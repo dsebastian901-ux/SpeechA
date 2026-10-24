@@ -1642,6 +1642,7 @@ class AnalyticsService:
 
         # v3.5.8 · pago previo estructurado. Un pago histórico puede coexistir
         # con una NUEVA promesa en la misma llamada; no debe anularla.
+        completed_payment_confirmation = completed_payment(text, segments)
         completed_payment_matches = list(re.finditer(
             r"\b(?:ya\s+(?:pague|page|hice|realice)|pague\s+(?:ayer|hoy)|"
             r"hice\s+el\s+pago|realice\s+(?:mi|el|un)\s+pago|"
@@ -1649,7 +1650,12 @@ class AnalyticsService:
             r"(?:lo|el\s+pago)\s+hizo\s+el\s+dia|"
             r"(?:realizo|hizo)\s+el\s+pago\s+el\s+dia|"
             r"ya\s+se\s+(?:hizo|pago)|pago\s+(?:realizado|efectuado)|"
-            r"tengo\s+registrado\s+(?:un\s+)?reporte\s+de\s+pago)\b", normalized))
+            r"depositamos|tengo\s+registrado\s+(?:un\s+)?reporte\s+de\s+pago)\b", normalized))
+        # Extraer importes históricos solo de declaraciones ya acreditadas;
+        # las instrucciones futuras no pueden aportar pagos ni complementos.
+        completed_payment_matches = [m for m in completed_payment_matches if any(
+            u["text_start"] < m.end() and u["text_end"] > m.start()
+            for u in completed_payment_confirmation["evidence"])]
         payment_already_made = bool(payment_already_made or completed_payment_matches)
         prior_payment_evidence = []
         prior_payment_amounts = []
@@ -1721,7 +1727,6 @@ class AnalyticsService:
             r"\b(?:ya\s+(?:pague|page|hice|realice)|pague\s+(?:ayer|hoy)|(?:lo|el\s+pago)\s+hizo\s+el\s+dia|(?:realizo|hizo)\s+el\s+pago\s+el\s+dia|ya\s+se\s+(?:hizo|pago)|pago\s+(?:realizado|efectuado))\b",
             norm(promise_date_evidence)))
         commitment_confirmation = payment_commitment(text, segments)
-        completed_payment_confirmation = completed_payment(text, segments)
         payment_already_made = completed_payment_confirmation["confirmed"]
         explicit_new_promise = bool(
             promise_date and promise_date_evidence and (promise_is_future or not prior_cue_in_promise)
@@ -3205,8 +3210,9 @@ class AnalyticsService:
 
             sequence_wording = bool(re.search(
                 r"\b(?:pago\s+inicial|primer\s+pago|segundo\s+pago|tercer\s+pago|"
-                r"despues|después|luego|posteriormente|pagos?\s+(?:semanales|quincenales)|"
-                r"hoy.{0,80}(?:mañana|dia|día)|(?:dia|día)\s+\d{1,2}.{0,80}(?:dia|día)\s+\d{1,2})\b",
+                r"(?:dos|tres|2|3)\s+pagos|pagos?\s+(?:semanales|quincenales)|"
+                r"hoy.{0,80}(?:mañana|manana|(?:el\s+)?dia\s+\d{1,2})|"
+                r"(?:dia|día)\s+\d{1,2}.{0,80}(?:dia|día)\s+\d{1,2})\b",
                 source_norm))
             distinct = []
             for v in multi_payment_amounts:

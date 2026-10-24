@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r09-diagnostic",
+  "revision": "3.6.19-r10-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 97,
@@ -18,13 +18,20 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 181,
+    "passed": 195,
     "failed": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Natural identity confirmations, unconfirmed silence, negated liquidation, local bank instructions, sentence-aware payment offers and checkpoint-only reanalysis.",
+  "additional_fix": "Preserves r09; excludes future payment instructions from completed-payment evidence, extracts a reported deposit amount and avoids fictitious installments triggered by a farewell.",
+  "uploaded_audio_review": {
+    "files_fully_decoded": 2,
+    "checkpoint_calls": [4, 10],
+    "new_speech_recognition_executed": false,
+    "blocker": "Model binary download redirects to us.aws.cdn.hf.co; proxy CONNECT returned 403. Domain added to saved environment draft; runtime change pending.",
+    "human_speaker_validation": false
+  },
   "publication_note": "Real card reference masked in documentation; private migration archive and audit data remain outside Git.",
   "reported_batch": {
     "evaluations": 36,

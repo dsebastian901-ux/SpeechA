@@ -1,11 +1,11 @@
-# MRS Speech Analytics · revisión 09 — diagnóstico
+# MRS Speech Analytics · revisión 10 — diagnóstico
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_09_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_10_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
@@ -44,8 +44,8 @@ python tools/regression_checkpoints.py \
   --input-dir /ruta/privada/pruebas_checkpoints \
   --baseline-source /ruta/privada/proyecto/MRS_Speech_Analytics_v3.6.19_Revision \
   --reviewed-changes tests/reviewed_baseline_changes.json \
-  --output-dir /ruta/privada/resultados_r07
+  --output-dir /ruta/privada/resultados_revision_actual
 ```
 
 No suba checkpoints, audios ni resultados reales a un repositorio público.
-El paquete de código excluye esos datos; la auditoría se entrega por separado.
+El paquete de código excluye esos datos; los resultados privados se conservan fuera de Git.

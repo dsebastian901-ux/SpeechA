@@ -115,3 +115,85 @@ def test_known_agent_cannot_answer_own_identity_or_payment_question():
     r = A.calculate_basic_compliance("Gestor: ¿Es usted? Sí. ¿Podemos contemplar su pago mañana? Sí.")
     assert r["contact_type"] != "TITULAR"
     assert not r["negotiation_validation"]["commitment_confirmed"]
+
+
+@pytest.mark.parametrize("instruction", [
+    "Una vez que realice el pago, envíe el comprobante.",
+    "Cuando realice mi pago, enviaré el comprobante.",
+    "Para que realice el pago, le enviaré la referencia.",
+    "En cuanto haga el pago, le aviso.",
+    "Una vez que  realice el pago, envíe el comprobante.",
+    "Si yo realice el pago, enviaré el comprobante.",
+])
+def test_future_payment_instructions_do_not_exempt_new_collection(instruction):
+    r = A.calculate_basic_compliance("Habla MRS. Soy yo. " + instruction,
+                                      {"estatus_grabacion": "CONVENIO"})
+    n = r["negotiation_validation"]
+    assert not n["payment_already_made"]
+    assert not n["payment_confirmation_case"]
+    assert not n["prior_payment_evidence"]
+    assert "PEN_CONV_LUGARES" in {p["id"] for p in r["penalties"]}
+
+
+@pytest.mark.parametrize("report", [
+    "Sí pagué 600 pesos ayer.",
+    "Cuando realicé mi pago envié el comprobante.",
+    "Ayer realicé mi pago.",
+])
+def test_accented_past_payment_reports_remain_completed(report):
+    r = A.calculate_basic_compliance("Habla MRS. Soy yo. " + report,
+                                      {"estatus_grabacion": "CONVENIO"})
+    assert r["negotiation_validation"]["payment_confirmation_case"]
+    assert "PEN_CONV_LUGARES" not in {p["id"] for p in r["penalties"]}
+
+
+def test_a_future_instruction_does_not_erase_a_separate_completed_payment():
+    r = A.calculate_basic_compliance(
+        "Habla MRS. Soy yo. Ya pagué 600 pesos hoy, cuando realice el otro pago le aviso.",
+        {"estatus_grabacion": "CONVENIO", "pago_minimo": "500", "saldo_total": "2000"})
+    n = r["negotiation_validation"]
+    assert n["payment_confirmation_case"]
+    assert n["prior_payment_total"] == 600
+
+
+def test_negated_payment_report_is_not_completed():
+    r = A.calculate_basic_compliance("Habla MRS. Soy yo. No pagué 600 pesos ayer.",
+                                      {"estatus_grabacion": "CONVENIO"})
+    assert not r["negotiation_validation"]["payment_confirmation_case"]
+
+
+def test_reported_deposit_amount_can_cover_the_minimum_without_a_new_promise():
+    r = A.calculate_basic_compliance(
+        "Habla MRS. Soy yo. Depositamos desde el domingo. ¿Qué cantidad pagaron? "
+        "Fueron mil pesos. Llame hoy al banco para verificar la aplicación.",
+        {"estatus_grabacion": "NO DEFINE FECHA DE PAGO", "pago_minimo": "750", "saldo_total": "2000"})
+    n = r["negotiation_validation"]
+    assert n["payment_confirmation_case"]
+    assert n["prior_payment_total"] == 1000
+    assert n["prior_payment_covers_minimum"]
+    assert not n["promise_date_confirmed_from_call"]
+    assert "PEN_SIN_INTENTO_NEGOCIACION" not in {p["id"] for p in r["penalties"]}
+    assert r["status_validation"]["detected_status"] == "PAGO REPORTADO / ACLARACION"
+    assert r["status_validation"]["matches"] is False
+    assert r["final_result"] == "REVISAR"
+
+
+def test_payment_today_followed_by_good_day_is_not_a_second_installment():
+    r = A.calculate_basic_compliance(
+        "Habla MRS. Soy yo. Podemos ofrecer mil pesos o dos mil pesos. "
+        "Me comprometo a pagar dos mil pesos hoy. Que tenga buen día.",
+        {"estatus_grabacion": "CONVENIO", "pago_minimo": "500", "saldo_total": "8000",
+         "fecha": "2026-10-13"})
+    n = r["negotiation_validation"]
+    assert not n["multipago_detectado"]
+    assert n["monto_detectado"] == 2000
+
+
+def test_distinct_dated_installments_are_still_added():
+    r = A.calculate_basic_compliance(
+        "Habla MRS. Soy yo. Me comprometo a pagar mil pesos hoy y dos mil pesos mañana.",
+        {"estatus_grabacion": "CONVENIO", "pago_minimo": "2500", "saldo_total": "8000",
+         "fecha": "2026-10-13"})
+    n = r["negotiation_validation"]
+    assert n["multipago_detectado"]
+    assert n["total_multipago"] == 3000

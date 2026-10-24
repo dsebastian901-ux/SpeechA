@@ -184,18 +184,36 @@ def payment_commitment(text, segments=()):
 
 def completed_payment(text, segments=()):
     evidence = []
+    source, cursor = normalize(text), 0
     for unit in sentence_evidence(text, segments):
-        s = normalize(unit["text"])
+        verbatim = unicodedata.normalize("NFC", re.sub(r"\s+", " ", unit["text"]).strip())
+        s = normalize(verbatim)
+        position = source.find(s, cursor)
+        if position >= 0:
+            cursor = position + len(s)
         if "?" in s or "¿" in s:
             continue
-        pattern = re.search(
+        candidates = list(re.finditer(
             r"\b(?:ya pague|yo pague|lo pague|pague (?:ayer|hoy)|ya (?:hice|realice) (?:mi |el |un )?pago|"
             r"(?:hice|realice) (?:mi|el|un) pago|lo realice|lo hice|depositamos|fui a realizar mi pago|"
-            r"ya (?:mande|envie) (?:el |mi )?comprobante|ya se pago|tengo registrado (?:un )?reporte de pago)\b", s)
-        if (pattern or re.search(r"\bpagué\b", unit["text"], re.I)) and not re.search(
-                r"\b(?:no|aun no|todavia no)\s+(?:he |lo )?(?:pague|hice|realice|depositamos)\b", s):
-            if unit["speaker_role"] != "GESTOR" or "tengo registrado" in s:
-                evidence.append(unit)
+            r"ya (?:mande|envie) (?:el |mi )?comprobante|ya se pago|tengo registrado (?:un )?reporte de pago)\b", s))
+        candidates.extend(re.finditer(r"\bpagué\b", verbatim, re.I))
+        # Sin tilde, «realice» puede ser subjuntivo: una instrucción para un
+        # pago futuro no acredita un depósito anterior, aunque mencione recibo.
+        future_instructions = list(re.finditer(
+            r"\b(?:una vez que|cuando|en cuanto|para que|despu[eé]s de que|si)\s+"
+            r"(?:(?:usted|yo|ya|lo|me|le)\s+)*(?:realice|haga|pague|deposite|tenga)\b",
+            verbatim, re.I))
+        for candidate in candidates:
+            if any(f.start() <= candidate.start() < f.end() for f in future_instructions):
+                continue
+            if re.search(r"\b(?:no|aun no|todavia no)\s+(?:he |lo )?$", s[:candidate.start()]):
+                continue
+            if unit["speaker_role"] == "GESTOR" and "tengo registrado" not in normalize(candidate.group()):
+                continue
+            start, end = position + candidate.start(), position + candidate.end()
+            if position >= 0 and not any(u["text_start"] < end and u["text_end"] > start for u in evidence):
+                evidence.append(dict(unit, text_start=start, text_end=end))
     return {"confirmed": bool(evidence), "evidence": evidence}
 
 
