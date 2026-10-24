@@ -1,0 +1,11 @@
+MRS Speech Analytics 3.6.19 - actualización de código (NO CERTIFICADA PARA PRODUCCIÓN)
+
+Ajustes presentes en el código:
+- Filtro transversal REFERENCIA DISTINTA en dashboard, detector de referencia en grupos.
+- Equivalencia RECADO REF1/REF2 con MENSAJE CON FAMILIAR en cotejo de estatus.
+- NO CONOCEN A DEUDOR: exige evidencias separadas de derechos ARCO, tiempo con línea, identificación/comprobante y correo de privacidad; si faltan bloquea aprobación.
+- APROBADO_CON_EXCEPCION: carpeta, salida de reporte y dictamen independientes. Por seguridad solo se activa con metadatos confirmados manualmente del audio (audio_verified, interlocutor_hostile_or_lascivious, prevented_script, agent_professional). El sistema no puede atribuir automáticamente al hablante expresiones lascivas sin diarización.
+- Se conservan controles previos de lugares de pago en CONVENIO.
+
+Pruebas realizadas aquí: análisis sintáctico de archivos Python y casos unitarios de comparación de referencia.
+NO realizadas: interfaz Windows, flujo de instalación, integración de lote completo, escucha de audios y pruebas exhaustivas de regresión. No afirmar versión estable ni operativa.

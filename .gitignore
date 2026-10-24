@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+/private/
+/pruebas_checkpoints/
+/reportes/
+/dist/
+*.log
+proyecto/MRS_Speech_Analytics_v3.6.19_Revision/data/
+proyecto/MRS_Speech_Analytics_v3.6.19_Revision/logs/
+proyecto/MRS_Speech_Analytics_v3.6.19_Revision/reports/

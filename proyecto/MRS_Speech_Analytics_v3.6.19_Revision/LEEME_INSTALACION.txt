@@ -1,0 +1,14 @@
+MRS SPEECH ANALYTICS PROFESSIONAL v3.5.7
+
+INSTALACION EN OTRA PC
+1. Descomprima el ZIP completo en una carpeta local.
+2. Debe tener Python 3.10 de 64 bits instalado.
+3. Ejecute INSTALAR.bat.
+4. Espere a que aparezca "INSTALACION COMPLETADA CORRECTAMENTE".
+5. Abra el programa con INICIAR_MRS.bat.
+
+IMPORTANTE
+- No ejecute el programa directamente dentro del ZIP.
+- Mantenga todos los archivos y carpetas juntos.
+- La primera instalacion requiere Internet para descargar dependencias.
+- Esta copia corresponde al codigo activo v3.5.7 del paquete proporcionado.

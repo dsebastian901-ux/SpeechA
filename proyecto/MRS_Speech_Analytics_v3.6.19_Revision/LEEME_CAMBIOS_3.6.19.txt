@@ -1,0 +1,9 @@
+MRS Speech Analytics 3.6.19 - Actualización desde 3.6.18
+
+Integrado: detector contextual de referencia 4812…5012 (número completo en el paquete privado de migración) dictada en grupos, comparación con cuenta original, evidencia en payment_reference_validation y bloqueo crítico para nuevos análisis.
+
+La auditoría histórica del checkpoint del 21/10/2026 se incluye en AUDITORIA_REFERENCIAS_CHECKPOINT_20261021.csv. Se identificaron 8 llamadas candidatas que requieren confirmación escuchando el audio; no se modifica automáticamente el checkpoint ni los reportes anteriores.
+
+LIMITACIONES: no se han integrado todas las correcciones de estatus, excepciones y dashboard solicitadas, ni se ha probado la interfaz en Windows. El detector puede tener falsos positivos con conversaciones largas y necesita revisión de audio. No es una versión final validada.
+
+Instalación: extraer carpeta y usar INSTALAR.bat; conservar respaldo de la instalación anterior.

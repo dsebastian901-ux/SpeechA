@@ -1,0 +1,25 @@
+MRS Speech Analytics 3.6.18 - Integración de reglas entre modalidades
+
+Base: MRS_Speech_Analytics_318_Lugares_Solo_Convenio(1).zip.
+
+Cambios:
+1) AnalyticsService.shared_quality_decision centraliza el filtro de aprobación
+   (umbral, fallas graves, revisión por trato, convenio sin dos lugares,
+   negociación/estatus no válidos y duración).
+2) SOLO AUDIOS aplica esa misma puerta antes de sus validaciones de lote;
+   no se exigen nombre final, saldos ni estatus de Excel inexistentes.
+3) ANÁLISIS INDIVIDUAL guarda en metadatos shared_classification y
+   final_result, además de la puntuación.
+4) GESTIÓN DE AUDIOS / Dashboard incorpora registros de Analytics individuales
+   cuando no existe checkpoint de lotes; búsqueda por palabra/frase sin
+   sensibilidad a acentos y respetando filtros de gestor/supervisor/resultado.
+5) No se modificó Whisper, modelos, motor de transcripción ni reglas existentes
+   de extracción de montos. No se requiere retranscribir audios guardados.
+
+IMPORTANTE:
+- La detección de 'ay morosa' requiere atribución al hablante y contexto;
+  no se ha implementado una penalización automática por la sola frase.
+- No se ha verificado ejecución de la interfaz Windows en este entorno;
+  se verificó la sintaxis Python y el contenido del ZIP.
+- Los análisis individuales antiguos sin shared_classification pueden
+  mostrarse por score, sin re-evaluar automáticamente los audios históricos.

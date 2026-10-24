@@ -1,0 +1,4 @@
+Compilación completa: OK
+108 análisis (27 x 4 checkpoints): sin excepciones
+Motor de procesamiento de audios y reportes conservado.
+La transcripción sin diarización no certifica la atribución de hablante; dictaminación final requiere revisión de casos ambiguos.

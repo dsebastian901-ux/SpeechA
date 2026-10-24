@@ -1,0 +1,4 @@
+Verificacion de compilacion completa y reanalisis de cuatro checkpoints sin retranscribir.
+Se mantiene procesamiento normal de nuevos audios.
+Se corrigio interpretacion de numeros telefonicos como tarjetas y montos de convenio.
+Las clasificaciones siguen sujetas a comprobacion acustica en casos ambiguos.

@@ -1,0 +1,5 @@
+Motor de audios, interfaz y reportes conservados.
+Regresión: 108 evaluaciones, sin excepciones.
+Pruebas de seguridad: divulgaciones claras siguen bloqueadas.
+Cambios: parentesco interrogativo, frases del gestor y aceptación de recado no confirmada.
+Sin diarización, los casos ambiguos permanecen en REVISAR.

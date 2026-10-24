@@ -1,0 +1,29 @@
+{
+  "revision": "3.6.19-r08-candidate",
+  "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
+  "original_archive_files_verified_unchanged": 138,
+  "original_application_files_retained_unchanged": 97,
+  "modified_original_source_files": [
+    "LEEME_CAMBIOS_3.6.19.txt",
+    "app/services/analytics_service.py",
+    "app/services/batch_report_service.py",
+    "app/services/batch_service.py",
+    "app/services/payment_reference_validation.py",
+    "app/services/transcription_services.py",
+    "app/ui/views/analytics_view.py"
+  ],
+  "excluded_private_csv_reports": [
+    "AUDITORIA_REFERENCIAS_CHECKPOINT_20261021.csv",
+    "REGRESION_27.csv",
+    "RESULTADOS_REGRESION_1061.csv"
+  ],
+  "tests": {
+    "passed": 157,
+    "failed": 0
+  },
+  "checkpoint_evaluations": 268,
+  "acoustic_verification": false,
+  "windows_validation": false,
+  "additional_fix": "Explicit holder is not a family recipient merely for mentioning own relatives",
+  "publication_note": "Real card reference masked in documentation; private migration archive and audit data remain outside Git."
+}

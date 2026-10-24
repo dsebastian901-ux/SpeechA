@@ -1,0 +1,9 @@
+CORRECCIÓN 02 - Validación de terceros y bloqueo de aprobaciones
+- Bloqueo por divulgar mora, saldo, negativa de pago, mensualidades vencidas o deuda a un tercero, incluso sin monto.
+- Parentesco hipotético ("no sé si es mi hermano") no valida automáticamente familiar.
+- Grosería aislada no se atribuye automáticamente al gestor sin identificación de hablante; se envía a revisión.
+- El score de una dictaminación no validada queda limitado a 79, para evitar reportar calidad perfecta en REVISAR.
+- Se conserva equivalencia RECADO REF1/REF2 con MENSAJE CON FAMILIAR solo con parentesco y recado real.
+PRUEBA: 27 transcripciones del checkpoint 20261023-223319, ver REGRESION_27.csv.
+RESULTADO DE PRUEBA: 3 APROBADA, 11 REVISAR, 13 INCORRECTA (falla crítica por divulgación a tercero).
+AVISO: revisión basada en transcripciones, no escucha de audios; algunos bloqueos dependen de la calidad de transcripción. No certificado para uso sin revisión de calidad.

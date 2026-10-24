@@ -1,0 +1,8 @@
+[
+  {
+    "case": "batch_checkpoint(20261021-154002):099",
+    "allowed_removed": ["PEN010"],
+    "required_text": "puede tomar una captura de pantalla",
+    "reason": "El gestor pide una captura del comprobante. 'Puede tomar' no identifica a un tercero. Se mantienen PEN_CONV_LUGARES, PEN_CONV_TRANSFER_REV y REVISAR; no se aprueba la llamada."
+  }
+]

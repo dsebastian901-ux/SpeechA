@@ -1,0 +1,25 @@
+MRS Speech Analytics v3.6.18 - Integración de correcciones verificadas
+
+BASE: MRS_Speech_Analytics_v3.6.18_Instalable(2).zip
+ARCHIVOS DE CÓDIGO MODIFICADOS:
+- app/services/analytics_service.py
+- app/services/batch_service.py
+
+CAMBIOS IMPLEMENTADOS:
+1. Corrige dos nombres de variables inexistentes en la evaluación de montos; 61 llamadas del conjunto de 1061 fallaban con NameError.
+2. Impide aprobar convenios sin dos lugares de pago autorizados y pagos instruidos sin lugar autorizado.
+3. Impide que APROBADO_SIN_ETIQUETAR eluda ese bloqueo obligatorio.
+4. Sincroniza final_result con la clasificación operativa que se guarda en el lote.
+5. Detecta algunos estatus con evidencia explícita (convenio, negativa, fecha indefinida, pago reportado); los desacuerdos de confianza media requieren revisión, no MAL_DICTAMINADO automático.
+6. Conserva la clasificación de aprobación por umbral y el flujo de copiado originales, sin cambiar interfaz, instalación, Whisper ni checkpoints.
+
+PRUEBAS EJECUTADAS:
+- 1061 transcripciones únicas recuperadas de checkpoints.
+- Versión original: 61 errores de ejecución; versión corregida: 0 errores de ejecución.
+- La versión original aprobaba 324 de esos casos; la corregida aprueba 293. Se bloquean 31 aprobaciones anteriores por reglas de pago o discrepancias de estatus; revisar el CSV para detalles. No se aprobaron artificialmente llamadas.
+- Esta prueba ejecutó analytics_service, NO el procesamiento completo de audio/Excel ni la instalación Windows.
+
+IMPORTANTE:
+Este paquete contiene las correcciones descritas; NO se ha validado exhaustivamente cada una de las 52 reglas solicitadas ni se ha probado la instalación en Windows. No sustituye una certificación funcional integral.
+
+Tu ZIP original no fue sobrescrito.

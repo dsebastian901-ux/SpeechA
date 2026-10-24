@@ -1,0 +1,4 @@
+MRS Speech Analytics 3.6.19 - REVISION TECNICA, NO CERTIFICADA PARA PRODUCCION
+Base: 3.6.18.
+Correcciones: elimina uso prematuro de variable de referencia; detector general por 8 grupos; filtro transversal REFERENCIA DISTINTA en dashboard; incidencias ASR pasan a REVISAR, no se declaran fraude confirmado.
+LIMITACIONES: No se ejecutó GUI en Windows, ni se validaron audios contra transcripciones. No se certifican todas las reglas de estatus/excepción solicitadas. Mantener 3.6.18 en producción.
