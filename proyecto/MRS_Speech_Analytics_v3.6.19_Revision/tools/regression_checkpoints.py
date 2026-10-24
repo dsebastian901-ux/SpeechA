@@ -8,6 +8,8 @@ import collections
 import csv
 import hashlib
 import json
+import re
+from datetime import date
 from pathlib import Path
 import subprocess
 import sys
@@ -69,6 +71,11 @@ def invariants(row):
         failures.append("trato pendiente aprobado")
     if privacy.get("review_required") and row["shared_decision"].get("aprobado"):
         failures.append("puerta común aprobó privacidad incierta")
+    negotiation = m.get("negotiation_validation") or {}
+    if approved and (negotiation.get("installment_validation") or {}).get("review_required"):
+        failures.append("parcialidades contradictorias aprobadas")
+    if approved and status.get("detected_status") == "CONVENIO" and not (negotiation.get("commitment_evidence") or {}).get("accepted"):
+        failures.append("convenio aprobado sin aceptación acreditada")
     return failures
 
 
@@ -89,6 +96,19 @@ def verified_removal(rule, previous, current):
     if rule == "capture_instruction_not_recipient":
         return (previous.get("quality_contact_type") == "TERCERO" and
                 current.get("quality_contact_type") != "TERCERO")
+    if rule in {"spoken_payment_date", "payment_store_not_date"}:
+        old = previous.get("negotiation_validation") or {}
+        raw = negotiation.get("promise_date_text") or ""
+        evidence = negotiation.get("promise_date_evidence") or ""
+        try:
+            detected = date.fromisoformat(negotiation["promise_date"])
+            due = date.fromisoformat(str(negotiation["due_date"]).split()[0])
+        except (KeyError, ValueError, TypeError):
+            return False
+        supported = raw in evidence and detected <= due
+        if rule == "spoken_payment_date":
+            return supported and not old.get("promise_date") and bool(re.search(r"[a-z]+ de [a-z]+", raw))
+        return supported and old.get("promise_date_text") == "7-11" and raw != "7-11" and old.get("promise_date", "") > due.isoformat()
     return False
 
 

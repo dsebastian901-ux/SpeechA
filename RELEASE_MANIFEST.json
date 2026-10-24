@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r10-diagnostic",
+  "revision": "3.6.19-r11-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 97,
@@ -18,16 +18,19 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 195,
+    "passed": 244,
     "failed": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Preserves r09; excludes future payment instructions from completed-payment evidence, extracts a reported deposit amount and avoids fictitious installments triggered by a farewell.",
+  "additional_fix": "Natural contact and payment responses, explicit status evidence, coherent date evidence, installment amounts and conflicts, missing discount amount and balance review; Excel separates contact type from detected status.",
   "uploaded_audio_review": {
     "files_fully_decoded": 2,
-    "checkpoint_calls": [4, 10],
+    "checkpoint_calls": [
+      4,
+      10
+    ],
     "new_speech_recognition_executed": false,
     "blocker": "Model binary download redirects to us.aws.cdn.hf.co; proxy CONNECT returned 403. Domain added to saved environment draft; runtime change pending.",
     "human_speaker_validation": false
@@ -37,12 +40,26 @@
     "evaluations": 36,
     "reproduced_original_results": 36,
     "before": {
+      "REVISAR": 36
+    },
+    "after": {
+      "REVISAR": 35,
+      "APROBADO": 1
+    },
+    "human_validation_complete": false,
+    "comparison_base": "User-returned revision-10 checkpoint",
+    "original_batch_outcomes": {
       "REVISAR": 32,
       "FALLA_GRAVE": 4
     },
-    "after": {
-      "REVISAR": 36
-    },
-    "human_validation_complete": false
+    "identified_contacts_before": 20,
+    "identified_contacts_after": 26,
+    "status_matches_before": 1,
+    "status_matches_after": 5
+  },
+  "historical_regression_outcomes": {
+    "REVISAR": 259,
+    "FALLA_GRAVE": 5,
+    "APROBADO": 4
   }
 }

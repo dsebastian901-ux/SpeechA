@@ -106,18 +106,30 @@ def holder_confirmation(text, segments=()):
     s = normalize(text)
     # Una confirmación aparente seguida de ausencia/tercero no acredita titular.
     counter = re.compile(r"\b(?:no (?:se encuentra|esta aqui|esta en casa)|no soy|soy su (?:espos[oa]|madre|padre|herman[oa])|es nuestro proveedor)\b")
+    identification = (
+        r"(?:me (?:puede|pueden|podria|podrian|podre|podeis) comunicar[, ]*(?:por favor[, ]*)?con|"
+        r"me comunica[, ]*(?:por favor[, ]*)?con|estoy buscando a|hablo con)")
     prompt = re.compile(
-        r"\b(?:me (?:puede|pueden|podria|podrian) comunicar[, ]*(?:por favor[, ]*)?con|"
-        r"me comunica[, ]*(?:por favor[, ]*)?con)\s+[^.!?]{2,100}[.?]\s*"
+        rf"\b{identification}\s+[^.!?]{{2,100}}[.?]\s*"
         r"(?P<answer>(?:si[, ]+)?(?:digame|diganme|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b")
     direct = re.compile(
-        r"\bes usted(?:\s+(?:el caballero|la senora|la senorita|el senor|el titular|la titular|caballero|senora|senorita|senor))?\s*\?\s*"
+        r"\bes usted(?P<identity>[^.!?]{0,85})\?\s*"
         r"(?P<answer>si|asi es|correcto|aja)\b")
     contextual = re.compile(
-        r"\bme (?:puede|pueden|podeis|podria|podrian) comunicar[, ]*(?:por favor[, ]*)?con\s+[^.!?]{2,100}[.?]\s*"
-        r"(?P<answer>si(?:[, ]+si)?[^.!?]{0,35})[.!?]\s*(?:mucho gusto|me presento)\b")
+        rf"\b{identification}\s+[^.!?]{{2,100}}[.?]\s*"
+        r"(?P<answer>si(?:[, ]+si)?[^.!?]{0,35})[.!?]\s*"
+        r"(?:(?:buen(?:o|os)? dias?|buenas? tardes?|que tal|mucho gusto)[.!?]\s*){0,2}"
+        r"(?:mucho gusto|me presento)\b")
     for pattern in (prompt, direct, contextual):
         for match in pattern.finditer(s):
+            if pattern is direct and match["identity"].strip() and not re.match(
+                    r"(?:el caballero|la senora|la senorita|el senor|el titular|la titular|caballero|senora|senorita|senor)\b",
+                    match["identity"].strip()):
+                continue
+            if pattern is direct and re.search(
+                    r"\b(?:familiar|espos[oa]|madre|padre|herman[oa]|referencia|conocid[oa]|quien|pagar|pago)\b",
+                    match["identity"]):
+                continue
             if _role_at(text, segments, match.start("answer")) in {"GESTOR", "TERCERO"}:
                 continue
             tail = s[match.end():match.end()+80]
@@ -155,12 +167,22 @@ def payment_commitment(text, segments=()):
         positive = re.search(
             r"\b(?:me comprometo a (?:pagar|depositar|abonar|cubrir)|"
             r"(?:yo )?voy a (?:pagar|depositar|abonar|cubrir)|pagare|depositare|abonare|"
-            r"(?:manana|el lunes|el martes|el miercoles|el jueves|el viernes|el sabado|el domingo) (?:le )?(?:pago|deposito))\b", s)
+            r"(?:manana|el lunes|el martes|el miercoles|el jueves|el viernes|el sabado|el domingo) "
+            r"(?:(?:le )?(?:pago|deposito)|mando a pagar(?:lo)?))\b", s)
         negative = re.search(
             r"\b(?:no (?:voy a|puedo|pienso|quiero) (?:pagar|depositar|abonar|cubrir)|"
             r"no puedo (?:comprometerme|confirmar|dar una fecha)|no me comprometo|"
-            r"no tengo (?:esa|la) cantidad|no dispongo de (?:esa|la) cantidad)\b", s)
-        conditional = re.search(r"\b(?:si me da tiempo|si consigo (?:el )?dinero|si tengo dinero|si puedo juntar)\b", s)
+            r"no tengo (?:esa|la) cantidad|no dispongo de (?:esa|la) cantidad|"
+            r"no (?:tengo|cuento con) (?:dinero|la cantidad|esa cantidad)|"
+            r"(?:manana|hoy) no (?:podria|puedo)|no (?:tendria|tendre)\s+(?:\d+|dos|mil))\b", s)
+        conditional = re.search(
+            r"\b(?:si me da tiempo|si consigo (?:el )?dinero|si tengo dinero|si puedo juntar|"
+            r"hare lo posible|a lo mejor|yo creo|no se cuanto (?:voy a|vaya a|pueda) (?:pagar|depositar)|"
+            r"no se cuando (?:pueda|voy a) pagar)\b", s)
+        payment_context = re.search(r"\b(?:pago|pagar|depositar|dinero|cantidad|convenio|pesos|descuento)\b",
+                                    source[max(0, position-220):cursor])
+        if conditional and not payment_context:
+            conditional = None
         if conditional:
             events.append((position, None, unit["text"]))
             continue
@@ -169,12 +191,38 @@ def payment_commitment(text, segments=()):
         elif positive and not re.search(r"\b(?:no|si pudiera|si tuviera)\b.{0,18}"+re.escape(positive.group()), s):
             events.append((position, True, unit["text"]))
     question = re.compile(
-        r"\b(?:podemos (?:contemplar|contar con|confirmar)|se compromete a|puedo confirmar)\b"
+        r"\b(?:podemos (?:contemplar|contar con|confirmar)|se compromete a|puedo confirmar|"
+        r"confirmaria (?:su pago|el pago|la opcion))\b"
         r"[^?]{0,130}\b(?:pago|pagar|deposito|depositar)\b[^?]{0,90}\?\s*"
         r"(?P<answer>si|de acuerdo|esta bien|claro|correcto)\b")
     for match in question.finditer(source):
         if _role_at(text, segments, match.start("answer")) != "GESTOR":
-            events.append((match.start(), True, match.group()))
+            reply = source[match.start("answer"):match.end()+100].split(".")[0]
+            if not re.search(r"\b(?:si me da tiempo|si consigo|si puedo juntar|yo creo|a lo mejor|no puedo|no tengo)\b", reply):
+                events.append((match.start("answer"), True, match.group()))
+    # La respuesta puede indicar el importe en lugar de repetir «sí». Se exige
+    # una pregunta futura de pago, una cantidad explícita y una respuesta firme.
+    amount_question = re.compile(
+        r"\b(?:que cantidad|con que cantidad|por que cantidad)\b[^?!.]{0,100}"
+        r"\b(?:confirmaria pagar|podemos contemplar|puede pagar|va a pagar)\b[^?!.]{0,60}\?\s*"
+        r"(?P<answer>[^.!?]{1,110})")
+    for match in amount_question.finditer(source):
+        answer = match["answer"]
+        if (_role_at(text, segments, match.start("answer")) in {"GESTOR", "TERCERO"}
+                or not re.search(r"\b(?:\d{2,}|mil|cientos|quinientos)\b", answer)
+                or re.search(r"\b(?:no|creo|a lo mejor|si consigo|si puedo|si me da)\b", answer)):
+            continue
+        events.append((match.start("answer"), True, match.group()))
+    # Al corregir una propuesta, una aceptación nueva puede reemplazar una
+    # condición anterior. Un «ok» aislado o responder sobre WhatsApp no basta.
+    corrected_offer = re.compile(
+        r"\b(?:cuanto me (?:dice|dices)|por que cantidad seria)\?\s*"
+        r"[^.!?]{1,90}\bpesos\b[.!?]\s*(?P<answer>ok[, ]+esta bien|de acuerdo)\b")
+    for match in corrected_offer.finditer(source):
+        before = source[max(0, match.start()-220):match.start()]
+        if (re.search(r"\b(?:pago|pagar|convenio|fecha)\b", before)
+                and _role_at(text, segments, match.start("answer")) not in {"GESTOR", "TERCERO"}):
+            events.append((match.start("answer"), True, match.group()))
     if not events:
         return {"accepted": False, "declined": False, "evidence": ""}
     _, accepted, evidence = max(events, key=lambda e: e[0])
@@ -232,7 +280,7 @@ DECLINES = re.compile(
 
 def assess_recado(text, segments=()):
     families, acceptances, refusals, unknown = [], [], [], []
-    for unit in evidence_units(text, segments):
+    for unit in sentence_evidence(text, segments):
         s = normalize(unit["text"])
         if unit["speaker_role"] in {"GESTOR", "TITULAR"}:
             continue
@@ -258,7 +306,7 @@ def assess_recado(text, segments=()):
 
 def recipient_statement(text, segments, pattern):
     """No usar preguntas, negaciones ni palabras del gestor como identidad."""
-    for unit in evidence_units(text, segments):
+    for unit in sentence_evidence(text, segments):
         if unit["speaker_role"] == "GESTOR":
             continue
         s = normalize(unit["text"])
@@ -272,16 +320,19 @@ def recipient_statement(text, segments, pattern):
 
 
 def agent_statement(text, segments, pattern):
-    for unit in evidence_units(text, segments):
+    for unit in sentence_evidence(text, segments):
         if unit["speaker_role"] in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:
             continue
-        s = normalize(unit["text"])
-        if "?" in s or "¿" in s:
-            continue
-        for match in re.finditer(pattern, s):
-            prefix = s[max(0, match.start()-70):match.start()]
-            if not re.search(r"\bno\b[^.!?;]{0,65}$", prefix):
-                return True
+        # Whisper puede unir «le ofrecemos un descuento, ¿lo acepta?» en una
+        # oración. La pregunta posterior no elimina la oferta declarada.
+        for clause in re.split(r"[;,]", unit["text"]):
+            s = normalize(clause)
+            if "?" in s or "¿" in s:
+                continue
+            for match in re.finditer(pattern, s):
+                prefix = s[max(0, match.start()-70):match.start()]
+                if not re.search(r"\bno\b[^.!?;]{0,65}$", prefix):
+                    return True
     return False
 
 

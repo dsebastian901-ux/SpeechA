@@ -100,6 +100,9 @@ class BatchReportService:
         "Transcripción Completa",
         "Transcripción Depurada",
         "Ruta audio clasificado",
+        "Interlocutor detectado",
+        "Evidencia estatus",
+        "Método detección estatus",
     ]
 
     MODE_B_HEADERS = [
@@ -167,6 +170,9 @@ class BatchReportService:
         "Transcripción Completa",
         "Transcripción Depurada",
         "Ruta audio clasificado",
+        "Interlocutor detectado",
+        "Evidencia estatus",
+        "Método detección estatus",
     ]
 
 
@@ -602,7 +608,7 @@ class BatchReportService:
             "Clasificación física": physical,
             "Nivel de atención": cls._nivel_atencion(classification, metadata),
             "MRS detectado": cls._yes_no(checks.get("identifica_mrs")),
-            "Estatus detectado IA": metadata.get("quality_contact_type") or status.get("detected_status") or "",
+            "Estatus detectado IA": status.get("detected_status") or "",
             "Fecha de pago detectada": negotiation.get("promise_date") or "",
             "Fecha textual escuchada": negotiation.get("promise_date_text") or "",
             "Evidencia de fecha": negotiation.get("promise_date_evidence") or "",
@@ -690,6 +696,9 @@ class BatchReportService:
             "Transcripción Completa": transcription,
             "Transcripción Depurada": transcription_clean,
             "Ruta audio clasificado": item.get("classified_audio_path") or "",
+            "Interlocutor detectado": metadata.get("quality_contact_type") or "",
+            "Evidencia estatus": status.get("evidence") or "",
+            "Método detección estatus": status.get("evidence_method") or "",
         }
 
     @staticmethod
@@ -774,6 +783,9 @@ class BatchReportService:
             "Transferencia Detectada": 23,
             "Cuenta Santander Autorizada": 28,
             "Revisión Datos Transferencia": 28,
+            "Interlocutor detectado": 28,
+            "Evidencia estatus": 70,
+            "Método detección estatus": 48,
         }
         header_map = {str(c.value or "").strip(): c.column for c in ws[1]}
         for header, width in audit_widths.items():

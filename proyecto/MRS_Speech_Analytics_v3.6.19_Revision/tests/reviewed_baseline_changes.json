@@ -389,6 +389,28 @@
     "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
   },
   {
+    "case": "batch_checkpoint(20261021-154002):111",
+    "allowed_removed": [
+      "PEN007"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN007": "spoken_payment_date"
+    },
+    "reason": "La fecha veintidós de octubre consta literalmente en el texto; no es ausencia de fecha. La llamada conserva otros bloqueos de revisión."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):115",
+    "allowed_removed": [
+      "PEN005"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN005": "payment_store_not_date"
+    },
+    "reason": "La tienda 7-11 generaba una fecha falsa posterior al vencimiento; el texto dice 17 de octubre. La llamada conserva otros bloqueos de revisión."
+  },
+  {
     "case": "batch_checkpoint(20261021-154002):117",
     "allowed_removed": [
       "PEN009",

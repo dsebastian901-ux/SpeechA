@@ -19,6 +19,7 @@ from app.models.analytics_model import AnalyticsModel
 from app.models.transcriptions import TranscriptionModel
 from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment
 from app.services.payment_instruction_validation import wrong_bank_instructions
+from app.services.installment_validation import installment_plan
 
 
 class AnalyticsService:
@@ -771,7 +772,7 @@ class AnalyticsService:
         return None
 
     @classmethod
-    def _extract_payment_promise_date(cls, text, call_date_value=None):
+    def _extract_payment_promise_date(cls, text, call_date_value=None, _details=False):
         """
         Extrae la fecha de compromiso más probable.
 
@@ -807,6 +808,9 @@ class AnalyticsService:
             left = max(0, match.start() - 100)
             right = min(len(normalized), match.end() + 100)
             context = normalized[left:right]
+            if re.fullmatch(r"7[/-]11", match.group()) and not re.search(
+                    r"(?:dia|fecha|para el|pagar el|pago el)\s*$", normalized[max(0,match.start()-25):match.start()]):
+                return  # La tienda 7-11 no es una fecha de pago.
 
             near_left = max(0, match.start() - 55)
             near_right = min(len(normalized), match.end() + 55)
@@ -875,6 +879,23 @@ class AnalyticsService:
             except ValueError:
                 pass
 
+        day_names = {"uno":1, "dos":2, "tres":3, "cuatro":4, "cinco":5, "seis":6,
+                     "siete":7, "ocho":8, "nueve":9, "diez":10, "once":11, "doce":12,
+                     "trece":13, "catorce":14, "quince":15, "dieciseis":16, "diecisiete":17,
+                     "dieciocho":18, "diecinueve":19, "veinte":20, "veintiuno":21,
+                     "veintidos":22, "veintitres":23, "veinticuatro":24, "veinticinco":25,
+                     "veintiseis":26, "veintisiete":27, "veintiocho":28, "veintinueve":29,
+                     "treinta":30, "treinta y uno":31}
+        for m in re.finditer(r"\b("+"|".join(sorted(day_names, key=len, reverse=True))+
+                             r")\s+de\s+("+"|".join(months)+r")\b", normalized):
+            try:
+                candidate = date(base.year, months[m[2]], day_names[m[1]])
+                if candidate < base - timedelta(days=31):
+                    candidate = candidate.replace(year=base.year+1)
+                add_candidate(m, candidate)
+            except ValueError:
+                pass
+
         # dd/mm/yyyy, dd-mm-yyyy, dd/mm, dd-mm
         numeric_pattern = (
             r"\b([0-3]?\d)[/-]([01]?\d)(?:[/-](\d{2,4}))?\b"
@@ -912,39 +933,14 @@ class AnalyticsService:
 
         # Mayor score = contexto de compromiso más fuerte y mención más tardía.
         candidates.sort(key=lambda item: (item[0], item[1]))
-        return candidates[-1][2]
+        selected = candidates[-1]
+        return {"date": selected[2], "text": selected[3], "evidence": selected[4]} if _details else selected[2]
 
     @classmethod
     def _extract_payment_promise_date_details(cls, text, call_date_value=None):
         """Devuelve fecha + evidencia textual; nunca crea evidencia desde Excel."""
-        base = cls._parse_context_date(call_date_value)
-        if base is None:
-            return {"date": None, "text": "", "evidence": ""}
-        normalized = cls._normalize_for_analysis(cls._normalize_spaces(text))
-        # Reutiliza el extractor estricto para obtener la fecha final.
-        candidate = cls._extract_payment_promise_date(text, call_date_value)
-        if candidate is None:
-            return {"date": None, "text": "", "evidence": ""}
-        # Localiza una mención que realmente explique esa fecha.
-        patterns = [r"\bpasado\s+manana\b", r"(?<!pasado\s)\bmanana\b", r"\bhoy\b",
-                    r"\b[0-3]?\d\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)(?:\s+(?:de\s+)?\d{4})?\b",
-                    r"\b[0-3]?\d[/-][01]?\d(?:[/-]\d{2,4})?\b",
-                    r"\b(?:el\s+|este\s+|proximo\s+)?(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)\b"]
-        hits=[]
-        pay=re.compile(r"\b(?:pago|pagar|pague|page|deposit|transfer|abono|convenio|compromiso|queda|quedamos|acuerdo|liquid|cantidad|monto|pesos|confirm)\w*\b")
-        for pat in patterns:
-            for m in re.finditer(pat, normalized):
-                a=max(0,m.start()-100); b=min(len(normalized),m.end()+100); ctx=normalized[a:b]
-                near=normalized[max(0,m.start()-55):min(len(normalized),m.end()+55)]
-                inability=bool(re.search(r"\b(?:no\s+(?:tengo|puedo|voy|podre|podria)\b.{0,24}(?:pagar|pago)|sin\s+dinero|no\s+hay\s+dinero)\b", near))
-                incidental=bool(re.search(r"\b(?:vence|vencimiento|fecha\s+limite|estado\s+de\s+cuenta|corte)\b", near))
-                visit=bool(re.search(r"\b(?:visita|domicilio|domiciliaria|diligencia|licenciad[oa]s?|abogad[oa]s?|recuperacion|recuperar|bienes|muebles|folio\s+de\s+la\s+negativa|negativa\s+de\s+pago)\b", near))
-                if pay.search(near) and not inability and not incidental and not visit:
-                    hits.append((m.start(),m.group(0).strip(),ctx.strip()))
-        if not hits:
-            return {"date": None, "text": "", "evidence": ""}
-        _, raw, ev=sorted(hits,key=lambda x:x[0])[-1]
-        return {"date": candidate, "text": raw, "evidence": ev}
+        return cls._extract_payment_promise_date(text, call_date_value, _details=True) or {
+            "date": None, "text": "", "evidence": ""}
 
     # v3.6.14 · Tabla oficial 04_Moras_Cortes del Manual Operativo v2.1.
     # Bradescard conserva Asignación y Vencimiento; solo se deriva Fecha de Pago.
@@ -1117,6 +1113,12 @@ class AnalyticsService:
             r"\b(?:soy yo|(?:si )?soy (?:el |la )?titular|habla (?:el |la )titular)\b")
         contact_confirmation = holder_confirmation(text, segments)
         titular = titular or contact_confirmation["confirmed"]
+        # La ausencia declarada confirma un tercero, no su parentesco. Una
+        # entrega posterior al titular prevalece sobre esa respuesta inicial.
+        intermediary_response = bool(not titular and recipient_statement(text, segments,
+            r"^(?:(?:bueno|pues)[, ]+)?(?:(?:el|ella) )?(?:no se encuentra(?: aqui| en casa| en este momento)?|"
+            r"no esta (?:aqui|en casa)|esta trabajando)[.!]?$"))
+        third_party = third_party or intermediary_response
 
         if unknown_debtor:
             contact_type = "NO CONOCEN A DEUDOR"
@@ -1129,7 +1131,7 @@ class AnalyticsService:
             detected_status = "MENSAJE EN TRABAJO"
         elif third_party:
             contact_type = "TERCERO"
-            detected_status = "MENSAJE CON TERCERO"
+            detected_status = "" if intermediary_response else "MENSAJE CON TERCERO"
         elif titular:
             contact_type = "TITULAR"
             detected_status = ""
@@ -1312,6 +1314,8 @@ class AnalyticsService:
         recado_real = bool(recado_callback and (recado_transmitted or leaves_message)
                            and not (recado_declines or recado_refusal)
                            and recado_recibido_explicito)
+        if intermediary_response and recado_real:
+            detected_status = "MENSAJE CON TERCERO"
         if recado_applies:
             # La relación familiar explícita prevalece sobre "soy yo" (identidad del referente).
             if recado_family_evidence and not recado_unknown_explicit:
@@ -1962,6 +1966,8 @@ class AnalyticsService:
         # ambiguas se solicita revisión, evitando culpar al gestor por el
         # comportamiento del titular o por un corte técnico.
         confrontation_patterns = [
+            "sabes escuchar", "sabe escuchar", "aprende como funciona una tarjeta",
+            "me esta poniendo muchas trabas", "si te molesta que te generen las llamadas",
             "si no quiere pagar es su problema",
             "usted fue quien se endeudo",
             "usted se endeudo",
@@ -1979,7 +1985,7 @@ class AnalyticsService:
             "usted es una deudora",
         ]
         confrontation_details = [dict(unit, phrase=phrase)
-            for unit in evidence_units(text, context.get("_segments") or [])
+            for unit in sentence_evidence(text, context.get("_segments") or [])
             for phrase in confrontation_patterns if re.search(r"(?<!\w)" + re.escape(norm(phrase)) + r"(?!\w)", norm(unit["text"]))]
         confrontation_evidence = list(dict.fromkeys(e["phrase"] for e in confrontation_details))
         confrontation_review = any(e["speaker_role"] == "NO DETERMINADO" for e in confrontation_details)
@@ -2717,33 +2723,39 @@ class AnalyticsService:
         # Se preserva la identificación original de terceros/familiares.
         # ---------------------------------------------------------
         status_detection_confidence = "NO DETERMINADA"
+        status_evidence = ""
+        status_evidence_method = "SIN_EVIDENCIA"
         if contact_type == "TITULAR" and not detected_status:
             agreement_evidence = bool(re.search(
                 r"\b(?:gener(?:o|amos|are|amos)\s+(?:su\s+|el\s+)?convenio|"
                 r"su\s+convenio\s+quedaria|quedamos\s+en\s+(?:tres|dos|3|2)\s+pagos|"
                 r"confirmo\s+(?:su\s+)?convenio)\b", normalized
             ))
-            refusal_evidence = bool(re.search(
+            refusal_evidence = recipient_statement(text, segments,
                 r"\b(?:no\s+voy\s+a\s+pagar|no\s+le\s+voy\s+a\s+pagar|"
-                r"no\s+pienso\s+pagar|me\s+niego\s+a\s+pagar)\b", normalized
-            ))
-            no_date_evidence = bool(re.search(
+                r"no\s+pienso\s+pagar|me\s+niego\s+a\s+pagar)\b")
+            no_date_evidence = recipient_statement(text, segments,
                 r"\b(?:no\s+se\s+cuando\s+(?:pueda|voy\s+a)\s+pagar|"
                 r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
-                r"no\s+tengo\s+fecha|lo\s+voy\s+a\s+revisar)\b", normalized
-            ))
+                r"no\s+tengo\s+fecha|lo\s+voy\s+a\s+revisar)\b")
             if (agreement_evidence or promise_date is not None) and confirms_commitment and not payment_confirmation_case:
                 detected_status = "CONVENIO"
                 status_detection_confidence = "ALTA"
+                status_evidence = commitment_confirmation["evidence"]
+                status_evidence_method = "COMPROMISO_ACEPTADO_CON_FECHA"
             elif refusal_evidence and not confirms_commitment:
                 detected_status = "NEGATIVA DE PAGO"
                 status_detection_confidence = "ALTA"
-            elif (no_date_evidence or commitment_confirmation["declined"]) and not explicit_new_promise and not confirms_commitment:
+                status_evidence_method = "NEGATIVA_EXPLICITA_DEL_INTERLOCUTOR"
+            elif (no_date_evidence or commitment_confirmation["declined"] or commitment_confirmation.get("conditional")) and not payment_confirmation_case and not explicit_new_promise and not confirms_commitment:
                 detected_status = "NO DEFINE FECHA DE PAGO"
                 status_detection_confidence = "ALTA"
+                status_evidence = commitment_confirmation["evidence"]
+                status_evidence_method = "SIN_COMPROMISO_FIRME_RESPUESTA_EXPLICITA"
             elif payment_confirmation_case and not confirms_commitment:
                 detected_status = "PAGO REPORTADO / ACLARACION"
                 status_detection_confidence = "MEDIA"
+                status_evidence_method = "PAGO_ANTERIOR_REPORTADO"
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
 
@@ -2759,6 +2771,8 @@ class AnalyticsService:
             "valid": True,
             "reasons": [],
             "detection_confidence": status_detection_confidence,
+            "evidence_method": status_evidence_method,
+            "evidence": status_evidence,
         }
 
         if excel_status:
@@ -2865,6 +2879,10 @@ class AnalyticsService:
 
         # No interpretar falta de evidencia como coincidencia válida.
         # Con Excel y estatus no detectable: revisión, nunca mal dictaminado automático.
+        if intermediary_response and not recado_real:
+            status_validation["valid"] = False
+            status_validation["review_required"] = True
+            status_validation["reasons"].append("Tercero identificado sin recado efectivamente confirmado; revisar conversación.")
         if excel_status and status_validation["matches"] is None:
             status_validation["valid"] = False
             status_validation["review_required"] = True
@@ -2996,7 +3014,10 @@ class AnalyticsService:
                 val=spanish_number_value(m.group(1))
                 if val is not None and val > 0:
                     found.append((m.start(),m.end(),val,m.group(0)))
-            return sorted(found, key=lambda x:x[0])
+            # «mil 900 pesos» aporta 1900, no otros 900 adicionales.
+            return sorted([m for m in found if not any(
+                other[0] <= m[0] and other[1] >= m[1] and
+                (other[0] < m[0] or other[1] > m[1]) for other in found)], key=lambda x:x[0])
 
         minimum_expected = parse_money_value(context.get("pago_minimo"))
         total_expected = parse_money_value(context.get("saldo_total"))
@@ -3097,11 +3118,15 @@ class AnalyticsService:
             prior_balance = [pos for pos in balance_positions if pos <= mm[0]]
             pay_distance = (mm[0] - max(prior_pay)) if prior_pay else 10**9
             balance_distance = (mm[0] - max(prior_balance)) if prior_balance else 10**9
+            balance_intro = re.search(
+                r"\b(?:saldo(?:\s+(?:total|pendiente|vencid[oa]))?|monto de atraso)"
+                r"(?:\s+(?:por|la|cantidad|de|es|asciende|a)){0,7}\s*$",
+                source_norm[max(0,mm[0]-110):mm[0]])
 
             # El saldo domina mientras siga siendo el contexto precedente más cercano.
             # Se amplía a 120 caracteres para cubrir repeticiones de confirmación
             # inmediatamente posteriores: "saldo ... 7.200. 7.200, ok?".
-            if balance_distance <= 120 and balance_distance <= pay_distance:
+            if balance_intro or (balance_distance <= 120 and balance_distance <= pay_distance):
                 balance_amount_candidates.append((balance_distance, mm))
                 continue
             if pay_distance <= 120:
@@ -3300,6 +3325,27 @@ class AnalyticsService:
                 detected_amount_role = "REGULARIZACION"
             else:
                 detected_amount_role = "PAGO NEGOCIADO"
+        plan = installment_plan(source_norm, money_mentions)
+        accepted_mentions = monetary_mentions(norm(commitment_confirmation["evidence"])) if confirms_commitment else []
+        accepted_amounts = {float(m[2]) for m in accepted_mentions}
+        if plan["amounts"] and accepted_amounts and not accepted_amounts.issubset(set(plan["amounts"])):
+            plan["review_required"] = True
+            plan["conflicts"].append({"accepted_amounts": sorted(accepted_amounts), "plan_amounts": plan["amounts"]})
+        if plan["amounts"]:
+            multi_payment_detected = True
+            multi_payment_amounts = plan["amounts"]
+            multi_payment_total = plan["total"]
+        elif confirms_commitment:
+            if len(accepted_amounts) == 1:
+                detected_claim_amount = next(iter(accepted_amounts))
+                detected_claim_evidence = accepted_mentions[-1][3]
+                detected_amount_raw = detected_claim_amount
+                detected_amount_role = "PAGO NEGOCIADO"
+                amount_asr_normalized = False
+                multi_payment_detected = False
+                multi_payment_amounts = []
+                multi_payment_total = None
+
         # Una liquidación total en parcialidades debe cuadrar con el saldo total.
         # Para regularización por mínimo, el saldo total NO es el importe exigible.
         multi_payment_balance_mismatch = bool(
@@ -3315,7 +3361,7 @@ class AnalyticsService:
             amount_asr_normalized = False
             detected_amount_role = "NEGOCIACION MULTIPAGO"
 
-        elif detected_balance_amount is not None:
+        elif detected_balance_amount is not None and detected_claim_amount is None:
             # Existe dinero en la llamada, pero solo atribuible al saldo informado.
             detected_amount_role = "SALDO INFORMADO"
             detected_claim_evidence = detected_balance_evidence
@@ -3350,6 +3396,10 @@ class AnalyticsService:
         if data_inconsistency:
             amount_validation = "REVISAR - DATOS DE ORIGEN INCONSISTENTES"
             amount_reason = f"Pago mínimo ({minimum_expected:g}) mayor que saldo total ({total_expected:g}); revisar Excel/origen antes de penalizar."
+            amount_review = True
+        elif plan["review_required"]:
+            amount_validation = "REVISAR - PARCIALIDADES CON IMPORTES CONTRADICTORIOS"
+            amount_reason = "Se mencionan importes distintos para la misma parcialidad; confirmar el acuerdo final en audio."
             amount_review = True
         elif detected_claim_amount is not None and total_expected is not None and detected_claim_amount > total_expected + 0.009:
             amount_validation = "INVALIDA - MONTO EXCEDE SALDO TOTAL"
@@ -3407,6 +3457,19 @@ class AnalyticsService:
             amount_reason = "Hay una afirmación de regularización/liquidación, pero no se pudo atribuir con seguridad un monto negociado a esa afirmación."
             amount_review = True
 
+        # Una propuesta válida no acredita que un saldo informado diferente
+        # sea correcto. La discrepancia requiere revisión, sin convertirla en
+        # una falla grave automática ni ocultarla detrás del nuevo importe.
+        if balance_validation == "SALDO INFORMADO DIFERENTE AL SALDO TOTAL" and not amount_invalid:
+            amount_review = True
+            amount_validation = "REVISAR - SALDO INFORMADO DIFERENTE"
+            amount_reason = balance_reason
+        if (not amount_invalid and detected_claim_amount is None and agent_statement(text, segments,
+                r"\b(?:se le esta ofreciendo|le ofrecemos|le ofrezco) un descuento\b")):
+            amount_review = True
+            amount_validation = "REVISAR - IMPORTE DEL DESCUENTO NO CONFIRMADO"
+            amount_reason = "Se ofrece un descuento, pero no se confirmó un importe atribuible a esa propuesta."
+
         negotiation_validation = {
             "assignment": mora,
             "assignment_date": assignment_date,
@@ -3420,6 +3483,7 @@ class AnalyticsService:
             "promise_date_evidence": promise_date_evidence,
             "promise_date_confirmed_from_call": bool(promise_date and promise_date_evidence and confirms_commitment),
             "commitment_evidence": commitment_confirmation,
+            "installment_validation": plan,
             "date_rule": None,
             "date_effect": None,
             "is_negotiation": requires_new_negotiation_validation,
