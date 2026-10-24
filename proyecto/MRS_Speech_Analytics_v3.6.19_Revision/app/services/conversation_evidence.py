@@ -68,6 +68,137 @@ def evidence_units(text, segments=()):
     return units
 
 
+def sentence_evidence(text, segments=()):
+    """Las ventanas de Whisper son acústicas; no delimitan frases ni turnos.
+
+    Reunir oraciones del texto completo y conservar roles/timing solo cuando
+    sus fragmentos los sustentan. Nunca se deduce una voz de SPEAKER_00/01.
+    """
+    source = normalize(text)
+    spans, cursor = [], 0
+    for unit in evidence_units(text, segments):
+        folded = normalize(unit["text"])
+        position = source.find(folded, cursor)
+        if position >= 0:
+            spans.append((position, position+len(folded), unit))
+            cursor = position+len(folded)
+    result, cursor = [], 0
+    for unit in _text_units(text):
+        folded = normalize(unit["text"])
+        position = source.find(folded, cursor)
+        if position < 0:
+            result.append(unit)
+            continue
+        end = position+len(folded)
+        overlaps = [u for a, b, u in spans if a < end and b > position]
+        roles = {u["speaker_role"] for u in overlaps}
+        if unit["speaker_role"] == "NO DETERMINADO" and len(roles) == 1:
+            unit = dict(unit, speaker_role=next(iter(roles)))
+        if overlaps and all(isinstance(u["start"], (int, float)) and isinstance(u["end"], (int, float)) for u in overlaps):
+            unit = dict(unit, start=min(u["start"] for u in overlaps), end=max(u["end"] for u in overlaps))
+        result.append(unit)
+        cursor = end
+    return result
+
+
+def holder_confirmation(text, segments=()):
+    """Confirmación conversacional del titular, independiente de la etiqueta Excel."""
+    s = normalize(text)
+    # Una confirmación aparente seguida de ausencia/tercero no acredita titular.
+    counter = re.compile(r"\b(?:no (?:se encuentra|esta aqui|esta en casa)|no soy|soy su (?:espos[oa]|madre|padre|herman[oa])|es nuestro proveedor)\b")
+    prompt = re.compile(
+        r"\b(?:me (?:puede|pueden|podria|podrian) comunicar[, ]*(?:por favor[, ]*)?con|"
+        r"me comunica[, ]*(?:por favor[, ]*)?con)\s+[^.!?]{2,100}[.?]\s*"
+        r"(?P<answer>(?:si[, ]+)?(?:digame|diganme|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b")
+    direct = re.compile(
+        r"\bes usted(?:\s+(?:el caballero|la senora|la senorita|el senor|el titular|la titular|caballero|senora|senorita|senor))?\s*\?\s*"
+        r"(?P<answer>si|asi es|correcto|aja)\b")
+    contextual = re.compile(
+        r"\bme (?:puede|pueden|podeis|podria|podrian) comunicar[, ]*(?:por favor[, ]*)?con\s+[^.!?]{2,100}[.?]\s*"
+        r"(?P<answer>si(?:[, ]+si)?[^.!?]{0,35})[.!?]\s*(?:mucho gusto|me presento)\b")
+    for pattern in (prompt, direct, contextual):
+        for match in pattern.finditer(s):
+            if _role_at(text, segments, match.start("answer")) in {"GESTOR", "TERCERO"}:
+                continue
+            tail = s[match.end():match.end()+80]
+            if (counter.search(match.group()+tail) or re.search(r"\b(?:obviamente )?no soy\b", s)
+                    or re.search(r"\b(?:se lo comunico|le paso|permita|espere|no esta)\b", match["answer"] + tail[:45])):
+                continue
+            return {"confirmed": True, "method": "RESPUESTA_A_IDENTIFICACION",
+                    "evidence": match.group(), "speaker_role": "NO DETERMINADO"}
+    return {"confirmed": False, "method": "SIN_CONFIRMACION", "evidence": ""}
+
+
+def _role_at(text, segments, position):
+    source, cursor = normalize(text), 0
+    for unit in sentence_evidence(text, segments):
+        folded = normalize(unit["text"])
+        start = source.find(folded, cursor)
+        if start >= 0:
+            cursor = start+len(folded)
+            if start <= position < cursor:
+                return unit["speaker_role"]
+    return "NO DETERMINADO"
+
+
+def payment_commitment(text, segments=()):
+    """Una propuesta, pregunta o mención de convenio no equivale a aceptación."""
+    source = normalize(text)
+    events, cursor = [], 0
+    for unit in sentence_evidence(text, segments):
+        s = normalize(unit["text"])
+        position = source.find(s, cursor)
+        if position >= 0:
+            cursor = position + len(s)
+        if unit["speaker_role"] == "GESTOR" or "?" in s or "¿" in s:
+            continue
+        positive = re.search(
+            r"\b(?:me comprometo a (?:pagar|depositar|abonar|cubrir)|"
+            r"(?:yo )?voy a (?:pagar|depositar|abonar|cubrir)|pagare|depositare|abonare|"
+            r"(?:manana|el lunes|el martes|el miercoles|el jueves|el viernes|el sabado|el domingo) (?:le )?(?:pago|deposito))\b", s)
+        negative = re.search(
+            r"\b(?:no (?:voy a|puedo|pienso|quiero) (?:pagar|depositar|abonar|cubrir)|"
+            r"no puedo (?:comprometerme|confirmar|dar una fecha)|no me comprometo|"
+            r"no tengo (?:esa|la) cantidad|no dispongo de (?:esa|la) cantidad)\b", s)
+        conditional = re.search(r"\b(?:si me da tiempo|si consigo (?:el )?dinero|si tengo dinero|si puedo juntar)\b", s)
+        if conditional:
+            events.append((position, None, unit["text"]))
+            continue
+        if negative:
+            events.append((position, False, unit["text"]))
+        elif positive and not re.search(r"\b(?:no|si pudiera|si tuviera)\b.{0,18}"+re.escape(positive.group()), s):
+            events.append((position, True, unit["text"]))
+    question = re.compile(
+        r"\b(?:podemos (?:contemplar|contar con|confirmar)|se compromete a|puedo confirmar)\b"
+        r"[^?]{0,130}\b(?:pago|pagar|deposito|depositar)\b[^?]{0,90}\?\s*"
+        r"(?P<answer>si|de acuerdo|esta bien|claro|correcto)\b")
+    for match in question.finditer(source):
+        if _role_at(text, segments, match.start("answer")) != "GESTOR":
+            events.append((match.start(), True, match.group()))
+    if not events:
+        return {"accepted": False, "declined": False, "evidence": ""}
+    _, accepted, evidence = max(events, key=lambda e: e[0])
+    return {"accepted": accepted is True, "declined": accepted is False,
+            "conditional": accepted is None, "evidence": evidence}
+
+
+def completed_payment(text, segments=()):
+    evidence = []
+    for unit in sentence_evidence(text, segments):
+        s = normalize(unit["text"])
+        if "?" in s or "¿" in s:
+            continue
+        pattern = re.search(
+            r"\b(?:ya pague|yo pague|lo pague|pague (?:ayer|hoy)|ya (?:hice|realice) (?:mi |el |un )?pago|"
+            r"(?:hice|realice) (?:mi|el|un) pago|lo realice|lo hice|depositamos|fui a realizar mi pago|"
+            r"ya (?:mande|envie) (?:el |mi )?comprobante|ya se pago|tengo registrado (?:un )?reporte de pago)\b", s)
+        if (pattern or re.search(r"\bpagué\b", unit["text"], re.I)) and not re.search(
+                r"\b(?:no|aun no|todavia no)\s+(?:he |lo )?(?:pague|hice|realice|depositamos)\b", s):
+            if unit["speaker_role"] != "GESTOR" or "tengo registrado" in s:
+                evidence.append(unit)
+    return {"confirmed": bool(evidence), "evidence": evidence}
+
+
 KIN = r"(?:espos[oa]|marido|mujer|pareja|herman[oa]|hij[oa]|mama|madre|papa|padre|sobrin[oa]|prim[oa]|ti[oa]|abuel[oa]|cunad[oa])"
 FAMILY = re.compile(rf"\b(?:(?:soy|era) (?:su |un |una )?familiar|soy su {KIN}|(?:es|era) mi {KIN}|(?:es|era) (?:espos[oa]|pareja) de mi {KIN})\b")
 ACCEPTANCE = re.compile(
@@ -139,13 +270,13 @@ def agent_statement(text, segments, pattern):
 def payment_places(text, segments, catalog):
     """Lugares ofrecidos para pagar, sin duplicar marcas anidadas ni negadas."""
     found = {}
-    for unit in evidence_units(text, segments):
+    for unit in sentence_evidence(text, segments):
         if unit["speaker_role"] in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:
             continue
         s = normalize(unit["text"])
         # La tienda de origen de la tarjeta no es una instrucción de pago.
-        if not re.search(r"\b(?:puede pagar|podra pagar|puede realizar|realizar (?:su |el )?pago|"
-                         r"pague|pagar en|pago en|pago de servicio|deposite|depositar en|"
+        if not re.search(r"\b(?:puede pagar(?:lo|los)?|podra pagar(?:lo|los)?|puede realizar|realizar (?:su |el )?pago|"
+                         r"pague|pagar(?:lo|los)? en|pago en|pago de servicio|deposite|depositar en|"
                          r"lugares de pago|opciones de pago|convenio (?:numero )?\d)\b", s):
             continue
         matches = []

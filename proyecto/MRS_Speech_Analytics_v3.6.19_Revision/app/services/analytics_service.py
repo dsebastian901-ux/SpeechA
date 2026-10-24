@@ -17,7 +17,8 @@ from typing import Dict, List, Optional
 
 from app.models.analytics_model import AnalyticsModel
 from app.models.transcriptions import TranscriptionModel
-from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement
+from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment
+from app.services.payment_instruction_validation import wrong_bank_instructions
 
 
 class AnalyticsService:
@@ -91,6 +92,8 @@ class AnalyticsService:
             reasons.append("Confrontación sin hablante confirmado; requiere revisión")
         if treatment.get("hostile_interlocutor_review_required"):
             reasons.append("Hostilidad del interlocutor requiere validación")
+        if (metadata.get("call_end_validation") or {}).get("review_required"):
+            reasons.append("Silencio o finalización sin responsable confirmado; revisar audio")
         if duration_seconds is not None and float(duration_seconds) < 60:
             reasons.append("Duración inferior a 60 segundos")
         duration = metadata.get("duration_validation") or {}
@@ -461,6 +464,7 @@ class AnalyticsService:
         analysis.metadata["quality_contact_type"] = compliance.get(
             "contact_type", "CONTACTO NO DETERMINADO"
         )
+        analysis.metadata["contact_validation"] = compliance.get("contact_validation", {})
         analysis.metadata["quality_blocks"] = compliance.get("blocks", {})
         analysis.metadata["quality_checks"] = compliance.get("checks", {})
         analysis.metadata["operational_context"] = compliance.get(
@@ -1106,11 +1110,13 @@ class AnalyticsService:
         spouse = any(re.search(r"\b(?:espos[oa]|marido|mujer)\b", e["phrase"])
                      for e in recado_assessment["family"])
         third_party = recipient_statement(text, segments,
-            r"\bsoy (?:su )?(?:companero|companera|vecino|vecina|amigo|amiga|conocido|conocida|encargado de la casa|encargada de la casa)\b")
+            r"\b(?:soy (?:su )?(?:companero|companera|vecino|vecina|amigo|amiga|conocido|conocida|encargado de la casa|encargada de la casa)|es nuestro proveedor|lo conoci en una fiesta)\b")
         work_contact = recipient_statement(text, segments,
             r"\b(?:soy (?:su )?compan(er[oa]) de trabajo|(?:es|era) mi (?:trabajador|trabajadora|empleado|empleada)|trabaja (?:conmigo|para mi))\b")
         titular = recipient_statement(text, segments,
             r"\b(?:soy yo|(?:si )?soy (?:el |la )?titular|habla (?:el |la )titular)\b")
+        contact_confirmation = holder_confirmation(text, segments)
+        titular = titular or contact_confirmation["confirmed"]
 
         if unknown_debtor:
             contact_type = "NO CONOCEN A DEUDOR"
@@ -1178,7 +1184,7 @@ class AnalyticsService:
         # cuenta cuando está ligado a uno de estos contextos; no se acepta MR
         # aislado en cualquier parte de la conversación.
         mrs_context_pattern = (
-            r"(?:corporativo(?:\s+juridico)?|despacho|juridico|consultores?|consultoria|"
+            r"(?:corporativo(?:\s+juridico)?|despacho|juridico|consultor(?:es)?|consultoria|"
             r"le\s+habl(?:o|amos)|habl(?:o|amos)|le\s+llam(?:o|amos)|llam(?:o|amos)|"
             r"somos|por\s+parte\s+de)"
         )
@@ -1193,12 +1199,15 @@ class AnalyticsService:
                 mrs_initialism_text,
             )
         )
+        mrs_smr_context_variant = bool(re.search(
+            r"\b(?:consultor(?:es)?|despacho|juridico|corporativo)\s+(?:de\s+)?smr\b",
+            mrs_initialism_text))
 
         # Formas explícitas completas también son válidas. Para MR simple se
         # exige el contexto anterior.
         identifies_mrs_explicit = mrs_known_variant
-        identifies_mrs_asr = mrs_known_variant or mrs_mr_context_variant
-        identifies_mrs = bool(identifies_mrs_explicit or mrs_mr_context_variant)
+        identifies_mrs_asr = mrs_known_variant or mrs_mr_context_variant or mrs_smr_context_variant
+        identifies_mrs = bool(identifies_mrs_explicit or mrs_mr_context_variant or mrs_smr_context_variant)
         mrs_asr_variant = mrs_known_variant
         mrs_presentation_context = bool(re.search(mrs_context_pattern, mrs_initialism_text))
 
@@ -1521,6 +1530,7 @@ class AnalyticsService:
             liquidation_offer_pattern.search(norm(unit["text"]))
             and unit["speaker_role"] not in {"TITULAR", "TERCERO", "INTERLOCUTOR"}
             and not re.search(r"\b(?:me dijeron|me habian dicho|segun yo|yo pague|yo quiero|crei|pense)\b", norm(unit["text"]))
+            and not re.search(r"\bno\s+(?:puede|podra|debe|debera|liquida|liquidaria)\b", norm(unit["text"]))
             for unit in evidence_units(text, context.get("_segments") or []))
         liquidation_words = agent_liquidation_offer
         liquidation_attribution = (
@@ -1710,8 +1720,12 @@ class AnalyticsService:
         prior_cue_in_promise = bool(re.search(
             r"\b(?:ya\s+(?:pague|page|hice|realice)|pague\s+(?:ayer|hoy)|(?:lo|el\s+pago)\s+hizo\s+el\s+dia|(?:realizo|hizo)\s+el\s+pago\s+el\s+dia|ya\s+se\s+(?:hizo|pago)|pago\s+(?:realizado|efectuado))\b",
             norm(promise_date_evidence)))
+        commitment_confirmation = payment_commitment(text, segments)
+        completed_payment_confirmation = completed_payment(text, segments)
+        payment_already_made = completed_payment_confirmation["confirmed"]
         explicit_new_promise = bool(
             promise_date and promise_date_evidence and (promise_is_future or not prior_cue_in_promise)
+            and commitment_confirmation["accepted"]
         )
         payment_confirmation_case = bool(payment_already_made and not explicit_new_promise)
         # Solo se elimina la fecha cuando la llamada es exclusivamente confirmación
@@ -1747,19 +1761,7 @@ class AnalyticsService:
         if promise_date is not None and not payment_confirmation_case:
             confirms_payment_date = True
 
-        confirms_commitment = any_of([
-            "confirmo su compromiso",
-            "confirmamos su pago",
-            "entonces queda su pago",
-            "queda su pago para",
-            "acuerdo de pago",
-            "convenio",
-            "queda para",
-            "quedamos para",
-            "esta bien",
-            "está bien",
-            "de acuerdo",
-        ])
+        confirms_commitment = bool(commitment_confirmation["accepted"])
 
         regularization_wording = any_of([
             "se pone al corriente",
@@ -2073,7 +2075,7 @@ class AnalyticsService:
         if explicit_agent_hangup:
             call_end_result = "CUELGA GESTOR - GRAVE"
         elif abandonment_review:
-            call_end_result = "SILENCIO/ABANDONO - GRAVE PARA REVISION"
+            call_end_result = "SILENCIO FINAL - RESPONSABLE NO DETERMINADO"
         elif explicit_holder_hangup:
             call_end_result = "CUELGA TITULAR - PASA"
         elif explicit_farewell:
@@ -2145,6 +2147,7 @@ class AnalyticsService:
             "explicit_agent_hangup": explicit_agent_hangup,
             "explicit_holder_hangup": explicit_holder_hangup,
             "abandonment_review": abandonment_review,
+            "review_required": abandonment_review,
         }
 
         # ---------------------------------------------------------
@@ -2193,7 +2196,7 @@ class AnalyticsService:
 
         authorized_payment_places = {
             "FARMACIAS DEL AHORRO": ["farmacias del ahorro", "farmacia del ahorro"],
-            "7-ELEVEN": ["7 eleven", "seven eleven"],
+            "7-ELEVEN": ["7 eleven", "seven eleven", "7-11", "7/11", "7 y 11"],
             "CHEDRAUI": ["chedraui"],
             "WOOLWORTH": ["woolworth"],
             "TIENDAS DEL SOL": ["tiendas del sol", "tienda del sol", "del sol"],
@@ -2280,30 +2283,12 @@ class AnalyticsService:
             bank: any(norm(v) in normalized for v in variants)
             for bank, variants in bank_variants.items()
         }
-        account_wording = any_of([
-            "a esa cuenta", "esa cuenta", "a la cuenta", "numero de cuenta",
-            "número de cuenta", "cuenta bancaria", "depositar a", "abonar a esa cuenta",
-            "directamente a esa cuenta",
-        ])
-        # Captura secuencias largas de dígitos aun cuando Whisper inserte comas/espacios.
-        digit_groups = re.findall(r"(?:\d[\s,.-]*){7,18}", text or "")
-        spoken_numbers = [re.sub(r"\D", "", g) for g in digit_groups]
-        spoken_numbers = [n for n in spoken_numbers if len(n) >= 7]
-        wrong_bank_data = []
-        for bank, mentioned in bank_mentioned.items():
-            if not mentioned:
-                continue
-            required = bank_authorized_tokens[bank]
-            has_required = required in digits_only
-            if payment_instruction_context and account_wording and spoken_numbers and not has_required:
-                wrong_bank_data.append({
-                    "bank": bank,
-                    "expected_convenio": required,
-                    "numbers_detected": spoken_numbers[:5],
-                })
-                unauthorized_payment_evidence.append(
-                    f"{bank}: se indicó una cuenta/numeración para pago sin el convenio autorizado {required}"
-                )
+        wrong_bank_data = wrong_bank_instructions(
+            text, context.get("_segments") or [], bank_variants, bank_authorized_tokens,
+            "014320655030560466")
+        for entry in wrong_bank_data:
+            unauthorized_payment_evidence.append(
+                f"{entry['bank']}: instrucción explícita de pago a una cuenta/numeración no autorizada")
 
         unauthorized_payment_method = bool(
             payment_instruction_context and (unauthorized_payment_evidence or wrong_bank_data)
@@ -2487,8 +2472,8 @@ class AnalyticsService:
         if abandonment_review:
             add_penalty(
                 "PEN_ABANDONO_GESTOR", "Finalización",
-                "Silencio final prolongado con intentos de respuesta del interlocutor; grave para revisión por posible abandono del gestor.",
-                100, True, ["FIN002"],
+                "Silencio final prolongado; no confirma abandono del gestor. Revisar audio y quién dejó de responder.",
+                0, False, ["FIN002"],
             )
 
         if not identifies_mrs:
@@ -2742,16 +2727,16 @@ class AnalyticsService:
                 r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
                 r"no\s+tengo\s+fecha|lo\s+voy\s+a\s+revisar)\b", normalized
             ))
-            if agreement_evidence and confirms_commitment and not payment_confirmation_case:
+            if (agreement_evidence or promise_date is not None) and confirms_commitment and not payment_confirmation_case:
                 detected_status = "CONVENIO"
                 status_detection_confidence = "ALTA"
-            elif refusal_evidence and not agreement_evidence:
+            elif refusal_evidence and not confirms_commitment:
                 detected_status = "NEGATIVA DE PAGO"
                 status_detection_confidence = "ALTA"
-            elif no_date_evidence and not explicit_new_promise and not agreement_evidence:
+            elif (no_date_evidence or commitment_confirmation["declined"]) and not explicit_new_promise and not confirms_commitment:
                 detected_status = "NO DEFINE FECHA DE PAGO"
                 status_detection_confidence = "ALTA"
-            elif payment_confirmation_case and not agreement_evidence:
+            elif payment_confirmation_case and not confirms_commitment:
                 detected_status = "PAGO REPORTADO / ACLARACION"
                 status_detection_confidence = "MEDIA"
         elif detected_status:
@@ -3427,11 +3412,13 @@ class AnalyticsService:
             "promise_date": promise_date.isoformat() if promise_date else None,
             "promise_date_text": promise_date_text,
             "promise_date_evidence": promise_date_evidence,
-            "promise_date_confirmed_from_call": bool(promise_date and promise_date_evidence),
+            "promise_date_confirmed_from_call": bool(promise_date and promise_date_evidence and confirms_commitment),
+            "commitment_evidence": commitment_confirmation,
             "date_rule": None,
             "date_effect": None,
             "is_negotiation": requires_new_negotiation_validation,
             "payment_already_made": payment_already_made,
+            "completed_payment_evidence": completed_payment_confirmation,
             "prior_payment_evidence": prior_payment_evidence,
             "prior_payment_amounts": prior_payment_amounts,
             "prior_payment_total": prior_payment_total,
@@ -3670,6 +3657,7 @@ class AnalyticsService:
         # pero obligan a revisión porque la clasificación operativa es incorrecta.
         requires_review = (
             uncertain_disclosure
+            or abandonment_review
             or contact_type == "CONTACTO NO DETERMINADO"
             or missing_collection_attempt
             or not status_validation["valid"]
@@ -3819,6 +3807,7 @@ class AnalyticsService:
             "checks": checks,
             "blocks": blocks,
             "contact_type": contact_type,
+            "contact_validation": contact_confirmation,
             "detected_status": detected_status,
             "relationship": relationship,
             "observations": observations,

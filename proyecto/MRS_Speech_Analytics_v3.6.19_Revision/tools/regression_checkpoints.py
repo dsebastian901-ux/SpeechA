@@ -72,6 +72,26 @@ def invariants(row):
     return failures
 
 
+def verified_removal(rule, previous, current):
+    """Causas esperadas explícitas; una etiqueta histórica no es un oráculo."""
+    negotiation = current.get("negotiation_validation") or {}
+    payment = current.get("convenio_payment_validation") or {}
+    if rule == "payment_already_reported":
+        return bool(negotiation.get("payment_confirmation_case")
+                    and (negotiation.get("completed_payment_evidence") or {}).get("confirmed")
+                    and not (negotiation.get("commitment_evidence") or {}).get("accepted"))
+    if rule == "two_distinct_payment_places":
+        return len(set(payment.get("authorized_places_detected") or [])) >= 2 and bool(payment.get("payment_place_details"))
+    if rule == "accepted_payment_commitment":
+        return negotiation.get("commitment_confirmed") is True and (negotiation.get("commitment_evidence") or {}).get("accepted") is True
+    if rule == "callback_numbers_not_bank_account":
+        return bool((previous.get("convenio_payment_validation") or {}).get("wrong_bank_data")) and not payment.get("unauthorized_evidence") and not payment.get("wrong_bank_data")
+    if rule == "capture_instruction_not_recipient":
+        return (previous.get("quality_contact_type") == "TERCERO" and
+                current.get("quality_contact_type") != "TERCERO")
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", type=Path)
@@ -119,7 +139,14 @@ def main():
         review = reviewed.get(row["case"], {})
         if other_removed and other_removed == set(review.get("allowed_removed", [])):
             original = json.loads((args.input_dir/row["checkpoint"]).read_text(encoding="utf-8-sig"))["items"][row["index"]-1]
-            if review.get("required_text") not in original["result"]["texto"].lower() or str(m["final_result"]).startswith("APROBAD"):
+            valid = not str(m["final_result"]).startswith("APROBAD")
+            if review.get("checkpoint_sha256"):
+                valid = valid and row["source_sha256"] == review["checkpoint_sha256"]
+                rules = review.get("evidence_rules") or {}
+                valid = valid and set(rules) == other_removed and all(verified_removal(rules[p], b, m) for p in other_removed)
+            else:
+                valid = valid and review.get("required_text") in original["result"]["texto"].lower()
+            if not valid:
                 penalty_changes.append({"case": row["case"], "removed": removed, "issue": "Revisión documental no coincide con evidencia o resultado"})
         elif other_removed:
             penalty_changes.append({"case": row["case"], "removed": removed})

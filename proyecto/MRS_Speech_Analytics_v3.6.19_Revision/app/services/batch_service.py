@@ -893,7 +893,7 @@ class BatchService:
                 if isinstance(analytics_data, dict):
                     analytics_data.setdefault("metadata", {})["final_result"] = analytics_metadata["final_result"]
                 if manual_reasons:
-                    classification["motivo"] = " | ".join(dict.fromkeys(manual_reasons))
+                    classification["motivo"] = " | ".join(dict.fromkeys(part.strip() for reason in manual_reasons for part in str(reason).split("|") if part.strip()))
 
                 item["analytics"] = analytics_data
                 item["analytics_metadata"] = analytics_metadata

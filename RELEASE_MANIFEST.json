@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r08-candidate",
+  "revision": "3.6.19-r09-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 97,
@@ -18,12 +18,24 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 157,
+    "passed": 181,
     "failed": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Explicit holder is not a family recipient merely for mentioning own relatives",
-  "publication_note": "Real card reference masked in documentation; private migration archive and audit data remain outside Git."
+  "additional_fix": "Natural identity confirmations, unconfirmed silence, negated liquidation, local bank instructions, sentence-aware payment offers and checkpoint-only reanalysis.",
+  "publication_note": "Real card reference masked in documentation; private migration archive and audit data remain outside Git.",
+  "reported_batch": {
+    "evaluations": 36,
+    "reproduced_original_results": 36,
+    "before": {
+      "REVISAR": 32,
+      "FALLA_GRAVE": 4
+    },
+    "after": {
+      "REVISAR": 36
+    },
+    "human_validation_complete": false
+  }
 }
