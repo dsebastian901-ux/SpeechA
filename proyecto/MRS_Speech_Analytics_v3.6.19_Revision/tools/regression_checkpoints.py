@@ -102,6 +102,20 @@ def verified_removal(rule, previous, current):
                     and not payment.get("wrong_bank_data"))
     if rule == "callback_numbers_not_bank_account":
         return bool((previous.get("convenio_payment_validation") or {}).get("wrong_bank_data")) and not payment.get("unauthorized_evidence") and not payment.get("wrong_bank_data")
+    if rule == "contact_number_not_payment_date":
+        old = previous.get("negotiation_validation") or {}
+        evidence = old.get("promise_date_evidence") or ""
+        try:
+            old_date = date.fromisoformat(old["promise_date"])
+            call_date = date.fromisoformat(str(old["call_date"]).split()[0])
+        except (KeyError, TypeError, ValueError):
+            return False
+        return bool(re.search(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", evidence)
+                    and re.search(r"comprobante|whatsapp|numero", evidence)
+                    and old_date.year > call_date.year+2
+                    and negotiation.get("promise_date") != old.get("promise_date")
+                    and not negotiation.get("commitment_confirmed")
+                    and current.get("final_result") == "REVISAR")
     if rule == "capture_instruction_not_recipient":
         return (previous.get("quality_contact_type") == "TERCERO" and
                 current.get("quality_contact_type") != "TERCERO")

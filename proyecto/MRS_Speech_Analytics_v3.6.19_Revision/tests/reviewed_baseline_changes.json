@@ -578,5 +578,44 @@
       "PEN_CONV_LUGARES": "payment_already_reported"
     },
     "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):011",
+    "allowed_removed": [
+      "PEN005"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN005": "contact_number_not_payment_date"
+    },
+    "reason": "La fecha 2077 deriva de fragmentos de teléfono para comprobantes, no de una promesa. La llamada conserva revisión y no confirma convenio."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):047",
+    "allowed_removed": [
+      "PEN005"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN005": "contact_number_not_payment_date"
+    },
+    "reason": "Dictado y rectificación de teléfono para WhatsApp no son fecha de pago. Se conserva revisión por compromiso e identidad no confirmados."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):074",
+    "allowed_removed": [
+      "PEN005",
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_WHATSAPP"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN005": "payment_already_reported",
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_WHATSAPP": "payment_already_reported"
+    },
+    "reason": "Declaración explícita ya le di un abono el viernes y otro ayer y petición de comprobantes: pagos anteriores sin compromiso nuevo. No se evalúa viernes como promesa futura ni se exige nuevo convenio; conserva revisión."
   }
 ]

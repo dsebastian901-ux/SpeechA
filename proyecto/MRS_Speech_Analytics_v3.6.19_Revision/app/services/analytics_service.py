@@ -19,8 +19,9 @@ from app.models.analytics_model import AnalyticsModel
 from app.models.transcriptions import TranscriptionModel
 from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment
 from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion
-from app.services.installment_validation import installment_plan
+from app.services.installment_validation import installment_plan, installment_dates
 from app.services.asr_amount_recovery import validated_entries
+from app.services.mora_payment_policy import payment_policy, two_installment_window, LIQUIDATION_MORAS
 
 
 class AnalyticsService:
@@ -39,7 +40,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r14"
+    ENGINE_REVISION = "3.6.19-r15"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -53,7 +54,7 @@ class AnalyticsService:
         reasons = []
         recovery = metadata.get("amount_recovery_validation") or {}
         if recovery.get("review_required"):
-            reasons.append("Importe recuperado por lecturas adicionales de audio; confirmar evidencia y autorización")
+            reasons.append("Importe recuperado por lecturas adicionales de audio; conserva revisión de evidencia")
         if metadata.get("quality_contact_type") == "CONTACTO NO DETERMINADO":
             reasons.append("Interlocutor sin identificar; requiere revisión")
         critical = any(isinstance(f, dict) and f.get("invalidates") is True for f in failures)
@@ -819,6 +820,11 @@ class AnalyticsService:
         def add_candidate(match, candidate):
             if candidate is None:
                 return
+            if re.fullmatch(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", match.group()):
+                prefix = normalized[max(0, match.start()-65):match.start()]
+                if not re.search(r"\b(?:el|pago|pagar|depositar|fecha|promesa|para|dia)\s+"
+                                 r"(?:(?:es|sera|el|para|dia|de|pago)\s+){0,5}$", prefix):
+                    return  # Fragmentos de teléfono no son fechas de promesa.
             left = max(0, match.start() - 100)
             right = min(len(normalized), match.end() + 100)
             context = normalized[left:right]
@@ -956,7 +962,7 @@ class AnalyticsService:
         return cls._extract_payment_promise_date(text, call_date_value, _details=True) or {
             "date": None, "text": "", "evidence": ""}
 
-    # v3.6.14 · Tabla oficial 04_Moras_Cortes del Manual Operativo v2.1.
+    # Tabla 04_Moras_Cortes contrastada con el manual operativo recibido (portada 2.0).
     # Bradescard conserva Asignación y Vencimiento; solo se deriva Fecha de Pago.
     CUT_PAYMENT_DAY = {3: 26, 5: 28, 8: 1, 10: 3, 11: 4, 15: 8, 19: 12, 20: 13, 23: 16, 25: 18, 28: 21}
 
@@ -985,10 +991,8 @@ class AnalyticsService:
             return cut, None
         from calendar import monthrange
         year, month = base.year, base.month
-        if day < cut:
-            month += 1
-            if month == 13:
-                month, year = 1, year + 1
+        # La tabla da el día de pago del periodo gestionado. No desplazarlo
+        # automáticamente al mes siguiente por ser menor al número de corte.
         try:
             return cut, date(year, month, min(day, monthrange(year, month)[1]))
         except Exception:
@@ -1106,6 +1110,9 @@ class AnalyticsService:
             "A": "A",
         }
         mora = mora_aliases.get(assignment_norm, assignment)
+        mora_policy = payment_policy(mora, parsed_call_date, parsed_due_date)
+        if not mora_policy["uses_cut"] and mora in LIQUIDATION_MORAS:
+            cut_applied, calculated_payment_date, parsed_limit_date = None, None, None
 
         # ---------------------------------------------------------
         # DETECCIÓN DE INTERLOCUTOR / ESTATUS
@@ -1915,10 +1922,7 @@ class AnalyticsService:
         # Si la misma llamada presenta el pago como liquidación y también
         # como simple puesta al corriente/regularización, se manda a revisión
         # sin inventar una penalización que no exista en el Manual.
-        high_mora_liquidation = mora in {
-            "3HN", "4PV", "5PV", "6PV",
-            "C1", "C2", "C3", "C4", "B", "A",
-        }
+        high_mora_liquidation = mora in LIQUIDATION_MORAS
         liquidation_effect_asr_variant = bool(
             re.search(
                 r"\b(?:"
@@ -2657,7 +2661,8 @@ class AnalyticsService:
         # intento real de negociación, salvo reporte de pago ya realizado que
         # cubra el mínimo (o cuyo monto no pueda determinarse con seguridad).
         negotiation_attempt = bool(
-            (promise_date_evidence and not payment_confirmation_case)
+            explicit_settlement_offer
+            or (promise_date_evidence and not payment_confirmation_case)
             or re.search(r"\b(?:cuanto\s+puede\s+pagar|que\s+cantidad\s+puede|"
                          r"que\s+dia\s+puede\s+pagar|cuando\s+puede\s+pagar|"
                          r"propuesta\s+de\s+pago|opcion\s+de\s+pago|convenio|"
@@ -3432,6 +3437,8 @@ class AnalyticsService:
             multi_payment_detected and multi_payment_total is not None
             and total_expected is not None
             and (total_liquidation_wording or liquidation_words)
+            and not (mora in LIQUIDATION_MORAS and minimum_expected is not None
+                     and minimum_expected <= multi_payment_total <= total_expected)
             and abs(multi_payment_total - total_expected) > 0.01
         )
         if multi_payment_detected and multi_payment_total is not None:
@@ -3485,6 +3492,11 @@ class AnalyticsService:
             amount_validation = "INVALIDA - MONTO EXCEDE SALDO TOTAL"
             amount_reason = f"Monto negociado {detected_claim_amount:g} excede el saldo total {total_expected:g}."
             amount_invalid = True
+        elif (mora in LIQUIDATION_MORAS and total_liquidation_wording and detected_claim_amount is not None
+              and (minimum_expected is None or total_expected is None)):
+            amount_validation = "REVISAR - REFERENCIA FINANCIERA INCOMPLETA"
+            amount_reason = "Para cotejar la liquidación por mora se requieren pago_minimo y saldo_total de origen."
+            amount_review = True
         elif detected_claim_amount is not None and minimum_expected is not None and detected_claim_amount + 0.009 < minimum_expected:
             if explicit_partial_exception and not positive_effect_for_partial:
                 amount_validation = "VALIDA - PAGO PARCIAL EXPLICITO"
@@ -3503,10 +3515,17 @@ class AnalyticsService:
                     amount_reason = f"Monto negociado {detected_claim_amount:g} menor al pago mínimo requerido {minimum_expected:g}. Solo se permite si se identifica y explica expresamente como pago parcial sin regularizar ni liquidar."
                     amount_invalid = True
         elif detected_claim_amount is not None:
-            # Regla universal: toda negociación no parcial debe quedar dentro del rango
-            # [pago mínimo, saldo total]. La liquidación total además debe cubrir el total,
-            # salvo descuento autorizado verificable.
-            if total_liquidation_wording and total_expected is not None and detected_claim_amount + 0.009 < total_expected:
+            # El usuario aclara que pago_minimo es la referencia para liquidar
+            # en 3HN–A; no exigir el saldo total ni otro dato de autorización.
+            if mora in LIQUIDATION_MORAS and minimum_expected is not None and total_expected is not None:
+                amount_validation = "VALIDA - MINIMO DE LIQUIDACION SEGUN MORA"
+                amount_reason = (f"En {mora}, pago_minimo de Excel ({minimum_expected:g}) es la referencia de liquidación; "
+                                 f"la oferta de {detected_claim_amount:g} cubre el mínimo sin exceder el saldo total.")
+            elif total_liquidation_wording and mora_policy["mode"] == "MORA_NO_CONFIGURADA":
+                amount_validation = "REVISAR - MORA SIN POLITICA DE LIQUIDACION"
+                amount_reason = "No se conoce la mora para determinar si el mínimo permite liquidar o solo cubrir mensualidad vencida."
+                amount_review = True
+            elif total_liquidation_wording and total_expected is not None and detected_claim_amount + 0.009 < total_expected:
                 discount_wording = any_of(["descuento", "bonificacion", "bonificación", "quita"])
                 if discount_wording:
                     amount_validation = "REVISAR - DESCUENTO NO VERIFICABLE"
@@ -3550,7 +3569,23 @@ class AnalyticsService:
             amount_validation = "REVISAR - IMPORTE DEL DESCUENTO NO CONFIRMADO"
             amount_reason = "Se ofrece un descuento, pero no se confirmó un importe atribuible a esa propuesta."
 
+        schedule_dates = installment_dates(source_norm, lambda fragment:
+            cls._extract_payment_promise_date_details(fragment, call_date)) if plan["amounts"] and not payment_confirmation_case else []
+        if len(schedule_dates) >= 2:
+            last_installment = max(schedule_dates, key=lambda item: item["date"])
+            promise_date = date.fromisoformat(last_installment["date"])
+            promise_date_text = last_installment["text"]
+            promise_date_evidence = last_installment["evidence"]
+        installment_window = (two_installment_window(schedule_dates, parsed_call_date, parsed_due_date,
+                              second_anchor="FIRST_PAYMENT") if mora_policy["uses_cut"]
+                              else {"applies": False, "valid": False, "reasons": []})
+        if installment_window.get("first_payment_valid"):
+            mora_policy["window_end"] = installment_window["second_window_end"]
+            mora_policy["installment_exception_source"] = "Usuario: primero dentro de tres días; segundo hasta siete días desde el primero, sin exceder vencimiento"
         negotiation_validation = {
+            "mora_payment_policy": mora_policy,
+            "installment_dates": schedule_dates,
+            "installment_window": installment_window,
             "assignment": mora,
             "assignment_date": assignment_date,
             "limit_date": limit_date,
@@ -3693,6 +3728,15 @@ class AnalyticsService:
                 "recuperación o nuevo uso del crédito; requiere revisión."
             )
 
+        if (mora in LIQUIDATION_MORAS and not payment_confirmation_case
+                and agent_statement(text, segments,
+                    r"\b(?:se pone al corriente|queda al corriente|regulariza su cuenta|"
+                    r"cubre (?:la |una |solo la )?mensualidad vencida)\b")):
+            negotiation_validation["valid"] = False
+            negotiation_validation["review_required"] = True
+            negotiation_validation["reasons"].append(
+                f"En {mora} el mínimo corresponde a liquidación; se describe un efecto de regularización o mensualidad vencida.")
+
         # ---------------------------------------------------------
         # RF001-RF014 · REGLAS DE FECHAS DEL MANUAL OPERATIVO
         # ---------------------------------------------------------
@@ -3716,6 +3760,40 @@ class AnalyticsService:
         rf_id = rf_by_mora.get(mora)
         negotiation_validation["date_rule"] = rf_id
 
+        if requires_new_negotiation_validation and confirms_commitment and mora_policy["mode"] != "MORA_NO_CONFIGURADA":
+            if not parsed_call_date or not promise_date:
+                negotiation_validation["valid"] = False
+                negotiation_validation["reasons"].append("Faltan fecha de llamada o promesa interpretable para validar el plazo por mora.")
+            if not parsed_due_date:
+                negotiation_validation["valid"] = False
+                negotiation_validation["reasons"].append("Falta el vencimiento de origen para validar la negociación.")
+            if mora_policy["uses_cut"] and parsed_limit_date is None:
+                negotiation_validation["valid"] = False
+                negotiation_validation["reasons"].append("Falta corte válido para determinar el efecto de regularización o mensualidad vencida.")
+
+        if requires_new_negotiation_validation and confirms_commitment and promise_date:
+            window_end = cls._parse_context_date(mora_policy["window_end"])
+            if parsed_call_date and promise_date < parsed_call_date:
+                negotiation_validation["valid"] = False
+                negotiation_validation["reasons"].append("La fecha de una nueva promesa es anterior a la llamada.")
+            if mora_policy["mode"] == "MES_DE_LLAMADA":
+                if not parsed_call_date or not window_end:
+                    negotiation_validation["valid"] = False
+                    negotiation_validation["reasons"].append("Falta la fecha de llamada para validar el mes de liquidación.")
+                elif promise_date.year != parsed_call_date.year or promise_date.month != parsed_call_date.month:
+                    negotiation_validation["valid"] = False
+                    negotiation_validation["reasons"].append(
+                        f"Liquidación {mora}: la promesa {promise_date.isoformat()} queda fuera del mes de la llamada; "
+                        f"el vencimiento posterior no amplía el plazo {window_end.isoformat()}.")
+            elif mora_policy["mode"] == "CORTE_Y_VENCIMIENTO":
+                if installment_window["applies"]:
+                    if not installment_window["valid"]:
+                        negotiation_validation["valid"] = False
+                        negotiation_validation["reasons"].extend(installment_window["reasons"])
+                elif parsed_call_date and promise_date > parsed_call_date+timedelta(days=3):
+                    negotiation_validation["valid"] = False
+                    negotiation_validation["reasons"].append("RN004: la promesa excede los tres días posteriores a la llamada.")
+
         if requires_new_negotiation_validation and promise_date and parsed_due_date:
             if promise_date > parsed_due_date:
                 negotiation_validation["valid"] = False
@@ -3728,14 +3806,11 @@ class AnalyticsService:
                 )
                 negotiation_validation["reasons"].append(reason)
 
-                add_penalty(
-                    "PEN005",
-                    "Fechas",
-                    reason,
-                    100,
-                    True,
-                    [rf_id] if rf_id else [],
-                )
+                if not confirms_commitment or plan["review_required"]:
+                    negotiation_validation["reasons"].append("Confirmar aceptación del plan y sus fechas antes de atribuir falta grave.")
+                else:
+                    add_penalty(
+                        "PEN005", "Fechas", reason, 100, True, [rf_id] if rf_id else [])
 
             elif mora in {"1PV", "2PV", "3PV"}:
                 if parsed_limit_date and promise_date <= parsed_limit_date:
@@ -3762,26 +3837,15 @@ class AnalyticsService:
                         )
 
             elif mora == "1FLP":
-                if parsed_limit_date and promise_date > parsed_limit_date:
-                    negotiation_validation["date_effect"] = "CUBRE MENSUALIDAD VENCIDA"
-                else:
-                    negotiation_validation["date_effect"] = "N/A"
+                negotiation_validation["date_effect"] = "CUBRE MENSUALIDAD VENCIDA"
 
             elif mora in {
                 "3HN", "4PV", "5PV", "6PV",
                 "C1", "C2", "C3", "C4", "B", "A",
             }:
-                # RF005-RF014:
-                # <= fecha límite = N/A
-                # > fecha límite y <= vencimiento = LIQUIDACION VALIDA
-                if parsed_limit_date:
-                    if promise_date <= parsed_limit_date:
-                        negotiation_validation["date_effect"] = "N/A"
-                    else:
-                        negotiation_validation["date_effect"] = "LIQUIDACION VALIDA"
-                else:
-                    # Sin fecha límite no se inventa el efecto de la regla.
-                    negotiation_validation["date_effect"] = "FECHA LIMITE NO DISPONIBLE"
+                negotiation_validation["date_effect"] = (
+                    "LIQUIDACION DENTRO DEL MES" if parsed_call_date and promise_date.year == parsed_call_date.year
+                    and promise_date.month == parsed_call_date.month else "LIQUIDACION FUERA DEL MES")
 
         elif payment_confirmation_case and rf_id:
             # Pago ya realizado: no existe promesa futura que evaluar por RF.

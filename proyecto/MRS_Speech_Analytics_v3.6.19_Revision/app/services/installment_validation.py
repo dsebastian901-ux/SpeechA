@@ -2,6 +2,28 @@
 import re
 
 
+def installment_dates(source, parse_date):
+    """Última fecha propuesta para cada parcialidad, separada de recordatorios."""
+    matches = list(re.finditer(r"\b(primer(?: pago)?|segundo(?: pago)?|tercer(?: pago)?|pago mas)\b", source))
+    dates = {}
+    for index, match in enumerate(matches):
+        ordinal = 1 if match[1].startswith("primer") else 3 if match[1].startswith("tercer") else 2
+        left = match.start()
+        if ordinal == 1 and re.search(r"\bcomo\s*$", source[max(0,left-8):left]):
+            breaks = list(re.finditer(r"[.!?](?:\s|$)", source[:left]))
+            left = breaks[-1].end() if breaks else 0
+        right = min(len(source), match.end()+180, matches[index+1].start() if index+1 < len(matches) else len(source))
+        stop = re.search(r"[.!?](?:\s|$)", source[match.end():right])
+        if stop:
+            right = match.end()+stop.start()
+        evidence = source[left:right]
+        parsed = parse_date(evidence)
+        if parsed.get("date"):
+            dates[ordinal] = {"installment": ordinal, "date": parsed["date"].isoformat(),
+                              "text": parsed["text"], "evidence": evidence}
+    return [dates[k] for k in sorted(dates)]
+
+
 def installment_plan(source, mentions):
     counts = []
     for match in re.finditer(r"\b(dos|tres|2|3) pagos (?:por|de)\s+", source):

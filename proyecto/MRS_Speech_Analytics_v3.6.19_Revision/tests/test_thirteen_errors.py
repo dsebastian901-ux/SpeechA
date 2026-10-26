@@ -132,7 +132,7 @@ def test_e10_e11_exception_does_not_override_other_blockers(blocker):
 
 
 NEGOTIATION = {"estatus_grabacion": "CONVENIO", "fecha": "2026-10-20", "vencimiento": "2026-10-25",
-               "asignacion": "1PV", "pago_minimo": "500", "saldo_total": "2000", "corte": "17"}
+               "asignacion": "1PV", "pago_minimo": "500", "saldo_total": "2000", "corte": "3"}
 
 
 def test_e12_valid_negotiation_retains_amount_date_and_places():

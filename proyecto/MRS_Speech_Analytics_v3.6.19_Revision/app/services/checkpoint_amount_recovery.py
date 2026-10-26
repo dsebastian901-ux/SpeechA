@@ -8,6 +8,7 @@ import tempfile
 from app.services.asr_amount_recovery import missing_proposals
 from app.services.checkpoint_reanalysis import reanalyze_checkpoint
 from app.services.whisper_service import WhisperService
+from app.services.analytics_service import AnalyticsService
 
 
 def recover_checkpoint_amounts(checkpoint_path, audio_directory=None, output_directory=None, whisper_service=None):
@@ -17,7 +18,7 @@ def recover_checkpoint_amounts(checkpoint_path, audio_directory=None, output_dir
     if not isinstance(payload, dict) or not payload.get("items"):
         raise ValueError("El checkpoint no contiene llamadas.")
     target = (Path(output_directory).expanduser().resolve() if output_directory else
-              Path(tempfile.mkdtemp(prefix="Recuperacion_MRS_r14_", dir=source.parent)))
+              Path(tempfile.mkdtemp(prefix="Recuperacion_MRS_" + AnalyticsService.ENGINE_REVISION.rsplit("-", 1)[-1] + "_", dir=source.parent)))
     if target.exists() and any(target.iterdir()):
         raise ValueError("Seleccione una carpeta de salida nueva y vacía.")
     target.mkdir(parents=True, exist_ok=True)

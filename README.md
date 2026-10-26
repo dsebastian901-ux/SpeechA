@@ -1,11 +1,11 @@
-# MRS Speech Analytics · revisión 14 — recuperación de importes omitidos
+# MRS Speech Analytics · revisión 15 — importes y plazos según la mora
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_14_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_15_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
@@ -17,17 +17,30 @@ dependencias originales se conservan. La primera transcripción de audio nuevo
 necesita descargar el modelo de Whisper desde Hugging Face.
 
 Para probar las reglas nuevas sobre textos guardados, ejecute
-`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r14` y crear una
-carpeta `Reanalisis_MRS_r14_...`. Este paso no vuelve a transcribir audios.
+`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r15` y crear una
+carpeta `Reanalisis_MRS_r15_...`. Este paso no vuelve a transcribir audios.
+Si ya recuperó importes, seleccione el checkpoint final de esa recuperación;
+así se conserva la evidencia sin volver a ejecutar Whisper.
 
 Para recuperar un importe omitido, ejecute `RECUPERAR_IMPORTES.bat`, seleccione
 el checkpoint y la carpeta de sus audios originales. Se releen únicamente
 ventanas de ofertas incompletas; se conservan los textos originales y se genera
-un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r14_.../resultados`.
+un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r15_.../resultados`.
 La evidencia aparece en las columnas finales de recuperación. Un importe
-recuperado por ASR requiere revisión y no acredita autorización de descuentos.
+recuperado por ASR conserva revisión de evidencia. El efecto del mínimo se valida
+por mora: regularización/mensualidad o liquidación. En las moras de liquidación,
+el mínimo del Excel es la referencia; no se exige el saldo total ni una columna
+adicional de autorización por la diferencia entre mínimo y saldo.
 Este control también se aplica al procesar audios nuevos. Se usa el mismo modelo
 configurado, sin instalar otro Whisper ni actualizar Python.
+
+La revisión 15 contrasta las hojas 04, 05, 06, 13 y 14 del manual recibido.
+Por aclaración expresa del usuario, 3HN, 4PV–6PV, C1–C4, B y A se liquidan
+durante el mes de la llamada: un vencimiento posterior no prolonga ese plazo.
+En 1PV–3PV y 1-FLP se conservan corte y vencimiento. En dos exhibiciones, la
+primera queda dentro de tres días de la llamada y la segunda hasta siete días
+desde la primera, sin exceder el vencimiento. Sin esa excepción, rige el plazo
+general de tres días. La excepción no prolonga el mes permitido para liquidación.
 
 Para reproducir las pruebas en esa carpeta:
 

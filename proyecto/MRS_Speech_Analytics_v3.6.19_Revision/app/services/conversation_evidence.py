@@ -245,7 +245,8 @@ def completed_payment(text, segments=()):
         candidates = list(re.finditer(
             r"\b(?:ya pague|yo pague|lo pague|pague (?:ayer|hoy)|ya (?:hice|realice) (?:mi |el |un )?pago|"
             r"(?:hice|realice) (?:mi|el|un) pago|lo realice|lo hice|depositamos|fui a realizar mi pago|"
-            r"ya (?:mande|envie) (?:el |mi )?comprobante|ya se pago|tengo registrado (?:un )?reporte de pago)\b", s))
+            r"ya (?:mande|envie) (?:el |mi )?comprobante|ya (?:le )?di (?:un )?abono|"
+            r"ya se pago|tengo registrado (?:un )?reporte de pago)\b", s))
         candidates.extend(re.finditer(r"\bpagué\b", verbatim, re.I))
         # Sin tilde, «realice» puede ser subjuntivo: una instrucción para un
         # pago futuro no acredita un depósito anterior, aunque mencione recibo.

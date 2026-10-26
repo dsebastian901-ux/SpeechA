@@ -105,6 +105,9 @@ class BatchReportService:
         "Método detección estatus",
         "Recuperación importe audio",
         "Evidencia recuperación importe",
+        "Efecto pago mínimo",
+        "Política de plazo",
+        "Fecha máxima de negociación",
     ]
 
     MODE_B_HEADERS = [
@@ -177,6 +180,9 @@ class BatchReportService:
         "Método detección estatus",
         "Recuperación importe audio",
         "Evidencia recuperación importe",
+        "Efecto pago mínimo",
+        "Política de plazo",
+        "Fecha máxima de negociación",
     ]
 
 
@@ -705,6 +711,9 @@ class BatchReportService:
             "Método detección estatus": status.get("evidence_method") or "",
             "Recuperación importe audio": "REVISAR" if (metadata.get("amount_recovery_validation") or {}).get("review_required") else "",
             "Evidencia recuperación importe": negotiation.get("evidencia_monto") if (metadata.get("amount_recovery_validation") or {}).get("entries") else "",
+            "Efecto pago mínimo": (negotiation.get("mora_payment_policy") or {}).get("minimum_effect") or "",
+            "Política de plazo": (negotiation.get("mora_payment_policy") or {}).get("mode") or "",
+            "Fecha máxima de negociación": (negotiation.get("mora_payment_policy") or {}).get("window_end") or "",
         }
 
     @staticmethod

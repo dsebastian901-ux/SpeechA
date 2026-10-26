@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r14-diagnostic",
+  "revision": "3.6.19-r15-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -19,13 +19,13 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 331,
+    "passed": 403,
     "failed": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Targeted two-window ASR recovery for explicit offers with missing monetary amounts. Original transcripts retained; evidence appended to JSON and Excel; recovered amounts cannot authorize automatic approval.",
+  "additional_fix": "Manual-based minimum-payment effects by mora; liquidation within call month; two installments with first within 3 days and second within 7 days FROM FIRST PAYMENT, never beyond maturity; preserve recovery evidence and original results.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -59,19 +59,19 @@
       "APROBADO": 1
     },
     "human_validation_complete": false,
-    "comparison_base": "Revision-12 reanalysis, retaining original cached transcriptions",
+    "comparison_base": "User-returned revision-13 checkpoint, preserving all original cached results",
     "original_batch_outcomes": {
       "REVISAR": 32,
       "FALLA_GRAVE": 4
     },
     "identified_contacts_before": 26,
     "identified_contacts_after": 26,
-    "status_matches_before": 4,
+    "status_matches_before": 5,
     "status_matches_after": 5
   },
   "historical_regression_outcomes": {
-    "REVISAR": 259,
-    "FALLA_GRAVE": 5,
+    "REVISAR": 262,
+    "FALLA_GRAVE": 2,
     "APROBADO": 4
   },
   "automated_asr_verification": true,
@@ -87,7 +87,23 @@
     },
     "source_transcripts_unchanged": true,
     "human_verified_by_program": false,
-    "windows_validation": false,
-    "root_cause_of_cross_platform_asr_difference_confirmed": false
+    "windows_validation": true,
+    "root_cause_of_cross_platform_asr_difference_confirmed": false,
+    "returned_windows_outputs_verified": true,
+    "rules_r15_windows_verified": false
+  },
+  "manual_policy_review": {
+    "cover_version": "2.0",
+    "source_sha256": "3612fe16bae3e65e7f41f9132d7535cbce0f3ae4c08556074ac47662fb67d842",
+    "sheets": [
+      "04_Moras_Cortes",
+      "05_Estrategias",
+      "06_Reglas_Negociacion",
+      "13_Reglas_Fechas",
+      "14_Reglas_Montos"
+    ],
+    "user_monthly_override": "3HN, 4PV–6PV, C1–C4, B, A: within call month; later maturity does not extend month",
+    "user_installment_override": "first within 3 days from call; second within 7 days FROM FIRST PAYMENT, neither beyond maturity",
+    "scope": "Amounts and negotiation dates; not certification of all 13 issues."
   }
 }

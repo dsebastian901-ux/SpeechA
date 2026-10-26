@@ -65,7 +65,7 @@ def test_accepted_payment_does_not_require_literal_confirmo_convenio():
         "¿Podemos contemplar su pago de 600 pesos el 23 de octubre de 2026? Sí, de acuerdo. "
         "Puede pagar en Chedraui y Farmacias del Ahorro. Envíe su comprobante por WhatsApp.",
         {"estatus_grabacion": "CONVENIO", "fecha": "2026-10-20", "vencimiento": "2026-10-25",
-         "pago_minimo": "500", "saldo_total": "2000", "asignacion": "1PV"})
+         "pago_minimo": "500", "saldo_total": "2000", "asignacion": "1PV", "corte": "3"})
     assert r["status_validation"]["detected_status"] == "CONVENIO"
     assert r["status_validation"]["matches"] is True
     assert r["final_result"] == "APROBADA"

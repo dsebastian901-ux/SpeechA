@@ -77,7 +77,7 @@ def test_matching_windows_recover_an_amount_without_changing_text_or_using_excel
                            segments=SEGMENTS, metadata={"recuperacion_importes": result})
     a = A.analyze_transcription(t, CONTEXT)
     assert a.metadata["negotiation_validation"]["monto_detectado"] == 2450
-    assert a.metadata["negotiation_validation"]["validacion_monto"] == "REVISAR - DESCUENTO NO VERIFICABLE"
+    assert a.metadata["negotiation_validation"]["validacion_monto"] == "VALIDA - MINIMO DE LIQUIDACION SEGUN MORA"
     assert a.metadata["shared_classification"]["clasificacion"] == "REVISAR"
     assert t.text == TEXT
 

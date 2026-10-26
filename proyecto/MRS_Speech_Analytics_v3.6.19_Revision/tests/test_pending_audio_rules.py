@@ -20,15 +20,15 @@ def analyze_offer(offer, **context):
     "Le ofrecemos una opción para liquidar lo que ya es la cuenta por 3100 pesos con descuento.",
     "Le ofrezco un descuento para liquidar su cuenta por 3100 pesos, ¿lo acepta?",
 ])
-def test_settlement_offer_requires_discount_validation_despite_in_range_amount(offer):
+def test_settlement_offer_uses_the_mora_minimum_reference(offer):
     a = analyze_offer(offer)
     n = a.metadata["negotiation_validation"]
     assert n["total_liquidation_wording"]
     assert n["monto_detectado"] == 3100
-    assert n["validacion_monto"] == "REVISAR - DESCUENTO NO VERIFICABLE"
+    assert n["validacion_monto"] == "VALIDA - MINIMO DE LIQUIDACION SEGUN MORA"
     assert not n["commitment_confirmed"]
     assert a.metadata["status_validation"]["detected_status"] == "NO DEFINE FECHA DE PAGO"
-    assert a.metadata["shared_classification"]["clasificacion"] == "REVISAR"
+    assert a.metadata["shared_classification"]["clasificacion"] == "APROBADO"
 
 
 def test_split_whisper_windows_do_not_hide_the_settlement_offer():
@@ -38,7 +38,7 @@ def test_split_whisper_windows_do_not_hide_the_settlement_offer():
         {"text": "finiquitar la deuda, le están pidiendo 3100 pesos.", "start": 4, "end": 8}])
     n = a.metadata["negotiation_validation"]
     assert n["total_liquidation_wording"] and n["monto_detectado"] == 3100
-    assert n["validacion_monto"] == "REVISAR - DESCUENTO NO VERIFICABLE"
+    assert n["validacion_monto"] == "VALIDA - MINIMO DE LIQUIDACION SEGUN MORA"
 
 
 @pytest.mark.parametrize("offer", [
