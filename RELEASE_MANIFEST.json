@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r16-diagnostic",
+  "revision": "3.6.19-r17-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -19,13 +19,13 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 429,
+    "passed": 436,
     "failed": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Persist explicit human confirmation of recovered amounts with call/evidence binding and revocation. Compare spoken references only against numero_de_tarjeta. Separately validate and correct output-name identifiers in copies.",
+  "additional_fix": "Save checkpoint recovery, reanalysis and human validation in independent folders under the user home MRS_Resultados directory. Preflight Windows path lengths including the temporary report; preserve all amount-confirmation and classification rules from r16.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -105,6 +105,16 @@
     "user_monthly_override": "3HN, 4PV–6PV, C1–C4, B, A: within call month; later maturity does not extend month",
     "user_installment_override": "first within 3 days from call; second within 7 days FROM FIRST PAYMENT, neither beyond maturity",
     "scope": "Amounts and negotiation dates; not certification of all 13 issues."
+  },
+  "checkpoint_output_paths": {
+    "default_root": "%USERPROFILE%\\MRS_Resultados",
+    "independent_runs": true,
+    "windows_utf16_path_budget": 240,
+    "three_operations_repeated_with_deep_input_tested": true,
+    "real_three_call_input_path_characters": 310,
+    "real_three_call_report_path_characters": 146,
+    "existing_output_files_preserved": true,
+    "actual_windows_execution": false
   },
   "human_amount_review": {
     "supported": true,

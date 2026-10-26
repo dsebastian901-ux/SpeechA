@@ -4,12 +4,12 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
-import tempfile
 
 from app.services.amount_review_service import make_amount_review
 from app.services.account_source_validation import corrected_account_name, write_corrected_relation_excel
 from app.services.analytics_service import AnalyticsService
 from app.services.checkpoint_reanalysis import reanalyze_checkpoint
+from app.services.checkpoint_output import create_checkpoint_output
 
 
 def review_checkpoint(checkpoint_path, confirmations, name_corrections=(), output_directory=None, relation_excel=None):
@@ -39,11 +39,8 @@ def review_checkpoint(checkpoint_path, confirmations, name_corrections=(), outpu
                 "corrected_name": corrected}
             item["relation"]["nombre_final"] = corrected
             excel_corrections[name]={"nombre_final":corrected,"numero_de_tarjeta":relation["numero_de_tarjeta"]}
-    target = (Path(output_directory).expanduser().resolve() if output_directory else
-              Path(tempfile.mkdtemp(prefix="Validacion_MRS_"+AnalyticsService.ENGINE_REVISION.rsplit("-",1)[-1]+"_", dir=source.parent)))
-    if target.exists() and any(target.iterdir()):
-        raise ValueError("Seleccione una carpeta nueva y vacía.")
-    target.mkdir(parents=True, exist_ok=True)
+    target = create_checkpoint_output(output_directory,
+        "Validacion_MRS_" + AnalyticsService.ENGINE_REVISION.rsplit("-", 1)[-1] + "_", nested_results=True)
     excel_copy=None
     excel_source=Path(relation_excel or original.get("relation_excel") or "")
     if corrections and excel_source.is_file():

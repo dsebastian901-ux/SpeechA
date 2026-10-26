@@ -1,11 +1,11 @@
-# MRS Speech Analytics · revisión 16 — confirmación de importes y datos de salida
+# MRS Speech Analytics · revisión 17 — guardado sin acumular rutas
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_16_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_17_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
@@ -17,15 +17,15 @@ dependencias originales se conservan. La primera transcripción de audio nuevo
 necesita descargar el modelo de Whisper desde Hugging Face.
 
 Para probar las reglas nuevas sobre textos guardados, ejecute
-`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r16` y crear una
-carpeta `Reanalisis_MRS_r16_...`. Este paso no vuelve a transcribir audios.
+`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r17` y crear una
+carpeta `Reanalisis_MRS_r17_...`. Este paso no vuelve a transcribir audios.
 Si ya recuperó importes, seleccione el checkpoint final de esa recuperación;
 así se conserva la evidencia sin volver a ejecutar Whisper.
 
 Para recuperar un importe omitido, ejecute `RECUPERAR_IMPORTES.bat`, seleccione
 el checkpoint y la carpeta de sus audios originales. Se releen únicamente
 ventanas de ofertas incompletas; se conservan los textos originales y se genera
-un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r16_.../resultados`.
+un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r17_.../resultados`.
 La evidencia aparece en las columnas finales de recuperación. Un importe
 recuperado por ASR conserva revisión de evidencia. El efecto del mínimo se valida
 por mora: regularización/mensualidad o liquidación. En las moras de liquidación,
@@ -47,10 +47,18 @@ Para registrar un importe recuperado ya comprobado por una persona, ejecute
 desmarcadas. Confirme solo los importes comprobados; si el identificador de
 nombre_final difiere de numero_de_tarjeta, puede corregirlo en una copia usando
 la tarjeta de origen. Guarde para generar un checkpoint y reporte nuevos en
-`Validacion_MRS_r16_.../resultados`. Cuando se localiza o selecciona el Excel
+`Validacion_MRS_r17_.../resultados`. Cuando se localiza o selecciona el Excel
 de cuentas, también se genera `Datos_Cuentas_Corregidos.xlsx` sin cambiar el original.
 En análisis individual existe el botón Validar importe. La confirmación se
 conserva para reanálisis posteriores y no exime las demás reglas de calidad.
+
+Las tres herramientas guardan ahora cada ejecución en una carpeta independiente
+dentro de `%USERPROFILE%\MRS_Resultados` (por ejemplo,
+`C:\Users\Usuario\MRS_Resultados`). No se anidan dentro del checkpoint anterior:
+esto corrige el fallo de guardado al acumular recuperaciones y reanálisis.
+Antes de generar archivos se comprueba que las rutas de salida, incluido el Excel
+temporal, quepan en el límite conservador de Windows. `--output-dir` permite elegir
+otra carpeta corta, nueva y vacía al ejecutar las herramientas desde la consola.
 
 Para reproducir las pruebas en esa carpeta:
 

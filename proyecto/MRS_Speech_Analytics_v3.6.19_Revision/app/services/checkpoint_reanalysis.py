@@ -4,12 +4,12 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
-import tempfile
 
 from app.models.transcriptions import TranscriptionModel
 from app.services.analytics_service import AnalyticsService
 from app.services.batch_report_service import BatchReportService
 from app.services.transcription_services import TranscriptionService
+from app.services.checkpoint_output import create_checkpoint_output
 
 
 def reanalyze_checkpoint(checkpoint_path, output_directory=None):
@@ -18,10 +18,8 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None):
     payload = json.loads(raw.decode("utf-8-sig"))
     if not isinstance(payload, dict) or not isinstance(payload.get("items"), list) or not payload["items"]:
         raise ValueError("El checkpoint no contiene llamadas para reanalizar.")
-    target = (Path(output_directory).expanduser().resolve() if output_directory else
-              Path(tempfile.mkdtemp(prefix="Reanalisis_MRS_" + AnalyticsService.ENGINE_REVISION.rsplit("-", 1)[-1] + "_",
-                                   dir=str(source.parent))))
-    target.mkdir(parents=True, exist_ok=True)
+    target = create_checkpoint_output(output_directory,
+        "Reanalisis_MRS_" + AnalyticsService.ENGINE_REVISION.rsplit("-", 1)[-1] + "_")
     destination = target/"checkpoint_reanalizado.json"
     if destination == source or destination.exists():
         raise ValueError("Elija una carpeta nueva; no se sobrescriben checkpoints.")

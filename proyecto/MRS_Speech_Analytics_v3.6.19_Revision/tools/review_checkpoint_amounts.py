@@ -9,6 +9,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from app.services.asr_amount_recovery import validated_entries
 from app.services.account_source_validation import validate_account_source
 from app.services.checkpoint_human_review import review_checkpoint
+from app.services.checkpoint_output import default_output_root
 
 
 def main():
@@ -26,6 +27,7 @@ def main():
     payload=json.loads(source.read_text(encoding="utf-8-sig"))
     root.title("Confirmar importes y datos de salida");root.geometry("900x620")
     Label(root,text="Marque únicamente lo ya comprobado en el audio o en los datos de cuenta.",wraplength=850).pack(pady=12)
+    Label(root,text=f"Carpeta de resultados: {args.output_dir or default_output_root()}",wraplength=850).pack()
     container=Frame(root);container.pack(fill="both",expand=True)
     canvas=Canvas(container);bar=Scrollbar(container,orient="vertical",command=canvas.yview)
     body=Frame(canvas);body.bind("<Configure>",lambda e:canvas.configure(scrollregion=canvas.bbox("all")))
