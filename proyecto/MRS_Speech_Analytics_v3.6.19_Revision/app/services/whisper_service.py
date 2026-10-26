@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import importlib.metadata
 from time import perf_counter
 
 from datetime import datetime
@@ -18,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from app.config.settings import TRANSCRIPTIONS_DIR
 from app.services.settings_service import SettingsService
+from app.services.asr_amount_recovery import missing_proposals, recover_amounts
 
 
 LOGGER = logging.getLogger(__name__)
@@ -640,6 +642,19 @@ class WhisperService:
         # GUARDAR TXT + JSON
         # -----------------------------------------------------
 
+        recovery_started = perf_counter()
+        data["recuperacion_importes"] = self.recover_missing_amounts(
+            path, complete_text, normalized_segments, selected_language)
+        data["tiempo_recuperacion_importes_segundos"] = round(perf_counter()-recovery_started, 3)
+        transcription_seconds = max(0.0, perf_counter()-transcription_started)
+        data.update({
+            "tiempo_whisper_segundos": round(transcription_seconds, 3),
+            "tiempo_whisper_legible": self._format_duration(transcription_seconds),
+            "factor_tiempo_real": round(transcription_seconds/duration, 4) if duration else 0.0,
+            "velocidad_tiempo_real_x": round(duration/transcription_seconds, 3) if transcription_seconds else 0.0,
+            "revision_transcripcion": "3.6.19-r14",
+            "versiones_asr": self._dependency_versions(),
+        })
         data.update(
             self._save_outputs(
                 audio_path=path,
@@ -653,6 +668,41 @@ class WhisperService:
     # =========================================================
     # EJECUTAR FASTER-WHISPER
     # =========================================================
+
+    def recover_missing_amounts(self, audio_path, text, segments, language="es"):
+        """Releer únicamente ofertas incompletas; conservar el texto original."""
+        if not missing_proposals(text, segments):
+            return recover_amounts(text, segments, lambda *args: "")
+        audio = None
+
+        def read_window(start, end, beam):
+            nonlocal audio
+            if self._model is None:
+                self.load_model()
+            if audio is None:
+                from faster_whisper.audio import decode_audio
+                audio = decode_audio(str(audio_path), sampling_rate=16000)
+            clip = audio[int(start*16000):min(len(audio), int(end*16000))]
+            if len(clip) == 0:
+                raise ValueError("Ventana de audio vacía")
+            with self._transcription_lock:
+                generated, _ = self._model.transcribe(
+                    clip, language=language, task="transcribe", beam_size=beam,
+                    vad_filter=False, word_timestamps=True,
+                    condition_on_previous_text=False, temperature=0)
+                return " ".join(s.text.strip() for s in generated)
+
+        return recover_amounts(text, segments, read_window)
+
+    @staticmethod
+    def _dependency_versions():
+        versions = {}
+        for name in ("faster-whisper", "ctranslate2", "av"):
+            try:
+                versions[name] = importlib.metadata.version(name)
+            except importlib.metadata.PackageNotFoundError:
+                versions[name] = "desconocida"
+        return versions
 
     def _run_transcription(
         self,

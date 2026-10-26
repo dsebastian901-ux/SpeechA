@@ -20,6 +20,7 @@ from app.models.transcriptions import TranscriptionModel
 from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment
 from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion
 from app.services.installment_validation import installment_plan
+from app.services.asr_amount_recovery import validated_entries
 
 
 class AnalyticsService:
@@ -38,7 +39,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r13"
+    ENGINE_REVISION = "3.6.19-r14"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -50,6 +51,9 @@ class AnalyticsService:
         status = metadata.get("status_validation") or {}
         negotiation = metadata.get("negotiation_validation") or {}
         reasons = []
+        recovery = metadata.get("amount_recovery_validation") or {}
+        if recovery.get("review_required"):
+            reasons.append("Importe recuperado por lecturas adicionales de audio; confirmar evidencia y autorización")
         if metadata.get("quality_contact_type") == "CONTACTO NO DETERMINADO":
             reasons.append("Interlocutor sin identificar; requiere revisión")
         critical = any(isinstance(f, dict) and f.get("invalidates") is True for f in failures)
@@ -396,6 +400,7 @@ class AnalyticsService:
         enriched_context = dict(operational_context or {})
         enriched_context["_segments"] = list(getattr(transcription, "segments", []) or [])
         enriched_context["_duration_seconds"] = float(getattr(transcription, "duration_seconds", 0.0) or 0.0)
+        enriched_context["_amount_recovery"] = (getattr(transcription, "metadata", {}) or {}).get("recuperacion_importes")
 
         compliance = cls.calculate_basic_compliance(
             text,
@@ -508,6 +513,12 @@ class AnalyticsService:
         analysis.metadata["negotiation_validation"] = compliance.get(
             "negotiation_validation", {}
         )
+        audit = enriched_context.get("_amount_recovery")
+        recovered = validated_entries(text, transcription.segments, audit)
+        analysis.metadata["amount_recovery_validation"] = {
+            "entries": recovered, "review_required": bool(isinstance(audit, dict) and audit.get("entries")),
+            "human_verified": False,
+        }
         analysis.metadata["final_result"] = compliance.get(
             "final_result", "REVISAR"
         )
@@ -1540,7 +1551,7 @@ class AnalyticsService:
         settlement_pattern = (
             r"\b(?:se le esta ofreciendo|le (?:ofrecemos|ofrezco)|le podemos ofrecer)\b"
             r".{0,80}\b(?:descuento|opcion)\b.{0,45}\bpara\s+"
-            r"(?:finiquitar (?:la |su )?(?:deuda|cuenta)|liquidar (?:la |su )?cuenta|"
+            r"(?:(?:finiquitar|fin de quitar) (?:la |su )?(?:deuda|cuenta)|liquidar (?:la |su )?cuenta|"
             r"liquidar lo que (?:ya )?es la cuenta)\b")
         explicit_settlement_offer = any(
             unit["speaker_role"] not in {"TITULAR", "TERCERO", "INTERLOCUTOR"}
@@ -3384,6 +3395,16 @@ class AnalyticsService:
                 detected_amount_role = "REGULARIZACION"
             else:
                 detected_amount_role = "PAGO NEGOCIADO"
+        recovered_amounts = validated_entries(text, segments, context.get("_amount_recovery"))
+        if len(recovered_amounts) == 1:
+            recovered = recovered_amounts[0]
+            detected_claim_amount = float(recovered["amount"])
+            detected_amount_raw = detected_claim_amount
+            detected_claim_evidence = (
+                f"ASR adicional {recovered['inicio']:g}–{recovered['fin']:g}s: "
+                + " | ".join(a["texto"] for a in recovered["attempts"]))
+            detected_amount_role = "OFERTA RECUPERADA ASR - REVISAR"
+            amount_asr_normalized = False
         plan = installment_plan(source_norm, money_mentions)
         accepted_mentions = monetary_mentions(norm(commitment_confirmation["evidence"])) if confirms_commitment else []
         accepted_amounts = {float(m[2]) for m in accepted_mentions}

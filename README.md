@@ -1,11 +1,11 @@
-# MRS Speech Analytics · revisión 13 — finiquitos y fechas condicionales
+# MRS Speech Analytics · revisión 14 — recuperación de importes omitidos
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_13_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_14_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
@@ -17,11 +17,17 @@ dependencias originales se conservan. La primera transcripción de audio nuevo
 necesita descargar el modelo de Whisper desde Hugging Face.
 
 Para probar las reglas nuevas sobre textos guardados, ejecute
-`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r13` y crear una
-carpeta `Reanalisis_MRS_r13_...`. Este paso no vuelve a transcribir audios.
-Para comparar el reconocimiento de los tres audios recibidos después, procéselos
-como audios nuevos desde una carpeta de prueba independiente; conservar los
-resultados anteriores permite distinguir mejoras de transcripción y de reglas.
+`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r14` y crear una
+carpeta `Reanalisis_MRS_r14_...`. Este paso no vuelve a transcribir audios.
+
+Para recuperar un importe omitido, ejecute `RECUPERAR_IMPORTES.bat`, seleccione
+el checkpoint y la carpeta de sus audios originales. Se releen únicamente
+ventanas de ofertas incompletas; se conservan los textos originales y se genera
+un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r14_.../resultados`.
+La evidencia aparece en las columnas finales de recuperación. Un importe
+recuperado por ASR requiere revisión y no acredita autorización de descuentos.
+Este control también se aplica al procesar audios nuevos. Se usa el mismo modelo
+configurado, sin instalar otro Whisper ni actualizar Python.
 
 Para reproducir las pruebas en esa carpeta:
 

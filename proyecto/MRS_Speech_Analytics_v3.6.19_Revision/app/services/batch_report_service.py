@@ -103,6 +103,8 @@ class BatchReportService:
         "Interlocutor detectado",
         "Evidencia estatus",
         "Método detección estatus",
+        "Recuperación importe audio",
+        "Evidencia recuperación importe",
     ]
 
     MODE_B_HEADERS = [
@@ -173,6 +175,8 @@ class BatchReportService:
         "Interlocutor detectado",
         "Evidencia estatus",
         "Método detección estatus",
+        "Recuperación importe audio",
+        "Evidencia recuperación importe",
     ]
 
 
@@ -699,6 +703,8 @@ class BatchReportService:
             "Interlocutor detectado": metadata.get("quality_contact_type") or "",
             "Evidencia estatus": status.get("evidence") or "",
             "Método detección estatus": status.get("evidence_method") or "",
+            "Recuperación importe audio": "REVISAR" if (metadata.get("amount_recovery_validation") or {}).get("review_required") else "",
+            "Evidencia recuperación importe": negotiation.get("evidencia_monto") if (metadata.get("amount_recovery_validation") or {}).get("entries") else "",
         }
 
     @staticmethod

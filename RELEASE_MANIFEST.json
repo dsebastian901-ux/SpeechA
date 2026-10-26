@@ -1,8 +1,8 @@
 {
-  "revision": "3.6.19-r13-diagnostic",
+  "revision": "3.6.19-r14-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
-  "original_application_files_retained_unchanged": 97,
+  "original_application_files_retained_unchanged": 96,
   "modified_original_source_files": [
     "LEEME_CAMBIOS_3.6.19.txt",
     "app/services/analytics_service.py",
@@ -10,7 +10,8 @@
     "app/services/batch_service.py",
     "app/services/payment_reference_validation.py",
     "app/services/transcription_services.py",
-    "app/ui/views/analytics_view.py"
+    "app/ui/views/analytics_view.py",
+    "app/services/whisper_service.py"
   ],
   "excluded_private_csv_reports": [
     "AUDITORIA_REFERENCIAS_CHECKPOINT_20261021.csv",
@@ -18,13 +19,13 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 289,
+    "passed": 330,
     "failed": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Explicit debt-settlement discounts require authorization review; conditional payment replies do not confirm firm agreements. Three pending original audios retranscribed and compared with r12 and r13.",
+  "additional_fix": "Targeted two-window ASR recovery for explicit offers with missing monetary amounts. Original transcripts retained; evidence appended to JSON and Excel; recovered amounts cannot authorize automatic approval.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -73,5 +74,20 @@
     "FALLA_GRAVE": 5,
     "APROBADO": 4
   },
-  "automated_asr_verification": true
+  "automated_asr_verification": true,
+  "amount_recovery": {
+    "new_audio_control": true,
+    "checkpoint_recovery_tool": "RECUPERAR_IMPORTES.bat",
+    "real_three_call_checkpoint_tested": true,
+    "checked_calls": 1,
+    "recovered_amounts": 1,
+    "pending_windows": 0,
+    "outcomes": {
+      "REVISAR": 3
+    },
+    "source_transcripts_unchanged": true,
+    "human_verified_by_program": false,
+    "windows_validation": false,
+    "root_cause_of_cross_platform_asr_difference_confirmed": false
+  }
 }
