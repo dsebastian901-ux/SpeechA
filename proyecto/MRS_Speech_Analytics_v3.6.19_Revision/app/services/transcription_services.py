@@ -15,6 +15,7 @@ from typing import List, Optional
 
 from app.models.transcriptions import TranscriptionModel
 from app.services.review_service import ReviewService
+from app.services.amount_review_service import AmountReviewService
 
 
 class TranscriptionService:
@@ -213,6 +214,9 @@ class TranscriptionService:
         review = ReviewService.load(path)
         if review is not None:
             transcription.metadata["hostile_interlocutor_exception"] = review
+        amount_review = AmountReviewService.load(path)
+        if amount_review is not None:
+            transcription.metadata["amount_audio_review"] = amount_review
         return transcription
 
     @classmethod

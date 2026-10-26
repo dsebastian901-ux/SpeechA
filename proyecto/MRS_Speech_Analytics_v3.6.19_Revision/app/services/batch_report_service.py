@@ -108,6 +108,8 @@ class BatchReportService:
         "Efecto pago mínimo",
         "Política de plazo",
         "Fecha máxima de negociación",
+        "Datos de cuenta",
+        "Motivo datos de cuenta",
     ]
 
     MODE_B_HEADERS = [
@@ -183,6 +185,8 @@ class BatchReportService:
         "Efecto pago mínimo",
         "Política de plazo",
         "Fecha máxima de negociación",
+        "Datos de cuenta",
+        "Motivo datos de cuenta",
     ]
 
 
@@ -709,11 +713,14 @@ class BatchReportService:
             "Interlocutor detectado": metadata.get("quality_contact_type") or "",
             "Evidencia estatus": status.get("evidence") or "",
             "Método detección estatus": status.get("evidence_method") or "",
-            "Recuperación importe audio": "REVISAR" if (metadata.get("amount_recovery_validation") or {}).get("review_required") else "",
+            "Recuperación importe audio": ("CONFIRMADO POR USUARIO" if (metadata.get("amount_recovery_validation") or {}).get("human_verified") else
+                                           "REVISAR" if (metadata.get("amount_recovery_validation") or {}).get("review_required") else ""),
             "Evidencia recuperación importe": negotiation.get("evidencia_monto") if (metadata.get("amount_recovery_validation") or {}).get("entries") else "",
             "Efecto pago mínimo": (negotiation.get("mora_payment_policy") or {}).get("minimum_effect") or "",
             "Política de plazo": (negotiation.get("mora_payment_policy") or {}).get("mode") or "",
             "Fecha máxima de negociación": (negotiation.get("mora_payment_policy") or {}).get("window_end") or "",
+            "Datos de cuenta": "NOMBRE DE SALIDA POR CORREGIR" if (metadata.get("account_source_validation") or {}).get("review_required") else "",
+            "Motivo datos de cuenta": (metadata.get("account_source_validation") or {}).get("reason") or "",
         }
 
     @staticmethod

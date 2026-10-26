@@ -22,6 +22,8 @@ from app.services.payment_instruction_validation import wrong_bank_instructions,
 from app.services.installment_validation import installment_plan, installment_dates
 from app.services.asr_amount_recovery import validated_entries
 from app.services.mora_payment_policy import payment_policy, two_installment_window, LIQUIDATION_MORAS
+from app.services.amount_review_service import amount_review_status
+from app.services.account_source_validation import validate_account_source
 
 
 class AnalyticsService:
@@ -40,7 +42,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r15"
+    ENGINE_REVISION = "3.6.19-r16"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -52,6 +54,9 @@ class AnalyticsService:
         status = metadata.get("status_validation") or {}
         negotiation = metadata.get("negotiation_validation") or {}
         reasons = []
+        account = metadata.get("account_source_validation") or {}
+        if account.get("review_required"):
+            reasons.append(account.get("reason") or "Datos de cuenta inconsistentes; revisar nombre de salida")
         recovery = metadata.get("amount_recovery_validation") or {}
         if recovery.get("review_required"):
             reasons.append("Importe recuperado por lecturas adicionales de audio; conserva revisión de evidencia")
@@ -514,12 +519,12 @@ class AnalyticsService:
         analysis.metadata["negotiation_validation"] = compliance.get(
             "negotiation_validation", {}
         )
-        audit = enriched_context.get("_amount_recovery")
-        recovered = validated_entries(text, transcription.segments, audit)
-        analysis.metadata["amount_recovery_validation"] = {
-            "entries": recovered, "review_required": bool(isinstance(audit, dict) and audit.get("entries")),
-            "human_verified": False,
-        }
+        data = dict(transcription.metadata or {})
+        data.setdefault("archivo", transcription.file_name)
+        data.setdefault("texto", transcription.text)
+        data.setdefault("segmentos", transcription.segments)
+        analysis.metadata["amount_recovery_validation"] = amount_review_status(data, data.get("amount_audio_review"))
+        analysis.metadata["account_source_validation"] = validate_account_source(operational_context or {})
         analysis.metadata["final_result"] = compliance.get(
             "final_result", "REVISAR"
         )
@@ -4028,6 +4033,8 @@ class AnalyticsService:
             "operational_context": {
                 "estatus_grabacion": excel_status,
                 "campana": campaign,
+                "corte": context.get("corte"),
+                "nombre_final": context.get("nombre_final"),
                 "corte_aplicado": cut_applied,
                 "fecha_pago_calculada": calculated_payment_date.isoformat() if calculated_payment_date else None,
                 "fecha_asignacion": assignment_date,

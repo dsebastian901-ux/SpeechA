@@ -691,6 +691,7 @@ class BatchService:
                     record_data = record.to_dict()
 
                     operational_context = {
+                        "nombre_final": record_data.get("nombre_final"),
                         "estatus_grabacion": record_data.get("estatus_grabacion"),
                         "campana": record_data.get("campana"),
                         "fecha_asignacion": record_data.get("fecha_asignacion"),

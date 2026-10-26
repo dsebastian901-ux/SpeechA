@@ -37,6 +37,10 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None):
             previous_review = (item.get("analytics_metadata") or {}).get("hostile_interlocutor_exception")
             if isinstance(previous_review, dict):
                 transcription.metadata["hostile_interlocutor_exception"] = deepcopy(previous_review)
+            amount_review = (item.get("amount_audio_review") or
+                             ((item.get("analytics_metadata") or {}).get("amount_recovery_validation") or {}).get("human_review_record"))
+            if isinstance(amount_review, dict):
+                transcription.metadata["amount_audio_review"] = deepcopy(amount_review)
             relation = item.get("relation") or {}
             analysis = AnalyticsService.analyze_transcription(transcription, relation)
             old = item.get("classification") or {}

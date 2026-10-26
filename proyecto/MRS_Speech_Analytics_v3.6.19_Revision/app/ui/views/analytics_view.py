@@ -19,6 +19,9 @@ from app.models.transcriptions import TranscriptionModel
 from app.services.analytics_service import AnalyticsService
 from app.services.transcription_services import TranscriptionService
 from app.services.review_service import ReviewService
+from app.services.amount_review_service import AmountReviewService
+from app.services.asr_amount_recovery import validated_entries
+from app.services.relation_service import RelationService
 from app.ui.themes import Theme
 
 
@@ -305,6 +308,8 @@ class AnalyticsView(ctk.CTkFrame):
         )
         ctk.CTkButton(header, text="Validar trato", width=150,
                       command=self.validate_treatment).grid(row=1, column=1, pady=(8, 0), sticky="e")
+        ctk.CTkButton(header, text="Validar importe", width=150,
+                      command=self.validate_amount).grid(row=2, column=1, pady=(8, 0), sticky="e")
 
         # -----------------------------------------------------
         # ESTADO
@@ -1029,6 +1034,33 @@ class AnalyticsView(ctk.CTkFrame):
     # ANALIZAR Y GUARDAR
     # =========================================================
 
+    def validate_amount(self):
+        transcription=self.selected_transcription
+        if transcription is None or not transcription.json_path:
+            messagebox.showinfo("Validar importe","Seleccione una transcripción JSON.")
+            return
+        data=transcription.metadata or {}
+        entries=validated_entries(data.get("texto",transcription.text),transcription.segments,data.get("recuperacion_importes"))
+        if not entries:
+            messagebox.showinfo("Validar importe","Esta llamada no tiene importes recuperados válidos pendientes de confirmación.")
+            return
+        dialog=ctk.CTkToplevel(self);dialog.title("Confirmación de importe");dialog.geometry("700x400")
+        dialog.transient(self.winfo_toplevel())
+        ctk.CTkLabel(dialog,text="Marque solo los importes que haya comprobado en el audio.").pack(pady=16)
+        variables={}
+        for entry in entries:
+            var=ctk.BooleanVar(value=False);variables[entry["anchor_start"]]=var
+            ctk.CTkCheckBox(dialog,text=f"Confirmé ${entry['amount']:g} en el audio ({entry['inicio']:g}–{entry['fin']:g} s).",variable=var).pack(anchor="w",padx=18,pady=8)
+        def save():
+            try:
+                anchors=[key for key,var in variables.items() if var.get()]
+                record=AmountReviewService.save(transcription.json_path,anchors,audio_verified=bool(anchors))
+                transcription.metadata["amount_audio_review"]=record
+            except Exception as error:
+                messagebox.showerror("Validar importe",str(error),parent=dialog);return
+            dialog.destroy();self.analyze_selected()
+        ctk.CTkButton(dialog,text="Guardar y volver a analizar",command=save).pack(pady=16)
+
     def validate_treatment(self):
         transcription = self.selected_transcription
         if transcription is None or not transcription.json_path:
@@ -1097,17 +1129,24 @@ class AnalyticsView(ctk.CTkFrame):
             # ANALIZAR
             # =================================================
 
+            saved_context=dict((getattr(self.current_analysis,"metadata",{}) or {}).get("operational_context") or {})
+            if not saved_context.get("corte"):
+                saved_context["corte"]=saved_context.get("corte_aplicado")
+            previous_decision=(getattr(self.current_analysis,"metadata",{}) or {}).get("shared_classification") or {}
             analysis = (
                 AnalyticsService
                 .analyze_transcription(
-                    self.selected_transcription
+                    self.selected_transcription,
+                    operational_context=saved_context
                 )
             )
 
             shared = AnalyticsService.shared_quality_decision(
                 getattr(analysis, "metadata", {}) or {},
                 getattr(analysis, "compliance_score", 0),
+                minimum_score=RelationService().get_minimum_score(),
                 duration_seconds=getattr(self.selected_transcription, "duration_seconds", None),
+                base_classification=previous_decision,
             )
             analysis.metadata["shared_classification"] = shared
             analysis.metadata["final_result"] = shared["clasificacion"]

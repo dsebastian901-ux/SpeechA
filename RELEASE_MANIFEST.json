@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r15-diagnostic",
+  "revision": "3.6.19-r16-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -19,13 +19,13 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 403,
+    "passed": 429,
     "failed": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Manual-based minimum-payment effects by mora; liquidation within call month; two installments with first within 3 days and second within 7 days FROM FIRST PAYMENT, never beyond maturity; preserve recovery evidence and original results.",
+  "additional_fix": "Persist explicit human confirmation of recovered amounts with call/evidence binding and revocation. Compare spoken references only against numero_de_tarjeta. Separately validate and correct output-name identifiers in copies.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -105,5 +105,24 @@
     "user_monthly_override": "3HN, 4PV–6PV, C1–C4, B, A: within call month; later maturity does not extend month",
     "user_installment_override": "first within 3 days from call; second within 7 days FROM FIRST PAYMENT, neither beyond maturity",
     "scope": "Amounts and negotiation dates; not certification of all 13 issues."
+  },
+  "human_amount_review": {
+    "supported": true,
+    "checkboxes_default_to_false": true,
+    "scope": "RECOVERED_AMOUNTS_ONLY",
+    "other_blockers_preserved": true,
+    "changed_evidence_invalidates_review": true,
+    "persists_across_reanalysis": true,
+    "tool": "VALIDAR_IMPORTES.bat",
+    "actual_reviewed_batch_outcomes": {
+      "REVISAR": 2,
+      "APROBADO": 1
+    },
+    "original_results_preserved": true,
+    "original_excel_preserved": true,
+    "corrected_excel_cells": 1,
+    "confirmation_source": "Explicit user statements in conversation, not assistant audio listening",
+    "gui_tested_linux": true,
+    "gui_tested_windows": false
   }
 }
