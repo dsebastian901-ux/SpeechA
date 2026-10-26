@@ -177,6 +177,7 @@ def payment_commitment(text, segments=()):
             r"(?:manana|hoy) no (?:podria|puedo)|no (?:tendria|tendre)\s+(?:\d+|dos|mil))\b", s)
         conditional = re.search(
             r"\b(?:si me da tiempo|si consigo (?:el )?dinero|si tengo dinero|si puedo juntar|"
+            r"lo podria(?: hacer)?|(?:yo )?pagaria|"
             r"hare lo posible|a lo mejor|yo creo|no se cuanto (?:voy a|vaya a|pueda) (?:pagar|depositar)|"
             r"no se cuando (?:pueda|voy a) pagar)\b", s)
         payment_context = re.search(r"\b(?:pago|pagar|depositar|dinero|cantidad|convenio|pesos|descuento)\b",

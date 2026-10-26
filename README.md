@@ -1,11 +1,11 @@
-# MRS Speech Analytics · revisión 12 — pagos reportados y recados
+# MRS Speech Analytics · revisión 13 — finiquitos y fechas condicionales
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_12_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_13_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
@@ -15,6 +15,13 @@ Use Python 3.10 de 64 bits. Extraiga el paquete completo, abra la carpeta de la
 aplicación y ejecute `INSTALAR.bat`; después `INICIAR_MRS.bat`. Los lanzadores y
 dependencias originales se conservan. La primera transcripción de audio nuevo
 necesita descargar el modelo de Whisper desde Hugging Face.
+
+Para probar las reglas nuevas sobre textos guardados, ejecute
+`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r13` y crear una
+carpeta `Reanalisis_MRS_r13_...`. Este paso no vuelve a transcribir audios.
+Para comparar el reconocimiento de los tres audios recibidos después, procéselos
+como audios nuevos desde una carpeta de prueba independiente; conservar los
+resultados anteriores permite distinguir mejoras de transcripción y de reglas.
 
 Para reproducir las pruebas en esa carpeta:
 

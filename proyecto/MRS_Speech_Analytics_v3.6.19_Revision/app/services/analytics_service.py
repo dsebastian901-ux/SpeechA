@@ -38,7 +38,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r12"
+    ENGINE_REVISION = "3.6.19-r13"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -1535,7 +1535,19 @@ class AnalyticsService:
             r"|\b(?:le\s+ofrecemos|le\s+podemos\s+ofrecer|la\s+opcion\s+es)\b.{0,100}\b(?:liquidar|liquidacion)\b"
             r"|\b(?:liquida|liquidaria)\s+(?:su\s+cuenta|la\s+cuenta|saldo\s+total|el\s+saldo\s+total|saldo\s+vencido|el\s+saldo\s+vencido|lo\s+vencido)\b",
         )
-        agent_liquidation_offer = any(
+        # «Finiquitar la deuda» expresa liquidación total, aunque la oferta
+        # termine con una pregunta o quede partida entre ventanas de Whisper.
+        settlement_pattern = (
+            r"\b(?:se le esta ofreciendo|le (?:ofrecemos|ofrezco)|le podemos ofrecer)\b"
+            r".{0,80}\b(?:descuento|opcion)\b.{0,45}\bpara\s+"
+            r"(?:finiquitar (?:la |su )?(?:deuda|cuenta)|liquidar (?:la |su )?cuenta|"
+            r"liquidar lo que (?:ya )?es la cuenta)\b")
+        explicit_settlement_offer = any(
+            unit["speaker_role"] not in {"TITULAR", "TERCERO", "INTERLOCUTOR"}
+            and not re.search(r"\b(?:me dijeron|me habian dicho|segun yo|crei|pense)\b", norm(unit["text"]))
+            and agent_statement(unit["text"], (), settlement_pattern)
+            for unit in sentence_evidence(text, segments))
+        agent_liquidation_offer = explicit_settlement_offer or any(
             liquidation_offer_pattern.search(norm(unit["text"]))
             and unit["speaker_role"] not in {"TITULAR", "TERCERO", "INTERLOCUTOR"}
             and not re.search(r"\b(?:me dijeron|me habian dicho|segun yo|yo pague|yo quiero|crei|pense)\b", norm(unit["text"]))
@@ -1937,7 +1949,7 @@ class AnalyticsService:
                 normalized,
             )
         )
-        total_liquidation_wording = any_of([
+        total_liquidation_wording = explicit_settlement_offer or any_of([
             "liquidacion total",
             "liquidar saldo total",
             "liquida saldo total",
@@ -3113,7 +3125,7 @@ class AnalyticsService:
         negotiation_anchor_re = re.compile(
             r"\b(?:pagar|pague|paga|pago|abono|abonar|parcial|parcialidad|convenio|"
             r"propuesta|acuerdo|regulariza|regularizar|corriente|liquida|liquidar|liquidacion|"
-            r"cubrir|cubre|cantidad\s+de|monto\s+de|pago\s+minimo|minimo\s+que|mínimo\s+que)\b"
+            r"cubrir|cubre|finiquitar|finiquito|cantidad\s+de|monto\s+de|pago\s+minimo|minimo\s+que|mínimo\s+que)\b"
         )
         balance_anchor_re = re.compile(
             r"\b(?:saldo(?!\s+(?:pasado|anterior)\b)(?:\s+total|\s+pendiente)?|total\s+adeudado|adeudo\s+total)\b"

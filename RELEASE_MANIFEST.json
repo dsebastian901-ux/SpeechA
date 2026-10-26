@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r12-diagnostic",
+  "revision": "3.6.19-r13-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 97,
@@ -18,21 +18,24 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 273,
+    "passed": 289,
     "failed": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Reported transfers versus new instructions, affirmative past-payment answers, structured reported amounts, third-party contact without presumed recado, and explicit engine revision in reanalysis outputs.",
+  "additional_fix": "Explicit debt-settlement discounts require authorization review; conditional payment replies do not confirm firm agreements. Three pending original audios retranscribed and compared with r12 and r13.",
   "uploaded_audio_review": {
-    "files_fully_decoded": 5,
+    "files_fully_decoded": 8,
     "checkpoint_calls": [
       4,
       10,
+      12,
       17,
       21,
-      31
+      23,
+      31,
+      32
     ],
     "new_speech_recognition_executed": true,
     "model": "small",
@@ -40,11 +43,7 @@
     "compute_type": "int8",
     "model_download_verified": true,
     "human_speaker_validation": false,
-    "requested_calls_still_missing": [
-      12,
-      23,
-      32
-    ]
+    "requested_calls_still_missing": []
   },
   "publication_note": "Real card reference masked in documentation; private migration archive and audit data remain outside Git.",
   "reported_batch": {
@@ -59,15 +58,15 @@
       "APROBADO": 1
     },
     "human_validation_complete": false,
-    "comparison_base": "User-returned revision-11 checkpoint",
+    "comparison_base": "Revision-12 reanalysis, retaining original cached transcriptions",
     "original_batch_outcomes": {
       "REVISAR": 32,
       "FALLA_GRAVE": 4
     },
     "identified_contacts_before": 26,
     "identified_contacts_after": 26,
-    "status_matches_before": 5,
-    "status_matches_after": 4
+    "status_matches_before": 4,
+    "status_matches_after": 5
   },
   "historical_regression_outcomes": {
     "REVISAR": 259,
