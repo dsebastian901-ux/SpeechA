@@ -671,6 +671,8 @@ class WhisperService:
 
     def recover_missing_amounts(self, audio_path, text, segments, language="es"):
         """Releer únicamente ofertas incompletas; conservar el texto original."""
+        if str(language or "").lower() == "auto":
+            language = None
         if not missing_proposals(text, segments):
             return recover_amounts(text, segments, lambda *args: "")
         audio = None

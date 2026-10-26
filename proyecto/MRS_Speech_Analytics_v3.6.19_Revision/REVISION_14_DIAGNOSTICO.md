@@ -37,7 +37,7 @@ de importe del descuento no confirmado a importe identificado con descuento no
 verificable. El dictamen sigue REVISAR. Las llamadas 12 y 32 no se retranscribieron
 y conservaron sus motivos de revisión por saldo y parcialidades contradictorias.
 
-- 330 pruebas aprobadas y compilación de app y herramientas correcta.
+- 331 pruebas aprobadas y compilación de app y herramientas correcta.
 - Regresión: 268 evaluaciones, 196 textos y 5 checkpoints. Se conservan
   259 REVISAR, 5 FALLA_GRAVE y 4 APROBADO; sin fallos de seguridad ni
   eliminaciones de penalización sin justificar.

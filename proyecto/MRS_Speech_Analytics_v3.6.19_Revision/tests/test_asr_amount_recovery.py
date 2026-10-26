@@ -196,3 +196,16 @@ def test_new_audio_path_runs_recovery_and_saves_original_transcript(tmp_path, mo
     assert result["revision_transcripcion"] == "3.6.19-r14"
     assert result["recuperacion_importes"]["entries"][0]["amount"] == 2450
     assert Path(result["ruta_json"]).is_file()
+
+
+def test_recovery_respects_automatic_language(monkeypatch):
+    service = WhisperService()
+    readings, languages = iter(READINGS), []
+    def transcribe(*args, **kwargs):
+        languages.append(kwargs["language"])
+        return iter([SimpleNamespace(text=next(readings))]), None
+    service._model = SimpleNamespace(transcribe=transcribe)
+    monkeypatch.setattr("faster_whisper.audio.decode_audio", lambda *args, **kwargs: np.zeros(90*16000))
+    result = service.recover_missing_amounts("synthetic.wav", TEXT, SEGMENTS, language="auto")
+    assert result["entries"][0]["amount"] == 2450
+    assert languages == [None, None]
