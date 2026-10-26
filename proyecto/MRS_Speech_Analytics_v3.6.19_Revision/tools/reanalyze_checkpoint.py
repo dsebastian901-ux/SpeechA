@@ -25,6 +25,7 @@ def main():
             return
         source = Path(selected)
     result = reanalyze_checkpoint(source, args.output_dir)
+    print("Revisión del motor:", result["engine_revision"])
     print("Evaluaciones:", result["evaluations"])
     print("Resultados:", result["outcomes"])
     print("Reporte nuevo:", result["report"])

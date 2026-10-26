@@ -19,7 +19,8 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None):
     if not isinstance(payload, dict) or not isinstance(payload.get("items"), list) or not payload["items"]:
         raise ValueError("El checkpoint no contiene llamadas para reanalizar.")
     target = (Path(output_directory).expanduser().resolve() if output_directory else
-              Path(tempfile.mkdtemp(prefix="Reanalisis_MRS_", dir=str(source.parent))))
+              Path(tempfile.mkdtemp(prefix="Reanalisis_MRS_" + AnalyticsService.ENGINE_REVISION.rsplit("-", 1)[-1] + "_",
+                                   dir=str(source.parent))))
     target.mkdir(parents=True, exist_ok=True)
     destination = target/"checkpoint_reanalizado.json"
     if destination == source or destination.exists():
@@ -76,14 +77,16 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None):
     note.append(["No se ejecutó Whisper ni se copiaron/movieron audios."])
     note.append(["La columna 'Clasificación física' muestra la clasificación calculada; no acredita una copia nueva."])
     note.append(["El checkpoint y el reporte originales permanecen sin cambios."])
+    note.append(["Revisión del motor", AnalyticsService.ENGINE_REVISION])
     workbook.save(report)
     workbook.close()
     updated["completed"] = not outcomes.get("ERROR")
     updated["updated_at"] = datetime.now(timezone.utc).isoformat()
     updated["last_report_path"] = report
-    updated["reanalysis"] = {"source_sha256": hashlib.sha256(raw).hexdigest(),
+    updated["reanalysis"] = {"engine_revision": AnalyticsService.ENGINE_REVISION,
+                              "source_sha256": hashlib.sha256(raw).hexdigest(),
                               "whisper_executed": False, "audio_files_copied": False, "outcomes": outcomes}
     destination.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
     assert source.read_bytes() == raw, "El origen cambió durante el reanálisis"
     return {"report": report, "checkpoint": str(destination), "outcomes": outcomes,
-            "evaluations": len(updated["items"])}
+            "evaluations": len(updated["items"]), "engine_revision": AnalyticsService.ENGINE_REVISION}

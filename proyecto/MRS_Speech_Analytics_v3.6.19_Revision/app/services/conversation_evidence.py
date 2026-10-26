@@ -262,6 +262,31 @@ def completed_payment(text, segments=()):
             start, end = position + candidate.start(), position + candidate.end()
             if position >= 0 and not any(u["text_start"] < end and u["text_end"] > start for u in evidence):
                 evidence.append(dict(unit, text_start=start, text_end=end))
+    # En una conversación natural, «sí» puede reportar el pago sin repetir
+    # «ya pagué». «Puedo»/«pado» solo se toleran con una pregunta posterior
+    # inequívoca de cuándo se hizo; nunca convierten una oferta futura en pago.
+    question = re.compile(
+        r"\bya (?P<verb>pudo|puedo|realizo|ha realizado|ha podido|hizo)\b[^?!]{0,95}"
+        r"\b(?:pago|pado)\b[^?!]{0,25}\?\s*"
+        r"(?:(?:titular|cliente|interlocutor)\s*:\s*)?(?P<answer>si|asi es)\b")
+    for match in question.finditer(source):
+        role = _role_at(text, segments, match.start("answer"))
+        reply = source[match.start("answer"):match.end()+90].split(".")[0]
+        if (role == "GESTOR" or re.search(r"\b(?:manana|proximo)\b", match.group())
+                or re.search(r"\b(?:si puedo|si consigo|si me da|creo|no (?:pague|pude|lo hice|he pagado))\b", reply)
+                or source[match.end():].lstrip().startswith("?")):
+            continue
+        followup = source[match.end():match.end()+180]
+        past_question = re.search(
+            r"\b(?:que dia lo (?:realice|realizo|hizo|pago)|cuando (?:lo )?(?:pago|realizo)|"
+            r"que cantidad (?:pago|deposito))\b", followup)
+        if match["verb"] == "puedo" and not past_question:
+            continue
+        if "pado" in match.group() and not past_question:
+            continue
+        evidence.append({"text": match.group(), "speaker_role": role, "start": None, "end": None,
+                         "text_start": match.start(), "text_end": match.end(),
+                         "method": "RESPUESTA_A_PAGO_REALIZADO"})
     return {"confirmed": bool(evidence), "evidence": evidence}
 
 

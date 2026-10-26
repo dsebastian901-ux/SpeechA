@@ -91,6 +91,15 @@ def verified_removal(rule, previous, current):
         return len(set(payment.get("authorized_places_detected") or [])) >= 2 and bool(payment.get("payment_place_details"))
     if rule == "accepted_payment_commitment":
         return negotiation.get("commitment_confirmed") is True and (negotiation.get("commitment_evidence") or {}).get("accepted") is True
+    if rule == "reported_transfer_not_new_instruction":
+        return bool((previous.get("convenio_payment_validation") or {}).get("transfer_data_review")
+                    and negotiation.get("payment_confirmation_case")
+                    and (negotiation.get("completed_payment_evidence") or {}).get("confirmed")
+                    and payment.get("reported_transfer_only")
+                    and not payment.get("transfer_instruction_evidence")
+                    and not payment.get("future_transfer_discussion")
+                    and not payment.get("unauthorized_payment_method")
+                    and not payment.get("wrong_bank_data"))
     if rule == "callback_numbers_not_bank_account":
         return bool((previous.get("convenio_payment_validation") or {}).get("wrong_bank_data")) and not payment.get("unauthorized_evidence") and not payment.get("wrong_bank_data")
     if rule == "capture_instruction_not_recipient":

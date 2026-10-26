@@ -72,13 +72,15 @@
   {
     "case": "batch_checkpoint(20261021-154002):027",
     "allowed_removed": [
-      "PEN_CONV_LUGARES"
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_TRANSFER_REV"
     ],
     "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
     "evidence_rules": {
-      "PEN_CONV_LUGARES": "payment_already_reported"
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
     },
-    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
   },
   {
     "case": "batch_checkpoint(20261021-154002):028",
@@ -107,6 +109,17 @@
       "PEN_CONV_LUGARES": "two_distinct_payment_places"
     },
     "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):036",
+    "allowed_removed": [
+      "PEN_CONV_TRANSFER_REV"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
   },
   {
     "case": "batch_checkpoint(20261021-154002):037",
@@ -140,14 +153,16 @@
     "case": "batch_checkpoint(20261021-154002):042",
     "allowed_removed": [
       "PEN009",
-      "PEN_CONV_LUGARES"
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_TRANSFER_REV"
     ],
     "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
     "evidence_rules": {
       "PEN009": "payment_already_reported",
-      "PEN_CONV_LUGARES": "payment_already_reported"
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
     },
-    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
   },
   {
     "case": "batch_checkpoint(20261021-154002):044",
@@ -365,6 +380,21 @@
     "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
   },
   {
+    "case": "batch_checkpoint(20261021-154002):101",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_WHATSAPP"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_WHATSAPP": "payment_already_reported"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
+  },
+  {
     "case": "batch_checkpoint(20261021-154002):103",
     "allowed_removed": [
       "PEN009"
@@ -374,6 +404,19 @@
       "PEN009": "accepted_payment_commitment"
     },
     "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):106",
+    "allowed_removed": [
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_TRANSFER_REV"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
   },
   {
     "case": "batch_checkpoint(20261021-154002):108",
@@ -446,17 +489,30 @@
     "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
   },
   {
+    "case": "batch_checkpoint(20261021-154002):132",
+    "allowed_removed": [
+      "PEN_CONV_TRANSFER_REV"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
+  },
+  {
     "case": "batch_checkpoint(20261021-154002):142",
     "allowed_removed": [
       "PEN009",
-      "PEN_CONV_LUGARES"
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_TRANSFER_REV"
     ],
     "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
     "evidence_rules": {
       "PEN009": "payment_already_reported",
-      "PEN_CONV_LUGARES": "payment_already_reported"
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
     },
-    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
   },
   {
     "case": "batch_checkpoint(20261021-154002):144",
@@ -479,6 +535,21 @@
       "PEN_CONV_LUGARES": "payment_already_reported"
     },
     "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):152",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_TRANSFER_REV"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
   },
   {
     "case": "batch_checkpoint(20261021-154002):155",

@@ -1,11 +1,11 @@
-# MRS Speech Analytics · revisión 11 — identificación, estatus y reporte
+# MRS Speech Analytics · revisión 12 — pagos reportados y recados
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_11_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_12_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 

@@ -18,7 +18,7 @@ from typing import Dict, List, Optional
 from app.models.analytics_model import AnalyticsModel
 from app.models.transcriptions import TranscriptionModel
 from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment
-from app.services.payment_instruction_validation import wrong_bank_instructions
+from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion
 from app.services.installment_validation import installment_plan
 
 
@@ -37,6 +37,8 @@ class AnalyticsService:
     - Cargar Analytics previamente guardados.
     - Listar análisis del proyecto.
     """
+
+    ENGINE_REVISION = "3.6.19-r12"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -428,6 +430,7 @@ class AnalyticsService:
         # -----------------------------------------------------
 
         analysis.metadata = {
+            "engine_revision": cls.ENGINE_REVISION,
             "source_language": str(
                 getattr(
                     transcription,
@@ -1125,13 +1128,13 @@ class AnalyticsService:
             detected_status = "NO CONOCEN A DEUDOR"
         elif family:
             contact_type = "TERCERO / FAMILIAR"
-            detected_status = "MENSAJE CON FAMILIAR"
+            detected_status = ""
         elif work_contact:
             contact_type = "TERCERO / TRABAJO"
-            detected_status = "MENSAJE EN TRABAJO"
+            detected_status = ""
         elif third_party:
             contact_type = "TERCERO"
-            detected_status = "" if intermediary_response else "MENSAJE CON TERCERO"
+            detected_status = ""
         elif titular:
             contact_type = "TITULAR"
             detected_status = ""
@@ -1314,8 +1317,10 @@ class AnalyticsService:
         recado_real = bool(recado_callback and (recado_transmitted or leaves_message)
                            and not (recado_declines or recado_refusal)
                            and recado_recibido_explicito)
-        if intermediary_response and recado_real:
-            detected_status = "MENSAJE CON TERCERO"
+        if recado_real:
+            detected_status = {"TERCERO / FAMILIAR": "MENSAJE CON FAMILIAR",
+                               "TERCERO / TRABAJO": "MENSAJE EN TRABAJO",
+                               "TERCERO": "MENSAJE CON TERCERO"}.get(contact_type, detected_status)
         if recado_applies:
             # La relación familiar explícita prevalece sobre "soy yo" (identidad del referente).
             if recado_family_evidence and not recado_unknown_explicit:
@@ -1654,12 +1659,24 @@ class AnalyticsService:
             r"(?:lo|el\s+pago)\s+hizo\s+el\s+dia|"
             r"(?:realizo|hizo)\s+el\s+pago\s+el\s+dia|"
             r"ya\s+se\s+(?:hizo|pago)|pago\s+(?:realizado|efectuado)|"
-            r"depositamos|tengo\s+registrado\s+(?:un\s+)?reporte\s+de\s+pago)\b", normalized))
+            r"depositamos|ya (?:pudo|puedo|realizo|ha realizado|ha podido|hizo)\b[^?!]{0,95}\b(?:pago|pado)|"
+            r"tengo\s+registrado\s+(?:un\s+)?reporte\s+de\s+pago)\b", normalized))
         # Extraer importes históricos solo de declaraciones ya acreditadas;
         # las instrucciones futuras no pueden aportar pagos ni complementos.
         completed_payment_matches = [m for m in completed_payment_matches if any(
             u["text_start"] < m.end() and u["text_end"] > m.start()
             for u in completed_payment_confirmation["evidence"])]
+        additional_payment_starts = set()
+        for unit in completed_payment_confirmation["evidence"]:
+            start, end = unit["text_start"], unit["text_end"]
+            if any(m.start() < end and m.end() > start for m in completed_payment_matches):
+                continue
+            fragment = normalized[start:end]
+            match = re.compile(re.escape(fragment)).match(normalized, start) if fragment else None
+            if match:
+                completed_payment_matches.append(match)
+                additional_payment_starts.add(start)
+        completed_payment_matches.sort(key=lambda m: m.start())
         payment_already_made = bool(payment_already_made or completed_payment_matches)
         prior_payment_evidence = []
         prior_payment_amounts = []
@@ -1686,14 +1703,17 @@ class AnalyticsService:
         # "ya pagué / hice mi pago / pago realizado" de un mismo tramo no deben sumar
         # dos veces la misma cantidad. Además 3,900 debe conservarse como 3900, no 900.
         for pm in completed_payment_matches:
-            a=max(0, pm.start()-70); b=min(len(normalized), pm.end()+150)
+            response_event = any(u.get("method") == "RESPUESTA_A_PAGO_REALIZADO" and
+                                 u["text_start"] < pm.end() and u["text_end"] > pm.start()
+                                 for u in completed_payment_confirmation["evidence"])
+            a=pm.start() if response_event or pm.start() in additional_payment_starts else max(0, pm.start()-70)
+            b=min(len(normalized), pm.end()+150)
             # Si el contexto se solapa ampliamente con un pago previo ya procesado,
             # se considera el mismo evento y no se vuelve a sumar.
             if any(not (b < sa or a > sb) for sa, sb in prior_payment_spans):
                 continue
             ctx=normalized[a:b]
             prior_payment_evidence.append(ctx.strip())
-            prior_payment_spans.append((a,b))
             candidates=[]
             for am in re.finditer(r"(?:\$\s*)?(\d{1,3}(?:[.,]\d{3})+|\d{2,7}(?:[.,]\d{1,2})?)(?:\s*pesos?)?", ctx):
                 val=_parse_prior_payment_number(am.group(1))
@@ -1719,11 +1739,23 @@ class AnalyticsService:
                     val=float(total_w+current_w)
                     if val >= 10:
                         candidates.append((wm.start(), val))
+                if response_event:
+                    number_words = "|".join(sorted([*word_map, "mil", "y"], key=len, reverse=True))
+                    for am in re.finditer(r"\b(?:por|de)\s+((?:(?:"+number_words+r")\s*){1,7})(?=pesos?\b|[.,!?]|$)", ctx):
+                        total_w, current_w = 0, 0
+                        for word in am[1].split():
+                            if word == "mil":
+                                total_w += (current_w or 1)*1000; current_w=0
+                            elif word in word_map:
+                                current_w += word_map[word]
+                        if total_w+current_w >= 10:
+                            candidates.append((am.start(1), float(total_w+current_w)))
             if candidates:
                 # Prioriza la cantidad más próxima a la expresión de pago realizado.
                 rel_pm=max(0, pm.start()-a)
                 _, val=min(candidates, key=lambda x: abs(x[0]-rel_pm))
                 prior_payment_amounts.append(val)
+                prior_payment_spans.append((a,b))
         prior_payment_total = sum(prior_payment_amounts) if prior_payment_amounts else None
 
         promise_is_future = bool(promise_date and parsed_call_date and promise_date > parsed_call_date)
@@ -1966,6 +1998,7 @@ class AnalyticsService:
         # ambiguas se solicita revisión, evitando culpar al gestor por el
         # comportamiento del titular o por un corte técnico.
         confrontation_patterns = [
+            "mentirosa", "mentiroso",
             "sabes escuchar", "sabe escuchar", "aprende como funciona una tarjeta",
             "me esta poniendo muchas trabas", "si te molesta que te generen las llamadas",
             "si no quiere pagar es su problema",
@@ -2256,6 +2289,10 @@ class AnalyticsService:
             "dieciseis digitos de su tarjeta", "nombre completo",
         ])
         authorized_transfer = bool(transfer_wording and authorized_transfer_account)
+        transfer_instruction_evidence = transfer_instructions(text, segments)
+        authorized_transfer_instruction = any("014320655030560466" in re.sub(r"\D", "", e["text"])
+                                              for e in transfer_instruction_evidence)
+        authorized_transfer = bool(authorized_transfer and authorized_transfer_instruction)
         if authorized_transfer:
             detected_payment_places.append("TRANSFERENCIA A SANTANDER BRADESCARD")
             payment_place_evidence.append("transferencia a cuenta Santander autorizada")
@@ -2305,10 +2342,15 @@ class AnalyticsService:
             payment_instruction_context and (unauthorized_payment_evidence or wrong_bank_data)
         )
 
-        transfer_data_review = bool(
-            transfer_wording and not authorized_transfer_account
-            and payment_instruction_context and not unauthorized_payment_method
-        )
+        bank_destination_context = bool(re.search(
+            r"\b(?:clabe|cuenta bancaria|numero de cuenta|cuenta de destino|cuenta personal)\b", normalized))
+        new_transfer_discussion = future_transfer_discussion(text, segments)
+        reported_transfer_only = bool(payment_confirmation_case and not transfer_instruction_evidence
+                                      and not bank_destination_context and not new_transfer_discussion)
+        transfer_data_review = bool(not unauthorized_payment_method and (
+            (transfer_instruction_evidence and not authorized_transfer_instruction)
+            or (transfer_wording and not authorized_transfer_account and payment_instruction_context
+                and not reported_transfer_only and not only_negated_transfers(text))))
 
         convenio_payment_validation = {
             "applies": is_convenio,
@@ -2330,6 +2372,10 @@ class AnalyticsService:
             "transfer_beneficiary_detected": transfer_beneficiary,
             "transfer_reference_detected": transfer_reference,
             "transfer_data_review": transfer_data_review,
+            "transfer_instruction_evidence": transfer_instruction_evidence,
+            "authorized_transfer_instruction_confirmed": authorized_transfer_instruction,
+            "reported_transfer_only": reported_transfer_only,
+            "future_transfer_discussion": new_transfer_discussion,
             "authorized_transfer_account": "014320655030560466",
             "authorized_transfer_bank": "Santander",
             "authorized_transfer_beneficiary": "Bradescard México S. de R.L.",
@@ -2879,9 +2925,10 @@ class AnalyticsService:
 
         # No interpretar falta de evidencia como coincidencia válida.
         # Con Excel y estatus no detectable: revisión, nunca mal dictaminado automático.
-        if intermediary_response and not recado_real:
+        if contact_type in {"TERCERO", "TERCERO / FAMILIAR", "TERCERO / TRABAJO"} and not recado_real:
             status_validation["valid"] = False
             status_validation["review_required"] = True
+            status_validation["evidence_method"] = "TERCERO_SIN_RECADO_CONFIRMADO"
             status_validation["reasons"].append("Tercero identificado sin recado efectivamente confirmado; revisar conversación.")
         if excel_status and status_validation["matches"] is None:
             status_validation["valid"] = False
@@ -3069,7 +3116,7 @@ class AnalyticsService:
             r"cubrir|cubre|cantidad\s+de|monto\s+de|pago\s+minimo|minimo\s+que|mínimo\s+que)\b"
         )
         balance_anchor_re = re.compile(
-            r"\b(?:saldo(?:\s+total|\s+pendiente)?|total\s+adeudado|adeudo\s+total)\b"
+            r"\b(?:saldo(?!\s+(?:pasado|anterior)\b)(?:\s+total|\s+pendiente)?|total\s+adeudado|adeudo\s+total)\b"
         )
         negotiation_positions = [m.start() for m in negotiation_anchor_re.finditer(source_norm)]
         balance_positions = [m.start() for m in balance_anchor_re.finditer(source_norm)]
