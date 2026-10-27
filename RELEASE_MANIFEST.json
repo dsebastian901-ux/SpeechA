@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r17-diagnostic",
+  "revision": "3.6.19-r18-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -19,13 +19,13 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 436,
+    "passed": 467,
     "failed": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Save checkpoint recovery, reanalysis and human validation in independent folders under the user home MRS_Resultados directory. Preflight Windows path lengths including the temporary report; preserve all amount-confirmation and classification rules from r16.",
+  "additional_fix": "Persist evidence-bound human confirmation of an announced balance and final installment plan, preserving ASR text and initial proposals. Recalculate all other financial and quality gates; retain r17 independent output directories.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -115,6 +115,27 @@
     "real_three_call_report_path_characters": 146,
     "existing_output_files_preserved": true,
     "actual_windows_execution": false
+  },
+  "financial_fact_review": {
+    "scope": "BALANCE_AND_FINAL_INSTALLMENTS_ONLY",
+    "tool": "VALIDAR_IMPORTES.bat",
+    "balance_field_initially_empty": true,
+    "checkboxes_default_to_false": true,
+    "expected_excel_values_not_used_to_fill_confirmation": true,
+    "call_and_evidence_bound": true,
+    "stale_review_blocks_approval": true,
+    "initial_proposals_preserved": true,
+    "revocation_preserves_history": true,
+    "reanalysis_preserves_confirmation_and_revocation": true,
+    "existing_amount_and_name_reviews_preserved": true,
+    "reported_three_call_outcomes": {"APROBADO": 3},
+    "reported_three_call_scores_unchanged": [100, 80, 90],
+    "report_columns": 87,
+    "new_asr_executed": false,
+    "confirmation_source": "Explicit user statements, not assistant audio listening",
+    "gui_tested_linux": true,
+    "gui_tested_windows": false,
+    "r17_output_save_verified_on_returned_windows_files": true
   },
   "human_amount_review": {
     "supported": true,

@@ -24,6 +24,7 @@ from app.services.asr_amount_recovery import validated_entries
 from app.services.mora_payment_policy import payment_policy, two_installment_window, LIQUIDATION_MORAS
 from app.services.amount_review_service import amount_review_status
 from app.services.account_source_validation import validate_account_source
+from app.services.financial_review_service import apply_financial_review
 
 
 class AnalyticsService:
@@ -42,7 +43,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r17"
+    ENGINE_REVISION = "3.6.19-r18"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -60,6 +61,9 @@ class AnalyticsService:
         recovery = metadata.get("amount_recovery_validation") or {}
         if recovery.get("review_required"):
             reasons.append("Importe recuperado por lecturas adicionales de audio; conserva revisión de evidencia")
+        financial = metadata.get("financial_review_validation") or {}
+        if financial.get("review_required"):
+            reasons.append(financial.get("reason") or "Confirmación financiera pendiente de revisión")
         if metadata.get("quality_contact_type") == "CONTACTO NO DETERMINADO":
             reasons.append("Interlocutor sin identificar; requiere revisión")
         critical = any(isinstance(f, dict) and f.get("invalidates") is True for f in failures)
@@ -407,6 +411,12 @@ class AnalyticsService:
         enriched_context["_segments"] = list(getattr(transcription, "segments", []) or [])
         enriched_context["_duration_seconds"] = float(getattr(transcription, "duration_seconds", 0.0) or 0.0)
         enriched_context["_amount_recovery"] = (getattr(transcription, "metadata", {}) or {}).get("recuperacion_importes")
+        financial_source = dict(getattr(transcription, "metadata", {}) or {})
+        financial_source.setdefault("archivo", transcription.file_name)
+        financial_source.setdefault("texto", transcription.text)
+        financial_source.setdefault("segmentos", transcription.segments)
+        enriched_context["_financial_source"] = financial_source
+        enriched_context["_financial_review"] = financial_source.get("financial_audio_review")
 
         compliance = cls.calculate_basic_compliance(
             text,
@@ -525,6 +535,7 @@ class AnalyticsService:
         data.setdefault("segmentos", transcription.segments)
         analysis.metadata["amount_recovery_validation"] = amount_review_status(data, data.get("amount_audio_review"))
         analysis.metadata["account_source_validation"] = validate_account_source(operational_context or {})
+        analysis.metadata["financial_review_validation"] = (compliance.get("negotiation_validation") or {}).get("financial_review", {})
         analysis.metadata["final_result"] = compliance.get(
             "final_result", "REVISAR"
         )
@@ -3421,6 +3432,9 @@ class AnalyticsService:
         if plan["amounts"] and accepted_amounts and not accepted_amounts.issubset(set(plan["amounts"])):
             plan["review_required"] = True
             plan["conflicts"].append({"accepted_amounts": sorted(accepted_amounts), "plan_amounts": plan["amounts"]})
+        detected_balance_amount, detected_balance_evidence, plan, financial_review = apply_financial_review(
+            context.get("_financial_source"), context.get("_financial_review"),
+            detected_balance_amount, detected_balance_evidence, plan)
         if plan["amounts"]:
             multi_payment_detected = True
             multi_payment_amounts = plan["amounts"]
@@ -3604,6 +3618,7 @@ class AnalyticsService:
             "promise_date_confirmed_from_call": bool(promise_date and promise_date_evidence and confirms_commitment),
             "commitment_evidence": commitment_confirmation,
             "installment_validation": plan,
+            "financial_review": financial_review,
             "date_rule": None,
             "date_effect": None,
             "is_negotiation": requires_new_negotiation_validation,

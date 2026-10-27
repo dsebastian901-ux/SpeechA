@@ -39,6 +39,9 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None):
                              ((item.get("analytics_metadata") or {}).get("amount_recovery_validation") or {}).get("human_review_record"))
             if isinstance(amount_review, dict):
                 transcription.metadata["amount_audio_review"] = deepcopy(amount_review)
+            financial_review = (item.get("financial_audio_review") if "financial_audio_review" in item else
+                ((item.get("analytics_metadata") or {}).get("financial_review_validation") or {}).get("human_review_record"))
+            transcription.metadata["financial_audio_review"] = deepcopy(financial_review)
             relation = item.get("relation") or {}
             analysis = AnalyticsService.analyze_transcription(transcription, relation)
             old = item.get("classification") or {}

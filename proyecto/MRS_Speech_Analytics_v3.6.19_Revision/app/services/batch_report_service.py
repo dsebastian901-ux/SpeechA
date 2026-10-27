@@ -110,6 +110,11 @@ class BatchReportService:
         "Fecha máxima de negociación",
         "Datos de cuenta",
         "Motivo datos de cuenta",
+        "Confirmación financiera",
+        "Saldo ASR original",
+        "Saldo confirmado por usuario",
+        "Parcialidades finales confirmadas",
+        "Historial de propuestas de parcialidades",
     ]
 
     MODE_B_HEADERS = [
@@ -188,6 +193,8 @@ class BatchReportService:
         "Datos de cuenta",
         "Motivo datos de cuenta",
     ]
+
+    MODE_B_HEADERS += HEADERS[-5:]
 
 
     @staticmethod
@@ -498,6 +505,8 @@ class BatchReportService:
         convenio_payment = metadata.get("convenio_payment_validation") or {}
         card_validation = metadata.get("card_validation") or {}
         duration_validation = metadata.get("duration_validation") or {}
+        financial = metadata.get("financial_review_validation") or {}
+        reviewed_balance = ((financial.get("human_review_record") or {}).get("balance") or {})
 
         result_payload = item.get("result") or {}
         transcription = str(
@@ -721,6 +730,14 @@ class BatchReportService:
             "Fecha máxima de negociación": (negotiation.get("mora_payment_policy") or {}).get("window_end") or "",
             "Datos de cuenta": "NOMBRE DE SALIDA POR CORREGIR" if (metadata.get("account_source_validation") or {}).get("review_required") else "",
             "Motivo datos de cuenta": (metadata.get("account_source_validation") or {}).get("reason") or "",
+            "Confirmación financiera": ("CONFIRMADO POR USUARIO" if financial.get("human_verified") else
+                "REVISAR CONFIRMACIÓN" if financial.get("review_required") else ""),
+            "Saldo ASR original": reviewed_balance.get("original_amount", ""),
+            "Saldo confirmado por usuario": reviewed_balance.get("confirmed_amount", ""),
+            "Parcialidades finales confirmadas": (" + ".join(f"{v:g}" for v in (negotiation.get("installment_validation") or {}).get("amounts", []))
+                if financial.get("installments_applied") else ""),
+            "Historial de propuestas de parcialidades": (json.dumps((negotiation.get("installment_validation") or {}).get("evidence", []), ensure_ascii=False)
+                if financial.get("installments_applied") else ""),
         }
 
     @staticmethod
