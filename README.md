@@ -1,11 +1,11 @@
-# MRS Speech Analytics · revisión 18 — saldo y acuerdo final confirmados
+# MRS Speech Analytics · revisión 19 — incorporar validaciones al lote completo
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_18_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_19_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
@@ -17,15 +17,15 @@ dependencias originales se conservan. La primera transcripción de audio nuevo
 necesita descargar el modelo de Whisper desde Hugging Face.
 
 Para probar las reglas nuevas sobre textos guardados, ejecute
-`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r18` y crear una
-carpeta `Reanalisis_MRS_r18_...`. Este paso no vuelve a transcribir audios.
+`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r19` y crear una
+carpeta `Reanalisis_MRS_r19_...`. Este paso no vuelve a transcribir audios.
 Si ya recuperó importes, seleccione el checkpoint final de esa recuperación;
 así se conserva la evidencia sin volver a ejecutar Whisper.
 
 Para recuperar un importe omitido, ejecute `RECUPERAR_IMPORTES.bat`, seleccione
 el checkpoint y la carpeta de sus audios originales. Se releen únicamente
 ventanas de ofertas incompletas; se conservan los textos originales y se genera
-un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r18_.../resultados`.
+un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r19_.../resultados`.
 La evidencia aparece en las columnas finales de recuperación. Un importe
 recuperado por ASR conserva revisión de evidencia. El efecto del mínimo se valida
 por mora: regularización/mensualidad o liquidación. En las moras de liquidación,
@@ -47,7 +47,7 @@ Para registrar un importe recuperado ya comprobado por una persona, ejecute
 desmarcadas. Confirme solo los importes comprobados; si el identificador de
 nombre_final difiere de numero_de_tarjeta, puede corregirlo en una copia usando
 la tarjeta de origen. Guarde para generar un checkpoint y reporte nuevos en
-`Validacion_MRS_r18_.../resultados`. Cuando se localiza o selecciona el Excel
+`Validacion_MRS_r19_.../resultados`. Cuando se localiza o selecciona el Excel
 de cuentas, también se genera `Datos_Cuentas_Corregidos.xlsx` sin cambiar el original.
 En análisis individual existe el botón Validar importe. La confirmación se
 conserva para reanálisis posteriores y no exime las demás reglas de calidad.
@@ -65,6 +65,21 @@ El Excel añade las columnas Confirmación financiera, Saldo ASR original,
 Saldo confirmado por usuario, Parcialidades finales confirmadas e Historial de
 propuestas de parcialidades. Un reanálisis conserva las confirmaciones válidas.
 La herramienta también permite revocarlas y volver a evaluar la lectura ASR.
+
+Para incorporar las confirmaciones de una muestra al lote completo, ejecute
+`INCORPORAR_VALIDACIONES.bat`. Seleccione primero el checkpoint del lote completo
+y después el checkpoint final de la muestra ya validada. Las llamadas se cruzan
+por nombre exacto, texto, segmentos, duración y datos de cuenta. Si hay una
+diferencia o una confirmación incompatible, se detiene la incorporación.
+
+La salida está en `%USERPROFILE%\MRS_Resultados\Integracion_MRS_r19_...\resultados`.
+Conserva todas las llamadas y sus datos originales, agrega la evidencia recuperada
+necesaria y las confirmaciones válidas, y recalcula las clasificaciones.
+No se trasladan etiquetas de aprobación ni puntajes mínimos de la muestra.
+Solo se corrige un nombre de salida si lleva su confirmación explícita anterior.
+Si se localiza el Excel de cuentas, se genera una copia con esos nombres corregidos.
+La consola y la hoja NOTA_REANALISIS indican los archivos nuevos y el alcance.
+No se ejecuta Whisper ni se copian audios.
 
 Las tres herramientas guardan ahora cada ejecución en una carpeta independiente
 dentro de `%USERPROFILE%\MRS_Resultados` (por ejemplo,

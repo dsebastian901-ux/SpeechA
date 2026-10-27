@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r18-diagnostic",
+  "revision": "3.6.19-r19-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -19,13 +19,13 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 467,
+    "passed": 492,
     "failed": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Persist evidence-bound human confirmation of an announced balance and final installment plan, preserving ASR text and initial proposals. Recalculate all other financial and quality gates; retain r17 independent output directories.",
+  "additional_fix": "Incorporate existing evidence-bound financial and output-name confirmations into a matching full batch, preserving all calls and original transcripts, then recalculate decisions with the full batch thresholds. Reject incompatible evidence or account context before creating outputs.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -55,11 +55,11 @@
       "APROBADO": 1
     },
     "after": {
-      "REVISAR": 35,
-      "APROBADO": 1
+      "REVISAR": 32,
+      "APROBADO": 4
     },
     "human_validation_complete": false,
-    "comparison_base": "User-returned revision-13 checkpoint, preserving all original cached results",
+    "comparison_base": "User-returned revision-13 full checkpoint, reanalyzed before and after incorporating the user-verified revision-18 three-call confirmations",
     "original_batch_outcomes": {
       "REVISAR": 32,
       "FALLA_GRAVE": 4
@@ -136,6 +136,25 @@
     "gui_tested_linux": true,
     "gui_tested_windows": false,
     "r17_output_save_verified_on_returned_windows_files": true
+  },
+  "checkpoint_review_import": {
+    "tool": "INCORPORAR_VALIDACIONES.bat",
+    "matched_calls": 3,
+    "total_calls_preserved": 36,
+    "other_33_decisions_unchanged": true,
+    "matching": ["file_name", "texto", "segmentos", "duracion_segundos", "numero_de_tarjeta", "account_context"],
+    "source_transcripts_segments_paths_and_cards_preserved": true,
+    "preflight_before_output_creation": true,
+    "cached_approval_and_sample_threshold_not_imported": true,
+    "source_files_unchanged": true,
+    "corrected_excel_cells": 1,
+    "subsequent_reanalysis_preserves_result": true,
+    "whisper_executed": false,
+    "tk_selection_flow_tested_linux": true,
+    "native_file_selection_simulated": true,
+    "windows_tested": false,
+    "r18_returned_checkpoint_and_excel_verified": true,
+    "pending_overlap_counts": {"output_names": 12, "privacy": 12, "status_mismatch": 8, "financial": 3}
   },
   "human_amount_review": {
     "supported": true,
