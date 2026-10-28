@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r20-diagnostic",
+  "revision": "3.6.19-r21-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -20,13 +20,14 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 569,
-    "failed": 0
+    "passed": 645,
+    "failed": 0,
+    "skipped": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Recognize explicit named identity questions with affirmative replies, while preserving intermediary/role guards. Distinguish confirmed full-settlement offers from questions, unattributed echoes, owed balances, personal intent and overdue-only payment. Ambiguity remains REVIEW; confirmed restricted-mora offers remain PEN004.",
+  "additional_fix": "Apply the user-confirmed follow-up status policy; correct paid-amount binding and date/time confusion, nominal identity, recado acceptance and WhatsApp suffix attribution; preserve independent review gates and actual penalty score. Do not waive new payment instructions, privacy or treatment findings.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -45,7 +46,8 @@
     "compute_type": "int8",
     "model_download_verified": true,
     "human_speaker_validation": false,
-    "requested_calls_still_missing": []
+    "requested_calls_still_missing": [],
+    "scope": "Historical automated audio checks from earlier revisions, not newly executed for r21."
   },
   "publication_note": "Real card reference masked in documentation; private migration archive and audit data remain outside Git.",
   "reported_batch": {
@@ -68,12 +70,22 @@
     "identified_contacts_before": 26,
     "identified_contacts_after": 26,
     "status_matches_before": 5,
-    "status_matches_after": 5
+    "status_matches_after": 5,
+    "r21_reanalysis": {
+      "evaluations": 36,
+      "outcomes": {
+        "REVISAR": 29,
+        "APROBADO": 7
+      },
+      "previous_four_approvals_preserved": true,
+      "name_reviews_preserved": 13,
+      "manual_financial_proofs_preserved": true
+    }
   },
   "historical_regression_outcomes": {
-    "REVISAR": 262,
+    "REVISAR": 254,
     "FALLA_GRAVE": 2,
-    "APROBADO": 4
+    "APROBADO": 12
   },
   "automated_asr_verification": true,
   "amount_recovery": {
@@ -129,8 +141,14 @@
     "revocation_preserves_history": true,
     "reanalysis_preserves_confirmation_and_revocation": true,
     "existing_amount_and_name_reviews_preserved": true,
-    "reported_three_call_outcomes": {"APROBADO": 3},
-    "reported_three_call_scores_unchanged": [100, 80, 90],
+    "reported_three_call_outcomes": {
+      "APROBADO": 3
+    },
+    "reported_three_call_scores_unchanged": [
+      100,
+      80,
+      90
+    ],
     "report_columns": 87,
     "new_asr_executed": false,
     "confirmation_source": "Explicit user statements, not assistant audio listening",
@@ -143,7 +161,14 @@
     "matched_calls": 3,
     "total_calls_preserved": 36,
     "other_33_decisions_unchanged": true,
-    "matching": ["file_name", "texto", "segmentos", "duracion_segundos", "numero_de_tarjeta", "account_context"],
+    "matching": [
+      "file_name",
+      "texto",
+      "segmentos",
+      "duracion_segundos",
+      "numero_de_tarjeta",
+      "account_context"
+    ],
     "source_transcripts_segments_paths_and_cards_preserved": true,
     "preflight_before_output_creation": true,
     "cached_approval_and_sample_threshold_not_imported": true,
@@ -155,7 +180,12 @@
     "native_file_selection_simulated": true,
     "windows_tested": false,
     "r18_returned_checkpoint_and_excel_verified": true,
-    "pending_overlap_counts": {"output_names": 12, "privacy": 12, "status_mismatch": 8, "financial": 3}
+    "pending_overlap_counts": {
+      "output_names": 12,
+      "privacy": 12,
+      "status_mismatch": 8,
+      "financial": 3
+    }
   },
   "reported_95_call_batch": {
     "engine_before": "3.6.19-r19",
@@ -164,14 +194,31 @@
     "technical_errors": 0,
     "original_processing_seconds": 6067.917190100066,
     "original_report_matches_checkpoint": true,
-    "before": {"REVISAR": 91, "FALLA_GRAVE": 4},
-    "after": {"REVISAR": 92, "APROBADO": 1, "FALLA_GRAVE": 2},
+    "before": {
+      "REVISAR": 91,
+      "FALLA_GRAVE": 4
+    },
+    "after": {
+      "REVISAR": 92,
+      "APROBADO": 1,
+      "FALLA_GRAVE": 2
+    },
     "confirmed_holders_before": 6,
     "confirmed_holders_after": 26,
     "identity_unconfirmed_after": 67,
-    "changed_classification_cases": [4, 22, 63],
-    "removed_false_pen004_cases": [4, 63],
-    "remaining_critical_cases": [81, 93],
+    "changed_classification_cases": [
+      4,
+      22,
+      63
+    ],
+    "removed_false_pen004_cases": [
+      4,
+      63
+    ],
+    "remaining_critical_cases": [
+      81,
+      93
+    ],
     "approved_case": 22,
     "pending_output_name_mismatches": 22,
     "output_names_alone_explain_zero_approvals": false,
@@ -183,7 +230,27 @@
     "previous_36_outcomes_and_manual_reviews_preserved": true,
     "new_rule_windows_execution": false,
     "human_audio_verification": false,
-    "all_13_issues_closed": false
+    "all_13_issues_closed": false,
+    "r21_reanalysis": {
+      "engine_revision": "3.6.19-r21",
+      "before_r20": {
+        "APROBADO": 1,
+        "REVISAR": 92,
+        "FALLA_GRAVE": 2
+      },
+      "after": {
+        "REVISAR": 85,
+        "APROBADO": 8,
+        "FALLA_GRAVE": 2
+      },
+      "prior_31_approvals_retained": 6,
+      "prior_31_review_pending": 25,
+      "transcript_segments_and_account_data_unchanged": true,
+      "report_columns_verified": 87,
+      "whisper_executed": false,
+      "human_listening_performed": false,
+      "windows_verified": false
+    }
   },
   "human_amount_review": {
     "supported": true,
@@ -203,5 +270,24 @@
     "confirmation_source": "Explicit user statements in conversation, not assistant audio listening",
     "gui_tested_linux": true,
     "gui_tested_windows": false
+  },
+  "followup_status_policy": {
+    "source": "Explicit user clarification, 2026-10-28",
+    "keep_excel_status": [
+      "CONVENIO",
+      "NO DEFINE FECHA DE PAGO"
+    ],
+    "requires_reported_payment_and_receipt_followup": true,
+    "not_a_new_payment_promise": true,
+    "does_not_assert_unknown_paid_amount_covers_minimum": true,
+    "other_quality_gates_remain_active": true
+  },
+  "regression_policy_change": {
+    "allows_approved_followups_with_documented_user_policy": true,
+    "checkpoint_hash_and_original_penalty_evidence_checks_retained": true,
+    "new_safety_invariants": [
+      "No unconfirmed contact approval",
+      "No unaccepted new payment instruction approved as followup"
+    ]
   }
 }

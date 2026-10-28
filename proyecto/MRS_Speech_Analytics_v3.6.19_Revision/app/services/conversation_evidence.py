@@ -108,13 +108,16 @@ def holder_confirmation(text, segments=()):
     counter = re.compile(r"\b(?:no (?:se encuentra|esta aqui|esta en casa)|no soy|soy su (?:espos[oa]|madre|padre|herman[oa])|es nuestro proveedor)\b")
     identification = (
         r"(?:me (?:puede|pueden|podria|podrian|podre|podeis) comunicar[, ]*(?:(?:por|de) favor[, ]*)?con|"
-        r"me comunica[, ]*(?:(?:por|de) favor[, ]*)?con|estoy buscando a|hablo con|"
-        r"tengo el gusto(?: de hablar)? con|me comunico con|(?<=¿)con)")
+        r"me comunica[, ]*(?:(?:por|de) favor[, ]*)?con|me comunique con|me puede conectar con|"
+        r"(?:me )?voy a comunicar con|puede comunicar con|"
+        r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|se encuentra|estoy buscando a|hablo con|"
+        r"me estoy comunicando al numero telefonico de|seria tan amable de comunicarme con|"
+        r"tengo(?: el)? gusto(?: de hablar)? con|me comunico con|(?<=¿)con)")
     prompt = re.compile(
         rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}})[.?]\s*"
         r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+)?(?:digame|diganme|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b")
     named_identity = re.compile(
-        r"\b(?:tengo el gusto(?: de hablar)? con|me comunico con|hablo con|"
+        r"\b(?:tengo(?: el)? gusto(?: de hablar)? con|me comunico con|hablo con|"
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|(?<=¿)con)\s+"
         r"(?P<identity>[^.!?]{2,100})[.?]\s*(?:ah[, ]+)?"
         r"(?P<answer>si(?:[, ]+(?:digame|diganme))?|asi es|correcto|ella habla|el habla|digame|diganme)\b")
@@ -131,7 +134,15 @@ def holder_confirmation(text, segments=()):
         r"(?P<answer>si(?:[, ]+si)?[^.!?]{0,35})[.!?]\s*"
         r"(?:(?:buen(?:o|os)? dias?|buenas? tardes?|que tal|mucho gusto)[.!?]\s*){0,2}"
         r"(?:mucho gusto|me presento)\b")
-    for pattern in (prompt, direct, contextual, named_identity, delayed_self_identity):
+    split_honorific = re.compile(
+        r"\btengo el gusto con (?:el senor|la senora|la senorita)[.]\s*"
+        r"(?P<identity>[^.!?]{2,85})[.?]\s*(?P<answer>si|asi es|ella habla|el habla)\b")
+    greeted_identity = re.compile(
+        rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}})[.?]\s*"
+        r"(?P<answer>si)[.!]\s*(?:muy )?(?:buenos dias|buen dia|buenas tardes)"
+        r"(?:[, ]+(?:senor|senora|senorita|caballero)[^.!?]{0,65})?[.!]\s*"
+        r"(?:mi nombre es|me presento|le marcamos)\b")
+    for pattern in (prompt, direct, contextual, named_identity, delayed_self_identity, split_honorific, greeted_identity):
         for match in pattern.finditer(s):
             if pattern is not direct and re.search(
                     r"\b(?:familiar|espos[oa]|madre|padre|herman[oa]|referencia|quien|usted(?:es)?|"
@@ -149,11 +160,35 @@ def holder_confirmation(text, segments=()):
             if _role_at(text, segments, match.start("answer")) in {"GESTOR", "TERCERO"}:
                 continue
             tail = s[match.end():match.end()+80]
-            if (counter.search(match.group()+tail) or re.search(r"\b(?:obviamente )?no soy\b", s)
+            if (counter.search(match.group()+tail) or re.search(r"\bno soy (?:esa persona|ese senor|el titular|la titular)\b", s)
                     or re.search(r"\b(?:se lo comunico|le paso|permita|espere|no esta|lo busco|la busco)\b", match["answer"] + tail[:45])):
                 continue
             return {"confirmed": True, "method": "RESPUESTA_A_IDENTIFICACION",
                     "evidence": match.group(), "speaker_role": "NO DETERMINADO"}
+    # Autorreferencia independiente del Excel: pregunta nominal + respuesta
+    # sobre la PROPIA cuenta/tarjeta. «No tengo dinero»/«sí» solos no bastan.
+    # No transforma en titular a un familiar que paga por otra persona.
+    request = re.search(rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}})[.?]", s)
+    third_person = re.search(
+        r"\b(?:soy su |es mi (?:espos[oa]|herman[oa]|sobrin[oa]|hij[oa]|madre|padre)|"
+        r"no soy (?:esa persona|ese senor|el titular|la titular)|no esta (?:aqui|en casa)|"
+        r"no se encuentra aqui|se lo comunico|le paso (?:al titular|con el|con ella)|lo busco|la busco|"
+        r"no es mi (?:tarjeta|cuenta)|pago por (?:el|ella)|cuenta de mi|es nuestro proveedor|"
+        r"soy (?:su )?(?:companero|companera|amigo|amiga|vecino|vecina|familiar))\b", s)
+    ownership = re.compile(
+        r"\b(?:mi (?:tarjeta|cuenta|saldo|estado de cuenta|aplicacion|pago)|"
+        r"yo (?:tengo|tenia) una (?:cuenta|tarjeta)|(?:yo )?(?:cancele|bloquee|rompi) (?:mi |la )?tarjeta)\b")
+    if request and not third_person and not re.search(
+            r"\b(?:familiar|espos[oa]|madre|padre|herman[oa]|banco|despacho|corporativo|tarjeta|pago|deuda|cuenta|servicio)\b", request['identity']):
+        for unit in sentence_evidence(text, segments):
+            if unit["speaker_role"] in {"GESTOR", "TERCERO"}:
+                continue
+            value = normalize(unit["text"])
+            if ownership.search(value) and not re.search(
+                    r"\b(?:si tuviera|si tuviese|si yo tuviera|diga|digale|repita|usted dice|usted dijo)\b", value):
+                return {"confirmed": True, "method": "AUTORREFERENCIA_CUENTA_TRAS_IDENTIFICACION",
+                        "evidence": request.group()+" / "+unit["text"],
+                        "speaker_role": unit["speaker_role"]}
     return {"confirmed": False, "method": "SIN_CONFIRMACION", "evidence": ""}
 
 
@@ -183,13 +218,14 @@ def payment_commitment(text, segments=()):
         positive = re.search(
             r"\b(?:me comprometo a (?:pagar|depositar|abonar|cubrir)|"
             r"(?:yo )?voy a (?:pagar|depositar|abonar|cubrir)|pagare|depositare|abonare|"
-            r"(?:manana|el lunes|el martes|el miercoles|el jueves|el viernes|el sabado|el domingo) "
+            r"(?:manana|(?:el )?(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)) "
             r"(?:(?:le )?(?:pago|deposito)|mando a pagar(?:lo)?))\b", s)
         negative = re.search(
             r"\b(?:no (?:voy a|puedo|pienso|quiero) (?:pagar|depositar|abonar|cubrir)|"
             r"no puedo (?:comprometerme|confirmar|dar una fecha)|no me comprometo|"
             r"no tengo (?:esa|la) cantidad|no dispongo de (?:esa|la) cantidad|"
             r"no (?:tengo|cuento con) (?:dinero|la cantidad|esa cantidad)|"
+            r"no (?:lo )?(?:puedo|voy a poder) (?:pagar|hacer)|no lo confirmo|"
             r"(?:manana|hoy) no (?:podria|puedo)|no (?:tendria|tendre)\s+(?:\d+|dos|mil))\b", s)
         conditional = re.search(
             r"\b(?:si me da tiempo|si consigo (?:el )?dinero|si tengo dinero|si puedo juntar|"
@@ -199,6 +235,10 @@ def payment_commitment(text, segments=()):
         payment_context = re.search(r"\b(?:pago|pagar|depositar|dinero|cantidad|convenio|pesos|descuento)\b",
                                     source[max(0, position-220):cursor])
         if conditional and not payment_context:
+            conditional = None
+        if conditional and not (positive or negative) and re.search(
+                r"\b(?:no se (?:ha )?reflejado|no (?:habia|tenia|tienen) sistema|"
+                r"ustedes son|empresa.*seria)\b", s):
             conditional = None
         if conditional:
             events.append((position, None, unit["text"]))
@@ -221,7 +261,7 @@ def payment_commitment(text, segments=()):
     # una pregunta futura de pago, una cantidad explícita y una respuesta firme.
     amount_question = re.compile(
         r"\b(?:que cantidad|con que cantidad|por que cantidad)\b[^?!.]{0,100}"
-        r"\b(?:confirmaria pagar|podemos contemplar|puede pagar|va a pagar)\b[^?!.]{0,60}\?\s*"
+        r"\b(?:confirmaria pagar|podemos contemplar|puede pagar|va a pagar|va a realizar (?:su |el )?pago)\b[^?!.]{0,60}\?\s*"
         r"(?P<answer>[^.!?]{1,110})")
     for match in amount_question.finditer(source):
         answer = match["answer"]
@@ -230,6 +270,14 @@ def payment_commitment(text, segments=()):
                 or re.search(r"\b(?:no|creo|a lo mejor|si consigo|si puedo|si me da)\b", answer)):
             continue
         events.append((match.start("answer"), True, match.group()))
+    future_question = re.compile(
+        r"\b(?:ya tendra(?:n)? (?:usted )?(?:el |su )?pago para (?:hoy|manana)|"
+        r"podemos contar con (?:su |el )?pago (?:para )?(?:hoy|manana))[^?!.]{0,45}\?\s*"
+        r"(?P<answer>si(?:[, ]+[^.!?]{0,65})?)")
+    for match in future_question.finditer(source):
+        if (_role_at(text, segments, match.start('answer')) not in {'GESTOR', 'TERCERO'}
+                and not re.search(r"\b(?:creo|si puedo|si consigo|si me da|no puedo|a lo mejor)\b", match['answer'])):
+            events.append((match.start('answer'), True, match.group()))
     # Al corregir una propuesta, una aceptación nueva puede reemplazar una
     # condición anterior. Un «ok» aislado o responder sobre WhatsApp no basta.
     corrected_offer = re.compile(
@@ -262,7 +310,8 @@ def completed_payment(text, segments=()):
             r"\b(?:ya pague|yo pague|lo pague|pague (?:ayer|hoy)|ya (?:hice|realice) (?:mi |el |un )?pago|"
             r"(?:hice|realice) (?:mi|el|un) pago|lo realice|lo hice|depositamos|fui a realizar mi pago|"
             r"ya (?:mande|envie) (?:el |mi )?comprobante|ya (?:le )?di (?:un )?abono|"
-            r"ya se pago|tengo registrado (?:un )?reporte de pago)\b", s))
+            r"ya se pago|(?:ayer |hoy |ya )pagamos|(?:el |mi )?pago ya esta (?:hecho|realizado)|"
+            r"tengo registrado (?:un )?reporte de pago)\b", s))
         candidates.extend(re.finditer(r"\bpagué\b", verbatim, re.I))
         # Sin tilde, «realice» puede ser subjuntivo: una instrucción para un
         # pago futuro no acredita un depósito anterior, aunque mencione recibo.
@@ -273,10 +322,21 @@ def completed_payment(text, segments=()):
         for candidate in candidates:
             if any(f.start() <= candidate.start() < f.end() for f in future_instructions):
                 continue
+            if 'realice' in candidate.group() and not re.search(r"\brealicé\b", verbatim, re.I):
+                prefix=s[max(0,candidate.start()-65):candidate.start()]
+                if (re.search(r"\bque\s+(?:(?:el|ella|usted|yo|ya)\s+)*$",prefix)
+                        or not re.search(r"\b(?:ya|hoy|ayer|pasado|pasada)\b",prefix+' '+candidate.group())):
+                    continue
             if re.search(r"\b(?:no|aun no|todavia no)\s+(?:he |lo )?$", s[:candidate.start()]):
+                continue
+            if candidate.group() in {'lo realice', 'lo hice'} and re.search(
+                    r"\b(?:que|para que|cuando|si)\s*$", s[:candidate.start()]):
                 continue
             if unit["speaker_role"] == "GESTOR" and "tengo registrado" not in normalize(candidate.group()):
                 continue
+            if re.search(r"\b(?:cuando|una vez que|si|para que)\b[^.!?]{0,35}$", s[:candidate.start()]):
+                if 'esta hecho' in candidate.group() or 'esta realizado' in candidate.group():
+                    continue
             start, end = position + candidate.start(), position + candidate.end()
             if position >= 0 and not any(u["text_start"] < end and u["text_end"] > start for u in evidence):
                 evidence.append(dict(unit, text_start=start, text_end=end))
@@ -313,7 +373,8 @@ FAMILY = re.compile(rf"\b(?:(?:soy|era) (?:su |un |una )?familiar|soy su {KIN}|(
 ACCEPTANCE = re.compile(
     r"\b(?:lo anoto|lo puedo anotar|puedo anotarlo|yo se lo (?:envio|mando)|"
     r"yo le aviso|le (?:paso|doy|transmito) el recado|se lo comunico|"
-    r"se lo hago saber|le hago llegar el mensaje|le voy a (?:pasar|dar) el (?:recado|mensaje))\b")
+    r"se lo hago saber|le hago llegar el mensaje|le paso el dato|"
+    r"yo (?:le )?aviso(?: igual)?|le voy a (?:pasar|dar) el (?:recado|mensaje))\b")
 DECLINES = re.compile(
     r"\b(?:no (?:quiero|puedo|voy a) (?:recibir|tomar|anotar|pasar|dar|transmitir)|"
     r"no (?:le|se lo) (?:voy a |puedo |quiero )?(?:pasar|dar|mandar|avisar)|"
@@ -341,8 +402,31 @@ def assess_recado(text, segments=()):
             families.append(dict(unit, phrase=match.group()))
         if ACCEPTANCE.search(s) and not DECLINES.search(s) and "?" not in s and "¿" not in s:
             # Una cita o una instrucción del gestor no confirma recepción.
-            if not re.search(r"\b(?:diga|digale|dijera|dijera que|diga que|gracias por|no)\b.{0,25}" + ACCEPTANCE.pattern, s):
-                acceptances.append(unit)
+            for accepted in ACCEPTANCE.finditer(s):
+                prefix=s[max(0,accepted.start()-60):accepted.start()]
+                if (not re.search(r"\b(?:diga|digale|dijera|dijera que|diga que|gracias por)\b.{0,25}$",prefix)
+                        and not re.search(r"\bno\s*$",prefix)):
+                    acceptances.append(unit)
+                    break
+    source = normalize(text)
+    # «Hermana» es respuesta a una pregunta de parentesco, nunca una identidad
+    # inferida del estatus o de una mención suelta del gestor.
+    kin_reply = re.compile(
+        r"\bque (?:parentesco|parentezco) (?:tiene|tienes) (?:usted )?(?:con (?:el|ella))?\?\s*"
+        r"(?:no (?:la|lo) escuche[.!]\s*)?(?P<answer>"+KIN+r")[.! ,]")
+    for match in kin_reply.finditer(source):
+        if _role_at(text, segments, match.start('answer')) not in {'GESTOR', 'TITULAR'}:
+            families.append({'text':match.group(), 'phrase':match['answer'],
+                             'speaker_role':_role_at(text,segments,match.start('answer')),
+                             'start':None,'end':None})
+    request = re.compile(
+        r"\b(?:puedo|podria|podemos) (?:dejar(?:le)?|dar(?:le)?) (?:un |el )?recado[^?!]{0,55}\?\s*"
+        r"(?P<answer>si(?:[, ]+claro)?|claro|de acuerdo|a ver[, ]+digame)\b")
+    for match in request.finditer(source):
+        if (_role_at(text,segments,match.start('answer')) not in {'GESTOR','TITULAR'}
+                and not re.search(r"\b(?:pero no|no quiero|no puedo|no le voy)\b", source[match.end():match.end()+70])):
+            acceptances.append({'text':match.group(), 'speaker_role':_role_at(text,segments,match.start('answer')),
+                                'start':None,'end':None})
     return {"family": families, "acceptance": acceptances,
             "refusal": refusals, "unknown_recipient": unknown}
 
@@ -414,7 +498,7 @@ SENSITIVE = re.compile(
     r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis) (?:mes(?:es)?|mensualidades)(?: de)? (?:atraso|vencid[ao]s?)|"
     r"(?:deuda|adeudo|pago minimo|monto) (?:de |es |por )?\d[\d.,]*|"
     r"(?:adeuda|debe)\s+(?:\d[\d.,]*|mil|cien|doscientos|trescientos|quinientos)|"
-    r"(?:su|una|la) deuda|cubrir (?:el |su )?atraso|respecto a su atraso|"
+    r"(?:su|una|la) deuda|cubrir (?:el |su )?atraso|respecto a su atraso|por (?:el |su )?atraso|"
     r"negativa de pago|recuperacion (?:del|de su|en el) saldo|"
     r"pagos? vencidos?|incumplimiento (?:al|del|de) contrato|"
     r"(?:tiene|maneja|cuenta con) (?:una |la |su )?tarjeta)\b")

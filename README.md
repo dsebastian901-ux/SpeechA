@@ -1,11 +1,11 @@
-# MRS Speech Analytics · revisión 20 — identidad y atribución de liquidaciones
+# MRS Speech Analytics · revisión 21 — aprobación y seguimiento de pagos
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_20_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_21_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
@@ -17,15 +17,15 @@ dependencias originales se conservan. La primera transcripción de audio nuevo
 necesita descargar el modelo de Whisper desde Hugging Face.
 
 Para probar las reglas nuevas sobre textos guardados, ejecute
-`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r20` y crear una
-carpeta `Reanalisis_MRS_r20_...`. Este paso no vuelve a transcribir audios.
+`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r21` y crear una
+carpeta `Reanalisis_MRS_r21_...`. Este paso no vuelve a transcribir audios.
 Si ya recuperó importes, seleccione el checkpoint final de esa recuperación;
 así se conserva la evidencia sin volver a ejecutar Whisper.
 
 Para recuperar un importe omitido, ejecute `RECUPERAR_IMPORTES.bat`, seleccione
 el checkpoint y la carpeta de sus audios originales. Se releen únicamente
 ventanas de ofertas incompletas; se conservan los textos originales y se genera
-un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r20_.../resultados`.
+un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r21_.../resultados`.
 La evidencia aparece en las columnas finales de recuperación. Un importe
 recuperado por ASR conserva revisión de evidencia. El efecto del mínimo se valida
 por mora: regularización/mensualidad o liquidación. En las moras de liquidación,
@@ -47,7 +47,7 @@ Para registrar un importe recuperado ya comprobado por una persona, ejecute
 desmarcadas. Confirme solo los importes comprobados; si el identificador de
 nombre_final difiere de numero_de_tarjeta, puede corregirlo en una copia usando
 la tarjeta de origen. Guarde para generar un checkpoint y reporte nuevos en
-`Validacion_MRS_r20_.../resultados`. Cuando se localiza o selecciona el Excel
+`Validacion_MRS_r21_.../resultados`. Cuando se localiza o selecciona el Excel
 de cuentas, también se genera `Datos_Cuentas_Corregidos.xlsx` sin cambiar el original.
 En análisis individual existe el botón Validar importe. La confirmación se
 conserva para reanálisis posteriores y no exime las demás reglas de calidad.
@@ -72,7 +72,7 @@ y después el checkpoint final de la muestra ya validada. Las llamadas se cruzan
 por nombre exacto, texto, segmentos, duración y datos de cuenta. Si hay una
 diferencia o una confirmación incompatible, se detiene la incorporación.
 
-La salida está en `%USERPROFILE%\MRS_Resultados\Integracion_MRS_r20_...\resultados`.
+La salida está en `%USERPROFILE%\MRS_Resultados\Integracion_MRS_r21_...\resultados`.
 Conserva todas las llamadas y sus datos originales, agrega la evidencia recuperada
 necesaria y las confirmaciones válidas, y recalcula las clasificaciones.
 No se trasladan etiquetas de aprobación ni puntajes mínimos de la muestra.
@@ -81,14 +81,19 @@ Si se localiza el Excel de cuentas, se genera una copia con esos nombres corregi
 La consola y la hoja NOTA_REANALISIS indican los archivos nuevos y el alcance.
 No se ejecuta Whisper ni se copian audios.
 
-La revisión 20 reconoce aperturas explícitas como «¿Tengo el gusto con…? Sí»,
-«Me comunico con… Ah, sí, dígame» y «¿Con la señorita…? Sí». Conserva los controles
-de parentesco, ausencia, transferencia de la llamada y roles conocidos.
-También separa una oferta de liquidación del gestor de preguntas, intenciones
-del cliente y frases que solo cubren lo vencido. Un saldo debido seguido de
-«voy a liquidar» no equivale a la instrucción «usted debe liquidar».
-Las atribuciones inciertas permanecen en REVISAR; las ofertas totales confirmadas
-en moras restringidas conservan PEN004. No se cambian montos, fechas ni textos ASR.
+La revisión 21 incorpora la aclaración del usuario: se conserva CONVENIO o
+NO DEFINE FECHA DE PAGO en un seguimiento de pago reportado y comprobante.
+Se separan importes de fechas, plazos y teléfonos; una terminación de WhatsApp
+no se compara como tarjeta. Se reconocen variantes de identidad, parentesco,
+aceptación de recados y rechazo de una negociación posterior a un pago histórico.
+Se mantienen la atribución de liquidaciones, privacidad, maltrato, fechas,
+montos y dos lugares autorizados cuando hay una negociación nueva.
+
+El puntaje refleja las penalizaciones observadas; se retira el límite artificial
+de 79 por estatus no confirmado. Una llamada con evidencia pendiente conserva
+REVISAR aunque obtenga 100 puntos. Los textos ASR y datos de cuenta se conservan.
+El lote de 95 obtiene 8 APROBADO, 85 REVISAR y 2 FALLA_GRAVE; la comparación
+privada detalla las 31 aprobaciones anteriores y los pendientes por llamada.
 
 Para aplicar estas reglas a un lote existente, use REANALIZAR_CHECKPOINT.bat
 con el checkpoint más reciente de ese lote. La aprobación calculada y el
