@@ -12,12 +12,15 @@ UNITS.update(dict(zip('treinta cuarenta cincuenta sesenta setenta ochenta novent
 UNITS.update(dict(zip('cien ciento doscientos trescientos cuatrocientos quinientos seiscientos setecientos ochocientos novecientos'.split(),
                      (100,100,200,300,400,500,600,700,800,900))))
 WORDS = '|'.join(sorted([*UNITS,'mil'],key=len,reverse=True))
-NUMBER = rf'(?:\d{{1,3}}(?:[.,]\d{{3}})+(?:[.,]\d{{1,2}})?|\d{{1,7}}(?:[.,]\d{{1,2}})?|(?:{WORDS})(?:\s+(?:y\s+)?(?:{WORDS})){{0,7}})'
+NUMBER = rf'(?:(?:(?:un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve)\s+)?mil\s+\d{{1,3}}|\d{{1,3}}(?:[.,]\d{{3}})+(?:[.,]\d{{1,2}})?|\d{{1,7}}(?:[.,]\d{{1,2}})?|(?:{WORDS})(?:\s+(?:y\s+)?(?:{WORDS})){{0,7}})'
 MONEY = re.compile(rf'(?<!\w)(?:\$\s*)?(?P<number>{NUMBER})(?:\s*pesos?)?(?!\w)')
 
 
 def money_value(token):
     value=normalize(token).strip()
+    hybrid=re.fullmatch(r'(?:(un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve)\s+)?mil\s+(\d{1,3})',value)
+    if hybrid:
+        return float(UNITS.get(hybrid[1],1)*1000+int(hybrid[2]))
     if re.fullmatch(r'[\d.,]+',value):
         if re.fullmatch(r'\d{1,3}(?:[.,]\d{3})+',value):
             value=re.sub(r'[.,]','',value)
@@ -73,9 +76,9 @@ def reported_amounts(text, completion):
         tail=source[b:min(len(source),b+180)]
         # Importe ligado al verbo, antes de cambiar de oración/pregunta.
         # Se permiten introducciones naturales y el día antes de «por la cantidad».
-        direct=re.match(r'\s*(?:(?:mi|el|un)\s+pago\s*)?(?:minimo(?: que me pidieron)? de |de |por |por la cantidad (?:que era el pago total )?de )?(?P<amount>'+NUMBER+r')(?:\s*pesos?)?\b',tail)
+        direct=re.match(r'\s*[, ]*(?:(?:ya|senorita|senor|joven)\s*[, ]+){0,3}(?:(?:mi|el|un)\s+pago\s*)?(?:minimo(?: que me pidieron)? de |de |por |por la cantidad (?:que era el pago total )?de )?(?P<amount>'+NUMBER+r')(?:\s*pesos?)?\b',tail)
         if direct:
-            add(b,b+direct.end(),'IMPORTE_TRAS_PAGO_REPORTADO',a)
+            add(b+direct.start('amount'),b+direct.end(),'IMPORTE_TRAS_PAGO_REPORTADO',a)
         for match in re.finditer(r'\b(?:por la cantidad (?:que era el pago total )?de|pague|lo pague|pago (?:de|por))\s+',tail):
             bridge=tail[:match.start()]
             if re.search(r'\b(?:manana|tendria|debe|voy a|tengo que|tiene que)\b',bridge): continue
@@ -86,7 +89,7 @@ def reported_amounts(text, completion):
     question=re.compile(
         r'\b(?:que cantidad (?:pago|pagaron|cubrio|deposito|aplico(?: pago)?|realizo(?: (?:su|el) pago)?)|'
         r'(?:de|por) que cantidad(?: (?:fue|lo (?:hizo|realizo)|realizo(?: (?:su|el) pago)?))?|'
-        r'cual fue la cantidad)\b[^?!]{0,45}[?!.]\s*')
+        r'cual fue la cantidad|sobre que cantidad se realizo)\b[^?!]{0,45}[?!.]\s*')
     for match in question.finditer(source):
         previous=[u for u in anchors if 0<=match.start()-u['text_start']<=650]
         if not previous: continue
@@ -121,8 +124,11 @@ def reported_amounts(text, completion):
     amounts=[]
     for item in candidates:
         if item['amount'] not in amounts: amounts.append(item['amount'])
+    uncertain=any(re.search(r'\b(?:no recuerdo|no me acuerdo|creo que fueron|creo que eran)\b',c['text'])
+                  for c in candidates)
     conflicting=len(amounts)>1
     return {'amounts':amounts if not conflicting else [],
-            'total':amounts[0] if len(amounts)==1 else None,
-            'evidence':candidates,'review_required':conflicting,
-            'reason':'Importes de pagos reportados distintos; verificar eventos antes de sumarlos.' if conflicting else ''}
+            'total':amounts[0] if len(amounts)==1 and not uncertain else None,
+            'evidence':candidates,'review_required':conflicting or uncertain,
+            'reason':('Importe de pago reportado expresamente incierto; verificar el comprobante.' if uncertain else
+                      'Importes de pagos reportados distintos; verificar eventos antes de sumarlos.' if conflicting else '')}

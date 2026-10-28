@@ -165,6 +165,41 @@ def verified_removal(rule, previous, current):
     return False
 
 
+def verified_current_agreement(metadata):
+    """Una aceptación textual nueva permite retirar solo PEN009 documentado.
+
+    No autoriza quitar faltas de privacidad, trato, referencias o finanzas. La
+    revisión por llamada sigue exigiendo hash de origen y causa verificable.
+    """
+    status=metadata.get('status_validation') or {}
+    n=metadata.get('negotiation_validation') or {}
+    commitment=n.get('commitment_evidence') or {}
+    policy=n.get('mora_payment_policy') or {}
+    try:
+        promise=date.fromisoformat(n['promise_date'])
+        call=date.fromisoformat(str(n['call_date']).split()[0])
+        due=date.fromisoformat(str(n['due_date']).split()[0])
+        end=date.fromisoformat(policy['window_end'])
+    except (KeyError,TypeError,ValueError):
+        return False
+    window_ok=promise<=end or (n.get('installment_window') or {}).get('valid') is True
+    return bool(metadata.get('quality_contact_type')=='TITULAR'
+        and (metadata.get('contact_validation') or {}).get('confirmed') is True
+        and status.get('matches') is True and status.get('valid') is True
+        and status.get('detected_status')=='CONVENIO'
+        and status.get('evidence_method')=='COMPROMISO_ACEPTADO_CON_FECHA'
+        and status.get('evidence')==commitment.get('evidence') and commitment.get('evidence')
+        and commitment.get('accepted') is True and n.get('commitment_confirmed') is True
+        and n.get('valid') is True and not n.get('review_required')
+        and not n.get('hard_invalid') and not n.get('unaccepted_new_payment_instruction')
+        and call<=promise<=due and window_ok
+        and (metadata.get('shared_classification') or {}).get('aprobado') is True
+        and not metadata.get('critical_failures')
+        and not (metadata.get('privacy_validation') or {}).get('review_required')
+        and not (metadata.get('privacy_validation') or {}).get('confirmed_disclosure')
+        and not invariants({'metadata':metadata,'shared_decision':{'aprobado':True}}))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", type=Path)
@@ -213,7 +248,9 @@ def main():
         if other_removed and other_removed == set(review.get("allowed_removed", [])):
             original = json.loads((args.input_dir/row["checkpoint"]).read_text(encoding="utf-8-sig"))["items"][row["index"]-1]
             valid = (not str(m["final_result"]).startswith("APROBAD") or
-                     (bool(review.get('checkpoint_sha256')) and verified_followup_approval(m)))
+                     (bool(review.get('checkpoint_sha256')) and (
+                         verified_followup_approval(m) or
+                         (other_removed=={'PEN009'} and verified_current_agreement(m)))))
             if review.get("checkpoint_sha256"):
                 valid = valid and row["source_sha256"] == review["checkpoint_sha256"]
                 rules = review.get("evidence_rules") or {}

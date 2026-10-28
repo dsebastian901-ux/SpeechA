@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r21-diagnostic",
+  "revision": "3.6.19-r22-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -20,7 +20,7 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 645,
+    "passed": 692,
     "failed": 0,
     "skipped": 0
   },
@@ -289,5 +289,61 @@
       "No unconfirmed contact approval",
       "No unaccepted new payment instruction approved as followup"
     ]
+  },
+  "engine_revision": "3.6.19-r22",
+  "r22_review_backlog": {
+    "calls": 95,
+    "previous_review_calls": 85,
+    "before": {
+      "APROBADO": 8,
+      "REVISAR": 85,
+      "FALLA_GRAVE": 2
+    },
+    "after": {
+      "APROBADO": 11,
+      "REVISAR": 82,
+      "FALLA_GRAVE": 2
+    },
+    "technical_errors": 0,
+    "previous_eight_approvals_retained": true,
+    "output_identifiers_corrected_in_private_copy": 22,
+    "output_identifier_source": "Explicit prior user instruction: numero_de_tarjeta from Excel",
+    "original_audio_transcripts_segments_cards_and_financial_reviews_preserved": true,
+    "unit_tests_passed": 692,
+    "historical_regression_evaluations": 268,
+    "regression_safety_failures": 0,
+    "undocumented_penalty_removals": 0,
+    "regression_baselines": [
+      "original migration",
+      "r21"
+    ],
+    "previous36": {
+      "APROBADO": 7,
+      "REVISAR": 29
+    },
+    "previous36_manual_reviews_and_13_output_name_records_preserved": true,
+    "whisper_executed": false,
+    "audio_files_copied": false,
+    "human_audio_verification": false,
+    "windows_r22_execution_verified": false,
+    "pending_blockers_overlap": {
+      "status": 72,
+      "unconfirmed_identity": 48,
+      "financial": 27,
+      "privacy": 23,
+      "payment_places": 22,
+      "duration_under_60": 17,
+      "bank_data": 8,
+      "treatment": 4
+    },
+    "all_85_closed": false,
+    "all_13_issues_closed": false
+  },
+  "current_validation": {
+    "engine_revision": "3.6.19-r22",
+    "unit_tests": 692,
+    "historical_evaluations": 268,
+    "passed": true,
+    "scope": "Rules over stored transcripts; no new acoustic or native Windows verification"
   }
 }

@@ -107,8 +107,8 @@ def holder_confirmation(text, segments=()):
     # Una confirmación aparente seguida de ausencia/tercero no acredita titular.
     counter = re.compile(r"\b(?:no (?:se encuentra|esta aqui|esta en casa)|no soy|soy su (?:espos[oa]|madre|padre|herman[oa])|es nuestro proveedor)\b")
     identification = (
-        r"(?:me (?:puede|pueden|podria|podrian|podre|podeis) comunicar[, ]*(?:(?:por|de) favor[, ]*)?con|"
-        r"me comunica[, ]*(?:(?:por|de) favor[, ]*)?con|me comunique con|me puede conectar con|"
+        r"(?:me (?:puede|puedes|pueden|podria|podrias|podrian|podre|podeis) comunicar[, ]*(?:(?:por|de) favor[, ]*)?(?:con|a)|"
+        r"me comunican?[, ]*(?:(?:por|de) favor[, ]*)?con|me comunique con|me puede conectar con|"
         r"(?:me )?voy a comunicar con|puede comunicar con|"
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|se encuentra|estoy buscando a|hablo con|"
         r"me estoy comunicando al numero telefonico de|seria tan amable de comunicarme con|"
@@ -142,7 +142,12 @@ def holder_confirmation(text, segments=()):
         r"(?P<answer>si)[.!]\s*(?:muy )?(?:buenos dias|buen dia|buenas tardes)"
         r"(?:[, ]+(?:senor|senora|senorita|caballero)[^.!?]{0,65})?[.!]\s*"
         r"(?:mi nombre es|me presento|le marcamos)\b")
-    for pattern in (prompt, direct, contextual, named_identity, delayed_self_identity, split_honorific, greeted_identity):
+    company_reply = re.compile(
+        rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}})[.?]\s*"
+        r"¿?(?:de (?:donde habla|parte de quien)|quien habla)(?:[, ]+perdon)?\?\s*"
+        r"(?P<bridge>[^.!?]{1,130}\b(?:mrs|corporativo|juridico)\b[^.!?]{0,60})[.!]\s*"
+        r"(?P<answer>(?:ah[, ]+)?(?:si[, ]+)?(?:digame|diganme))\b")
+    for pattern in (prompt, direct, contextual, named_identity, delayed_self_identity, split_honorific, greeted_identity, company_reply):
         for match in pattern.finditer(s):
             if pattern is not direct and re.search(
                     r"\b(?:familiar|espos[oa]|madre|padre|herman[oa]|referencia|quien|usted(?:es)?|"
@@ -158,6 +163,8 @@ def holder_confirmation(text, segments=()):
                     match["identity"]):
                 continue
             if _role_at(text, segments, match.start("answer")) in {"GESTOR", "TERCERO"}:
+                continue
+            if pattern is company_reply and re.search(r"\b(?:se lo comunico|te hablan|le paso|no esta|no se encuentra)\b",match['bridge']):
                 continue
             tail = s[match.end():match.end()+80]
             if (counter.search(match.group()+tail) or re.search(r"\bno soy (?:esa persona|ese senor|el titular|la titular)\b", s)
@@ -218,6 +225,7 @@ def payment_commitment(text, segments=()):
         positive = re.search(
             r"\b(?:me comprometo a (?:pagar|depositar|abonar|cubrir)|"
             r"(?:yo )?voy a (?:pagar|depositar|abonar|cubrir)|pagare|depositare|abonare|"
+            r"(?:hoy|manana) (?:deposito|abono|lo hago|lo realizo|hago el deposito|hago el pago)|"
             r"(?:manana|(?:el )?(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)) "
             r"(?:(?:le )?(?:pago|deposito)|mando a pagar(?:lo)?))\b", s)
         negative = re.search(
@@ -225,6 +233,7 @@ def payment_commitment(text, segments=()):
             r"no puedo (?:comprometerme|confirmar|dar una fecha)|no me comprometo|"
             r"no tengo (?:esa|la) cantidad|no dispongo de (?:esa|la) cantidad|"
             r"no (?:tengo|cuento con) (?:dinero|la cantidad|esa cantidad)|"
+            r"no tengo (?:ni )?(?:para |pal )?(?:abonar|pagar)|"
             r"no (?:lo )?(?:puedo|voy a poder) (?:pagar|hacer)|no lo confirmo|"
             r"(?:manana|hoy) no (?:podria|puedo)|no (?:tendria|tendre)\s+(?:\d+|dos|mil))\b", s)
         conditional = re.search(
@@ -239,6 +248,8 @@ def payment_commitment(text, segments=()):
         if conditional and not (positive or negative) and re.search(
                 r"\b(?:no se (?:ha )?reflejado|no (?:habia|tenia|tienen) sistema|"
                 r"ustedes son|empresa.*seria)\b", s):
+            conditional = None
+        if conditional and re.search(r"\b(?:lo podria repetir|podria repetirlo)\b",s):
             conditional = None
         if conditional:
             events.append((position, None, unit["text"]))
@@ -288,6 +299,20 @@ def payment_commitment(text, segments=()):
         if (re.search(r"\b(?:pago|pagar|convenio|fecha)\b", before)
                 and _role_at(text, segments, match.start("answer")) not in {"GESTOR", "TERCERO"}):
             events.append((match.start("answer"), True, match.group()))
+    # Aceptación del importe que se acaba de confirmar, sin confundir la
+    # recepción de un número de WhatsApp ni la confirmación de un pago pasado.
+    confirmation = re.compile(
+        r"\bconfirm(?:a|aria|o) (?:usted )?(?:su |el |un )?pago\b"
+        r"(?P<offer>[^.!?]{0,100}(?:\d[\d.,]*|pesos)[^.!?]{0,65})[.?]\s*"
+        r"(?P<answer>si(?:[, ]+esta bien)?|de acuerdo|correcto|esta bien)\b")
+    for match in confirmation.finditer(source):
+        after=source[match.end():match.end()+60].split('.')[0]
+        before=source[max(0,match.start()-70):match.start()]
+        if (not re.search(r"\b(?:no|diga|diga que|usted dice|por ejemplo)\s*$",before)
+                and not re.search(r"\b(?:realizado|pago|hizo|ayer|pasado|recibido|reportado)\b",match['offer'])
+                and not re.search(r"\b(?:pero|no puedo|si consigo|a lo mejor|creo)\b",after)
+                and _role_at(text,segments,match.start('answer')) not in {'GESTOR','TERCERO'}):
+            events.append((match.start('answer'),True,match.group()))
     if not events:
         return {"accepted": False, "declined": False, "evidence": ""}
     _, accepted, evidence = max(events, key=lambda e: e[0])
@@ -311,8 +336,9 @@ def completed_payment(text, segments=()):
             r"(?:hice|realice) (?:mi|el|un) pago|lo realice|lo hice|depositamos|fui a realizar mi pago|"
             r"ya (?:mande|envie) (?:el |mi )?comprobante|ya (?:le )?di (?:un )?abono|"
             r"ya se pago|(?:ayer |hoy |ya )pagamos|(?:el |mi )?pago ya esta (?:hecho|realizado)|"
-            r"tengo registrado (?:un )?reporte de pago)\b", s))
+            r"fui a abonar|ya abone|tengo registrado (?:un )?reporte de pago)\b", s))
         candidates.extend(re.finditer(r"\bpagué\b", verbatim, re.I))
+        candidates.extend(re.finditer(r"\brealicé (?:mi|el|un) pago\b", verbatim, re.I))
         # Sin tilde, «realice» puede ser subjuntivo: una instrucción para un
         # pago futuro no acredita un depósito anterior, aunque mencione recibo.
         future_instructions = list(re.finditer(
@@ -466,14 +492,23 @@ def agent_statement(text, segments, pattern):
 def payment_places(text, segments, catalog):
     """Lugares ofrecidos para pagar, sin duplicar marcas anidadas ni negadas."""
     found = {}
-    for unit in sentence_evidence(text, segments):
+    units=sentence_evidence(text, segments)
+    payment_context=False
+    for unit in units:
         if unit["speaker_role"] in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:
             continue
         s = normalize(unit["text"])
         # La tienda de origen de la tarjeta no es una instrucción de pago.
-        if not re.search(r"\b(?:puede pagar(?:lo|los)?|podra pagar(?:lo|los)?|puede realizar|realizar (?:su |el )?pago|"
+        instruction=re.search(r"\b(?:puede pagar(?:lo|los)?|puede aplicar pago|podra pagar(?:lo|los)?|puede realizar|realizar (?:su |el )?pago|"
                          r"pague|pagar(?:lo|los)? en|pago en|pago de servicio|deposite|depositar en|"
-                         r"lugares de pago|opciones de pago|convenio (?:numero )?\d)\b", s):
+                         r"lugares de pago|opciones de pago|convenio (?:numero )?\d)\b", s)
+        # La enumeración puede ser la respuesta a «¿dónde puedo pagar?» en
+        # la oración inmediatamente anterior. No se arrastra contexto a toda
+        # la llamada ni se cuenta la tienda de origen como instrucción.
+        continuation=payment_context and re.match(r"^(?:en |a la |a |o |tambien |farmacias |tiendas |kiosco\b|7[- ])",s)
+        payment_context=bool(re.search(r"\b(?:donde|lugares|establecimientos)\b.*\b(?:pagar|pago)\b|"
+                                      r"\b(?:pagar|pago)\b.*\b(?:donde|establecimientos)\b",s))
+        if not instruction and not continuation:
             continue
         matches = []
         for place, variants in catalog.items():
@@ -486,7 +521,12 @@ def payment_places(text, segments, catalog):
                 continue
             selected.append((start, end))
             before = s[max(0, start-100):start]
-            if re.search(r"\bno\b.{0,80}\b(?:pagar|pague|en)\b", before):
+            # Negación de ESA opción; «no en Guadalajara, puede pagar en
+            # Kiosko» no niega la segunda cláusula afirmativa.
+            negative=re.search(r"\bno\b.{0,80}\b(?:pagar|pague|en)\b",before)
+            positive=list(re.finditer(r"\b(?:puede pagar|puede aplicar pago|pagar en|pago en|o en)\b",before))
+            if negative and not (positive and positive[-1].start()>negative.start()
+                    and not re.search(r"\bno (?:se )?$",before[max(0,positive[-1].start()-12):positive[-1].start()])):
                 continue
             found[place] = dict(unit, phrase=phrase, place=place)
     return list(found.values())

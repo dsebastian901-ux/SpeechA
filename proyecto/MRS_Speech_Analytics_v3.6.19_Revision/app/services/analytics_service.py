@@ -25,7 +25,7 @@ from app.services.mora_payment_policy import payment_policy, two_installment_win
 from app.services.amount_review_service import amount_review_status
 from app.services.account_source_validation import validate_account_source
 from app.services.financial_review_service import apply_financial_review
-from app.services.reported_payment_amounts import reported_amounts
+from app.services.reported_payment_amounts import reported_amounts, NUMBER, money_value
 
 
 class AnalyticsService:
@@ -44,7 +44,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r21"
+    ENGINE_REVISION = "3.6.19-r22"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -839,7 +839,7 @@ class AnalyticsService:
         def add_candidate(match, candidate):
             if candidate is None:
                 return
-            if re.fullmatch(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", match.group()):
+            if re.fullmatch(r"\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?", match.group()):
                 prefix = normalized[max(0, match.start()-65):match.start()]
                 if not re.search(r"\b(?:el|pago|pagar|depositar|fecha|promesa|para|dia)\s+"
                                  r"(?:(?:es|sera|el|para|dia|de|pago)\s+){0,5}$", prefix):
@@ -915,6 +915,16 @@ class AnalyticsService:
                 if not m.group(3) and candidate < base - timedelta(days=31):
                     candidate = date(year + 1, month, day)
                 add_candidate(m, candidate)
+            except ValueError:
+                pass
+
+        # «Confirmo el pago el día 24» es una fecha; no se exige que el
+        # interlocutor repita el nombre del mes en cada confirmación.
+        for m in re.finditer(r"\b(?:el dia|para el dia)\s+([0-3]?\d)\b(?!\s*[/:-])", normalized):
+            if re.match(r"\s+de\s+(?:"+'|'.join(months)+r")\b", normalized[m.end():]):
+                continue  # La fecha completa ya se evaluó arriba.
+            try:
+                add_candidate(m,date(base.year,base.month,int(m[1])))
             except ValueError:
                 pass
 
@@ -1795,12 +1805,7 @@ class AnalyticsService:
             "confirmo su compromiso",
             "confirmamos su pago",
             "fecha de pago",
-        ]) or bool(
-            re.search(
-                r"\b(?:0?[1-9]|[12]\d|3[01])[/-](?:0?[1-9]|1[0-2])(?:[/-]\d{2,4})?\b",
-                normalized,
-            )
-        )
+        ])
 
         # Coherencia interna: una fecha de promesa extraída es evidencia
         # suficiente para no penalizar simultáneamente "sin fecha".
@@ -1825,6 +1830,15 @@ class AnalyticsService:
             "solo una parte",
             "pago incompleto",
         ])
+        # Una advertencia para evitar un parcial no constituye su aceptación.
+        if partial_payment:
+            partial_payment = any(
+                not re.search(r"\b(?:no (?:se )?(?:vaya a |va a )?"
+                              r"(?:tomar|tome|toma|considerar|considere) como (?:un )?|"
+                              r"no (?:es|hare|realizare|acepto) (?:un )?|evitar (?:un )?)$",
+                              norm(u['text'])[:m.start()])
+                for u in sentence_evidence(text, segments)
+                for m in re.finditer(r"\b(?:pago parcial|abono parcial|solo una parte|pago incompleto)\b", norm(u['text'])))
         partial_explanation = any_of([
             "no regulariza la cuenta",
             "no queda al corriente",
@@ -2248,8 +2262,8 @@ class AnalyticsService:
         requests_receipt_whatsapp = bool(whatsapp_receipt_evidence)
 
         authorized_payment_places = {
-            "FARMACIAS DEL AHORRO": ["farmacias del ahorro", "farmacia del ahorro"],
-            "7-ELEVEN": ["7 eleven", "seven eleven", "7-11", "7/11", "7 y 11"],
+            "FARMACIAS DEL AHORRO": ["farmacias del ahorro", "farmacia del ahorro", "farmacias de la oro", "farmacia de la oro"],
+            "7-ELEVEN": ["7 eleven", "seven eleven", "7-11", "7/11", "7 y 11", "seven y leven"],
             "CHEDRAUI": ["chedraui"],
             "WOOLWORTH": ["woolworth"],
             "TIENDAS DEL SOL": ["tiendas del sol", "tienda del sol", "del sol"],
@@ -2823,6 +2837,7 @@ class AnalyticsService:
         unaccepted_new_payment_instruction = bool(is_convenio and payment_confirmation_case
             and not confirms_commitment and (agent_statement(text, segments,
                 r"\b(?:tiene|tendria|necesita) que (?:realizar|aplicar|cubrir|hacer) (?:un |el |su )?pago\b|"
+                r"\bseria que realice (?:un |el |su )?pago\b|"
                 r"\b(?:se le esta requiriendo|se le esta solicitando|se le requiere) (?:un |el |su )?pago\b")
                 or (prior_payment_total is not None and minimum_for_attempt is not None
                     and not prior_payment_covers_minimum and negotiation_attempt)))
@@ -3099,6 +3114,10 @@ class AnalyticsService:
                 ):
                     return True
 
+                # Una referencia anterior no absorbe el importe de una nueva
+                # cláusula: «tarjeta ... se requiere un pago de 1200».
+                if re.search(r"\b(?:pago|pagar|pague|saldo(?: total| pendiente| vencido)?|cantidad|monto|abono|minimo)\s*(?:de|por)?\s*$", before):
+                    return False
                 nearby = (before + " " + after).lower()
                 return bool(non_money_reference_re.search(nearby))
 
@@ -3126,6 +3145,19 @@ class AnalyticsService:
                 val=spanish_number_value(m.group(1))
                 if val is not None and val > 0:
                     found.append((m.start(),m.end(),val,m.group(0)))
+            # Las cantidades dictadas no requieren «pesos» si una cláusula
+            # financiera las introduce directamente. No se usa el mínimo de
+            # Excel para adivinar qué número se dijo.
+            for m in re.finditer(
+                    r"\b(?:pago(?: minimo| unico)?|saldo(?: total| pendiente| vencido)?|"
+                    r"cantidad|monto|abono)\s+(?:(?:por|de|la|cantidad)\s+){0,4}"
+                    r"(?P<amount>"+NUMBER+r")(?!\w)", source):
+                raw=m['amount']
+                if not re.search(r"[a-z]", raw):
+                    continue
+                value=money_value(raw)
+                if value and value>=10 and not is_non_money_reference(m.start('amount'),m.end('amount'),raw):
+                    found.append((m.start('amount'),m.end('amount'),value,raw))
             # «mil 900 pesos» aporta 1900, no otros 900 adicionales.
             return sorted([m for m in found if not any(
                 other[0] <= m[0] and other[1] >= m[1] and
@@ -3178,7 +3210,7 @@ class AnalyticsService:
         negotiation_anchor_re = re.compile(
             r"\b(?:pagar|pague|paga|pago|abono|abonar|parcial|parcialidad|convenio|"
             r"propuesta|acuerdo|regulariza|regularizar|corriente|liquida|liquidar|liquidacion|"
-            r"cubrir|cubre|finiquitar|finiquito|cantidad\s+de|monto\s+de|pago\s+minimo|minimo\s+que|mínimo\s+que)\b"
+            r"cubrir|cubre|finiquitar|finiquito|cantidad\s+de|monto\s+de|pago\s+minimo|minimo(?:\s+que)?|mínimo\s+que)\b"
         )
         balance_anchor_re = re.compile(
             r"\b(?:saldo(?!\s+(?:pasado|anterior)\b)(?:\s+total|\s+pendiente)?|total\s+adeudado|adeudo\s+total)\b"
@@ -3211,6 +3243,14 @@ class AnalyticsService:
             return any(max(0, pm.start()-45) <= mm[0] <= pm.end()+75 for pm in completed_payment_matches)
 
         for mm in money_mentions:
+            before_token=source_norm[max(0,mm[0]-60):mm[0]]
+            after_token=source_norm[mm[1]:mm[1]+35]
+            # Fechas, horas y plazos se excluyen por su sintaxis inmediata;
+            # mencionar «mañana» cerca de un pago no convierte ese pago en fecha.
+            if not re.search(r"\$|peso", str(mm[3])) and (
+                    re.search(r"\b(?:dia|fecha|corte|a las|son las|hasta el|desde el|antes del)\s*(?:de|el)?\s*$",before_token)
+                    or re.match(r"\s*(?:horas?|dias?|meses?|anos?|de octubre|de noviembre|de diciembre|de enero)\b",after_token)):
+                continue
             # v3.6.11: si la cifra está inmediatamente precedida por una terminación,
             # referencia, tarjeta, teléfono, WhatsApp, convenio, etc., se descarta como
             # monto aunque exista una palabra "pago" cercana. Ej.: "terminación 1509".
@@ -3219,7 +3259,10 @@ class AnalyticsService:
 
             prior_identifier = [pos for pos in identifier_positions if pos <= mm[0]]
             identifier_distance = (mm[0] - max(prior_identifier)) if prior_identifier else 10**9
-            if identifier_distance <= 85 and not ("$" in str(mm[3]) or "peso" in str(mm[3]).lower()):
+            payment_before = list(negotiation_anchor_re.finditer(before_token))
+            direct_money = bool(payment_before and re.fullmatch(
+                r"\s*(?:(?:de|por|la|cantidad|es|un|el)\s*)*",before_token[payment_before[-1].end():]))
+            if identifier_distance <= 85 and not direct_money and not ("$" in str(mm[3]) or "peso" in str(mm[3]).lower()):
                 continue
 
             # v3.6.5: atribución DIRECCIONAL. No usar la palabra "pago" que aparece
@@ -3260,10 +3303,8 @@ class AnalyticsService:
                     (total_expected is None or mm[2] <= total_expected + 0.009)
                 )
                 # Números típicos no monetarios: 7-Eleven / 7 11, horas y días sueltos.
-                store_or_calendar = bool(re.search(
-                    r"(?:7[\s-]*(?:eleven|11)|\b(?:dia|día|fecha|hora|horario|corte|terminacion|terminación)\b)",
-                    local,
-                )) and not explicit_currency
+                store_or_calendar = bool(re.match(r"\s*[- ]*(?:eleven|11)\b",local_after)
+                    and mm[2]==7) and not explicit_currency
                 if store_or_calendar:
                     continue
 
@@ -3355,7 +3396,7 @@ class AnalyticsService:
             for v in multi_payment_amounts:
                 if not any(abs(v-u) < 0.01 for u in distinct):
                     distinct.append(v)
-            if minimum_expected is not None and sequence_wording and len(distinct) >= 2:
+            if minimum_expected is not None and sequence_wording and len(distinct) == 2:
                 total_multi = sum(distinct)
                 if total_multi + 0.009 >= minimum_expected and (total_expected is None or total_multi <= total_expected + 0.009):
                     multi_payment_detected = True
@@ -3368,7 +3409,7 @@ class AnalyticsService:
             # debe sumarse al complemento comprometido para validar la regularización.
             if (minimum_expected is not None and not multi_payment_detected
                     and prior_payment_total is not None and prior_payment_total > 0
-                    and payment_already_made):
+                    and payment_already_made and explicit_new_promise):
                 future_candidates = []
                 for x in amount_candidates:
                     val = float(x[2][2])

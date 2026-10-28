@@ -1002,8 +1002,8 @@ class BatchReportService:
         summary_ws.append(["Aprobados", approved])
         summary_ws.append(["Aprobados sin etiquetar", approved_untagged])
         summary_ws.append(["No aprobados menor a 80%", under_80])
-        summary_ws.append(["Mal dictaminados", bad_dictation])
-        summary_ws.append(["Negociaciones inválidas", invalid_negotiation])
+        summary_ws.append(["Clasificación calculada: MAL DICTAMINADO", bad_dictation])
+        summary_ws.append(["Clasificación calculada: NEGOCIACION_INVALIDA", invalid_negotiation])
         summary_ws.append(["Fallas graves", severe_failure])
         summary_ws.append(["Revisión manual", review])
         summary_ws.append(["Incorrectos IA", incorrect])
@@ -1013,8 +1013,8 @@ class BatchReportService:
         summary_ws.append(["Score promedio", avg_score])
         summary_ws.append(["% aprobación", approval_pct])
         summary_ws.append(["Umbral mínimo", minimum_score])
-        summary_ws.append(["Mal dictaminado", sum(1 for r in rows if r.get("Validación Dictamen") == "MAL DICTAMINADO")])
-        summary_ws.append(["Negociaciones inválidas", sum(1 for r in rows if r.get("Validación Negociación") == "INVÁLIDA")])
+        summary_ws.append(["Discrepancias de estatus detectadas por reglas", sum(1 for r in rows if r.get("Validación Dictamen") == "MAL DICTAMINADO")])
+        summary_ws.append(["Validación financiera: INVÁLIDA", sum(1 for r in rows if r.get("Validación Negociación") == "INVÁLIDA")])
         summary_ws.append(["Confrontaciones del gestor", sum(1 for r in rows if "CONFRONTACION DEL GESTOR" in str(r.get("Confrontación") or "").upper())])
 
         summary_ws.column_dimensions["A"].width = 30
