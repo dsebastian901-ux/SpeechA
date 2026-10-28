@@ -107,21 +107,37 @@ def holder_confirmation(text, segments=()):
     # Una confirmación aparente seguida de ausencia/tercero no acredita titular.
     counter = re.compile(r"\b(?:no (?:se encuentra|esta aqui|esta en casa)|no soy|soy su (?:espos[oa]|madre|padre|herman[oa])|es nuestro proveedor)\b")
     identification = (
-        r"(?:me (?:puede|pueden|podria|podrian|podre|podeis) comunicar[, ]*(?:por favor[, ]*)?con|"
-        r"me comunica[, ]*(?:por favor[, ]*)?con|estoy buscando a|hablo con)")
+        r"(?:me (?:puede|pueden|podria|podrian|podre|podeis) comunicar[, ]*(?:(?:por|de) favor[, ]*)?con|"
+        r"me comunica[, ]*(?:(?:por|de) favor[, ]*)?con|estoy buscando a|hablo con|"
+        r"tengo el gusto(?: de hablar)? con|me comunico con|(?<=¿)con)")
     prompt = re.compile(
-        rf"\b{identification}\s+[^.!?]{{2,100}}[.?]\s*"
-        r"(?P<answer>(?:si[, ]+)?(?:digame|diganme|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b")
+        rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}})[.?]\s*"
+        r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+)?(?:digame|diganme|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b")
+    named_identity = re.compile(
+        r"\b(?:tengo el gusto(?: de hablar)? con|me comunico con|hablo con|"
+        r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|(?<=¿)con)\s+"
+        r"(?P<identity>[^.!?]{2,100})[.?]\s*(?:ah[, ]+)?"
+        r"(?P<answer>si(?:[, ]+(?:digame|diganme))?|asi es|correcto|ella habla|el habla|digame|diganme)\b")
+    # La presentación de la empresa puede separar la pregunta de «ella habla».
+    # Solo una respuesta explícita de identidad permite saltar ese tramo.
+    delayed_self_identity = re.compile(
+        rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}})[.?].{{0,250}}?"
+        r"(?P<answer>(?:si[, ]+)?(?:ella habla|el habla))(?=[.!?]|$)")
     direct = re.compile(
         r"\bes usted(?P<identity>[^.!?]{0,85})\?\s*"
         r"(?P<answer>si|asi es|correcto|aja)\b")
     contextual = re.compile(
-        rf"\b{identification}\s+[^.!?]{{2,100}}[.?]\s*"
+        rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}})[.?]\s*"
         r"(?P<answer>si(?:[, ]+si)?[^.!?]{0,35})[.!?]\s*"
         r"(?:(?:buen(?:o|os)? dias?|buenas? tardes?|que tal|mucho gusto)[.!?]\s*){0,2}"
         r"(?:mucho gusto|me presento)\b")
-    for pattern in (prompt, direct, contextual):
+    for pattern in (prompt, direct, contextual, named_identity, delayed_self_identity):
         for match in pattern.finditer(s):
+            if pattern is not direct and re.search(
+                    r"\b(?:familiar|espos[oa]|madre|padre|herman[oa]|referencia|quien|usted(?:es)?|"
+                    r"banco|despacho|corporativo|cobranza|pago|deuda|cuenta|departamento|encargad[oa]|"
+                    r"tarjeta|dinero|cantidad|telefono|linea|numero|servicio)\b", match["identity"]):
+                continue
             if pattern is direct and match["identity"].strip() and not re.match(
                     r"(?:el caballero|la senora|la senorita|el senor|el titular|la titular|caballero|senora|senorita|senor)\b",
                     match["identity"].strip()):
@@ -134,7 +150,7 @@ def holder_confirmation(text, segments=()):
                 continue
             tail = s[match.end():match.end()+80]
             if (counter.search(match.group()+tail) or re.search(r"\b(?:obviamente )?no soy\b", s)
-                    or re.search(r"\b(?:se lo comunico|le paso|permita|espere|no esta)\b", match["answer"] + tail[:45])):
+                    or re.search(r"\b(?:se lo comunico|le paso|permita|espere|no esta|lo busco|la busco)\b", match["answer"] + tail[:45])):
                 continue
             return {"confirmed": True, "method": "RESPUESTA_A_IDENTIFICACION",
                     "evidence": match.group(), "speaker_role": "NO DETERMINADO"}

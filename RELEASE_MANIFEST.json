@@ -1,11 +1,12 @@
 {
-  "revision": "3.6.19-r19-diagnostic",
+  "revision": "3.6.19-r20-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
   "modified_original_source_files": [
     "LEEME_CAMBIOS_3.6.19.txt",
     "app/services/analytics_service.py",
+    "app/services/conversation_evidence.py",
     "app/services/batch_report_service.py",
     "app/services/batch_service.py",
     "app/services/payment_reference_validation.py",
@@ -19,13 +20,13 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 492,
+    "passed": 569,
     "failed": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Incorporate existing evidence-bound financial and output-name confirmations into a matching full batch, preserving all calls and original transcripts, then recalculate decisions with the full batch thresholds. Reject incompatible evidence or account context before creating outputs.",
+  "additional_fix": "Recognize explicit named identity questions with affirmative replies, while preserving intermediary/role guards. Distinguish confirmed full-settlement offers from questions, unattributed echoes, owed balances, personal intent and overdue-only payment. Ambiguity remains REVIEW; confirmed restricted-mora offers remain PEN004.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -155,6 +156,34 @@
     "windows_tested": false,
     "r18_returned_checkpoint_and_excel_verified": true,
     "pending_overlap_counts": {"output_names": 12, "privacy": 12, "status_mismatch": 8, "financial": 3}
+  },
+  "reported_95_call_batch": {
+    "engine_before": "3.6.19-r19",
+    "calls": 95,
+    "completed_calls": 95,
+    "technical_errors": 0,
+    "original_processing_seconds": 6067.917190100066,
+    "original_report_matches_checkpoint": true,
+    "before": {"REVISAR": 91, "FALLA_GRAVE": 4},
+    "after": {"REVISAR": 92, "APROBADO": 1, "FALLA_GRAVE": 2},
+    "confirmed_holders_before": 6,
+    "confirmed_holders_after": 26,
+    "identity_unconfirmed_after": 67,
+    "changed_classification_cases": [4, 22, 63],
+    "removed_false_pen004_cases": [4, 63],
+    "remaining_critical_cases": [81, 93],
+    "approved_case": 22,
+    "pending_output_name_mismatches": 22,
+    "output_names_alone_explain_zero_approvals": false,
+    "source_transcripts_segments_account_data_and_reviews_unchanged": true,
+    "reanalysis_whisper_executed": false,
+    "original_whisper_executed": true,
+    "model": "small",
+    "original_device": "cpu",
+    "previous_36_outcomes_and_manual_reviews_preserved": true,
+    "new_rule_windows_execution": false,
+    "human_audio_verification": false,
+    "all_13_issues_closed": false
   },
   "human_amount_review": {
     "supported": true,

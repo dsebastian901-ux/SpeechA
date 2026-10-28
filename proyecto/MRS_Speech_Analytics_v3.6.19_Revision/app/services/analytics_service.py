@@ -43,7 +43,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r19"
+    ENGINE_REVISION = "3.6.19-r20"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -55,6 +55,8 @@ class AnalyticsService:
         status = metadata.get("status_validation") or {}
         negotiation = metadata.get("negotiation_validation") or {}
         reasons = []
+        if negotiation.get("liquidation_offer_review_required"):
+            reasons.append("Posible liquidación total sin atribución u oferta confirmada; revisar audio")
         account = metadata.get("account_source_validation") or {}
         if account.get("review_required"):
             reasons.append(account.get("reason") or "Datos de cuenta inconsistentes; revisar nombre de salida")
@@ -1564,10 +1566,11 @@ class AnalyticsService:
             normalized,
         ))
         liquidation_offer_pattern = re.compile(
-            r"\bcon\s+(?:este|ese|el)\s+pago\b.{0,80}\b(?:liquida|liquidaria|liquidar)\b"
-            r"|\b(?:usted\s+)?(?:puede|podra|debe|debera|tiene\s+que|tendria\s+que)\b.{0,80}\b(?:liquidar|liquida)\b"
-            r"|\b(?:le\s+ofrecemos|le\s+podemos\s+ofrecer|la\s+opcion\s+es)\b.{0,100}\b(?:liquidar|liquidacion)\b"
-            r"|\b(?:liquida|liquidaria)\s+(?:su\s+cuenta|la\s+cuenta|saldo\s+total|el\s+saldo\s+total|saldo\s+vencido|el\s+saldo\s+vencido|lo\s+vencido)\b",
+            r"(?P<payment>\bcon\s+(?:este|ese|el)\s+pago\b.{0,80}\b(?:liquida|liquidaria|liquidar)\b)"
+            r"|(?P<directive>\b(?:usted\s+)?(?:puede|podra|debe|debera|tiene\s+que|tendria\s+que)\b.{0,80}\b(?:liquidar|liquida)\b)"
+            r"|(?P<offer>\b(?:le\s+ofrecemos|le\s+podemos\s+ofrecer|la\s+opcion\s+es)\b.{0,100}\b(?:liquidar|liquidacion)\b)"
+            r"|(?P<bare>\b(?:liquida|liquidaria)\s+(?:su\s+cuenta|la\s+cuenta|saldo\s+total|el\s+saldo\s+total)\b"
+            r"|\b(?:tendria|tendra|dejaria|dejara)\s+(?:su|la)\s+cuenta\s+en\s+ceros\b)",
         )
         # «Finiquitar la deuda» expresa liquidación total, aunque la oferta
         # termine con una pregunta o quede partida entre ventanas de Whisper.
@@ -1581,12 +1584,42 @@ class AnalyticsService:
             and not re.search(r"\b(?:me dijeron|me habian dicho|segun yo|crei|pense)\b", norm(unit["text"]))
             and agent_statement(unit["text"], (), settlement_pattern)
             for unit in sentence_evidence(text, segments))
-        agent_liquidation_offer = explicit_settlement_offer or any(
-            liquidation_offer_pattern.search(norm(unit["text"]))
-            and unit["speaker_role"] not in {"TITULAR", "TERCERO", "INTERLOCUTOR"}
-            and not re.search(r"\b(?:me dijeron|me habian dicho|segun yo|yo pague|yo quiero|crei|pense)\b", norm(unit["text"]))
-            and not re.search(r"\bno\s+(?:puede|podra|debe|debera|liquida|liquidaria)\b", norm(unit["text"]))
-            for unit in evidence_units(text, context.get("_segments") or []))
+        agent_liquidation_offer = explicit_settlement_offer
+        liquidation_offer_evidence = []
+        for unit in sentence_evidence(text, segments):
+            if unit["speaker_role"] in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:
+                continue
+            for clause in re.split(r"[;]|(?=¿)", unit["text"]):
+                folded = norm(clause)
+                for candidate in liquidation_offer_pattern.finditer(folded):
+                    if re.search(r"\b(?:me dijeron|me habian dicho|segun yo|yo pague|yo quiero|crei|pense)\b", folded) or re.search(
+                            r"\b(?:el cliente|la cliente|el titular|la titular|usted)\s+(?:dijo|dice|menciona|comenta|confirmo|me dijo)\b", folded):
+                        continue
+                    prefix = folded[max(0, candidate.start()-60):candidate.start()]
+                    if re.search(r"\b(?:no|nunca|jamas)\s+(?:(?:se|le)\s+)?$", prefix) or re.search(
+                            r"\bno\s+(?:puede|podra|debe|debera|liquida|liquidaria)\b", candidate.group()):
+                        continue
+                    # Cubrir lo vencido no equivale a liquidar la cuenta completa.
+                    if re.match(r"\s+(?:lo que es\s+)?(?:(?:su|el|la)\s+)?(?:saldo vencido|mensualidad(?: vencida)?|pago (?:minimo|vencido)|lo vencido)\b",
+                                folded[candidate.end():]):
+                        continue
+                    question = "?" in folded or "¿" in folded
+                    # «Debe 1800 ... voy a liquidar» combina saldo e intención del
+                    # cliente. El verbo deber seguido de un monto no es una orden.
+                    owed_amount = candidate.lastgroup == "directive" and bool(re.match(
+                        r"(?:usted\s+)?(?:debe|debera)\s+(?:\$?\s*\d|mil\b|dos\b|tres\b|cuatro\b|cinco\b|seis\b|siete\b|ocho\b|nueve\b|diez\b|once\b|doce\b|quince\b|veinte\b|treinta\b|cien\b|ciento\b|doscientos\b|trescientos\b|cuatrocientos\b|quinientos\b|seiscientos\b|setecientos\b|ochocientos\b|novecientos\b)",
+                        candidate.group()))
+                    personal_intent = bool(re.search(r"\b(?:voy (?:a|al)|quiero|queria|yo)\b.{0,35}\bliquidar\b", candidate.group()))
+                    uncertain_claim = bool(re.search(r"\b(?:no creo|no creemos|no se si|no sabria si|tal vez|quizas|puede que)\b", prefix))
+                    confirmed = not (question or owed_amount or personal_intent or uncertain_claim) and (candidate.lastgroup != "bare" or unit["speaker_role"] == "GESTOR")
+                    liquidation_offer_evidence.append({"text": clause.strip(), "speaker_role": unit["speaker_role"],
+                        "start": unit.get("start"), "end": unit.get("end"), "confirmed": confirmed,
+                        "reason": "OFERTA_DIRECTA" if confirmed else "SALDO_E_INTENCION_PERSONAL" if owed_amount or personal_intent else "PREGUNTA_O_ENUNCIADO_SIN_ATRIBUCION"})
+                    agent_liquidation_offer = agent_liquidation_offer or confirmed
+        liquidation_offer_review_required = bool(liquidation_offer_evidence and not agent_liquidation_offer)
+        holder_liquidation_report = holder_liquidation_report or bool(re.search(
+            r"\b(?:voy (?:a|al) liquidar|yo liquido|liquidare)\b"
+            r"|\bya les habia dicho\b[^.!?]{0,100}\bliquid(?:o|ar)\b", normalized))
         liquidation_words = agent_liquidation_offer
         liquidation_attribution = (
             "GESTOR" if agent_liquidation_offer
@@ -3637,6 +3670,8 @@ class AnalyticsService:
             "payment_confirmation_case": payment_confirmation_case,
             "liquidation_detected": liquidation_words,
             "liquidation_attribution": liquidation_attribution,
+            "liquidation_offer_review_required": liquidation_offer_review_required,
+            "liquidation_offer_evidence": liquidation_offer_evidence,
             "holder_liquidation_report": holder_liquidation_report,
             "liquidation_allowed": mora not in restricted_liquidation_moras,
             "amount_confirmed": bool(detected_claim_amount is not None),
@@ -3714,6 +3749,11 @@ class AnalyticsService:
             negotiation_validation["reasons"].append(
                 f"Liquidación prohibida para la asignación {mora}."
             )
+        if liquidation_offer_review_required:
+            negotiation_validation["valid"] = False
+            negotiation_validation["review_required"] = True
+            negotiation_validation["reasons"].append(
+                "Posible liquidación total sin atribución u oferta confirmada; revisar audio.")
         if requires_new_negotiation_validation and detected_claim_amount is None:
             negotiation_validation["valid"] = False
             negotiation_validation["reasons"].append(
