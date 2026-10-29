@@ -233,6 +233,39 @@ def unknown_recipient_response(text, segments=()):
     return {'confirmed':False,'method':'SIN_RESPUESTA_EXPLICITA','evidence':''}
 
 
+def associate_relationship(text, segments=()):
+    """Una relación plural explícita acredita tercero, no parentesco ni recado."""
+    for unit in sentence_evidence(text, segments):
+        if unit['speaker_role'] in {'GESTOR', 'TITULAR'}:
+            continue
+        if re.fullmatch(
+                r'(?:(?:pues|bueno)[, ]+)?(?:solo )?somos (?:solo )?'
+                r'(?:conocid[oa]s|amig[oa]s)[.!]?', normalize(unit['text'])):
+            return {'confirmed': True, 'method': 'RELACION_PLURAL_EXPLICITA',
+                    'evidence': unit['text'], 'speaker_role': unit['speaker_role'],
+                    'start': unit['start'], 'end': unit['end']}
+    return {'confirmed': False, 'method': 'SIN_RELACION_PLURAL_EXPLICITA', 'evidence': ''}
+
+
+def _payment_review_condition(value):
+    return re.search(
+        r'\bsi (?:es necesari[oa]|corresponde|procede|'
+        r'me (?:aclaran|explican) (?:los cargos|el adeudo|la deuda)|'
+        r'se aclara (?:el saldo|la deuda|el adeudo))'
+        r'(?=\s*(?:[,;.!]|$|(?:yo )?(?:pago|pagare|voy a pagar|depositare|abonare)\b))', value)
+
+
+def _payment_review_deferral(value):
+    match = re.search(
+        r'\b(?:primero|antes(?: de pagar)?) (?:yo )?'
+        r'(?:voy a|tengo que|necesito|quiero) (?:analizar|revisar|consultar|verificar|aclarar|preguntar)'
+        r'\b[^.!?]{0,110}\b(?:pagos?|cargos|deuda|adeudo|cobros?|estado de cuenta|aclaracion)\b', value)
+    if match and re.search(r'\b(?:comprobante|ticket|recibo|whatsapp)\b', value):
+        if not re.search(r'\b(?:cargos|deuda|adeudo|cobros|aclaracion)\b', value):
+            return None  # Preparar un comprobante no revoca un pago futuro firme.
+    return match
+
+
 def payment_commitment(text, segments=()):
     """Una propuesta, pregunta o mención de convenio no equivale a aceptación."""
     source = normalize(text)
@@ -263,7 +296,8 @@ def payment_commitment(text, segments=()):
             r"lo podria(?: hacer)?|(?:yo )?pagaria|"
             r"hare lo posible|a lo mejor|yo creo|no se cuanto (?:voy a|vaya a|pueda) (?:pagar|depositar)|"
             r"no se cuando (?:pueda|voy a) pagar)\b", s)
-        payment_context = re.search(r"\b(?:pago|pagar|depositar|dinero|cantidad|convenio|pesos|descuento)\b",
+        conditional = conditional or _payment_review_condition(s) or (not positive and _payment_review_deferral(s))
+        payment_context = re.search(r"\b(?:pagos?|paguito|pagar|pagare|deposito|depositar|dinero|cantidad|convenio|pesos|descuento)\b",
                                     source[max(0, position-220):cursor])
         if conditional and not payment_context:
             conditional = None
@@ -288,7 +322,8 @@ def payment_commitment(text, segments=()):
     for match in question.finditer(source):
         if _role_at(text, segments, match.start("answer")) != "GESTOR":
             reply = source[match.start("answer"):match.end()+100].split(".")[0]
-            if not re.search(r"\b(?:si me da tiempo|si consigo|si puedo juntar|yo creo|a lo mejor|no puedo|no tengo)\b", reply):
+            if not (re.search(r"\b(?:si me da tiempo|si consigo|si puedo juntar|yo creo|a lo mejor|no puedo|no tengo)\b", reply)
+                    or _payment_review_condition(reply) or _payment_review_deferral(reply)):
                 events.append((match.start("answer"), True, match.group()))
     # La respuesta puede indicar el importe en lugar de repetir «sí». Se exige
     # una pregunta futura de pago, una cantidad explícita y una respuesta firme.
@@ -300,7 +335,8 @@ def payment_commitment(text, segments=()):
         answer = match["answer"]
         if (_role_at(text, segments, match.start("answer")) in {"GESTOR", "TERCERO"}
                 or not re.search(r"\b(?:\d{2,}|mil|cientos|quinientos)\b", answer)
-                or re.search(r"\b(?:no|creo|a lo mejor|si consigo|si puedo|si me da)\b", answer)):
+                or re.search(r"\b(?:no|creo|a lo mejor|si consigo|si puedo|si me da)\b", answer)
+                or _payment_review_condition(answer) or _payment_review_deferral(answer)):
             continue
         events.append((match.start("answer"), True, match.group()))
     future_question = re.compile(
@@ -309,7 +345,8 @@ def payment_commitment(text, segments=()):
         r"(?P<answer>si(?:[, ]+[^.!?]{0,65})?)")
     for match in future_question.finditer(source):
         if (_role_at(text, segments, match.start('answer')) not in {'GESTOR', 'TERCERO'}
-                and not re.search(r"\b(?:creo|si puedo|si consigo|si me da|no puedo|a lo mejor)\b", match['answer'])):
+                and not re.search(r"\b(?:creo|si puedo|si consigo|si me da|no puedo|a lo mejor)\b", match['answer'])
+                and not _payment_review_condition(match['answer']) and not _payment_review_deferral(match['answer'])):
             events.append((match.start('answer'), True, match.group()))
     # Al corregir una propuesta, una aceptación nueva puede reemplazar una
     # condición anterior. Un «ok» aislado o responder sobre WhatsApp no basta.
@@ -319,7 +356,9 @@ def payment_commitment(text, segments=()):
     for match in corrected_offer.finditer(source):
         before = source[max(0, match.start()-220):match.start()]
         if (re.search(r"\b(?:pago|pagar|convenio|fecha)\b", before)
-                and _role_at(text, segments, match.start("answer")) not in {"GESTOR", "TERCERO"}):
+                and _role_at(text, segments, match.start("answer")) not in {"GESTOR", "TERCERO"}
+                and not _payment_review_condition(source[match.start('answer'):match.end()+100].split('.')[0])
+                and not _payment_review_deferral(source[match.start('answer'):match.end()+100].split('.')[0])):
             events.append((match.start("answer"), True, match.group()))
     # Aceptación del importe que se acaba de confirmar, sin confundir la
     # recepción de un número de WhatsApp ni la confirmación de un pago pasado.
@@ -333,6 +372,8 @@ def payment_commitment(text, segments=()):
         if (not re.search(r"\b(?:no|diga|diga que|usted dice|por ejemplo)\s*$",before)
                 and not re.search(r"\b(?:realizado|pago|hizo|ayer|pasado|recibido|reportado)\b",match['offer'])
                 and not re.search(r"\b(?:pero|no puedo|si consigo|a lo mejor|creo)\b",after)
+                and not _payment_review_condition(source[match.start('answer'):match.end()+100].split('.')[0])
+                and not _payment_review_deferral(source[match.start('answer'):match.end()+100].split('.')[0])
                 and _role_at(text,segments,match.start('answer')) not in {'GESTOR','TERCERO'}):
             events.append((match.start('answer'),True,match.group()))
     if not events:

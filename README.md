@@ -1,11 +1,11 @@
-# MRS Speech Analytics · revisión 24 — incorporación de lecturas de audio
+# MRS Speech Analytics · revisión 25 — interlocutor y negociación condicionada
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_24_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_25_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
@@ -17,15 +17,15 @@ dependencias originales se conservan. La primera transcripción de audio nuevo
 necesita descargar el modelo de Whisper desde Hugging Face.
 
 Para probar las reglas nuevas sobre textos guardados, ejecute
-`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r24` y crear una
-carpeta `Reanalisis_MRS_r24_...`. Este paso no vuelve a transcribir audios.
+`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r25` y crear una
+carpeta `Reanalisis_MRS_r25_...`. Este paso no vuelve a transcribir audios.
 Si ya recuperó importes, seleccione el checkpoint final de esa recuperación;
 así se conserva la evidencia sin volver a ejecutar Whisper.
 
 Para recuperar un importe omitido, ejecute `RECUPERAR_IMPORTES.bat`, seleccione
 el checkpoint y la carpeta de sus audios originales. Se releen únicamente
 ventanas de ofertas incompletas; se conservan los textos originales y se genera
-un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r24_.../resultados`.
+un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r25_.../resultados`.
 La evidencia aparece en las columnas finales de recuperación. Un importe
 recuperado por ASR conserva revisión de evidencia. El efecto del mínimo se valida
 por mora: regularización/mensualidad o liquidación. En las moras de liquidación,
@@ -47,7 +47,7 @@ Para registrar un importe recuperado ya comprobado por una persona, ejecute
 desmarcadas. Confirme solo los importes comprobados; si el identificador de
 nombre_final difiere de numero_de_tarjeta, puede corregirlo en una copia usando
 la tarjeta de origen. Guarde para generar un checkpoint y reporte nuevos en
-`Validacion_MRS_r24_.../resultados`. Cuando se localiza o selecciona el Excel
+`Validacion_MRS_r25_.../resultados`. Cuando se localiza o selecciona el Excel
 de cuentas, también se genera `Datos_Cuentas_Corregidos.xlsx` sin cambiar el original.
 En análisis individual existe el botón Validar importe. La confirmación se
 conserva para reanálisis posteriores y no exime las demás reglas de calidad.
@@ -72,7 +72,7 @@ y después el checkpoint final de la muestra ya validada. Las llamadas se cruzan
 por nombre exacto, texto, segmentos, duración y datos de cuenta. Si hay una
 diferencia o una confirmación incompatible, se detiene la incorporación.
 
-La salida está en `%USERPROFILE%\MRS_Resultados\Integracion_MRS_r24_...\resultados`.
+La salida está en `%USERPROFILE%\MRS_Resultados\Integracion_MRS_r25_...\resultados`.
 Conserva todas las llamadas y sus datos originales, agrega la evidencia recuperada
 necesaria y las confirmaciones válidas, y recalcula las clasificaciones.
 No se trasladan etiquetas de aprobación ni puntajes mínimos de la muestra.
@@ -99,7 +99,7 @@ como incierto conserva revisión. El resumen Excel distingue clasificación
 calculada, discrepancias de estatus y validación financiera.
 
 El lote privado de 95, con 22 nombres corregidos según la instrucción expresa de
-usar numero_de_tarjeta, conserva en r24 12 APROBADO, 81 REVISAR y 2 FALLA_GRAVE.
+usar numero_de_tarjeta, obtiene en r25 13 APROBADO, 80 REVISAR y 2 FALLA_GRAVE.
 Se conservan las 12 aprobaciones de r23. El reanálisis ordinario no corrige nombres
 por sí solo: use el checkpoint corregido entregado para conservar esos cambios.
 El reporte de auditoría identifica los bloqueos de cada una de las 85 llamadas
@@ -128,7 +128,7 @@ py -3.10 -m pytest -q
 ```
 
 Las versiones de `constraints-tested.txt` fueron ejecutadas en Linux con Python
-3.10.22; falta verificar r24 en Windows. Los archivos recibidos acreditan la
+3.10.22; falta verificar r25 en Windows. Los archivos recibidos acreditan la
 ejecución del lector de bloques r23 en el Windows del usuario.
 
 ## Entorno de desarrollo en la nube
@@ -159,8 +159,8 @@ La regresión contra r21 usa como base su carpeta de aplicación extraída y
 `--reviewed-changes tests/reviewed_r22_changes.json`. El documento original de
 cambios permanece intacto. Ambos recorridos de 268 evaluaciones verifican hashes
 de origen, causas de retiro de penalizaciones e invariantes; no copian etiquetas
-históricas de aprobación. La suite actual contiene 765 pruebas. La regresión
-adicional de 268 evaluaciones contra r23 no cambia clasificaciones ni retira
+históricas de aprobación. La suite actual contiene 814 pruebas. La regresión
+de r25 con 268 evaluaciones contra r24 no cambia clasificaciones ni retira
 penalizaciones sin causa.
 
 ## Revisión adicional de un bloque de audio
@@ -171,7 +171,7 @@ carpeta de hasta 10 audios originales del bloque. No hace falta instalar otro
 Whisper: la herramienta exige que el mismo modelo usado en el checkpoint ya esté
 localmente disponible; no descarga otro modelo ni cambia la configuración.
 
-Se crea una carpeta `Revision_Audios_r24_...` en `%USERPROFILE%\MRS_Resultados`
+Se crea una carpeta `Revision_Audios_r25_...` en `%USERPROFILE%\MRS_Resultados`
 con `revision_audios_bloque.json` y `Comparacion_Bloque_Audios.xlsx`. Guarda una
 lectura completa con marcas de palabra y otra del cierre sin VAD, ambas como
 hipótesis ASR. No cambia el checkpoint, sus validaciones, los dictámenes ni los
@@ -195,5 +195,21 @@ puntajes. Se conserva todo lo anterior y se genera otra copia con JSON y Excel,
 sin ejecutar Whisper. El reporte añade tres columnas a las 87 anteriores.
 
 El reconocimiento nuevo se ejecutó en el equipo del usuario, no en esta nube.
-Las pruebas locales de r24 incluyen casos sintéticos y los resultados recibidos;
-no acreditan escucha humana ni ejecución nativa de r24 en Windows.
+Las pruebas locales incluyen casos sintéticos y los resultados recibidos;
+no acreditan escucha humana ni ejecución nativa de r25 en Windows.
+
+## Correcciones de interlocutor y negociación (r25)
+
+Se reconoce «somos conocidos/amigos» como tercero, sin inferir parentesco ni
+aceptación del recado. Revisar cargos antes de pagar y «si corresponde, pagaré»
+no acreditan un compromiso firme. Se separan pagos anteriores de instrucciones
+nuevas y se evita confundir una fecha mensual con un cargo recurrente.
+
+La llamada 83 recupera aprobación de calidad con NO DEFINE FECHA DE PAGO; no se
+inventa un convenio aceptado. La 7 conserva revisión. Los 95 puntajes permanecen
+iguales; el lote queda en 13 APROBADO, 80 REVISAR y 2 FALLA_GRAVE. Se conservan
+las correcciones y confirmaciones anteriores.
+
+La entrega r25 ya incluye el reporte y `Checkpoint_r25_95_Audios.json`; use ese
+checkpoint para el próximo cambio de reglas. No necesita volver a transcribir
+los audios ni repetir el reanálisis para obtener el reporte entregado.

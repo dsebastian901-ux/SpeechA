@@ -17,7 +17,7 @@ from typing import Dict, List, Optional
 
 from app.models.analytics_model import AnalyticsModel
 from app.models.transcriptions import TranscriptionModel
-from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment, unknown_recipient_response, dictated_privacy_email
+from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment, unknown_recipient_response, dictated_privacy_email, associate_relationship
 from app.services.audio_block_evidence import validate_evidence
 from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing
 from app.services.installment_validation import installment_plan, installment_dates
@@ -45,7 +45,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r24"
+    ENGINE_REVISION = "3.6.19-r25"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -501,6 +501,7 @@ class AnalyticsService:
             "contact_type", "CONTACTO NO DETERMINADO"
         )
         analysis.metadata["contact_validation"] = compliance.get("contact_validation", {})
+        analysis.metadata['associate_contact_validation'] = compliance.get('associate_contact_validation', {})
         analysis.metadata["quality_blocks"] = compliance.get("blocks", {})
         analysis.metadata["quality_checks"] = compliance.get("checks", {})
         analysis.metadata["operational_context"] = compliance.get(
@@ -1177,6 +1178,8 @@ class AnalyticsService:
             r"\b(?:soy yo|(?:si )?soy (?:el |la )?titular|habla (?:el |la )titular)\b")
         contact_confirmation = holder_confirmation(text, segments)
         titular = titular or contact_confirmation["confirmed"]
+        associate_confirmation = associate_relationship(text, segments)
+        third_party = third_party or (not titular and associate_confirmation['confirmed'])
         # La ausencia declarada confirma un tercero, no su parentesco. Una
         # entrega posterior al titular prevalece sobre esa respuesta inicial.
         intermediary_response = bool(not titular and recipient_statement(text, segments,
@@ -2696,7 +2699,7 @@ class AnalyticsService:
                          r"propuesta\s+de\s+pago|opcion\s+de\s+pago|convenio|"
                          r"reestructura|pago\s+minimo|liquidar|abono|parcialidad)\b", normalized)
             or agent_statement(text, segments,
-                r"\b(?:tendria que|tiene que|puede|podria|necesitaria) (?:realizar|aplicar|hacer) (?:un |el |su )?pago\b|"
+                r"\b(?:tendria que|tendriamos que|tiene que|puede|podria|necesitaria) (?:realizar|aplicar|hacer) (?:un |el |su )?(?:pago|deposito)\b|"
                 r"\b(?:se le esta solicitando|se le esta pidiendo) (?:un |el |su )?(?:pago|\d+|dos mil|mil)\b|"
                 r"\b(?:cuando|que dia) (?:lo )?estaria (?:haciendo|pagando)|"
                 r"\bpodemos contar con (?:su |el )?pago\b")
@@ -2846,6 +2849,8 @@ class AnalyticsService:
             and commitment_confirmation['declined'] and not re.search(
                 r"\b(?:me comprometo a|voy a (?:pagar|depositar|abonar)|"
                 r"(?:yo )?(?:el )?(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo) pago)\b",normalized))
+        prior_payment_with_current_condition = bool(payment_confirmation_case and negotiation_attempt
+            and commitment_confirmation.get('conditional') and not confirms_commitment)
         receipt_followup_question = any(
             u['speaker_role'] not in {'TITULAR','TERCERO','INTERLOCUTOR'} and re.search(
                 r"\b(?:tiene|cuenta con)\s+(?:usted\s+)?(?:el |la |su |un |una )?"
@@ -2857,7 +2862,7 @@ class AnalyticsService:
                 r"\b(?:comprobante|captura|ticket)\b") or receipt_followup_question))
         unaccepted_new_payment_instruction = bool(is_convenio and payment_confirmation_case
             and not confirms_commitment and (agent_statement(text, segments,
-                r"\b(?:tiene|tendria|necesita) que (?:realizar|aplicar|cubrir|hacer) (?:un |el |su )?pago\b|"
+                r"\b(?:tiene|tendria|tendriamos|necesita) que (?:realizar|aplicar|cubrir|hacer) (?:un |el |su )?(?:pago|deposito)\b|"
                 r"\bseria que realice (?:un |el |su )?pago\b|"
                 r"\b(?:se le esta requiriendo|se le esta solicitando|se le requiere) (?:un |el |su )?pago\b")
                 or (prior_payment_total is not None and minimum_for_attempt is not None
@@ -2884,7 +2889,7 @@ class AnalyticsService:
                 detected_status = "NEGATIVA DE PAGO"
                 status_detection_confidence = "ALTA"
                 status_evidence_method = "NEGATIVA_EXPLICITA_DEL_INTERLOCUTOR"
-            elif (no_date_evidence or commitment_confirmation["declined"] or commitment_confirmation.get("conditional")) and (not payment_confirmation_case or prior_payment_with_current_decline) and not explicit_new_promise and not confirms_commitment:
+            elif (no_date_evidence or commitment_confirmation["declined"] or commitment_confirmation.get("conditional")) and (not payment_confirmation_case or prior_payment_with_current_decline or prior_payment_with_current_condition) and not explicit_new_promise and not confirms_commitment:
                 detected_status = "NO DEFINE FECHA DE PAGO"
                 status_detection_confidence = "ALTA"
                 status_evidence = commitment_confirmation["evidence"]
@@ -3242,7 +3247,7 @@ class AnalyticsService:
         # convenio, abono, parcialidad, regularización o liquidación. Una cifra que aparece
         # únicamente junto a "saldo" no confirma el monto de la negociación.
         negotiation_anchor_re = re.compile(
-            r"\b(?:pagar|pague|paga|pago|abono|abonar|parcial|parcialidad|convenio|"
+            r"\b(?:pagar|pague|paga|pago|deposito|depositar|abono|abonar|parcial|parcialidad|convenio|"
             r"propuesta|acuerdo|regulariza|regularizar|corriente|liquida|liquidar|liquidacion|"
             r"cubrir|cubre|finiquitar|finiquito|cantidad(?:\s+de)?|monto\s+de|pago\s+minimo|minimo(?:\s+que)?|mínimo\s+que)\b"
         )
@@ -3345,15 +3350,20 @@ class AnalyticsService:
                 # v3.6.14 · CARGOS/ANUALIDADES INFORMATIVOS != MONTO NEGOCIADO.
                 # Ej.: "pago de 85 pesos al mes ... anualidad" explica un cargo
                 # recurrente; no debe desplazar a la propuesta posterior de $800.
+                # Las frases vecinas no convierten una propuesta nueva en el
+                # cargo mensual explicado antes. Tampoco una fecha «cada mes»
+                # acredita que el importe sea una anualidad recurrente.
+                recurring_local = (re.split(r'[.!?]\s+', local_before)[-1] + ' ' +
+                    evidence_raw + ' ' + re.split(r'[.!?]\s+', local_after)[0])
                 recurring_charge_info = bool(re.search(
                     r"(?:anualidad|membresia|membresía|cargo\s+(?:mensual|anual)|"
-                    r"(?:\d+|pesos?).{0,18}(?:al|por)\s+mes|cada\s+mes)",
-                    local,
+                    r"(?:\d+|pesos?).{0,18}(?:al|por|cada)\s+mes)",
+                    recurring_local,
                 ))
                 recurring_commitment = bool(re.search(
                     r"(?:pagar|cubrir|abonar).{0,35}(?:hoy|mañana|antes\s+de|"
                     r"se\s+compromete|queda\s+en|acuerda|confirma)",
-                    local,
+                    recurring_local,
                 ))
                 if recurring_charge_info and not recurring_commitment:
                     continue
@@ -3735,6 +3745,7 @@ class AnalyticsService:
             "payment_confirmation_case": payment_confirmation_case,
             "payment_followup_case": payment_followup_case,
             "prior_payment_with_current_decline": prior_payment_with_current_decline,
+            "prior_payment_with_current_condition": prior_payment_with_current_condition,
             "unaccepted_new_payment_instruction": unaccepted_new_payment_instruction,
             "liquidation_detected": liquidation_words,
             "liquidation_attribution": liquidation_attribution,
@@ -4163,6 +4174,7 @@ class AnalyticsService:
             "blocks": blocks,
             "contact_type": contact_type,
             "contact_validation": contact_confirmation,
+            "associate_contact_validation": associate_confirmation,
             "detected_status": detected_status,
             "relationship": relationship,
             "observations": observations,

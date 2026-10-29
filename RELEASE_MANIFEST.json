@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r24-diagnostic",
+  "revision": "3.6.19-r25-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -20,7 +20,7 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 765,
+    "passed": 814,
     "failed": 0,
     "skipped": 0
   },
@@ -290,7 +290,7 @@
       "No unaccepted new payment instruction approved as followup"
     ]
   },
-  "engine_revision": "3.6.19-r24",
+  "engine_revision": "3.6.19-r25",
   "r22_review_backlog": {
     "calls": 95,
     "previous_review_calls": 85,
@@ -340,11 +340,11 @@
     "all_13_issues_closed": false
   },
   "current_validation": {
-    "engine_revision": "3.6.19-r24",
-    "unit_tests": 765,
+    "engine_revision": "3.6.19-r25",
+    "unit_tests": 814,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Rules, ASR evidence provenance and integration of returned Windows r23 readings; no new cloud ASR, human listening or native r24 Windows certification."
+    "scope": "Stored-transcript interlocutor and conditional-negotiation rules, preserved linked ASR and human financial facts; no new audio transcription or native r25 Windows certification."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -472,5 +472,67 @@
     "additional_whisper_installation_required": false,
     "all_81_closed": false,
     "all_13_issues_closed": false
+  },
+  "r25_interlocutor_and_conditional_negotiation": {
+    "source_master": "Previously verified recovered r24 95-call checkpoint",
+    "plural_association_confirms_third_party_not_kinship_or_message_acceptance": true,
+    "charge_review_before_payment_is_not_a_firm_commitment": true,
+    "conditional_answers_do_not_hide_behind_affirmative_prefix": true,
+    "receipt_preparation_and_later_firm_acceptance_preserved": true,
+    "historical_payment_does_not_hide_current_conditional_response": true,
+    "new_payment_instructions_not_added_to_historical_paid_amount": true,
+    "deposit_wording_recognized_without_waiving_new_instruction_review": true,
+    "monthly_calendar_does_not_invalidate_current_offer_as_recurring_fee": true,
+    "actual_recurring_fees_not_treated_as_new_payment_offer": true,
+    "full95_before": {
+      "APROBADO": 12,
+      "REVISAR": 81,
+      "FALLA_GRAVE": 2
+    },
+    "full95_after": {
+      "APROBADO": 13,
+      "REVISAR": 80,
+      "FALLA_GRAVE": 2
+    },
+    "changed_approval_cases": [
+      83
+    ],
+    "updated_contact_case": 7,
+    "approved_case83_status": "NO DEFINE FECHA DE PAGO",
+    "case83_accepted_new_payment_promise": false,
+    "previous12_approvals_retained": true,
+    "all95_scores_unchanged": true,
+    "penalties_removed_from95": 0,
+    "source_text_segments_account_data_and_reviews_preserved": true,
+    "output_name_records_preserved": 22,
+    "linked_asr_records_preserved_and_valid": 10,
+    "report_columns": 90,
+    "report_data_cells_verified": 8550,
+    "previous36_outcomes": {
+      "APROBADO": 7,
+      "REVISAR": 29
+    },
+    "previous36_name_records_preserved": 13,
+    "previous36_amount_balance_and_installment_records_preserved": true,
+    "new_behavioral_tests": 49,
+    "unit_tests_passed": 814,
+    "historical_regression_baseline": "r24",
+    "historical_evaluations": 268,
+    "historical_classifications_changed": 0,
+    "safety_failures": 0,
+    "undocumented_penalty_removals": 0,
+    "human_voice_cases_still_pending": [
+      6,
+      11
+    ],
+    "recado_acceptance_case_still_pending": 7,
+    "new_human_confirmations": 0,
+    "whisper_executed": false,
+    "human_listening_performed": false,
+    "native_windows_r25_tested": false,
+    "python_major_minor": "3.10",
+    "additional_whisper_installation_required": false,
+    "all80_review_calls_closed": false,
+    "all13_operational_errors_closed": false
   }
 }

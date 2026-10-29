@@ -81,7 +81,8 @@ def reported_amounts(text, completion):
             add(b+direct.start('amount'),b+direct.end(),'IMPORTE_TRAS_PAGO_REPORTADO',a)
         for match in re.finditer(r'\b(?:por la cantidad (?:que era el pago total )?de|pague|lo pague|pago (?:de|por))\s+',tail):
             bridge=tail[:match.start()]
-            if re.search(r'\b(?:manana|tendria|debe|voy a|tengo que|tiene que)\b',bridge): continue
+            if re.search(r'\b(?:manana|tendria|debe|voy a|tengo que|tiene que|'
+                         r'(?:puede|podria|necesita) (?:usted )?(?:realizar|aplicar|hacer|cubrir|depositar|abonar))\b',bridge): continue
             add(b+match.end(),min(len(source),b+match.end()+95),'IMPORTE_DE_PAGO_REPORTADO',a)
 
     # Una pregunta puede quedar lejos de «ya pagué» cuando se comprueba antes
