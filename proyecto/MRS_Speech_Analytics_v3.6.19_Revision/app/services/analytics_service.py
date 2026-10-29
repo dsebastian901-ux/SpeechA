@@ -17,7 +17,8 @@ from typing import Dict, List, Optional
 
 from app.models.analytics_model import AnalyticsModel
 from app.models.transcriptions import TranscriptionModel
-from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment, unknown_recipient_response
+from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment, unknown_recipient_response, dictated_privacy_email
+from app.services.audio_block_evidence import validate_evidence
 from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing
 from app.services.installment_validation import installment_plan, installment_dates
 from app.services.asr_amount_recovery import validated_entries
@@ -44,7 +45,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r23"
+    ENGINE_REVISION = "3.6.19-r24"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -56,6 +57,13 @@ class AnalyticsService:
         status = metadata.get("status_validation") or {}
         negotiation = metadata.get("negotiation_validation") or {}
         reasons = []
+        additional=metadata.get('audio_block_evidence_validation') or {}
+        if additional.get('review_required'):
+            if additional.get('valid') and additional.get('risks') and all(
+                    r.get('type')=='EXPRESION_OFENSIVA_SIN_HABLANTE_CONFIRMADO' for r in additional['risks']):
+                reasons.append('Lenguaje ofensivo requiere revisión')
+            else:
+                reasons.append(additional.get('reason') or 'Lectura adicional pendiente de revisión.')
         if negotiation.get("liquidation_offer_review_required"):
             reasons.append("Posible liquidación total sin atribución u oferta confirmada; revisar audio")
         account = metadata.get("account_source_validation") or {}
@@ -536,9 +544,13 @@ class AnalyticsService:
         data.setdefault("archivo", transcription.file_name)
         data.setdefault("texto", transcription.text)
         data.setdefault("segmentos", transcription.segments)
+        data.setdefault('duracion_segundos',transcription.duration_seconds)
         analysis.metadata["amount_recovery_validation"] = amount_review_status(data, data.get("amount_audio_review"))
         analysis.metadata["account_source_validation"] = validate_account_source(operational_context or {})
         analysis.metadata["financial_review_validation"] = (compliance.get("negotiation_validation") or {}).get("financial_review", {})
+        analysis.metadata['audio_block_evidence_validation']=validate_evidence(
+            data.get('audio_block_evidence'),data,operational_context or {},
+            analysis.metadata['quality_contact_type'],cls.calculate_basic_compliance)
         analysis.metadata["final_result"] = compliance.get(
             "final_result", "REVISAR"
         )
@@ -1555,7 +1567,9 @@ class AnalyticsService:
         asks_ine_or_line_proof = agent_statement(text, segments,
             r"\b(?:ine|identificacion oficial|comprobante de (?:la linea|telefono|propiedad de la linea))\b")
         gives_privacy_email = agent_statement(text, segments,
-            r"\bprivacidad1?@bradesco\.com\.mx\b")
+            r"(?<![\w.+-])privacidad1?@bradesco\.com\.mx(?![\w-]|\.[\w.-])")
+        email_dictation=dictated_privacy_email(text,segments)
+        gives_privacy_email=bool(gives_privacy_email or email_dictation['detected'])
 
         no_conocen_valid = (
             unknown_debtor
@@ -4076,6 +4090,8 @@ class AnalyticsService:
             "no_conocen_confirmado": unknown_debtor,
             "proceso_arco": arco_process,
             "tiempo_con_linea": bool(asks_line_tenure or line_tenure_confirmed),
+            "correo_privacidad_dado": gives_privacy_email,
+            "correo_privacidad_dictado": email_dictation,
             "monto_confirmado": bool(detected_claim_amount is not None),
             "fecha_pago_confirmada": confirms_payment_date,
             "compromiso_confirmado": confirms_commitment,

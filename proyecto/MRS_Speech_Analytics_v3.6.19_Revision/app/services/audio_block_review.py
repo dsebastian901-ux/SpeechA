@@ -10,6 +10,8 @@ from time import perf_counter
 
 from app.services.analytics_service import AnalyticsService
 from app.services.checkpoint_output import create_checkpoint_output
+from app.services.asr_evidence_quality import block_reading_quality
+from app.services.audio_block_evidence import binding
 
 AUDIO_SUFFIXES={'.ogg','.wav','.mp3','.m4a','.flac','.aac','.wma'}
 
@@ -107,11 +109,14 @@ def _save_report(payload,path):
     from openpyxl.styles import Alignment,Font
     book=Workbook();sheet=book.active;sheet.title='COMPARACION_BLOQUE'
     sheet.append(['Llamada del lote','Archivo original','Estado de lectura','Duración audio',
-                  'Texto original conservado','Nueva lectura ASR','Cierre sin VAD','Motivo previo de revisión','Error'])
+                  'Texto original conservado','Nueva lectura ASR','Cierre sin VAD','Motivo previo de revisión','Error',
+                  'Alertas técnicas de lectura','Detalle de alertas ASR'])
     for item in payload['items']:
         sheet.append([item['case'],item['file_name'],item['status'],item.get('audio_duration'),
                       item['original_text'][:30000],item.get('text','')[:30000],
-                      item.get('tail_text','')[:30000],item['previous_reason'][:30000],item.get('error','')[:30000]])
+                      item.get('tail_text','')[:30000],item['previous_reason'][:30000],item.get('error','')[:30000],
+                      'REVISAR LECTURA ASR' if (item.get('quality') or {}).get('degraded') else '',
+                      json.dumps(item.get('quality') or {},ensure_ascii=False)[:30000]])
     sheet.freeze_panes='A2';sheet.auto_filter.ref=sheet.dimensions
     for cell in sheet[1]:cell.font=Font(bold=True)
     for row in sheet.iter_rows(min_row=2):
@@ -121,6 +126,8 @@ def _save_report(payload,path):
     note.append(['La lectura nueva y la del cierre son hipótesis ASR, no escucha humana ni identificación de voces.'])
     note.append(['No se cambian transcripciones, validaciones, dictámenes, nombres ni audios del checkpoint original.'])
     note.append(['Errores de lectura',payload['errors']]);note.append(['Lecturas completas',payload['completed_calls']])
+    note.append(['Lecturas con advertencias técnicas',payload.get('degraded_calls',0)])
+    note.append(['Las alertas técnicas no son infracciones del gestor ni respuestas confirmadas del interlocutor.'])
     book.save(path);book.close()
 
 
@@ -179,6 +186,7 @@ def review_audio_block(checkpoint_path,audio_directory,output_directory=None,*,r
               'original_text_sha256':hashlib.sha256(data.get('texto','').encode()).hexdigest(),
               'previous_reason':(original_item.get('classification') or {}).get('motivo',''),
               'status':'error','human_verified':False,'speaker_roles_confirmed':False}
+        item['source_binding']=binding(data,original_item.get('relation') or {})
         started=perf_counter()
         if progress:progress(f'Leyendo audio {number}/{len(matches)}: llamada {index}')
         try:
@@ -196,6 +204,7 @@ def review_audio_block(checkpoint_path,audio_directory,output_directory=None,*,r
                          'tail_segments':_asr_segments(reading.get('tail_segments') or [])})
             if sha256_file(path)!=item['audio_sha256']:
                 raise ValueError('El archivo de audio cambió durante la lectura; no se valida esta evidencia.')
+            item['quality']=block_reading_quality(item['segments'],item['tail_segments'])
             item['status']='completado';payload['completed_calls']+=1;payload['whisper_executed']=True
         except Exception as error:
             item['error']=str(error);payload['errors']+=1
@@ -203,6 +212,7 @@ def review_audio_block(checkpoint_path,audio_directory,output_directory=None,*,r
         payload['updated_at']=datetime.now(timezone.utc).isoformat()
         destination.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
     payload['completed']=payload['errors']==0
+    payload['degraded_calls']=sum(bool((item.get('quality') or {}).get('degraded')) for item in payload['items'])
     destination.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
     report=target/'Comparacion_Bloque_Audios.xlsx';_save_report(payload,report)
     assert source.read_bytes()==raw,'El checkpoint original cambió durante la lectura.'

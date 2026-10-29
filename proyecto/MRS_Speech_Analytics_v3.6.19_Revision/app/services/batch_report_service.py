@@ -115,6 +115,9 @@ class BatchReportService:
         "Saldo confirmado por usuario",
         "Parcialidades finales confirmadas",
         "Historial de propuestas de parcialidades",
+        "Lectura adicional audio",
+        "Alertas lectura ASR",
+        "Riesgos lectura adicional",
     ]
 
     MODE_B_HEADERS = [
@@ -738,6 +741,12 @@ class BatchReportService:
                 if financial.get("installments_applied") else ""),
             "Historial de propuestas de parcialidades": (json.dumps((negotiation.get("installment_validation") or {}).get("evidence", []), ensure_ascii=False)
                 if financial.get("installments_applied") else ""),
+            "Lectura adicional audio": ("ASR ADICIONAL" if (metadata.get('audio_block_evidence_validation') or {}).get('valid') else "REVISAR VÍNCULO")
+                if (metadata.get('audio_block_evidence_validation') or {}).get('present') else "",
+            "Alertas lectura ASR": json.dumps((metadata.get('audio_block_evidence_validation') or {}).get('quality') or {},ensure_ascii=False)
+                if ((metadata.get('audio_block_evidence_validation') or {}).get('quality') or {}).get('degraded') else "",
+            "Riesgos lectura adicional": json.dumps((metadata.get('audio_block_evidence_validation') or {}).get('risks') or [],ensure_ascii=False)
+                if (metadata.get('audio_block_evidence_validation') or {}).get('risks') else "",
         }
 
     @staticmethod

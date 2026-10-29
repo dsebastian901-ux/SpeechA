@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r23-diagnostic",
+  "revision": "3.6.19-r24-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -20,7 +20,7 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 734,
+    "passed": 765,
     "failed": 0,
     "skipped": 0
   },
@@ -290,7 +290,7 @@
       "No unaccepted new payment instruction approved as followup"
     ]
   },
-  "engine_revision": "3.6.19-r23",
+  "engine_revision": "3.6.19-r24",
   "r22_review_backlog": {
     "calls": 95,
     "previous_review_calls": 85,
@@ -340,11 +340,11 @@
     "all_13_issues_closed": false
   },
   "current_validation": {
-    "engine_revision": "3.6.19-r23",
-    "unit_tests": 734,
+    "engine_revision": "3.6.19-r24",
+    "unit_tests": 765,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Stored-transcript rules and local audio full decoding. New ASR and human listening blocked/unperformed in cloud."
+    "scope": "Rules, ASR evidence provenance and integration of returned Windows r23 readings; no new cloud ASR, human listening or native r24 Windows certification."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -394,5 +394,83 @@
     "audio_or_checkpoint_modified": false,
     "cloud_startup_draft_updated_to_remove_stale_cache_claim": true,
     "draft_does_not_apply_runtime_or_publish": true
+  },
+  "r24_returned_audio_block": {
+    "source_reader_revision": "3.6.19-r23",
+    "returned_completed_calls": 10,
+    "returned_runtime_errors": 0,
+    "received_case_indices": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      11,
+      12
+    ],
+    "model": "small",
+    "device": "cpu",
+    "compute_type": "int8",
+    "returned_r23_windows_reader_execution_verified": true,
+    "new_asr_executed_in_cloud": false,
+    "original_source_checkpoint_context_verified_against_current_master": true,
+    "received_excel_matches_json": true,
+    "original_audio_hashes_and_durations_match": true,
+    "source_transcripts_segments_account_data_and_reviews_preserved": true,
+    "degraded_reading_case_indices": [
+      4,
+      11,
+      12
+    ],
+    "degraded_segments_not_used_as_actual_recipient_rejection_or_penalty": true,
+    "degraded_reading_does_not_erase_valid_original_evidence": true,
+    "dictated_arco_email_requires_literal_authorized_domain": true,
+    "additional_risks_require_review_without_inferred_speaker_or_critical_penalty": true,
+    "block_outcomes": {
+      "APROBADO": 1,
+      "REVISAR": 9
+    },
+    "full95_outcomes": {
+      "APROBADO": 12,
+      "REVISAR": 81,
+      "FALLA_GRAVE": 2
+    },
+    "technical_errors": 0,
+    "previous12_approvals_retained": true,
+    "output_name_records_preserved": 22,
+    "previous36_outcomes": {
+      "APROBADO": 7,
+      "REVISAR": 29
+    },
+    "previous36_name_records_preserved": 13,
+    "previous36_amount_balance_and_final_installment_records_preserved": true,
+    "new_human_confirmations": 0,
+    "human_listening_performed": false,
+    "speaker_roles_confirmed": false,
+    "user_has_not_listened_to_requested_voice_and_recado_questions": true,
+    "pending_voice_cases": [
+      6,
+      11
+    ],
+    "pending_recado_conflict_case": 7,
+    "tool": "INCORPORAR_LECTURAS_BLOQUE.bat",
+    "checkpoint_reanalysis_retains_linked_readings": true,
+    "report_columns": 90,
+    "original87_columns_order_preserved": true,
+    "report_data_cells_verified": 8550,
+    "unit_tests_passed": 765,
+    "regression_baseline": "r23",
+    "historical_evaluations": 268,
+    "historical_classifications_changed": 0,
+    "regression_safety_failures": 0,
+    "undocumented_penalty_removals": 0,
+    "windows_r24_execution_verified": false,
+    "python_major_minor": "3.10",
+    "additional_whisper_installation_required": false,
+    "all_81_closed": false,
+    "all_13_issues_closed": false
   }
 }

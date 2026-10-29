@@ -559,8 +559,8 @@ def payment_places(text, segments, catalog):
 
 SENSITIVE = re.compile(
     r"\b(?:saldo (?:pendiente|vencido|total|de\s+\d[\d.,]*|es\s+\d[\d.,]*)|"
-    r"(?:tiene|presenta|cuenta con) (?:un |una |dos |tres |cuatro |\d+ )?(?:deuda|adeudo|atraso|mensualidad(?:es)?)|"
-    r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis) (?:mes(?:es)?|mensualidad(?:es)?)(?: de)? (?:atraso|vencid[ao]s?)|"
+    r"(?:tiene|presenta|cuenta con) (?:un |una |dos |tres |cuatro |\d+ )?(?:deuda|adeudo|atraso|mens(?:u)?alidad(?:es)?)|"
+    r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis) (?:mes(?:es)?|mens(?:u)?alidad(?:es)?)(?: de)? (?:atraso|vencid[ao]s?)|"
     r"(?:deuda|adeudo|pago minimo|monto) (?:de |es |por )?\d[\d.,]*|"
     r"(?:adeuda|debe)\s+(?:\d[\d.,]*|mil|cien|doscientos|trescientos|quinientos)|"
     r"(?:su|una|la) deuda|cubrir (?:el |su )?atraso|respecto a su atraso|por (?:el |su )?atraso|"
@@ -603,3 +603,25 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
             "reason": ("Divulgación atribuida al gestor ante un tercero confirmado." if confirmed else
                        "Posible divulgación financiera; confirmar hablante y destinatario en audio." if review else
                        "Sin divulgación a terceros confirmada.")}
+
+
+def dictated_privacy_email(text,segments=()):
+    """Correo dictado: exige privacidad, arroba y dominio literal autorizado.
+
+    No reconstruye letras dudosas ni sustituye un dominio parecido. Conserva
+    la evidencia de dictado sin afirmar validación de voz o entrega de correo.
+    """
+    source=normalize(text)
+    for start in re.finditer(r'\b(?:es privacidad|correo (?:es|seria) privacidad|le (?:voy a )?dictar (?:el |un )?correo)\b',source):
+        if _role_at(text,segments,start.start()) in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+        if re.search(r'\bno\s*$',source[max(0,start.start()-8):start.start()]):continue
+        block=source[start.start():start.start()+900]
+        match=re.search(r'\bprivacidad(?P<one>1)?\b(?P<bridge>.{0,400}?)\barroba\b'
+                        r'(?P<domain>.{0,350}?(?<![\w.@-])bradesco\.com\.mx(?![\w-]|\.[\w.-]))',block)
+        if not match:continue
+        if re.search(r'\bnumero (?:dos|tres|cuatro|cinco|seis|siete|ocho|nueve|\d{2,}|[2-9])\b',match['bridge']):continue
+        if re.search(r'\bno (?:es|era|diga)\b',match['domain']):continue
+        one=match['one'] or re.search(r'\b(?:numero )?(?:1|uno)\b',match['bridge'])
+        return {'detected':True,'address':'privacidad'+('1' if one else '')+'@bradesco.com.mx',
+                'method':'DICTADO_CON_DOMINIO_LITERAL','evidence':match.group()}
+    return {'detected':False,'address':'','method':'SIN_DICTADO_CONFIRMABLE','evidence':''}

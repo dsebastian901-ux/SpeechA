@@ -18,6 +18,11 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None):
     payload = json.loads(raw.decode("utf-8-sig"))
     if not isinstance(payload, dict) or not isinstance(payload.get("items"), list) or not payload["items"]:
         raise ValueError("El checkpoint no contiene llamadas para reanalizar.")
+    if (payload.get('schema')==1 and payload.get('source_checkpoint_sha256')
+            and any('original_text' in i for i in payload['items'])
+            and not any(isinstance(i.get('result'),dict) for i in payload['items'])):
+        raise ValueError('Seleccionó una lectura adicional, no el checkpoint del lote. '
+                         'Use INCORPORAR_LECTURAS_BLOQUE para incorporarla sin sustituir transcripciones.')
     target = create_checkpoint_output(output_directory,
         "Reanalisis_MRS_" + AnalyticsService.ENGINE_REVISION.rsplit("-", 1)[-1] + "_")
     destination = target/"checkpoint_reanalizado.json"
@@ -42,6 +47,7 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None):
             financial_review = (item.get("financial_audio_review") if "financial_audio_review" in item else
                 ((item.get("analytics_metadata") or {}).get("financial_review_validation") or {}).get("human_review_record"))
             transcription.metadata["financial_audio_review"] = deepcopy(financial_review)
+            transcription.metadata['audio_block_evidence']=deepcopy(item.get('audio_block_evidence'))
             relation = item.get("relation") or {}
             analysis = AnalyticsService.analyze_transcription(transcription, relation)
             old = item.get("classification") or {}
