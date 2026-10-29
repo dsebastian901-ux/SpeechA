@@ -7,7 +7,7 @@ def only_negated_transfers(text):
     source = normalize(text)
     mentions = list(re.finditer(r"\b(?:transferencia|transferir|transfiera)\b", source))
     return bool(mentions) and all(re.search(
-        r"\bno (?:puede|debe|se puede|se permite)\b[^.!?;,]{0,60}$",
+        r"\bno (?:puede|pueda|debe|se puede|se pueda|se permite)\b[^.!?;,]{0,60}$",
         source[max(0, m.start()-85):m.start()]) for m in mentions)
 
 
@@ -17,10 +17,12 @@ def future_transfer_discussion(text, segments=()):
         r"\b(?:puedo|puede|pueden|podria|podra|pudiera|podemos)\s+"
         r"(?:(?:hacer|realizar|pagar)\b[^.!?]{0,65}\b(?:transferencia|clabe)|transferir\b)")
     for unit in sentence_evidence(text, segments):
-        s = normalize(unit["text"])
-        for match in pattern.finditer(s):
-            if not re.search(r"\bno\s*$", s[max(0,match.start()-8):match.start()]):
-                return True
+        clauses=[unit['text']] if '?' in unit['text'] or '¿' in unit['text'] else re.split(r"[;,]",unit['text'])
+        for clause in clauses:
+            s = normalize(clause)
+            for match in pattern.finditer(s):
+                if not re.search(r"\bno\s*$", s[max(0,match.start()-8):match.start()]):
+                    return True
     return False
 
 
@@ -52,6 +54,25 @@ def transfer_instructions(text, segments=()):
                     continue
                 evidence.append(dict(unit, phrase=match.group()))
     return evidence
+
+
+def transfer_is_option_listing(text, segments, authorized_places):
+    """Enumerar bancos no es dictar una CLABE ni una transferencia elegida.
+
+    Solo exime el aviso genérico si hay dos alternativas autorizadas en la
+    conversación y no se desarrolla una transferencia concreta. No valida
+    datos bancarios ni agrega bancos al número de lugares autorizados.
+    """
+    source=normalize(text)
+    if len(set(authorized_places))<2 or future_transfer_discussion(text,segments) or transfer_instructions(text,segments):
+        return False
+    if re.search(r"\b(?:clabe|cuenta bancaria|numero de cuenta|cuenta de destino|"
+                 r"cuenta personal|banca movil|pago de tarjetas|practicaja|convenio (?:es|numero|\d))\b",source):
+        return False
+    mentions=list(re.finditer(r"\btransferencia\b",source))
+    return bool(mentions) and all(re.match(
+        r"\s+(?:de |desde |con |en )?(?:bbva|bancomer|van commer|citibanamex|santander)\b",
+        source[m.end():]) for m in mentions)
 
 
 def wrong_bank_instructions(text, segments, bank_variants, authorized_codes, transfer_account):

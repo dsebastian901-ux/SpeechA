@@ -1,11 +1,11 @@
-# MRS Speech Analytics · revisión 22 — revisión de pendientes y atribución de importes
+# MRS Speech Analytics · revisión 23 — revisión de bloques y lectura adicional
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_22_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_23_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
@@ -17,15 +17,15 @@ dependencias originales se conservan. La primera transcripción de audio nuevo
 necesita descargar el modelo de Whisper desde Hugging Face.
 
 Para probar las reglas nuevas sobre textos guardados, ejecute
-`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r22` y crear una
-carpeta `Reanalisis_MRS_r22_...`. Este paso no vuelve a transcribir audios.
+`REANALIZAR_CHECKPOINT.bat`. La consola debe mostrar `3.6.19-r23` y crear una
+carpeta `Reanalisis_MRS_r23_...`. Este paso no vuelve a transcribir audios.
 Si ya recuperó importes, seleccione el checkpoint final de esa recuperación;
 así se conserva la evidencia sin volver a ejecutar Whisper.
 
 Para recuperar un importe omitido, ejecute `RECUPERAR_IMPORTES.bat`, seleccione
 el checkpoint y la carpeta de sus audios originales. Se releen únicamente
 ventanas de ofertas incompletas; se conservan los textos originales y se genera
-un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r22_.../resultados`.
+un checkpoint nuevo y un Excel dentro de `Recuperacion_MRS_r23_.../resultados`.
 La evidencia aparece en las columnas finales de recuperación. Un importe
 recuperado por ASR conserva revisión de evidencia. El efecto del mínimo se valida
 por mora: regularización/mensualidad o liquidación. En las moras de liquidación,
@@ -47,7 +47,7 @@ Para registrar un importe recuperado ya comprobado por una persona, ejecute
 desmarcadas. Confirme solo los importes comprobados; si el identificador de
 nombre_final difiere de numero_de_tarjeta, puede corregirlo en una copia usando
 la tarjeta de origen. Guarde para generar un checkpoint y reporte nuevos en
-`Validacion_MRS_r22_.../resultados`. Cuando se localiza o selecciona el Excel
+`Validacion_MRS_r23_.../resultados`. Cuando se localiza o selecciona el Excel
 de cuentas, también se genera `Datos_Cuentas_Corregidos.xlsx` sin cambiar el original.
 En análisis individual existe el botón Validar importe. La confirmación se
 conserva para reanálisis posteriores y no exime las demás reglas de calidad.
@@ -72,7 +72,7 @@ y después el checkpoint final de la muestra ya validada. Las llamadas se cruzan
 por nombre exacto, texto, segmentos, duración y datos de cuenta. Si hay una
 diferencia o una confirmación incompatible, se detiene la incorporación.
 
-La salida está en `%USERPROFILE%\MRS_Resultados\Integracion_MRS_r22_...\resultados`.
+La salida está en `%USERPROFILE%\MRS_Resultados\Integracion_MRS_r23_...\resultados`.
 Conserva todas las llamadas y sus datos originales, agrega la evidencia recuperada
 necesaria y las confirmaciones válidas, y recalcula las clasificaciones.
 No se trasladan etiquetas de aprobación ni puntajes mínimos de la muestra.
@@ -99,8 +99,8 @@ como incierto conserva revisión. El resumen Excel distingue clasificación
 calculada, discrepancias de estatus y validación financiera.
 
 El lote privado de 95, con 22 nombres corregidos según la instrucción expresa de
-usar numero_de_tarjeta, obtiene 11 APROBADO, 82 REVISAR y 2 FALLA_GRAVE.
-Se conservan las 8 aprobaciones de r21. El reanálisis ordinario no corrige nombres
+usar numero_de_tarjeta, obtiene en r23 12 APROBADO, 81 REVISAR y 2 FALLA_GRAVE.
+Se conservan las 11 aprobaciones de r22. El reanálisis ordinario no corrige nombres
 por sí solo: use el checkpoint corregido entregado para conservar esos cambios.
 El reporte de auditoría identifica los bloqueos de cada una de las 85 llamadas
 que estaban pendientes; REVISAR no significa falta confirmada. No se escucharon
@@ -157,4 +157,26 @@ La regresión contra r21 usa como base su carpeta de aplicación extraída y
 `--reviewed-changes tests/reviewed_r22_changes.json`. El documento original de
 cambios permanece intacto. Ambos recorridos de 268 evaluaciones verifican hashes
 de origen, causas de retiro de penalizaciones e invariantes; no copian etiquetas
-históricas de aprobación. La suite actual contiene 692 pruebas.
+históricas de aprobación. La suite actual contiene 734 pruebas.
+
+## Revisión adicional de un bloque de audio (r23)
+
+Extraiga la aplicación y ejecute `REVISAR_BLOQUE_AUDIOS.bat` en el mismo Windows
+donde ya funciona Whisper. Seleccione el checkpoint completo más reciente y la
+carpeta de hasta 10 audios originales del bloque. No hace falta instalar otro
+Whisper: la herramienta exige que el mismo modelo usado en el checkpoint ya esté
+localmente disponible; no descarga otro modelo ni cambia la configuración.
+
+Se crea una carpeta `Revision_Audios_r23_...` en `%USERPROFILE%\MRS_Resultados`
+con `revision_audios_bloque.json` y `Comparacion_Bloque_Audios.xlsx`. Guarda una
+lectura completa con marcas de palabra y otra del cierre sin VAD, ambas como
+hipótesis ASR. No cambia el checkpoint, sus validaciones, los dictámenes ni los
+audios. No atribuye hablantes ni marca escucha humana. El JSON de lectura se
+comparte para revisar; no es un checkpoint para REANALIZAR_CHECKPOINT.
+
+El bloque de 10 recibido se decodificó completo y se cruzó con sus duraciones.
+La nueva transcripción en esta nube permanece sin ejecutar: no hay modelo en la
+caché actual y Hugging Face devuelve 403 del proxy al intentar descargarlo. El
+comportamiento de la herramienta se prueba con dobles del modelo; esto no
+certifica inferencia real ni ejecución nativa en Windows. La corrección de la
+llamada 2 proviene de reglas sobre el texto guardado, no de una nueva escucha.

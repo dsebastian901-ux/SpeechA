@@ -17,8 +17,8 @@ from typing import Dict, List, Optional
 
 from app.models.analytics_model import AnalyticsModel
 from app.models.transcriptions import TranscriptionModel
-from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment
-from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion
+from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment, unknown_recipient_response
+from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing
 from app.services.installment_validation import installment_plan, installment_dates
 from app.services.asr_amount_recovery import validated_entries
 from app.services.mora_payment_policy import payment_policy, two_installment_window, LIQUIDATION_MORAS
@@ -44,7 +44,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r22"
+    ENGINE_REVISION = "3.6.19-r23"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -874,7 +874,7 @@ class AnalyticsService:
             payment_context = payment_context and not inability_context and not incidental_date and not visit_context
             acceptance_context = bool(re.search(
                 r"\b(?:esta bien|de acuerdo|correcto|si|sale|va|"
-                r"queda|quedamos|confirm)\b",
+                r"queda|quedamos|confirm\w*)\b",
                 context,
             ))
 
@@ -1150,6 +1150,8 @@ class AnalyticsService:
         unknown_debtor = recipient_statement(text, segments,
             r"\b(?:no (?:lo|la) conozco|ni (?:lo|la) conozco|no conozco a|"
             r"no se quien es|nunca ha vivido aqui|numero (?:equivocado|incorrecto))\b")
+        unknown_response = unknown_recipient_response(text, segments)
+        unknown_debtor = unknown_debtor or unknown_response['confirmed']
 
         recado_assessment = assess_recado(text, context.get("_segments") or [])
         family = bool(recado_assessment["family"])
@@ -1546,7 +1548,9 @@ class AnalyticsService:
             r"(?:cuanto tiempo.{0,50}(?:linea|numero)|desde hace cuanto.{0,50}(?:linea|numero))"
             r"[.?!,; ]{1,8}(?:(?:tengo|llevo|hace) )?(?:un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|\d+) (?:anos?|mes(?:es)?)\b",
             normalized))
-        line_tenure_confirmed = bool(confirms_line_tenure or tenure_answer)
+        qualitative_tenure = recipient_statement(text, segments,
+            r"\b(?:yo )?tengo (?:varios |muchos )?anos con (?:este |el |mi )?numero\b")
+        line_tenure_confirmed = bool(confirms_line_tenure or tenure_answer or qualitative_tenure)
 
         asks_ine_or_line_proof = agent_statement(text, segments,
             r"\b(?:ine|identificacion oficial|comprobante de (?:la linea|telefono|propiedad de la linea))\b")
@@ -2047,13 +2051,14 @@ class AnalyticsService:
             "pinche vieja", "pinche viejo", "pinche", "cabron", "cabrona",
             "mierda", "hijo de puta", "hija de puta", "vete a la chingada",
             "puta", "puto", "chingar", "chinga tu madre", "jodete", "vete al carajo",
+            "que poca madre",
             "quiero acostarme contigo", "quiero tener sexo contigo", "quiero cogerte",
         ]
         insult_evidence = [p for p in insult_patterns if re.search(r"(?<!\w)" + re.escape(norm(p)) + r"s?(?!\w)", normalized)]
         ambiguous_tail_insult = bool(re.search(r"(?<!\w)uta[.!?¡¿ ]*$",normalized)
             and re.search(r"\b(?:hasta luego|gracias|buen dia)\b",normalized[-260:]))
         offensive_language_evidence = [dict(unit, phrase=phrase)
-            for unit in evidence_units(text, context.get("_segments") or [])
+            for unit in sentence_evidence(text, context.get("_segments") or [])
             for phrase in insult_evidence if norm(phrase) in norm(unit["text"])]
         # No inferir autor de groserías desde texto sin diarización.
         # Se bloquea la aprobación en cualquier caso; la responsabilidad queda por verificar.
@@ -2370,10 +2375,11 @@ class AnalyticsService:
         new_transfer_discussion = future_transfer_discussion(text, segments)
         reported_transfer_only = bool(payment_confirmation_case and not transfer_instruction_evidence
                                       and not bank_destination_context and not new_transfer_discussion)
+        transfer_option_listing = transfer_is_option_listing(text,segments,detected_payment_places)
         transfer_data_review = bool(not unauthorized_payment_method and (
             (transfer_instruction_evidence and not authorized_transfer_instruction)
             or (transfer_wording and not authorized_transfer_account and payment_instruction_context
-                and not reported_transfer_only and not only_negated_transfers(text))))
+                and not reported_transfer_only and not transfer_option_listing and not only_negated_transfers(text))))
 
         convenio_payment_validation = {
             "applies": is_convenio,
@@ -2399,6 +2405,7 @@ class AnalyticsService:
             "authorized_transfer_instruction_confirmed": authorized_transfer_instruction,
             "reported_transfer_only": reported_transfer_only,
             "future_transfer_discussion": new_transfer_discussion,
+            "transfer_option_listing_only": transfer_option_listing,
             "authorized_transfer_account": "014320655030560466",
             "authorized_transfer_bank": "Santander",
             "authorized_transfer_beneficiary": "Bradescard México S. de R.L.",
@@ -2874,6 +2881,9 @@ class AnalyticsService:
                 status_evidence_method = "PAGO_ANTERIOR_REPORTADO"
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
+            if unknown_response['confirmed'] and detected_status=='NO CONOCEN A DEUDOR':
+                status_evidence=unknown_response['evidence']
+                status_evidence_method=unknown_response['method']
 
         # ---------------------------------------------------------
         # VALIDACIÓN ESPECÍFICA DEL ESTATUS EXCEL
@@ -3158,6 +3168,16 @@ class AnalyticsService:
                 value=money_value(raw)
                 if value and value>=10 and not is_non_money_reference(m.start('amount'),m.end('amount'),raw):
                     found.append((m.start('amount'),m.end('amount'),value,raw))
+            # La respuesta «de mil quinientos» a una pregunta de importe no
+            # necesita moneda explícita. No se toma una pregunta de fecha.
+            for m in re.finditer(r"\b(?:de|por|con) que cantidad\?\s*(?:de |por )?"
+                                 r"(?P<amount>"+NUMBER+r")(?!\w)",source):
+                value=money_value(m['amount'])
+                suffix=source[m.end('amount'):m.end('amount')+45]
+                non_money_reply=re.match(r"\s*(?:digitos?|horas?|dias?|meses?|anos?|"
+                    r"de (?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre))\b",suffix)
+                if value and value>=10 and not non_money_reply:
+                    found.append((m.start('amount'),m.end('amount'),value,m['amount']))
             # «mil 900 pesos» aporta 1900, no otros 900 adicionales.
             return sorted([m for m in found if not any(
                 other[0] <= m[0] and other[1] >= m[1] and
@@ -3210,7 +3230,7 @@ class AnalyticsService:
         negotiation_anchor_re = re.compile(
             r"\b(?:pagar|pague|paga|pago|abono|abonar|parcial|parcialidad|convenio|"
             r"propuesta|acuerdo|regulariza|regularizar|corriente|liquida|liquidar|liquidacion|"
-            r"cubrir|cubre|finiquitar|finiquito|cantidad\s+de|monto\s+de|pago\s+minimo|minimo(?:\s+que)?|mínimo\s+que)\b"
+            r"cubrir|cubre|finiquitar|finiquito|cantidad(?:\s+de)?|monto\s+de|pago\s+minimo|minimo(?:\s+que)?|mínimo\s+que)\b"
         )
         balance_anchor_re = re.compile(
             r"\b(?:saldo(?!\s+(?:pasado|anterior)\b)(?:\s+total|\s+pendiente)?|total\s+adeudado|adeudo\s+total)\b"
@@ -4055,7 +4075,7 @@ class AnalyticsService:
             "recontacto": callback,
             "no_conocen_confirmado": unknown_debtor,
             "proceso_arco": arco_process,
-            "tiempo_con_linea": asks_line_tenure,
+            "tiempo_con_linea": bool(asks_line_tenure or line_tenure_confirmed),
             "monto_confirmado": bool(detected_claim_amount is not None),
             "fecha_pago_confirmada": confirms_payment_date,
             "compromiso_confirmado": confirms_commitment,

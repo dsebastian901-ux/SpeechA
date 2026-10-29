@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r22-diagnostic",
+  "revision": "3.6.19-r23-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -20,7 +20,7 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 692,
+    "passed": 734,
     "failed": 0,
     "skipped": 0
   },
@@ -290,7 +290,7 @@
       "No unaccepted new payment instruction approved as followup"
     ]
   },
-  "engine_revision": "3.6.19-r22",
+  "engine_revision": "3.6.19-r23",
   "r22_review_backlog": {
     "calls": 95,
     "previous_review_calls": 85,
@@ -340,10 +340,59 @@
     "all_13_issues_closed": false
   },
   "current_validation": {
-    "engine_revision": "3.6.19-r22",
-    "unit_tests": 692,
+    "engine_revision": "3.6.19-r23",
+    "unit_tests": 734,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Rules over stored transcripts; no new acoustic or native Windows verification"
+    "scope": "Stored-transcript rules and local audio full decoding. New ASR and human listening blocked/unperformed in cloud."
+  },
+  "r23_ten_audio_block": {
+    "uploaded_audio_files": 10,
+    "audio_files_fully_decoded": 10,
+    "total_duration_seconds": 2064.6,
+    "exact_checkpoint_name_and_duration_matches": 10,
+    "received_case_indices": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      11,
+      12
+    ],
+    "block_outcomes_by_rules": {
+      "APROBADO": 1,
+      "REVISAR": 9
+    },
+    "new_approved_case": 2,
+    "full95_outcomes": {
+      "APROBADO": 12,
+      "REVISAR": 81,
+      "FALLA_GRAVE": 2
+    },
+    "previous11_approvals_retained": true,
+    "previous36_outcomes": {
+      "APROBADO": 7,
+      "REVISAR": 29
+    },
+    "previous_manual_facts_and_name_records_preserved": true,
+    "unit_tests": 734,
+    "regression_against_r22_evaluations": 268,
+    "regression_safety_failures": 0,
+    "undocumented_penalty_removals": 0,
+    "new_asr_executed_in_cloud": false,
+    "human_listening_performed": false,
+    "cloud_model_cached": false,
+    "cloud_model_download_blocker": "Proxy CONNECT 403 to Hugging Face; absent local model cache",
+    "local_block_review_launcher": "REVISAR_BLOQUE_AUDIOS.bat",
+    "local_model_only": true,
+    "maximum_block_calls": 10,
+    "local_reader_tests": "Test doubles; no real-model or native Windows claim",
+    "audio_or_checkpoint_modified": false,
+    "cloud_startup_draft_updated_to_remove_stale_cache_claim": true,
+    "draft_does_not_apply_runtime_or_publish": true
   }
 }

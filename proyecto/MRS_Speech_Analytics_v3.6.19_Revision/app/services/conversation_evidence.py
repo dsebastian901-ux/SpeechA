@@ -211,6 +211,28 @@ def _role_at(text, segments, position):
     return "NO DETERMINADO"
 
 
+def unknown_recipient_response(text, segments=()):
+    """Una respuesta explícita a la pregunta de conocimiento del titular.
+
+    «No» aislado tras una pregunta negativa es ambiguo. «No, para nada» sí
+    expresa desconocimiento; nunca se toma una respuesta conocida del gestor.
+    """
+    source=normalize(text)
+    if recipient_statement(text,segments,
+            r"\b(?:si (?:lo |la )?conozco|es mi (?:herman[oa]|madre|padre|hij[oa]|sobrin[oa]))\b"):
+        return {'confirmed':False,'method':'RESPUESTAS_CONTRADICTORIAS','evidence':''}
+    question=re.compile(r"\bno (?:lo |la )?conoce(?:s)?(?: (?:a |para )?[^?!.]{0,65})?\?\s*"
+                        r"(?P<answer>no[, ]+(?:para nada|jamas|nunca))\b")
+    for match in question.finditer(source):
+        role=_role_at(text,segments,match.start('answer'))
+        after=source[match.end():match.end()+60]
+        if role=='GESTOR' or re.search(r"\b(?:si (?:lo |la )?conozco|es mi familiar|es mi hermana)\b",after):
+            continue
+        return {'confirmed':True,'method':'RESPUESTA_EXPLICITA_DE_DESCONOCIMIENTO',
+                'evidence':match.group(),'speaker_role':role}
+    return {'confirmed':False,'method':'SIN_RESPUESTA_EXPLICITA','evidence':''}
+
+
 def payment_commitment(text, segments=()):
     """Una propuesta, pregunta o mención de convenio no equivale a aceptación."""
     source = normalize(text)
@@ -495,9 +517,13 @@ def payment_places(text, segments, catalog):
     units=sentence_evidence(text, segments)
     payment_context=False
     for unit in units:
-        if unit["speaker_role"] in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:
-            continue
         s = normalize(unit["text"])
+        new_context=bool(re.search(
+            r"\b(?:donde|lugares|establecimientos|tienda)\b.*\b(?:pagar|pago|cubrir|depositar|abonar)\b|"
+            r"\b(?:pagar|pago|cubrir|depositar|abonar)\b.*\b(?:donde|lugares|establecimientos|tienda)\b",s))
+        if unit["speaker_role"] in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:
+            payment_context=new_context and ('?' in s or '¿' in s)
+            continue
         # La tienda de origen de la tarjeta no es una instrucción de pago.
         instruction=re.search(r"\b(?:puede pagar(?:lo|los)?|puede aplicar pago|podra pagar(?:lo|los)?|puede realizar|realizar (?:su |el )?pago|"
                          r"pague|pagar(?:lo|los)? en|pago en|pago de servicio|deposite|depositar en|"
@@ -506,8 +532,7 @@ def payment_places(text, segments, catalog):
         # la oración inmediatamente anterior. No se arrastra contexto a toda
         # la llamada ni se cuenta la tienda de origen como instrucción.
         continuation=payment_context and re.match(r"^(?:en |a la |a |o |tambien |farmacias |tiendas |kiosco\b|7[- ])",s)
-        payment_context=bool(re.search(r"\b(?:donde|lugares|establecimientos)\b.*\b(?:pagar|pago)\b|"
-                                      r"\b(?:pagar|pago)\b.*\b(?:donde|establecimientos)\b",s))
+        payment_context=new_context
         if not instruction and not continuation:
             continue
         matches = []
@@ -534,8 +559,8 @@ def payment_places(text, segments, catalog):
 
 SENSITIVE = re.compile(
     r"\b(?:saldo (?:pendiente|vencido|total|de\s+\d[\d.,]*|es\s+\d[\d.,]*)|"
-    r"(?:tiene|presenta|cuenta con) (?:un |una |dos |tres |cuatro |\d+ )?(?:deuda|adeudo|atraso|mensualidades)|"
-    r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis) (?:mes(?:es)?|mensualidades)(?: de)? (?:atraso|vencid[ao]s?)|"
+    r"(?:tiene|presenta|cuenta con) (?:un |una |dos |tres |cuatro |\d+ )?(?:deuda|adeudo|atraso|mensualidad(?:es)?)|"
+    r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis) (?:mes(?:es)?|mensualidad(?:es)?)(?: de)? (?:atraso|vencid[ao]s?)|"
     r"(?:deuda|adeudo|pago minimo|monto) (?:de |es |por )?\d[\d.,]*|"
     r"(?:adeuda|debe)\s+(?:\d[\d.,]*|mil|cien|doscientos|trescientos|quinientos)|"
     r"(?:su|una|la) deuda|cubrir (?:el |su )?atraso|respecto a su atraso|por (?:el |su )?atraso|"
@@ -549,7 +574,7 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
                    expected_third_party=False, titular=False, legacy_financial=False):
     evidence = []
     last_recipient = None
-    for unit in evidence_units(text, segments):
+    for unit in sentence_evidence(text, segments):
         role = unit["speaker_role"]
         if role in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:
             last_recipient = role
