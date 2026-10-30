@@ -20,7 +20,7 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 814,
+    "passed": 829,
     "failed": 0,
     "skipped": 0
   },
@@ -341,10 +341,10 @@
   },
   "current_validation": {
     "engine_revision": "3.6.19-r25",
-    "unit_tests": 814,
+    "unit_tests": 829,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Stored-transcript interlocutor and conditional-negotiation rules, preserved linked ASR and human financial facts; no new audio transcription or native r25 Windows certification."
+    "scope": "Existing r25 analytics unchanged; local checkpoint rebuild validated with synthetic cases and the returned 95-call files, preserving 22 authorized names and 10 ASR records. No native Windows claim."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -534,5 +534,37 @@
     "additional_whisper_installation_required": false,
     "all80_review_calls_closed": false,
     "all13_operational_errors_closed": false
+  },
+  "r25_local_checkpoint_rebuild": {
+    "launcher": "RECONSTRUIR_BASE_R25.bat",
+    "private_checkpoint_download_not_required": true,
+    "expected_batch_calls": 95,
+    "expected_linked_readings": 10,
+    "source_checkpoint_hash_and_context_checked": true,
+    "authorized_excel_card_output_name_policy": true,
+    "calls_preserved": 95,
+    "output_name_corrections_recovered": 22,
+    "asr_records_recovered_and_valid": 10,
+    "result": {
+      "APROBADO": 13,
+      "REVISAR": 80,
+      "FALLA_GRAVE": 2
+    },
+    "same_categories_scores_penalties_and_original_evidence_as_verified_r25_delivery": true,
+    "new_human_audio_facts": 0,
+    "originals_unchanged": true,
+    "output_in_new_directory": true,
+    "report_data_cells_verified": 8550,
+    "new_unit_tests": 15,
+    "all_unit_tests_passed": 829,
+    "whisper_executed": false,
+    "private_data_downloaded_or_uploaded_by_tool": false,
+    "analytics_engine_changed": false,
+    "native_windows_execution_tested": false,
+    "file_selection_flow_tested_with_simulated_dialogs": true,
+    "historical_evaluations": 268,
+    "historical_classifications_changed": 0,
+    "safety_failures": 0,
+    "undocumented_penalty_removals": 0
   }
 }

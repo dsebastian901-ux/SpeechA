@@ -11,6 +11,15 @@ se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
 
+Si no puede descargar el checkpoint privado del chat, este paquete incorpora
+`RECONSTRUIR_BASE_R25.bat`. Seleccione su último `checkpoint_reanalizado.json`
+completo de 95 llamadas, `revision_audios_bloque.json` con las diez lecturas y,
+si se solicita, el `batch_checkpoint.json` original usado para esas lecturas.
+Genera localmente `Checkpoint_r25_95_Audios.json` y su Excel, recuperando los
+nombres según `numero_de_tarjeta` previamente autorizado y conservando las
+lecturas. No ejecuta Whisper ni procesa de nuevo audios. Las reglas siguen siendo
+r25. Consulte `RECUPERAR_CHECKPOINT_SIN_DESCARGAR.txt` dentro de la aplicación.
+
 Use Python 3.10 de 64 bits. Extraiga el paquete completo, abra la carpeta de la
 aplicación y ejecute `INSTALAR.bat`; después `INICIAR_MRS.bat`. Los lanzadores y
 dependencias originales se conservan. La primera transcripción de audio nuevo
@@ -159,7 +168,7 @@ La regresión contra r21 usa como base su carpeta de aplicación extraída y
 `--reviewed-changes tests/reviewed_r22_changes.json`. El documento original de
 cambios permanece intacto. Ambos recorridos de 268 evaluaciones verifican hashes
 de origen, causas de retiro de penalizaciones e invariantes; no copian etiquetas
-históricas de aprobación. La suite actual contiene 814 pruebas. La regresión
+históricas de aprobación. La suite actual contiene 829 pruebas. La regresión
 de r25 con 268 evaluaciones contra r24 no cambia clasificaciones ni retira
 penalizaciones sin causa.
 
