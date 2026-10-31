@@ -18,6 +18,9 @@ sin la extensión `.bat`. El lanzador también se conserva dentro de la aplicaci
 Seleccione su último `checkpoint_reanalizado.json`
 completo de 95 llamadas, `revision_audios_bloque.json` con las diez lecturas y,
 si se solicita, el `batch_checkpoint.json` original usado para esas lecturas.
+El segundo archivo es el resultado anterior de `REVISAR_BLOQUE_AUDIOS`, guardado
+junto a `Comparacion_Bloque_Audios.xlsx`; no viene dentro del ZIP del programa.
+El selector distingue tipos de JSON y permite volver a elegir si se confunden.
 Genera localmente `Checkpoint_r25_95_Audios.json` y su Excel, recuperando los
 nombres según `numero_de_tarjeta` previamente autorizado y conservando las
 lecturas. No ejecuta Whisper ni procesa de nuevo audios. Las reglas siguen siendo
@@ -171,7 +174,7 @@ La regresión contra r21 usa como base su carpeta de aplicación extraída y
 `--reviewed-changes tests/reviewed_r22_changes.json`. El documento original de
 cambios permanece intacto. Ambos recorridos de 268 evaluaciones verifican hashes
 de origen, causas de retiro de penalizaciones e invariantes; no copian etiquetas
-históricas de aprobación. La suite actual contiene 829 pruebas. La regresión
+históricas de aprobación. La suite actual contiene 838 pruebas. La regresión
 de r25 con 268 evaluaciones contra r24 no cambia clasificaciones ni retira
 penalizaciones sin causa.
 

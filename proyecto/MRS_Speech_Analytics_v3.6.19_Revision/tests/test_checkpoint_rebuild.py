@@ -161,7 +161,8 @@ def test_file_selection_flow_reconstructs_from_three_local_json_files(tmp_path,m
         def destroy(self):destroyed.append(True)
     def choose(**kwargs):
         titles.append(kwargs['title']);return next(choices)
-    monkeypatch.setitem(sys.modules,'tkinter',SimpleNamespace(Tk=Root,filedialog=SimpleNamespace(askopenfilename=choose)))
+    monkeypatch.setitem(sys.modules,'tkinter',SimpleNamespace(Tk=Root,filedialog=SimpleNamespace(askopenfilename=choose),
+        messagebox=SimpleNamespace(showerror=lambda *args:pytest.fail('No se esperaba un error de seleccion.'))))
     monkeypatch.setattr(sys,'argv',['rebuild','--use-excel-card','--expected-calls','1',
         '--expected-readings','1','--output-dir',str(tmp_path/'out')])
     assert cli.main()==0 and len(titles)==3 and destroyed==[True]
@@ -176,6 +177,73 @@ def test_cancel_file_selection_creates_no_output(tmp_path,monkeypatch):
         def withdraw(self):pass
         def destroy(self):pass
     monkeypatch.setitem(sys.modules,'tkinter',SimpleNamespace(Tk=Root,
-        filedialog=SimpleNamespace(askopenfilename=lambda **kwargs:'')))
+        filedialog=SimpleNamespace(askopenfilename=lambda **kwargs:''),
+        messagebox=SimpleNamespace(showerror=lambda *args:pytest.fail('Cancelar no debe mostrar error.'))))
     monkeypatch.setattr(sys,'argv',['rebuild','--output-dir',str(tmp_path/'out')])
     assert cli.main()==0 and not (tmp_path/'out').exists()
+
+
+def test_second_file_dialog_explains_checkpoint_mistake_and_allows_retry(tmp_path):
+    from types import SimpleNamespace
+    from tools.rebuild_checkpoint_base import select_valid_file
+    master,readings=files(tmp_path);original=master.read_bytes();choices=iter([str(master),str(readings)])
+    errors=[];filters=[]
+    def choose(**kwargs):
+        filters.append(kwargs['filetypes']);return next(choices)
+    selected=select_valid_file(SimpleNamespace(askopenfilename=choose),
+        SimpleNamespace(showerror=lambda *args:errors.append(args[1])), 'Segundo paso','readings')
+    assert selected==readings and master.read_bytes()==original
+    assert len(errors)==1 and 'checkpoint' in errors[0] and 'Comparacion_Bloque_Audios.xlsx' in errors[0]
+    assert 'No renombre' in errors[0] and filters[0][0][1]=='revision_audios_bloque*.json'
+
+
+def test_first_file_dialog_rejects_readings_as_master_and_allows_retry(tmp_path):
+    from types import SimpleNamespace
+    from tools.rebuild_checkpoint_base import select_valid_file
+    master,readings=files(tmp_path);choices=iter([str(readings),str(master)]);errors=[]
+    selected=select_valid_file(SimpleNamespace(askopenfilename=lambda **kw:next(choices)),
+        SimpleNamespace(showerror=lambda *args:errors.append(args[1])), 'Primer paso','checkpoint',expected_calls=1)
+    assert selected==master and len(errors)==1 and 'COMPLETO' in errors[0]
+
+
+def test_origin_dialog_rejects_wrong_hash_before_reconstruction(tmp_path):
+    from types import SimpleNamespace
+    from tools.rebuild_checkpoint_base import select_valid_file
+    master,readings=files(tmp_path);original=tmp_path/'original.json';original.write_bytes(master.read_bytes())
+    payload=json.loads(master.read_text());payload['metadata_changed']=True;master.write_text(json.dumps(payload))
+    choices=iter([str(master),str(original)]);errors=[]
+    selected=select_valid_file(SimpleNamespace(askopenfilename=lambda **kw:next(choices)),
+        SimpleNamespace(showerror=lambda *args:errors.append(args[1])), 'Origen','checkpoint',
+        expected_sha256=json.loads(readings.read_text())['source_checkpoint_sha256'])
+    assert selected==original and len(errors)==1 and 'ORIGINAL' in errors[0]
+
+
+def test_cancel_after_bad_readings_selection_leaves_no_output(tmp_path):
+    from types import SimpleNamespace
+    from tools.rebuild_checkpoint_base import select_valid_file
+    master,_=files(tmp_path);choices=iter([str(master),'']);errors=[]
+    selected=select_valid_file(SimpleNamespace(askopenfilename=lambda **kw:next(choices)),
+        SimpleNamespace(showerror=lambda *args:errors.append(args[1])), 'Lecturas','readings')
+    assert selected is None and len(errors)==1 and not (tmp_path/'out').exists()
+
+
+@pytest.mark.parametrize('payload', ['not JSON', '[]', '{"items":[]}'])
+def test_bad_json_has_a_readable_selection_error(tmp_path,payload):
+    from tools.rebuild_checkpoint_base import check_selected_file
+    p=tmp_path/'invalid.json';p.write_text(payload)
+    with pytest.raises(ValueError,match='JSON|lista'):
+        check_selected_file(p,'readings')
+
+
+def test_incomplete_asr_receipt_is_not_reinterpreted_as_completed(tmp_path):
+    from tools.rebuild_checkpoint_base import check_selected_file
+    _,readings=files(tmp_path);j=json.loads(readings.read_text());j['errors']=1;readings.write_text(json.dumps(j))
+    with pytest.raises(ValueError,match='completas'):
+        check_selected_file(readings,'readings')
+
+
+def test_master_count_is_checked_in_file_selection(tmp_path):
+    from tools.rebuild_checkpoint_base import check_selected_file
+    master,_=files(tmp_path)
+    with pytest.raises(ValueError,match='95'):
+        check_selected_file(master,'checkpoint',expected_calls=95)

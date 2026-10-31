@@ -20,7 +20,7 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 829,
+    "passed": 838,
     "failed": 0,
     "skipped": 0
   },
@@ -341,10 +341,10 @@
   },
   "current_validation": {
     "engine_revision": "3.6.19-r25",
-    "unit_tests": 829,
+    "unit_tests": 838,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Existing r25 analytics unchanged; local checkpoint rebuild validated with synthetic cases and the returned 95-call files, preserving 22 authorized names and 10 ASR records. No native Windows claim."
+    "scope": "Existing r25 analytics unchanged; file-type and origin-hash selection validation with retry tested using simulated dialogs and real 95-call files. No full native Windows execution claim."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -566,5 +566,26 @@
     "historical_classifications_changed": 0,
     "safety_failures": 0,
     "undocumented_penalty_removals": 0
+  },
+  "r25_rebuild_file_selection": {
+    "step1_requires_full_checkpoint": true,
+    "step2_requires_completed_asr_readings": true,
+    "step3_checks_original_checkpoint_hash": true,
+    "wrong_file_selection_reopens_picker": true,
+    "cancellation_after_wrong_file_creates_no_output": true,
+    "specific_readings_filename_filter": true,
+    "dialog_explains_readings_are_separate_from_checkpoint": true,
+    "new_tests": 9,
+    "total_tests_passed": 838,
+    "simulated_wrong_selections_recovered_with_real_files": 2,
+    "real95_outcomes": {
+      "APROBADO": 13,
+      "REVISAR": 80,
+      "FALLA_GRAVE": 2
+    },
+    "all95_categories_scores_and_original_facts_same_as_verified_r25": true,
+    "whisper_executed": false,
+    "analytics_engine_changed": false,
+    "native_windows_dialogs_simulated": true
   }
 }
