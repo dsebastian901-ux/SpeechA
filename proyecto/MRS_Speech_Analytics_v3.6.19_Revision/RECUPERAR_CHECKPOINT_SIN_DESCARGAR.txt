@@ -41,8 +41,10 @@ ejecutar esta herramienta cuando tenga los archivos correctos.
 
 Verificacion: 840 pruebas aprobadas; reconstruccion del lote real de 95 y
 contraste de las 8.550 celdas de datos del Excel. El motor sigue siendo r25.
-La prueba de reconstruccion se realizo en Linux con los archivos recibidos;
-queda pendiente su ejecucion nativa en Windows.
+La reconstruccion se probo en Linux y despues se verifico su ejecucion completa
+en Windows mediante el checkpoint final y el Excel devueltos. Se comprobaron
+las 95 llamadas y las 8.550 celdas del reporte. Esto no certifica toda la
+aplicacion ni el procesamiento de audios nuevos de r25.
 
 Los datos se quedan en su equipo; este paquete de codigo no incluye audios,
 cuentas, checkpoints ni reportes reales.
@@ -71,5 +73,15 @@ La validacion de origen sigue activa; no se omite para forzar una incorporacion.
 Se reprodujo el fallo antes de la correccion y se comprobo la reconstruccion
 con los archivos recibidos simulando la codificacion Windows CP1252. Se
 conservan las 95 llamadas, 22 correcciones de nombre y diez lecturas. Se
-verificaron las 8.550 celdas del Excel. Falta la ejecucion completa corregida
-en un Windows real; no se afirma que la simulacion equivalga a esa prueba.
+verificaron las 8.550 celdas del Excel. Posteriormente se recibieron y validaron
+los archivos finales generados en Windows; coinciden en todas las llamadas,
+transcripciones, cuentas, tarjetas, dictamenes, puntajes y penalizaciones con
+la base r25 comprobada.
+
+BASE PARA CONTINUAR
+
+Use Checkpoint_r25_95_Audios.json, dentro de la subcarpeta resultados que indica
+la consola. checkpoint_con_lecturas.json es un archivo intermedio y todavia
+puede contener las clasificaciones anteriores a aplicar las reglas r25.
+La reconstruccion y el reporte final ya estan completos; no se requiere otra
+ejecucion de este paso para obtener estos resultados.

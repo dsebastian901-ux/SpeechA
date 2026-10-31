@@ -344,7 +344,7 @@
     "unit_tests": 840,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Explicit UTF-8 checkpoint reading and UTF-8 launcher mode; reproduced CP1252 failure before fix and verified actual 95-call reconstruction under simulated Windows decoding. Analytics rules unchanged; native corrected Windows full run pending."
+    "scope": "Returned native Windows r25 reconstruction and Excel export verified: 95 calls, preserved original facts, 22 names, 10 ASR records, 8550 report cells. General application and new-audio certification remain pending."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -560,12 +560,13 @@
     "whisper_executed": false,
     "private_data_downloaded_or_uploaded_by_tool": false,
     "analytics_engine_changed": false,
-    "native_windows_execution_tested": false,
+    "native_windows_execution_tested": true,
     "file_selection_flow_tested_with_simulated_dialogs": true,
     "historical_evaluations": 268,
     "historical_classifications_changed": 0,
     "safety_failures": 0,
-    "undocumented_penalty_removals": 0
+    "undocumented_penalty_removals": 0,
+    "native_returned_checkpoint_and_excel_verified": true
   },
   "r25_rebuild_file_selection": {
     "step1_requires_full_checkpoint": true,
@@ -611,6 +612,34 @@
     "whisper_executed": false,
     "new_human_audio_facts": 0,
     "analytics_rules_changed": false,
-    "native_corrected_windows_full_execution_verified": false
+    "native_corrected_windows_full_execution_verified": true,
+    "native_verification_scope": "Checkpoint reconstruction and Excel export only; returned final files compared to verified r25 evidence."
+  },
+  "r25_returned_native_windows_outputs": {
+    "scope": "CHECKPOINT_RECONSTRUCTION_AND_EXCEL_EXPORT_ONLY",
+    "engine_revision": "3.6.19-r25",
+    "calls": 95,
+    "outcomes": {
+      "APROBADO": 13,
+      "REVISAR": 80,
+      "FALLA_GRAVE": 2
+    },
+    "technical_errors": 0,
+    "returned_checkpoint_matches_verified_facts_accounts_cards_categories_scores_and_penalties": true,
+    "selected_status_financial_privacy_and_reference_metadata_match_verified_delivery": true,
+    "output_name_review_records_preserved": 22,
+    "asr_reading_records_preserved_and_valid": 10,
+    "excel_rows": 95,
+    "excel_columns": 90,
+    "excel_cells_verified": 8550,
+    "excel_cell_mismatches": 0,
+    "intermediate_hash_matches_final_reanalysis_source": true,
+    "utf8_text_preserved": true,
+    "new_whisper_execution": false,
+    "new_human_audio_confirmations": 0,
+    "final_base": "Checkpoint_r25_95_Audios.json",
+    "intermediate_is_not_final_base": true,
+    "all13_operational_issues_closed": false,
+    "full_new_audio_pipeline_certified": false
   }
 }

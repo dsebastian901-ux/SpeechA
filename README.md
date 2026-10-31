@@ -33,6 +33,14 @@ No se eliminan tildes ni se modifican datos para evitar el error. Cuando el lote
 seleccionado es el mismo `batch_checkpoint.json` que generó las lecturas, bastan
 ese archivo y `revision_audios_bloque.json`: no solicita un tercer archivo.
 
+La reconstrucción corregida ya se comprobó en Windows con el checkpoint final y
+el Excel devueltos: 95 llamadas, 13 APROBADO, 80 REVISAR, 2 FALLA_GRAVE, las 22
+correcciones de nombre y las diez lecturas intactas. Las 8.550 celdas del reporte
+coinciden con el JSON. Conserve `Checkpoint_r25_95_Audios.json` como base final;
+`checkpoint_con_lecturas.json` es un archivo intermedio con etiquetas anteriores.
+Esta comprobación corresponde a la reconstrucción y exportación, no certifica
+todo el procesamiento de audio nuevo ni el cierre de los 13 problemas operativos.
+
 Use Python 3.10 de 64 bits. Extraiga el paquete completo, abra la carpeta de la
 aplicación y ejecute `INSTALAR.bat`; después `INICIAR_MRS.bat`. Los lanzadores y
 dependencias originales se conservan. La primera transcripción de audio nuevo
@@ -150,8 +158,9 @@ py -3.10 -m pytest -q
 ```
 
 Las versiones de `constraints-tested.txt` fueron ejecutadas en Linux con Python
-3.10.22; falta verificar r25 en Windows. Los archivos recibidos acreditan la
-ejecución del lector de bloques r23 en el Windows del usuario.
+3.10.22. Los archivos recibidos acreditan el lector de bloques r23 y la
+reconstrucción/exportación corregida r25 en el Windows del usuario. La validación
+completa de la aplicación r25 y de su procesamiento de audio nuevo sigue pendiente.
 
 ## Entorno de desarrollo en la nube
 
