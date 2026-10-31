@@ -12,7 +12,10 @@ se conservan como historial, no como certificación de esta revisión.
 ## Windows
 
 Si no puede descargar el checkpoint privado del chat, este paquete incorpora
-`RECONSTRUIR_BASE_R25.bat`. Seleccione su último `checkpoint_reanalizado.json`
+`RECONSTRUIR_BASE_R25.bat` en la carpeta principal del ZIP, junto a este README.
+Extraiga el paquete completo antes de ejecutarlo. Windows puede mostrar el nombre
+sin la extensión `.bat`. El lanzador también se conserva dentro de la aplicación.
+Seleccione su último `checkpoint_reanalizado.json`
 completo de 95 llamadas, `revision_audios_bloque.json` con las diez lecturas y,
 si se solicita, el `batch_checkpoint.json` original usado para esas lecturas.
 Genera localmente `Checkpoint_r25_95_Audios.json` y su Excel, recuperando los
