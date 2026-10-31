@@ -252,6 +252,18 @@ def associate_relationship(text, segments=()):
             return {'confirmed': True, 'method': 'RELACION_PLURAL_EXPLICITA',
                     'evidence': unit['text'], 'speaker_role': unit['speaker_role'],
                     'start': unit['start'], 'end': unit['end']}
+    source=normalize(text)
+    question=re.compile(
+        r'\b(?:es usted[^?!.]{0,70}\b(?:conocid[oa]|amig[oa]|familiar)\b[^?!.]{0,45}|'
+        r'(?:me puede indicar )?que es usted[^?!.]{0,90}|solo conocid[oa])\?\s*'
+        r'(?P<answer>(?:si[, ]+)?(?:(?:soy |solo )?(?:una? |su )?)?(?:conocid[oa]|amig[oa]))\b')
+    for match in question.finditer(source):
+        role=_role_at(text,segments,match.start('answer'))
+        tail=source[match.end():match.end()+45]
+        if (role not in {'GESTOR','TITULAR'} and not re.match(r'\s*\?',tail)
+                and not re.search(r'\b(?:no|no se si|creo que|tal vez)\s*$',source[max(0,match.start()-25):match.start()])):
+            return {'confirmed':True,'method':'RESPUESTA_RELACION_CONOCIDO',
+                    'evidence':match.group(),'speaker_role':role,'start':None,'end':None}
     return {'confirmed': False, 'method': 'SIN_RELACION_PLURAL_EXPLICITA', 'evidence': ''}
 
 
@@ -468,13 +480,16 @@ def completed_payment(text, segments=()):
 KIN = r"(?:espos[oa]|marido|mujer|pareja|herman[oa]|hij[oa]|mama|madre|papa|padre|sobrin[oa]|prim[oa]|ti[oa]|abuel[oa]|cunad[oa])"
 FAMILY = re.compile(rf"\b(?:(?:soy|era) (?:su |un |una )?familiar|soy su {KIN}|(?:es|era) mi {KIN}|(?:es|era) (?:espos[oa]|pareja) de mi {KIN})\b")
 ACCEPTANCE = re.compile(
-    r"\b(?:lo anoto|lo puedo anotar|puedo anotarlo|yo se lo (?:envio|mando)|"
+    r"\b(?:lo anoto|dejelo anoto|dejeme anotarlo|lo puedo anotar|puedo anotarlo|yo se lo (?:envio|mando)|"
     r"yo le aviso|le (?:paso|doy|transmito) el recado|se lo comunico|"
     r"se lo hago saber|le hago llegar el mensaje|le paso el dato|"
     r"yo (?:le )?aviso(?: igual)?|le voy a (?:pasar|dar) el (?:recado|mensaje))\b")
 DECLINES = re.compile(
-    r"\b(?:no (?:quiero|puedo|voy a) (?:recibir|tomar|anotar|pasar|dar|transmitir)|"
-    r"no (?:le|se lo) (?:voy a |puedo |quiero )?(?:pasar|dar|mandar|avisar)|"
+    r"\b(?:no (?:quiero|puedo|voy a) (?:recibir|tomar|anotar)(?=\s*(?:[,.!?]|$)|\s+(?:el |un )?(?:recado|mensaje|numero))|"
+    r"no (?:quiero|puedo|voy a) (?:pasar|dar|transmitir) (?:el |un |su )?(?:recado|mensaje)|"
+    r"no le (?:voy a |puedo |quiero )?(?:pasar|dar|mandar) (?:el |un |su )?(?:recado|mensaje)|"
+    r"no le (?:voy a |puedo |quiero )?avisar|"
+    r"no se lo (?:voy a |puedo |quiero )?(?:pasar|dar|mandar)(?=\s*(?:[,.!?]|$))|"
     r"no tengo (?:con que|donde|como|forma de) (?:anotar|apuntar|contactar|avisar)|"
     r"no soy (?:su )?mensajer[oa]|no me interesa recibir el recado)\b")
 
@@ -492,9 +507,13 @@ def assess_recado(text, segments=()):
         for match in FAMILY.finditer(s):
             prefix = s[max(0, match.start()-55):match.start()]
             suffix = s[match.end():match.end()+25]
-            if ("?" in s or "¿" in s
-                    or re.search(r"\b(?:no|no es|no era|no soy|(?:no se si|creo que|tal vez|quizas)(?: es| sea)?|usted es|usted seria)\s*$", prefix)
-                    or re.match(r"\s*[,;]?\s*(?:verdad|correcto|cierto)\b", suffix)):
+            # Una pregunta posterior («es mi marido, ¿por qué?») no borra
+            # la afirmación. La afirmación dentro de una pregunta sí se excluye.
+            left = max(s.rfind(c,0,match.start()) for c in '.!?¿')
+            right = min((p for c in '.!?¿' if (p:=s.find(c,match.end()))>=0), default=len(s))
+            if ((left>=0 and s[left]=='¿') or (right<len(s) and s[right]=='?')
+                    or re.search(r"\b(?:no|no es|no era|no soy|(?:no se si|creo que|tal vez|quizas)(?: es| sea)?|usted es|usted seria|(?:diga|dice|dijo|dijera) que)\s*$", prefix)
+                    or re.match(r"\s*[,;]?\s*¿?\s*(?:verdad|correcto|cierto)\b", suffix)):
                 continue
             families.append(dict(unit, phrase=match.group()))
         if ACCEPTANCE.search(s) and not DECLINES.search(s) and "?" not in s and "¿" not in s:
@@ -516,14 +535,65 @@ def assess_recado(text, segments=()):
             families.append({'text':match.group(), 'phrase':match['answer'],
                              'speaker_role':_role_at(text,segments,match.start('answer')),
                              'start':None,'end':None})
+    contextual_kin = re.compile(
+        r'\b(?:que (?:parentesco|parentezco)\b[^?!.]{0,100}|'
+        r'que es (?:usted\b[^?!.]{0,80}|(?:de |del |de la )?(?:senor|senora|senorita|titular)\b[^?!.]{0,70})|'
+        r'con quien (?:tengo|tuve) el gusto[^?!.]{0,50}|'
+        r'usted(?: es)?[^?!.]{0,20}(?:familiar|conocid[oa]|amig[oa])[^?!.]{0,50})\?\s*'
+        r'(?:si[, ]+)?(?P<answer>(?:(?:con |soy )?su |mi )?'+KIN+r')(?=[.!?, ]|$)')
+    for match in contextual_kin.finditer(source):
+        role=_role_at(text,segments,match.start('answer'))
+        tail=source[match.end():match.end()+40]
+        if role not in {'GESTOR','TITULAR'} and not re.match(r'\s*\?',tail):
+            families.append({'text':match.group(),'phrase':match['answer'],
+                             'speaker_role':role,'start':None,'end':None})
+    confirm_kin=re.compile(r'\b(?:me comenta que |usted )?es su (?P<kin>'+KIN+r')\?\s*'
+                           r'(?P<answer>si|asi es|correcto)\b')
+    for match in confirm_kin.finditer(source):
+        prefix=source[max(0,match.start()-45):match.start()]
+        if (_role_at(text,segments,match.start('answer')) not in {'GESTOR','TITULAR'}
+                and not re.search(r'\b(?:no|dice que|dijo que)\s*$',prefix)
+                and not re.match(r'\s*\?',source[match.end():])
+                and not re.search(r'\b(?:creo|tal vez|pero no)\b',source[match.end():match.end()+35])):
+            families.append({'text':match.group(),'phrase':match['kin'],
+                             'speaker_role':_role_at(text,segments,match.start('answer')),'start':None,'end':None})
     request = re.compile(
-        r"\b(?:puedo|podria|podemos) (?:dejar(?:le)?|dar(?:le)?) (?:un |el )?recado[^?!]{0,55}\?\s*"
-        r"(?P<answer>si(?:[, ]+claro)?|claro|de acuerdo|a ver[, ]+digame)\b")
+        r"\b(?:puedo|puede|puedes|podre|podra|podria|pudiera|podemos|podriamos) (?:dejar(?:le)?|dar(?:le)?) "
+        r"(?:un |el |algun |algun tipo de )?(?:recado|mensaje|mensajito)[^?!.]{0,55}[?.]\s*"
+        r"(?P<answer>si(?:[, ]+claro)?|(?:bien[, ]+)?claro|de acuerdo|a ver[, ]+digame)\b")
     for match in request.finditer(source):
         if (_role_at(text,segments,match.start('answer')) not in {'GESTOR','TITULAR'}
+                and not re.search(r'\b(?:no|diga que|dice que|dijo que)(?: usted)?(?: le)?\s*$',source[max(0,match.start()-45):match.start()])
+                and not re.match(r'\s*\?',source[match.end():])
                 and not re.search(r"\b(?:pero no|no quiero|no puedo|no le voy)\b", source[match.end():match.end()+70])):
             acceptances.append({'text':match.group(), 'speaker_role':_role_at(text,segments,match.start('answer')),
                                 'start':None,'end':None})
+    for unit in sentence_evidence(text,segments):
+        if unit['speaker_role'] in {'GESTOR','TITULAR'}:continue
+        s=normalize(unit['text'])
+        offer=re.search(r'\b(?:(?:si |se )?gusta|quiere|desea) dejar(?:le)? (?:un |algun |el )?(?:recado|mensaje|mensajito)\b',s)
+        if offer and not re.search(r'\b(?:no(?: me| le)?|dice que|dijo que|diga que)\s*$',s[:offer.start()]):
+            acceptances.append(dict(unit,method='OFRECE_RECIBIR_MENSAJE'))
+    note_request=re.compile(
+        r'\b(?:tiene|tienes|tendra|tendria) (?:usted )?(?:(?:con que|donde) (?:anotar|apuntar)|donde tomar nota)'
+        r'[^?!.]{0,65}\?\s*(?P<answer>si(?:[, ]+(?:a ver|claro))?|a ver[, ]+diga(?:me|nme))\b')
+    for match in note_request.finditer(source):
+        nearby=source[max(0,match.start()-300):match.end()+300]
+        if (re.search(r'\b(?:recado|mensaje|se comunique|comunicarse)\b',nearby)
+                and _role_at(text,segments,match.start('answer')) not in {'GESTOR','TITULAR'}
+                and not re.match(r'\s*\?',source[match.end():])
+                and not re.search(r'\b(?:pero no|no quiero|no puedo|no le voy)\b',source[match.end():match.end()+70])):
+            acceptances.append({'text':match.group(),'speaker_role':_role_at(text,segments,match.start('answer')),
+                                'start':None,'end':None})
+    readback=re.compile(r'\bme (?:lo |puede )?rectifi(?:ca|car)\b[^?!.]{0,80}\?\s*'
+                        r'(?P<number>\d+(?:[\s,.-]+\d+){2,8})')
+    for match in readback.finditer(source):
+        digits=re.sub(r'\D','',match['number'])
+        nearby=source[max(0,match.start()-400):match.end()+150]
+        if (len(digits)==10 and re.search(r'\b(?:recado|mensaje|se comunique|comunicarse|numero telefonico)\b',nearby)
+                and _role_at(text,segments,match.start('number')) not in {'GESTOR','TITULAR'}):
+            acceptances.append({'text':match.group(),'method':'REPETICION_NUMERO_CONTACTO_SOLICITADA',
+                                'speaker_role':_role_at(text,segments,match.start('number')),'start':None,'end':None})
     return {"family": families, "acceptance": acceptances,
             "refusal": refusals, "unknown_recipient": unknown}
 
@@ -612,7 +682,7 @@ SENSITIVE = re.compile(
     r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis) (?:mes(?:es)?|mens(?:u)?alidad(?:es)?)(?: de)? (?:atraso|vencid[ao]s?)|"
     r"(?:deuda|adeudo|pago minimo|monto) (?:de |es |por )?\d[\d.,]*|"
     r"(?:adeuda|debe)\s+(?:\d[\d.,]*|mil|cien|doscientos|trescientos|quinientos)|"
-    r"(?:su|una|la) deuda|cubrir (?:el |su )?atraso|respecto a su atraso|por (?:el |su )?atraso|"
+    r"(?:su|una|la) deuda|(?:su|un|el) adeudo|cubrir (?:el |su )?atraso|respecto a su atraso|por (?:el |su )?atraso|"
     r"negativa de pago|recuperacion (?:del|de su|en el) saldo|"
     r"pagos? vencidos?|incumplimiento (?:al|del|de) contrato|"
     r"(?:tiene|maneja|cuenta con) (?:una |la |su )?tarjeta)\b")

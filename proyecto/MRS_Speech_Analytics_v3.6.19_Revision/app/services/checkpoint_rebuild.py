@@ -29,7 +29,7 @@ def needs_source_checkpoint(checkpoint_path, evidence_path):
 
 def rebuild_checkpoint(checkpoint_path, evidence_path=None, *, source_checkpoint=None,
                        output_directory=None, use_excel_card=False,
-                       expected_calls=None, expected_readings=None):
+                       expected_calls=None, expected_readings=None, require_readings=True):
     source = Path(checkpoint_path).expanduser().resolve()
     raw = source.read_bytes()
     original = json.loads(raw.decode('utf-8-sig'))
@@ -72,7 +72,7 @@ def rebuild_checkpoint(checkpoint_path, evidence_path=None, *, source_checkpoint
         if not all(receipt_names) or len(set(receipt_names)) != len(receipt_names) or set(receipt_names)-set(names):
             raise ValueError('Las lecturas están duplicadas o no pertenecen al lote.')
         existing_readings.update(receipt_names)
-    if not existing_readings:
+    if require_readings and not existing_readings:
         raise ValueError('Faltan las lecturas adicionales: seleccione revision_audios_bloque.json.')
     if expected_readings is not None and len(existing_readings) != expected_readings:
         raise ValueError(f'Se esperaban {expected_readings} lecturas adicionales vinculadas.')

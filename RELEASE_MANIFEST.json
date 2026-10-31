@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r26-diagnostic",
+  "revision": "3.6.19-r27-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -20,14 +20,14 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 893,
+    "passed": 984,
     "failed": 0,
     "skipped": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Apply the user-confirmed follow-up status policy; correct paid-amount binding and date/time confusion, nominal identity, recado acceptance and WhatsApp suffix attribution; preserve independent review gates and actual penalty score. Do not waive new payment instructions, privacy or treatment findings.",
+  "additional_fix": "Recognize contextual recado reception and kinship, keep real refusals, distinguish callback phones from incomplete card references, preserve unassigned privacy review, and apply the authorized Excel-card output-name policy in a copy without Whisper.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -290,7 +290,7 @@
       "No unaccepted new payment instruction approved as followup"
     ]
   },
-  "engine_revision": "3.6.19-r26",
+  "engine_revision": "3.6.19-r27",
   "r22_review_backlog": {
     "calls": 95,
     "previous_review_calls": 85,
@@ -340,11 +340,11 @@
     "all_13_issues_closed": false
   },
   "current_validation": {
-    "engine_revision": "3.6.19-r26",
-    "unit_tests": 893,
+    "engine_revision": "3.6.19-r27",
+    "unit_tests": 984,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "ARCO procedure rules checked in Linux against native returned r25 checkpoint: 95 calls, preserved original facts, 22 names, 10 ASR records, 9025 report cells. Native r26 execution, acoustic verification and general new-audio certification remain pending."
+    "scope": "Paired prior/r26 new103 analyzed by exact file, identical accounts and 86 identical transcripts. Targeted recado and phone corrections plus 31 authorized output-name corrections yield 11 approved, 86 review, 6 severe. Prior95 and prior36 facts and approvals retained. Native r27 execution and acoustic validation remain pending."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -695,5 +695,98 @@
     "new_human_audio_facts": 0,
     "all13_operational_issues_closed": false,
     "reanalyze_existing_final_r25_checkpoint_without_rebuilding": true
+  },
+  "r27_paired_new_batch": {
+    "calls": 103,
+    "unique_exact_file_pairs": 103,
+    "identical_accounts": 103,
+    "identical_duration": 103,
+    "identical_text_and_segments": 86,
+    "different_transcriptions": 17,
+    "same_excel_and_model_confirmed_by_user": true,
+    "recorded_asr_parameters_match": true,
+    "old_engine_revision_not_serialized": true,
+    "original_outcomes": {
+      "APROBADO": 51,
+      "NO_APROBADO_MENOR_80": 30,
+      "MAL_DICTAMINADO": 19,
+      "FALLA_GRAVE": 2,
+      "REVISAR": 1
+    },
+    "r26_outcomes": {
+      "REVISAR": 97,
+      "FALLA_GRAVE": 6
+    },
+    "r26_rules_on_old_texts_outcomes": {
+      "REVISAR": 97,
+      "FALLA_GRAVE": 6
+    },
+    "r27_with_authorized_name_corrections": {
+      "APROBADO": 11,
+      "REVISAR": 86,
+      "FALLA_GRAVE": 6
+    },
+    "r27_rules_and_name_policy_on_old_texts": {
+      "APROBADO": 10,
+      "REVISAR": 87,
+      "FALLA_GRAVE": 6
+    },
+    "old_approvals_restored": 10,
+    "other_new_approval": 1,
+    "old_approvals_still_not_approved": 41,
+    "remaining_old_approval_partition": {
+      "PRIVACY_REVIEW": 22,
+      "CRITICAL_ARCO": 1,
+      "OTHER_REVIEW": 18
+    },
+    "authorized_output_name_corrections": 31,
+    "original_cards_and_accounts_unchanged": true,
+    "original_asr_text_and_segments_unchanged": true,
+    "two_removed_collection_attempt_penalties_have_documented_applicability_causes": true,
+    "all103_mora_empty_in_both_sources": true,
+    "accounts_excel_needed_to_investigate_mora": true,
+    "unit_tests": 984,
+    "new_tests": 91,
+    "historical_evaluations": 268,
+    "historical_changed_classifications": 0,
+    "safety_failures": 0,
+    "undocumented_penalty_removals": 0,
+    "report_columns": 95,
+    "report_cells_verified": 9785,
+    "report_cell_mismatches": 0,
+    "previous95": {
+      "outcomes": {
+        "APROBADO": 13,
+        "REVISAR": 80,
+        "FALLA_GRAVE": 2
+      },
+      "name_reviews_preserved": 22,
+      "asr_records_preserved": 10,
+      "report_cells_verified": 9025
+    },
+    "previous36": {
+      "outcomes": {
+        "APROBADO": 7,
+        "REVISAR": 29
+      },
+      "name_reviews_preserved": 13,
+      "financial_confirmations_preserved": true,
+      "report_cells_verified": 3420
+    },
+    "native_r27_windows_execution_verified": false,
+    "new_asr_execution": false,
+    "new_human_audio_facts": 0,
+    "ordinary_batch_processing_and_whisper_dependencies_retained": true,
+    "all13_operational_issues_closed": false,
+    "local_launcher": "REANALIZAR_CON_TARJETA_EXCEL.bat",
+    "one_checkpoint_selection_no_additional_readings_required": true,
+    "no_audio_files_copied_by_reanalysis": true,
+    "accounts_excel_file_not_modified": true,
+    "returned_r26_native_batch_verified": {
+      "calls_completed": 103,
+      "audio_copies_reported_successful": 103,
+      "export_cells_verified": 9785,
+      "scope": "Returned r26 batch checkpoint and Excel consistency; not acoustic or all-application certification."
+    }
   }
 }

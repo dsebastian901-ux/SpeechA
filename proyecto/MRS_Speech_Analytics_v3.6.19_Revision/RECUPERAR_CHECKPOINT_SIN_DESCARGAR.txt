@@ -1,3 +1,15 @@
+ACTUALIZACION R27: LOTE NUEVO DE 103
+
+Para las 103 llamadas ya procesadas en r26, use el nuevo lanzador
+REANALIZAR_CON_TARJETA_EXCEL.bat de la carpeta principal del ZIP.
+Seleccione el batch_checkpoint.json de r26 de ese lote. No pide otro archivo
+ni ejecuta Whisper. Corrige 31 identificadores de salida con numero_de_tarjeta
+y genera Checkpoint_r27_Recuperado.json y el reporte: 11 APROBADO,
+86 REVISAR y 6 FALLA_GRAVE. El Excel de cuentas original no cambia.
+
+No repita la reconstruccion de 95 para obtener este resultado.
+Las instrucciones siguientes se conservan como historial de r26/r25.
+
 ACTUALIZACION R26
 
 Si ya genero Checkpoint_r25_95_Audios.json con su reporte final, conserve esa

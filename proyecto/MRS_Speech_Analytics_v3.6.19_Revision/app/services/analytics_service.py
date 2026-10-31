@@ -46,7 +46,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r26"
+    ENGINE_REVISION = "3.6.19-r27"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -506,6 +506,7 @@ class AnalyticsService:
         )
         analysis.metadata["contact_validation"] = compliance.get("contact_validation", {})
         analysis.metadata['associate_contact_validation'] = compliance.get('associate_contact_validation', {})
+        analysis.metadata['intermediary_contact_validation'] = compliance.get('intermediary_contact_validation', {})
         analysis.metadata["quality_blocks"] = compliance.get("blocks", {})
         analysis.metadata["quality_checks"] = compliance.get("checks", {})
         analysis.metadata["operational_context"] = compliance.get(
@@ -1188,8 +1189,13 @@ class AnalyticsService:
         # La ausencia declarada confirma un tercero, no su parentesco. Una
         # entrega posterior al titular prevalece sobre esa respuesta inicial.
         intermediary_response = bool(not titular and recipient_statement(text, segments,
-            r"^(?:(?:bueno|pues)[, ]+)?(?:(?:el|ella) )?(?:no se encuentra(?: aqui| en casa| en este momento)?|"
-            r"no esta (?:aqui|en casa)|esta trabajando)[.!]?$"))
+            r"^(?:(?:no|bueno|pues)[, ]+)?(?:(?:el|ella) )?(?:(?:por|en) (?:el|este|ese) momento[, ]+)?"
+            r"(?:no se encuentra(?: aqui| en casa| en este momento)?|"
+            r"no esta(?: aqui| en casa| ahorita| por el momento)?|no (?:llega|ha llegado)|esta trabajando)[.!]?$"))
+        message_for_named_person = bool(not titular and recado_assessment['acceptance'] and agent_statement(
+            text,segments,r'\b(?:el senor|la senora|la senorita|el titular|la titular)\b[^.!?]{0,65}'
+            r'\b(?:se pueda comunicar|se comunique|pueda comunicarse)\b'))
+        intermediary_response = intermediary_response or message_for_named_person
         third_party = third_party or intermediary_response
 
         if unknown_debtor:
@@ -1340,6 +1346,7 @@ class AnalyticsService:
             "le dejo el recado",
             "recado",
             "mensaje",
+            "mensajito",
         ])
 
         # RECADO REF1/REF2: análisis contextual del destinatario del recado.
@@ -1367,12 +1374,9 @@ class AnalyticsService:
             r"en cuanto (?:lo|la) vea le (?:comento|digo|aviso)|"
             r"(?:diga(?:le)?|indiquele|mencionele|comentele|avis(?:e|ele)) (?:por favor )?que|"
             r"(?:le puedo dejar|le dejo|le voy a dejar|le voy a dictar) (?:un |el )?(?:numero|recado|mensaje)|"
+            r"(?:le dejare|le estaria dejando|le estare dejando) (?:un |el )?(?:numero|recado|mensaje)|"
             r"(?:le menciona que|le mencion[eo] que|es un numero para (?:que|aquellos)|"
             r"(?:indiquele|digale|mencionele) (?:a|al|a la) ))\b", normalized))
-        recado_callback = bool(re.search(
-            r"\b(?:que se comunique|que (?:nos )?llame|que (?:nos )?marque|"
-            r"(?:se|pueda) comunicar con nosotros|numero (?:de telefono|de contacto|de atencion)|"
-            r"tiene donde anotar|tenga donde anotar)\b", normalized))
         # Un rechazo explícito bloquea la aprobación aunque el gestor haya dictado un número.
         # "Le puedo dejar" es una solicitud del gestor, NO prueba aceptación del interlocutor.
         # Si el texto carece de confirmación, se conserva REVISAR (no se fabrica una aprobación).
@@ -1381,7 +1385,9 @@ class AnalyticsService:
         # La pregunta de si puede anotar no demuestra que se dictó un mensaje.
         recado_callback = bool(re.search(
             r"\b(?:que (?:se comunique|(?:nos |me )?(?:llame|marque))|"
-            r"(?:se|pueda) comunicar con nosotros|numero (?:de telefono|de contacto|de atencion))\b",
+            r"(?:se|pueda) comunicar con nosotros|se comunique al|puede comunicarse|"
+            r"(?:me|nos) (?:pued[ae]|podria|podia|pudiera) (?:regalar|regresar) (?:una? |la )?llamada|"
+            r"numero (?:telefonico|de telefonico|de telefono|de contacto|de atencion))\b",
             normalized))
         recado_real = bool(recado_callback and (recado_transmitted or leaves_message)
                            and not (recado_declines or recado_refusal)
@@ -2741,6 +2747,7 @@ class AnalyticsService:
                  or prior_payment_binding["review_required"]))
         missing_collection_attempt = bool(
             contact_type == "TITULAR"
+            and canonical_excel_status != 'ACLARACION'
             and not negotiation_attempt
             and not prior_payment_covers_minimum
             and not reported_amount_pending
@@ -2913,6 +2920,9 @@ class AnalyticsService:
                 status_evidence_method = "PAGO_ANTERIOR_REPORTADO"
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
+            if recado_real and detected_status.startswith('MENSAJE '):
+                status_evidence=' / '.join(u['text'] for u in recado_assessment['acceptance'])
+                status_evidence_method='RECADO_ACEPTADO_CON_CONTACTO'
             if unknown_response['confirmed'] and detected_status=='NO CONOCEN A DEUDOR':
                 status_evidence=unknown_response['evidence']
                 status_evidence_method=unknown_response['method']
@@ -4194,6 +4204,13 @@ class AnalyticsService:
             "contact_type": contact_type,
             "contact_validation": contact_confirmation,
             "associate_contact_validation": associate_confirmation,
+            "intermediary_contact_validation": {
+                "confirmed": bool(intermediary_response),
+                "method": ('RECADO_ACEPTADO_PARA_OTRA_PERSONA' if message_for_named_person
+                           else 'RESPUESTA_DE_AUSENCIA' if intermediary_response else 'SIN_CONFIRMACION'),
+                "evidence": [u['text'] for u in recado_assessment['acceptance']] if message_for_named_person else [],
+                "human_verified": False,
+            },
             "arco_validation": arco_validation,
             "detected_status": detected_status,
             "relationship": relationship,

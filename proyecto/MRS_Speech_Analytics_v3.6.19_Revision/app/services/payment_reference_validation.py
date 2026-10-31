@@ -27,6 +27,10 @@ TOKEN=re.compile(r"(?<!\w)(?:\d{1,19}|veinti(?:uno|dos|tres|cuatro|cinco|seis|si
 CONTEXT=re.compile(r"(?:referencia(?: de pago)?|numeros? de (?:la |su )?tarjeta|(?:los |sus )?(?:16|dieciseis) digitos(?: de (?:la |su )?tarjeta)?|tarjeta|dictar(?:e|le)? (?:la |el )?(?:referencia|numero)|numero (?:para|con el que) pagar)")
 STOP=re.compile(r"\b(?:whatsapp|comprobante|saldo|pesos|bancos|establecimientos|telefon[oa]|celular|fecha|monto|importe)\b")
 SEPARATOR=re.compile(r"^(?:[\W_]|\b(?:aja|si|correcto|ok|bien)\b)*$")
+CALLBACK_INTENT=re.compile(r'\b(?:regalar(?:me)?|regresar(?:me)?) (?:una? |la )?llamada\b|'
+    r'\b(?:que|para que)\b[^.!?]{0,85}\b(?:se comunique|me llame|nos llame|comunicarse)\b|'
+    r'\bnumero (?:de contacto|telefonico|de telefono)\b')
+EXPLICIT_REFERENCE=re.compile(r'\b(?:referencia|numero de (?:la |su )?tarjeta|(?:16|dieciseis) digitos)\b')
 
 
 def _digits(token):
@@ -46,7 +50,7 @@ def find_reference(text, expected=''):
     """
     s=normalize(text)
     expected=re.sub(r"\D", "", str(expected or ""))
-    found, ambiguous = [], []
+    found, ambiguous, callbacks = [], [], []
     for ctx in CONTEXT.finditer(s):
         sub=s[ctx.end():ctx.end()+420]
         matches=list(TOKEN.finditer(sub))
@@ -68,6 +72,13 @@ def find_reference(text, expected=''):
         digits="".join(parts)
         evidence=sub[group[0].start():group[-1].end()]
         record={"digits":digits, "evidence":evidence, "context":ctx.group()}
+        number_start=ctx.end()+group[0].start()
+        before=s[max(0,number_start-420):number_start]
+        intentions=list(CALLBACK_INTENT.finditer(before))
+        phone_length=len(digits)==10 or (len(digits)==20 and digits[:10]==digits[10:])
+        if (phone_length and intentions and not EXPLICIT_REFERENCE.search(before[intentions[-1].end():])):
+            callbacks.append(dict(record,method='TELEFONO_CON_SOLICITUD_DE_LLAMADA'))
+            continue
         if len(digits)==32 and digits[:16]==digits[16:]:
             record["digits"]=digits[:16]  # Repetición completa, no pares adivinados.
             found.append(record)
@@ -80,4 +91,5 @@ def find_reference(text, expected=''):
     wrong=[v for v in unique.values() if len(expected)==16 and v["digits"]!=expected]
     return {"detected":list(unique.values()), "incorrect":wrong,
             "ambiguous":ambiguous, "expected":expected,
+            "excluded_callback_numbers":list({v['digits']:v for v in callbacks}.values()),
             "requires_review":bool(wrong or ambiguous or (found and len(expected)!=16))}
