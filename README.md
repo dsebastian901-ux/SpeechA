@@ -26,6 +26,13 @@ nombres según `numero_de_tarjeta` previamente autorizado y conservando las
 lecturas. No ejecuta Whisper ni procesa de nuevo audios. Las reglas siguen siendo
 r25. Consulte `RECUPERAR_CHECKPOINT_SIN_DESCARGAR.txt` dentro de la aplicación.
 
+El lanzador actualizado muestra `RECONSTRUCTOR R25 - CORRECCION UTF-8` y activa
+el modo UTF-8 de Python. Se corrigió la lectura del JSON generado que dependía
+de la codificación regional de Windows y podía fallar con `charmap`, byte `0x81`.
+No se eliminan tildes ni se modifican datos para evitar el error. Cuando el lote
+seleccionado es el mismo `batch_checkpoint.json` que generó las lecturas, bastan
+ese archivo y `revision_audios_bloque.json`: no solicita un tercer archivo.
+
 Use Python 3.10 de 64 bits. Extraiga el paquete completo, abra la carpeta de la
 aplicación y ejecute `INSTALAR.bat`; después `INICIAR_MRS.bat`. Los lanzadores y
 dependencias originales se conservan. La primera transcripción de audio nuevo
@@ -174,7 +181,7 @@ La regresión contra r21 usa como base su carpeta de aplicación extraída y
 `--reviewed-changes tests/reviewed_r22_changes.json`. El documento original de
 cambios permanece intacto. Ambos recorridos de 268 evaluaciones verifican hashes
 de origen, causas de retiro de penalizaciones e invariantes; no copian etiquetas
-históricas de aprobación. La suite actual contiene 838 pruebas. La regresión
+históricas de aprobación. La suite actual contiene 840 pruebas. La regresión
 de r25 con 268 evaluaciones contra r24 no cambia clasificaciones ni retira
 penalizaciones sin causa.
 

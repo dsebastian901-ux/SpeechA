@@ -39,7 +39,7 @@ confirmar permanecen pendientes. Los archivos originales no se sobrescriben.
 Si cancela una seleccion, no necesita reprocesar los audios: puede volver a
 ejecutar esta herramienta cuando tenga los archivos correctos.
 
-Verificacion: 838 pruebas aprobadas; reconstruccion del lote real de 95 y
+Verificacion: 840 pruebas aprobadas; reconstruccion del lote real de 95 y
 contraste de las 8.550 celdas de datos del Excel. El motor sigue siendo r25.
 La prueba de reconstruccion se realizo en Linux con los archivos recibidos;
 queda pendiente su ejecucion nativa en Windows.
@@ -56,3 +56,20 @@ Ese archivo no viene en el ZIP del programa porque contiene sus datos privados.
 No renombre un checkpoint para simular lecturas: sus contenidos son diferentes.
 El selector actualizado explica el problema y permite elegir otro archivo,
 sin cerrar la herramienta ni modificar los originales.
+
+CORRECCION PARA WINDOWS: ERROR 'charmap', BYTE 0x81
+
+El JSON generado se lee explicitamente como UTF-8 y el lanzador activa el modo
+UTF-8 de Python. No elimine tildes ni edite los nombres o transcripciones.
+Al abrir esta version vera: RECONSTRUCTOR R25 - CORRECCION UTF-8.
+
+Con la pareja original batch_checkpoint.json + revision_audios_bloque.json,
+si el hash de origen coincide, la herramienta no solicita un tercer archivo.
+Un checkpoint_reanalizado.json posterior no reemplaza aquel origen exacto.
+La validacion de origen sigue activa; no se omite para forzar una incorporacion.
+
+Se reprodujo el fallo antes de la correccion y se comprobo la reconstruccion
+con los archivos recibidos simulando la codificacion Windows CP1252. Se
+conservan las 95 llamadas, 22 correcciones de nombre y diez lecturas. Se
+verificaron las 8.550 celdas del Excel. Falta la ejecucion completa corregida
+en un Windows real; no se afirma que la simulacion equivalga a esa prueba.

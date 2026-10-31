@@ -20,7 +20,7 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 838,
+    "passed": 840,
     "failed": 0,
     "skipped": 0
   },
@@ -341,10 +341,10 @@
   },
   "current_validation": {
     "engine_revision": "3.6.19-r25",
-    "unit_tests": 838,
+    "unit_tests": 840,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Existing r25 analytics unchanged; file-type and origin-hash selection validation with retry tested using simulated dialogs and real 95-call files. No full native Windows execution claim."
+    "scope": "Explicit UTF-8 checkpoint reading and UTF-8 launcher mode; reproduced CP1252 failure before fix and verified actual 95-call reconstruction under simulated Windows decoding. Analytics rules unchanged; native corrected Windows full run pending."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -587,5 +587,30 @@
     "whisper_executed": false,
     "analytics_engine_changed": false,
     "native_windows_dialogs_simulated": true
+  },
+  "r25_windows_utf8_reconstruction": {
+    "error_reproduced_before_fix": "UnicodeDecodeError CP1252 / charmap byte 0x81",
+    "generated_json_read_as_utf8_sig": true,
+    "launcher_python_utf8_mode": true,
+    "accents_names_and_original_transcripts_preserved": true,
+    "new_utf8_bom_and_cp1252_regression_tests": 2,
+    "all_unit_tests_passed": 840,
+    "actual95_reconstruction_with_simulated_cp1252_passed": true,
+    "supplied_original_checkpoint_matches_receipt": true,
+    "third_file_required_for_supplied_pair": false,
+    "source_hash_verification_retained": true,
+    "cards_accounts_scores_penalties_and_categories_match_verified_r25": true,
+    "corrected_names_preserved": 22,
+    "asr_readings_preserved": 10,
+    "report_data_cells_verified": 8550,
+    "outcomes": {
+      "APROBADO": 13,
+      "REVISAR": 80,
+      "FALLA_GRAVE": 2
+    },
+    "whisper_executed": false,
+    "new_human_audio_facts": 0,
+    "analytics_rules_changed": false,
+    "native_corrected_windows_full_execution_verified": false
   }
 }

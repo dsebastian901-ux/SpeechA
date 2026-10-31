@@ -154,7 +154,7 @@ def attach_audio_block(master_path,evidence_path,output_directory=None,*,source_
     target=create_checkpoint_output(output_directory,'Evidencia_Audios_'+AnalyticsService.ENGINE_REVISION.rsplit('-',1)[-1]+'_',nested_results=True)
     intermediate=target/'checkpoint_con_lecturas.json';intermediate.write_text(json.dumps(updated,ensure_ascii=False,indent=2),encoding='utf-8')
     output=reanalyze_checkpoint(intermediate,target/'resultados')
-    final=Path(output['checkpoint']);payload=json.loads(final.read_text());payload['audio_block_import']={
+    final=Path(output['checkpoint']);payload=json.loads(final.read_text(encoding='utf-8-sig'));payload['audio_block_import']={
         'source_master_sha256':hashlib.sha256(raw).hexdigest(),'reading_sha256':hashlib.sha256(evidence_raw).hexdigest(),
         'matched_calls':len(records),'human_verified':False,'original_results_preserved':True,'whisper_executed':False}
     payload['audio_block_import']['source_engine_revision']=evidence.get('engine_revision')

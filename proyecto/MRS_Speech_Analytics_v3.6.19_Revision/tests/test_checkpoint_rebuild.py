@@ -247,3 +247,30 @@ def test_master_count_is_checked_in_file_selection(tmp_path):
     master,_=files(tmp_path)
     with pytest.raises(ValueError,match='95'):
         check_selected_file(master,'checkpoint',expected_calls=95)
+
+
+@pytest.mark.parametrize('bom',[False,True])
+def test_utf8_accents_survive_rebuild_when_windows_default_is_cp1252(tmp_path,monkeypatch,bom):
+    master,readings=files(tmp_path,receipt_text='Ándale, Íñigo. ¿Cómo está José?')
+    original=json.loads(master.read_text(encoding='utf-8'))
+    original['items'][0]['result']['texto']+=' Ándale, señor.'
+    original['items'][0]['relation']['gestor']='Álvaro Núñez'
+    master.write_text(json.dumps(original,ensure_ascii=False),encoding='utf-8-sig' if bom else 'utf-8')
+    receipt=json.loads(readings.read_text(encoding='utf-8'))
+    receipt['source_checkpoint_sha256']=hashlib.sha256(master.read_bytes()).hexdigest()
+    receipt['items'][0]['original_text']=original['items'][0]['result']['texto']
+    receipt['items'][0]['original_text_sha256']=hashlib.sha256(receipt['items'][0]['original_text'].encode()).hexdigest()
+    readings.write_text(json.dumps(receipt,ensure_ascii=False),encoding='utf-8-sig' if bom else 'utf-8')
+    raw=master.read_bytes();receipt_raw=readings.read_bytes()
+    real_read=Path.read_text
+    def windows_read(path,encoding=None,errors=None):
+        return real_read(path,encoding=encoding or 'cp1252',errors=errors)
+    monkeypatch.setattr(Path,'read_text',windows_read)
+    result=run(master,readings,tmp_path/'out')
+    saved=json.loads(Path(result['checkpoint']).read_bytes().decode('utf-8-sig'))
+    item=saved['items'][0]
+    assert item['result']==original['items'][0]['result']
+    assert item['relation']['gestor']=='Álvaro Núñez'
+    assert item['audio_block_evidence']['text']=='Ándale, Íñigo. ¿Cómo está José?'
+    assert item['classification']['clasificacion']=='APROBADO'
+    assert master.read_bytes()==raw and readings.read_bytes()==receipt_raw
