@@ -19,6 +19,7 @@ from app.models.analytics_model import AnalyticsModel
 from app.models.transcriptions import TranscriptionModel
 from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment, unknown_recipient_response, dictated_privacy_email, associate_relationship
 from app.services.audio_block_evidence import validate_evidence
+from app.services.arco_validation import assess_arco, qualitative_line_tenure
 from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing
 from app.services.installment_validation import installment_plan, installment_dates
 from app.services.asr_amount_recovery import validated_entries
@@ -45,7 +46,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r25"
+    ENGINE_REVISION = "3.6.19-r26"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -57,6 +58,9 @@ class AnalyticsService:
         status = metadata.get("status_validation") or {}
         negotiation = metadata.get("negotiation_validation") or {}
         reasons = []
+        arco = metadata.get('arco_validation') or {}
+        if arco.get('applies') and not arco.get('valid'):
+            reasons.extend(arco.get('reasons') or ['Procedimiento ARCO incompleto; requiere revisión.'])
         additional=metadata.get('audio_block_evidence_validation') or {}
         if additional.get('review_required'):
             if additional.get('valid') and additional.get('risks') and all(
@@ -525,6 +529,7 @@ class AnalyticsService:
         analysis.metadata["status_validation"] = compliance.get(
             "status_validation", {}
         )
+        analysis.metadata['arco_validation'] = compliance.get('arco_validation', {})
         analysis.metadata["convenio_payment_validation"] = compliance.get(
             "convenio_payment_validation", {}
         )
@@ -1538,9 +1543,6 @@ class AnalyticsService:
         # ---------------------------------------------------------
         # REGLAS NO CONOCEN A DEUDOR
         # ---------------------------------------------------------
-        arco_process = agent_statement(text, segments,
-            r"\b(?:puede ejercer|para ejercer|solicitar|tramitar|ejercer|procedimiento|proceso|tramite)\b"
-            r".{0,65}\b(?:derechos? (?:a )?arco|arco)\b")
         asks_line_tenure = any_of([
             "cuanto tiempo tiene con la linea",
             "cuanto tiempo lleva con la linea",
@@ -1565,14 +1567,15 @@ class AnalyticsService:
             normalized))
         qualitative_tenure = recipient_statement(text, segments,
             r"\b(?:yo )?tengo (?:varios |muchos )?anos con (?:este |el |mi )?numero\b")
-        line_tenure_confirmed = bool(confirms_line_tenure or tenure_answer or qualitative_tenure)
-
-        asks_ine_or_line_proof = agent_statement(text, segments,
-            r"\b(?:ine|identificacion oficial|comprobante de (?:la linea|telefono|propiedad de la linea))\b")
+        tenure_reply = qualitative_line_tenure(text, segments)
+        line_tenure_confirmed = bool(confirms_line_tenure or tenure_answer or qualitative_tenure or tenure_reply['confirmed'])
         gives_privacy_email = agent_statement(text, segments,
             r"(?<![\w.+-])privacidad1?@bradesco\.com\.mx(?![\w-]|\.[\w.-])")
         email_dictation=dictated_privacy_email(text,segments)
         gives_privacy_email=bool(gives_privacy_email or email_dictation['detected'])
+        arco_validation = assess_arco(text, segments, email_given=gives_privacy_email)
+        arco_process = arco_validation['process_explained']
+        asks_ine_or_line_proof = arco_validation['both_documents_requested']
 
         no_conocen_valid = (
             unknown_debtor
@@ -1581,6 +1584,11 @@ class AnalyticsService:
             and asks_ine_or_line_proof
             and gives_privacy_email
         )
+        arco_validation.update(applies=bool(unknown_debtor or canonical_excel_status=='NO CONOCEN A DEUDOR'),
+                               valid=bool(no_conocen_valid),line_tenure_confirmed=line_tenure_confirmed,
+                               line_tenure_reply=tenure_reply,unknown_recipient_confirmed=bool(unknown_debtor))
+        if not unknown_debtor:arco_validation['reasons'].append('No se confirmó desconocimiento del titular.')
+        if not line_tenure_confirmed:arco_validation['reasons'].append('No se confirmó antigüedad de la línea.')
 
         # ---------------------------------------------------------
         # REGLAS DE NEGOCIACIÓN
@@ -2612,11 +2620,16 @@ class AnalyticsService:
             )
 
         if unknown_debtor and not arco_process:
-            add_penalty(
-                "PEN_ARCO_OMISION", "Protección de Datos",
-                "Interlocutor confirma desconocer al titular y no se detecta el proceso de derechos ARCO obligatorio.",
-                100, True, ["ARCO001"],
-            )
+            if arco_validation['partial_guidance_requires_audio']:
+                add_penalty('PEN_ARCO_REV', 'Protección de Datos',
+                    'Hay indicios de orientación del trámite, pero no se confirmó la mención de derecho(s) ARCO; cotejar audio.',
+                    0, False, ['ARCO001'])
+            else:
+                add_penalty(
+                    "PEN_ARCO_OMISION", "Protección de Datos",
+                    "Interlocutor confirma desconocer al titular y no se detecta el proceso de derechos ARCO obligatorio.",
+                    100, True, ["ARCO001"],
+                )
 
         protected_third_statuses = {
             "MENSAJE CON FAMILIAR",
@@ -2978,8 +2991,14 @@ class AnalyticsService:
                 status_validation["line_tenure_confirmed"] = line_tenure_confirmed
                 status_validation["privacy_email"] = gives_privacy_email
                 status_validation["ine_or_line_proof"] = asks_ine_or_line_proof
-                if not asks_ine_or_line_proof:
-                    status_validation["reasons"].append("No se detectó solicitud de identificación o comprobante de titularidad de línea.")
+                status_validation['ine_requested'] = arco_validation['ine_requested']
+                status_validation['line_proof_requested'] = arco_validation['line_proof_requested']
+                if not arco_validation['ine_requested']:
+                    status_validation["reasons"].append("No se detectó solicitud de INE o identificación oficial.")
+                if not arco_validation['line_proof_requested']:
+                    status_validation["reasons"].append("No se detectó solicitud del comprobante de la línea.")
+                if arco_validation['documents_as_alternatives']:
+                    status_validation['reasons'].append('Se requieren INE y comprobante, no uno u otro documento.')
                 if not gives_privacy_email:
                     status_validation["reasons"].append("No se detectó el correo de privacidad para derechos ARCO.")
                 status_validation["valid"] = bool(no_conocen_valid)
@@ -4175,6 +4194,7 @@ class AnalyticsService:
             "contact_type": contact_type,
             "contact_validation": contact_confirmation,
             "associate_contact_validation": associate_confirmation,
+            "arco_validation": arco_validation,
             "detected_status": detected_status,
             "relationship": relationship,
             "observations": observations,

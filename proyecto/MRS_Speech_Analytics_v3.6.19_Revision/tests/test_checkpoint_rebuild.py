@@ -166,7 +166,7 @@ def test_file_selection_flow_reconstructs_from_three_local_json_files(tmp_path,m
     monkeypatch.setattr(sys,'argv',['rebuild','--use-excel-card','--expected-calls','1',
         '--expected-readings','1','--output-dir',str(tmp_path/'out')])
     assert cli.main()==0 and len(titles)==3 and destroyed==[True]
-    assert (tmp_path/'out/resultados/Checkpoint_r25_Recuperado.json').is_file()
+    assert (tmp_path/'out/resultados/Checkpoint_r26_Recuperado.json').is_file()
 
 
 def test_cancel_file_selection_creates_no_output(tmp_path,monkeypatch):

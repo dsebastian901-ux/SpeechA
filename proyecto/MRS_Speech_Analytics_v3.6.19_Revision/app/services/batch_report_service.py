@@ -199,6 +199,16 @@ class BatchReportService:
 
     MODE_B_HEADERS += HEADERS[-5:]
 
+    ARCO_HEADERS = [
+        "Mención derechos ARCO",
+        "Correo ARCO confirmado",
+        "INE solicitada",
+        "Comprobante de línea solicitado",
+        "Procedimiento ARCO completo",
+    ]
+    HEADERS += ARCO_HEADERS
+    MODE_B_HEADERS += ARCO_HEADERS
+
 
     @staticmethod
     def _yes_no(value) -> str:
@@ -747,6 +757,15 @@ class BatchReportService:
                 if ((metadata.get('audio_block_evidence_validation') or {}).get('quality') or {}).get('degraded') else "",
             "Riesgos lectura adicional": json.dumps((metadata.get('audio_block_evidence_validation') or {}).get('risks') or [],ensure_ascii=False)
                 if (metadata.get('audio_block_evidence_validation') or {}).get('risks') else "",
+            **{label: cls._yes_no((metadata.get('arco_validation') or {}).get(key))
+               if (metadata.get('arco_validation') or {}).get('applies') else "N/A"
+               for label, key in [
+                   ("Mención derechos ARCO", "rights_mentioned"),
+                   ("Correo ARCO confirmado", "email_given"),
+                   ("INE solicitada", "ine_requested"),
+                   ("Comprobante de línea solicitado", "line_proof_requested"),
+                   ("Procedimiento ARCO completo", "complete_procedure"),
+               ]},
         }
 
     @staticmethod

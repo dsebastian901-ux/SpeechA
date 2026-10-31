@@ -74,6 +74,9 @@ def invariants(row):
     negotiation = m.get("negotiation_validation") or {}
     if approved and m.get('quality_contact_type')=='CONTACTO NO DETERMINADO':
         failures.append('interlocutor no determinado aprobado')
+    arco=m.get('arco_validation') or {}
+    if approved and arco.get('applies') and not (arco.get('valid') and arco.get('complete_procedure')):
+        failures.append('procedimiento ARCO incompleto aprobado')
     if approved and negotiation.get('unaccepted_new_payment_instruction'):
         failures.append('instrucción nueva de pago sin aceptación aprobada como seguimiento')
     if approved and (negotiation.get("installment_validation") or {}).get("review_required"):

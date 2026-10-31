@@ -1,3 +1,16 @@
+ACTUALIZACION R26
+
+Si ya genero Checkpoint_r25_95_Audios.json con su reporte final, conserve esa
+base. Ejecute REANALIZAR_CHECKPOINT.bat de r26 y seleccione ese archivo.
+No necesita reconstruir otra vez ni ejecutar Whisper.
+
+El lanzador RECONSTRUIR_BASE_R25.bat conserva el nombre por compatibilidad;
+si vuelve a usarlo, aplica las reglas vigentes r26 y genera
+Checkpoint_r26_95_Audios.json. La consola imprime la revision del motor.
+Las verificaciones de r25 descritas abajo se conservan como historial.
+
+HISTORIAL DE LA RECUPERACION R25
+
 GENERAR EL CHECKPOINT R25 EN SU PC
 
 Esta herramienta evita descargar los datos privados desde el chat. Usa los

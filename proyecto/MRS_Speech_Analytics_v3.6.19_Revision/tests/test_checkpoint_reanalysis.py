@@ -19,7 +19,7 @@ def test_reanalysis_generates_excel_without_original_audio_or_whisper(tmp_path):
     assert source.read_bytes() == original
     saved = json.loads(Path(result["checkpoint"]).read_text(encoding="utf-8"))
     assert saved["reanalysis"]["whisper_executed"] is False
-    assert saved["reanalysis"]["engine_revision"] == result["engine_revision"] == "3.6.19-r25"
+    assert saved["reanalysis"]["engine_revision"] == result["engine_revision"] == "3.6.19-r26"
     assert saved["items"][0]["analytics_metadata"]["engine_revision"] == result["engine_revision"]
     assert saved["items"][0]["classified_audio_path"] is None
     book = load_workbook(result["report"], read_only=True, data_only=True)

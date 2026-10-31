@@ -104,7 +104,8 @@ def rebuild_checkpoint(checkpoint_path, evidence_path=None, *, source_checkpoint
             assert old.get(field) == new.get(field), f'Cambió evidencia original: {field}'
         assert {k:v for k,v in old.get('relation', {}).items() if k != 'nombre_final'} == {
             k:v for k,v in new.get('relation', {}).items() if k != 'nombre_final'}
-    filename = 'Checkpoint_r25_95_Audios.json' if len(items) == 95 else 'Checkpoint_r25_Recuperado.json'
+    revision = result['engine_revision'].rsplit('-', 1)[-1]
+    filename = f'Checkpoint_{revision}_95_Audios.json' if len(items) == 95 else f'Checkpoint_{revision}_Recuperado.json'
     destination = path.with_name(filename)
     if destination.exists():
         raise ValueError('No se sobrescriben checkpoints existentes.')

@@ -1,4 +1,4 @@
-"""Generar la base r25 localmente cuando no se puede descargar el checkpoint."""
+"""Generar una base local con el motor vigente cuando falla la descarga del checkpoint."""
 import argparse
 import hashlib
 import json
@@ -104,6 +104,7 @@ def main():
         print('Los archivos de entrada permanecen intactos.')
         return 1
     print('Base generada:', result['checkpoint'])
+    print('Revisión del motor:', result['engine_revision'])
     print('Reporte generado:', result['report'])
     print('Resultados:', result['outcomes'])
     print('Correcciones de nombre:', result['output_names_corrected'])

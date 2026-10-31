@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r25-diagnostic",
+  "revision": "3.6.19-r26-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -20,7 +20,7 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 840,
+    "passed": 893,
     "failed": 0,
     "skipped": 0
   },
@@ -290,7 +290,7 @@
       "No unaccepted new payment instruction approved as followup"
     ]
   },
-  "engine_revision": "3.6.19-r25",
+  "engine_revision": "3.6.19-r26",
   "r22_review_backlog": {
     "calls": 95,
     "previous_review_calls": 85,
@@ -340,11 +340,11 @@
     "all_13_issues_closed": false
   },
   "current_validation": {
-    "engine_revision": "3.6.19-r25",
-    "unit_tests": 840,
+    "engine_revision": "3.6.19-r26",
+    "unit_tests": 893,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Returned native Windows r25 reconstruction and Excel export verified: 95 calls, preserved original facts, 22 names, 10 ASR records, 8550 report cells. General application and new-audio certification remain pending."
+    "scope": "ARCO procedure rules checked in Linux against native returned r25 checkpoint: 95 calls, preserved original facts, 22 names, 10 ASR records, 9025 report cells. Native r26 execution, acoustic verification and general new-audio certification remain pending."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -641,5 +641,59 @@
     "intermediate_is_not_final_base": true,
     "all13_operational_issues_closed": false,
     "full_new_audio_pipeline_certified": false
+  },
+  "r26_complete_arco_procedure": {
+    "policy_source": "USER_CLARIFICATION_EXPLICIT_ARCO_RIGHTS_REQUIRED",
+    "prior_waiver_of_explicit_rights_mention_superseded": true,
+    "explicit_rights_and_process_required": true,
+    "official_privacy_email_required": true,
+    "id_and_line_proof_both_requested_required": true,
+    "documents_as_alternatives_rejected": true,
+    "baja_guidance_alone_satisfies_process": false,
+    "partial_guidance_still_requires_review": true,
+    "explicit_denial_and_omission_without_procedural_indications_keep_critical_block": true,
+    "unknown_recipient_and_line_tenure_required_for_status": true,
+    "qualitative_tenure_does_not_invent_years": true,
+    "uncertain_domain_not_reconstructed": true,
+    "new_tests": 53,
+    "historical_evaluations": 268,
+    "historical_classifications_changed": 0,
+    "safety_failures": 0,
+    "undocumented_penalty_removals": 0,
+    "current95": {
+      "outcomes": {
+        "APROBADO": 13,
+        "REVISAR": 80,
+        "FALLA_GRAVE": 2
+      },
+      "technical_errors": 0,
+      "scores_unchanged": true,
+      "existing_penalties_preserved": true,
+      "additional_review_only_flags": 2,
+      "original_facts_accounts_cards_preserved": true,
+      "output_name_review_records_preserved": 22,
+      "asr_reading_records_preserved_and_valid": 10,
+      "financial_card_and_asr_validation_preserved": true,
+      "privacy_risk_gates_preserved": true,
+      "report_columns": 95,
+      "previous90_columns_retained_in_order": true,
+      "report_cells_verified": 9025,
+      "report_cell_mismatches": 0
+    },
+    "previous36": {
+      "outcomes": {
+        "APROBADO": 7,
+        "REVISAR": 29
+      },
+      "name_records_preserved": 13,
+      "all_original_and_financial_confirmation_records_preserved": true,
+      "scores_categories_and_penalties_unchanged": true,
+      "report_cells_verified": 3420
+    },
+    "native_r26_execution_verified": false,
+    "new_whisper_execution": false,
+    "new_human_audio_facts": 0,
+    "all13_operational_issues_closed": false,
+    "reanalyze_existing_final_r25_checkpoint_without_rebuilding": true
   }
 }

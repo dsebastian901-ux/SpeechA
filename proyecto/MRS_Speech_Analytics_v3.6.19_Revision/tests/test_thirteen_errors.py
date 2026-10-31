@@ -39,7 +39,7 @@ def test_e06_linea_does_not_count_as_ine():
 
 def test_e06_complete_arco_workflow_is_not_critical():
     r = run("Habla MRS. No lo conozco. Puede ejercer sus derechos ARCO. Tengo dos años con esta línea. "
-            "Envíe identificación oficial o comprobante de teléfono a privacidad@bradesco.com.mx.",
+            "Envíe identificación oficial y comprobante de teléfono a privacidad@bradesco.com.mx.",
             estatus_grabacion="NO CONOCEN A DEUDOR")
     assert r["status_validation"]["valid"] is True
     assert "PEN_ARCO_OMISION" not in ids(r)

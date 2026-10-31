@@ -219,8 +219,16 @@ def unknown_recipient_response(text, segments=()):
     """
     source=normalize(text)
     if recipient_statement(text,segments,
-            r"\b(?:si (?:lo |la )?conozco|es mi (?:herman[oa]|madre|padre|hij[oa]|sobrin[oa]))\b"):
+            r"\b(?:si (?:lo |la )?(?:conozco|conocemos)|soy yo|soy (?:el |la )?titular|"
+            r"soy su (?:herman[oa]|madre|padre|hij[oa]|sobrin[oa])|es mi (?:herman[oa]|madre|padre|hij[oa]|sobrin[oa]))\b"):
         return {'confirmed':False,'method':'RESPUESTAS_CONTRADICTORIAS','evidence':''}
+    for unit in sentence_evidence(text,segments):
+        if unit['speaker_role']=='GESTOR':continue
+        if re.fullmatch(r'no (?:lo|la) conocemos(?: aqui| en (?:esta|la|nuestra) casa)?[.!]?|'
+                        r'no conocemos a (?:esa|esta) persona[.!]?',normalize(unit['text'])):
+            return {'confirmed':True,'method':'DECLARACION_PLURAL_DESCONOCIMIENTO',
+                    'evidence':unit['text'],'speaker_role':unit['speaker_role'],
+                    'start':unit['start'],'end':unit['end']}
     question=re.compile(r"\bno (?:lo |la )?conoce(?:s)?(?: (?:a |para )?[^?!.]{0,65})?\?\s*"
                         r"(?P<answer>no[, ]+(?:para nada|jamas|nunca))\b")
     for match in question.finditer(source):
