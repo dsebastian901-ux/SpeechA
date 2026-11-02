@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 
 from app.services.asr_evidence_quality import block_reading_quality,usable_groups
-from app.services.conversation_evidence import normalize,sensitive_financial_matches
+from app.services.conversation_evidence import normalize,sensitive_financial_matches,financial_answer_evidence
 from app.services.transcription_services import TranscriptionService
 
 
@@ -62,6 +62,10 @@ def validate_evidence(record,result,relation,contact_type,positive_evaluator=Non
             if contact_type!='TITULAR' and sensitive:
                 risks.append({'type':'PRIVACIDAD_SIN_HABLANTE_CONFIRMADO','source':mode,
                               'evidence':sensitive[0].group()})
+            if contact_type!='TITULAR':
+                for answer in financial_answer_evidence(text):
+                    risks.append({'type':'RESPUESTA_IMPORTE_SIN_HABLANTE_CONFIRMADO','source':mode,
+                                  'evidence':answer['question_text']+' '+answer['text']})
             offensive=re.search(r'\b(?:que poca madre|pendej[oa]|cabron[a]?|mierda|pinche|puta|puto)\b|(?<!\w)uta[.!?¡¿\s]*$',s)
             if offensive:risks.append({'type':'EXPRESION_OFENSIVA_SIN_HABLANTE_CONFIRMADO','source':mode,'evidence':offensive.group()})
             if positive_evaluator is not None:
@@ -75,6 +79,9 @@ def validate_evidence(record,result,relation,contact_type,positive_evaluator=Non
                     if penalty.get('id') in {'PEN002','PEN003','PEN004','PEN005','PEN012','PEN_CONV_FRAUDE','PEN_QUEJA_MALTRATO'}:
                         risks.append({'type':'ALERTA_NO_CONFIRMADA_'+penalty['id'],'source':mode,'evidence':penalty['reason']})
                 n=detected.get('negotiation_validation') or {}
+                if (detected.get('home_recovery_warning') or {}).get('review_required'):
+                    risks.append({'type':'ADVERTENCIA_DOMICILIO_SIN_VOZ_CONFIRMADA','source':mode,
+                                  'evidence':'Recuperación total en domicilio en una cuenta de 1–2 PV.'})
                 if n.get('amount_invalid') and n.get('commitment_confirmed'):
                     risks.append({'type':'IMPORTE_ADICIONAL_POR_CONFIRMAR','source':mode,'evidence':n.get('motivo_validacion_monto','')})
                 if contact_type=='TITULAR' and detected.get('contact_type') in {'TERCERO','TERCERO / FAMILIAR','TERCERO / TRABAJO','NO CONOCEN A DEUDOR'}:
@@ -167,7 +174,10 @@ def attach_audio_block(master_path,evidence_path,output_directory=None,*,source_
     target=create_checkpoint_output(output_directory,'Evidencia_Audios_'+AnalyticsService.ENGINE_REVISION.rsplit('-',1)[-1]+'_',nested_results=True)
     intermediate=target/'checkpoint_con_lecturas.json';intermediate.write_text(json.dumps(updated,ensure_ascii=False,indent=2),encoding='utf-8')
     output=reanalyze_checkpoint(intermediate,target/'resultados')
-    final=Path(output['checkpoint']);payload=json.loads(final.read_text(encoding='utf-8-sig'));payload['audio_block_import']={
+    final=Path(output['checkpoint']);payload=json.loads(final.read_text(encoding='utf-8-sig'))
+    if payload.get('audio_block_import'):
+        payload.setdefault('audio_block_import_history',[]).append(deepcopy(payload['audio_block_import']))
+    payload['audio_block_import']={
         'source_master_sha256':hashlib.sha256(raw).hexdigest(),'reading_sha256':hashlib.sha256(evidence_raw).hexdigest(),
         'matched_calls':len(records),'human_verified':False,'original_results_preserved':True,'whisper_executed':False}
     payload['audio_block_import']['source_engine_revision']=evidence.get('engine_revision')

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import re
 
 from app.services.audio_block_evidence import binding, digest, validate_evidence
-from app.services.conversation_evidence import assess_privacy, evidence_units
+from app.services.conversation_evidence import assess_privacy, evidence_units, financial_answer_evidence
 
 SCOPE = 'GESTOR_FINANCIAL_DISCLOSURE_TO_THIRD_PARTY_ONLY'
 
@@ -35,6 +35,11 @@ def disclosure_candidates(data, relation, audio_evidence=None):
                          'start': unit['start'], 'end': unit['end']}
             if candidate not in candidates:
                 candidates.append(candidate)
+        for answer in financial_answer_evidence(text,segments):
+            if answer['speaker_role'] not in {'GESTOR','NO DETERMINADO'} or answer.get('recipient_role')=='TITULAR':continue
+            candidate={'source':label,'source_hash':source_hash,'text':answer['text'],
+                       'start':answer['start'],'end':answer['end'],'question_text':answer['question_text']}
+            if candidate not in candidates:candidates.append(candidate)
     return candidates
 
 

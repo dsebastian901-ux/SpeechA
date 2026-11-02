@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r31-diagnostic",
+  "revision": "3.6.19-r32-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -21,14 +21,14 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 1189,
+    "passed": 1250,
     "failed": 0,
     "skipped": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Recognize explicit information-message acceptance followed by a complete callback number; recognize passive completed-payment reports, separate past dates and informational remaining balances from new negotiations, and preserve independent message-status and security gates.",
+  "additional_fix": "Audit the second ten-call block, recognize card-loss clarification and contextual message reception, detect standalone balance answers and low-mora home recovery warnings, preserve technical loop warnings without invented penalties, and record two explicit user confirmations in scoped context-bound records.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -291,7 +291,7 @@
       "No unaccepted new payment instruction approved as followup"
     ]
   },
-  "engine_revision": "3.6.19-r31",
+  "engine_revision": "3.6.19-r32",
   "r22_review_backlog": {
     "calls": 95,
     "previous_review_calls": 85,
@@ -341,11 +341,11 @@
     "all_13_issues_closed": false
   },
   "current_validation": {
-    "engine_revision": "3.6.19-r31",
-    "unit_tests": 1189,
+    "engine_revision": "3.6.19-r32",
+    "unit_tests": 1250,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Current103:14 approved,82 review,7 severe; only case59 changes category, all103 scores and penalties and prior13 approvals preserved. Case67 false financial review removed while message-status review remains. All source data,103 moras,31 names,five readings and both user confirmations preserved;9785 report cells verified. Historical categories unchanged;two past-payment cases have five evidence-reviewed penalty removals and score corrections. Returned native r31 checkpoint verified: all 103 items match the cloud result ignoring analysis_date, source hash matches, and all prior facts are preserved. The native r31 Excel has not been received; verification is limited to the returned checkpoint."
+    "scope": "Current103:17 approved,77 review,9 severe. New approvals11,65,88; user-confirmed disclosure56=PEN003 and home warning90 in1PV=PEN012. Prior14 approvals, all previous penalties,101 other scores and all source data preserved;103 moras,31 names,15 readings,prior facts and import history retained. Two degraded tails are technical warnings only.9785 final report cells verified. Native r32 verification remains pending."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -1219,5 +1219,98 @@
     "whisper_executed": false,
     "new_human_audio_listening_in_cloud": false,
     "continuation_base": "checkpoint_reanalizado.json"
+  },
+  "r32_second_block_and_confirmed_security": {
+    "engine_revision": "3.6.19-r32",
+    "matched_readings": 10,
+    "case_indices": [
+      4,
+      11,
+      29,
+      39,
+      56,
+      57,
+      65,
+      88,
+      90,
+      96
+    ],
+    "source_reader_revision": "3.6.19-r31",
+    "origin_checkpoint_revision": "3.6.19-r30",
+    "all_selected_contexts_checked_against_latest_r31": true,
+    "prior_import_receipt_history_preserved": true,
+    "source_reading_errors": 0,
+    "comparison_excel_rows_verified": 10,
+    "derived_degraded_tails": [
+      4,
+      39
+    ],
+    "technical_loops_not_quality_penalties": true,
+    "raw_asr_not_rewritten": true,
+    "current_batch": {
+      "evaluations": 103,
+      "outcomes": {
+        "APROBADO": 17,
+        "REVISAR": 77,
+        "FALLA_GRAVE": 9
+      },
+      "new_approvals": [
+        11,
+        65,
+        88
+      ],
+      "new_user_confirmed_critical_cases": [
+        56,
+        90
+      ],
+      "case56_rule": "PEN003",
+      "case90_rule": "PEN012",
+      "case90_mora": "1PV",
+      "prior14_approvals_and_all_previous_penalties_preserved": true,
+      "other101_scores_preserved": true,
+      "only_score_changes_are_two_confirmed_100_point_critical_failures": true,
+      "all_raw_asr_accounts_cards103_moras31_names_and_previous_user_facts_preserved": true,
+      "total_active_readings": 15,
+      "report_columns": 95,
+      "report_cells_verified": 9785,
+      "report_cell_mismatches": 0
+    },
+    "scoped_financial_answer_confirmation_supported": true,
+    "scoped_home_warning_confirmation_supported": true,
+    "confirmation_requires_explicit_facts_and_unchanged_context": true,
+    "no_confirmations_preselected": true,
+    "manual_role_confirmation_not_asr_diarization": true,
+    "card_loss_status_requires_report_folio_and_resolution_followup": true,
+    "unit_tests": 1250,
+    "new_tests": 61,
+    "real_graphical_tests": 5,
+    "historical_evaluations": 268,
+    "historical_changed_categories": 0,
+    "safety_failures": 0,
+    "unreviewed_penalty_removals": 0,
+    "prior95": {
+      "outcomes": {
+        "APROBADO": 13,
+        "REVISAR": 80,
+        "FALLA_GRAVE": 2
+      },
+      "all_facts_scores_penalties_and_categories_preserved": true
+    },
+    "prior36": {
+      "outcomes": {
+        "APROBADO": 7,
+        "REVISAR": 29
+      },
+      "all_facts_scores_penalties_and_categories_preserved": true
+    },
+    "whisper_executed_in_cloud": false,
+    "new_human_audio_listening_in_cloud": false,
+    "native_r32_outputs_verified": false,
+    "launchers": [
+      "INCORPORAR_LECTURAS_BLOQUE.bat",
+      "CONFIRMAR_DIVULGACION_A_TERCERO.bat",
+      "CONFIRMAR_ADVERTENCIA_DOMICILIO.bat"
+    ],
+    "all13_operational_issues_closed": false
   }
 }

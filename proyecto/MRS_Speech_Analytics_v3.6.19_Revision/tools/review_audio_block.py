@@ -17,7 +17,7 @@ def main():
         root=Tk();root.withdraw()
         try:
             if source is None:
-                name=filedialog.askopenfilename(title='Seleccionar checkpoint completo r22 o posterior',filetypes=[('Checkpoint JSON','*.json')])
+                name=filedialog.askopenfilename(title='Seleccionar el último checkpoint FINAL del lote',filetypes=[('Checkpoint JSON','*.json')])
                 if not name:print('Cancelado.');return 0
                 source=Path(name)
             if folder is None:

@@ -529,6 +529,15 @@ def assess_recado(text, segments=()):
                     acceptances.append(unit)
                     break
     source = normalize(text)
+    for unit in sentence_evidence(text,segments):
+        if unit['speaker_role'] in {'GESTOR','TITULAR'}:continue
+        if re.fullmatch(r'(?:(?:ok|bien|si|claro)[, ]+)?yo le digo[.!]?',normalize(unit['text'])):
+            # Una respuesta concreta al mensaje de retorno, no «yo le digo»
+            # dentro de una cita, una discusión o una instrucción del gestor.
+            at=source.find(normalize(unit['text']))
+            nearby=source[max(0,at-350):at]
+            if re.search(r'\b(?:que se comunique|se comunique (?:ese|al|a ese) numero|se pueda poner en contacto)\b',nearby):
+                acceptances.append(dict(unit,method='CONFIRMA_AVISO_TRAS_RECONTACTO'))
     # «Hermana» es respuesta a una pregunta de parentesco, nunca una identidad
     # inferida del estatus o de una mención suelta del gestor.
     kin_reply = re.compile(
@@ -632,6 +641,22 @@ def assess_recado(text, segments=()):
         if phones:
             acceptances.append({'text':match.group(),'method':'ACEPTA_INFORMACION_Y_RECIBE_CONTACTO',
                 'speaker_role':role,'start':None,'end':None,'callback_evidence':phones[0]})
+    delayed_offer=re.compile(r'\b(?:puedo|podria|podre) dejar(?:le|lo)? (?:un |el )numero (?:de )?telefonico'
+                             r'[^?!]{0,170}\?')
+    for offer in delayed_offer.finditer(source):
+        tail=source[offer.end():offer.end()+260]
+        answer=re.search(r'\ba ver[, ]+(?:digame|diselo|digalo)[.!]',tail)
+        if not answer or re.search(r'\b(?:no|dice que|dijo que)(?: le)?\s*$',source[max(0,offer.start()-50):offer.start()]):continue
+        role=_role_at(text,segments,offer.end()+answer.start())
+        if role in {'GESTOR','TITULAR'}:continue
+        for phone in callback_numbers(source[offer.start():offer.end()+260]):
+            number_position=offer.start()+phone['text_start']
+            if (number_position>offer.end()+answer.end()
+                    and _role_at(text,segments,number_position) not in {'TITULAR','TERCERO','INTERLOCUTOR'}):
+                acceptances.append({'text':offer.group()+' '+answer.group(),
+                    'method':'SOLICITA_DICTADO_TRAS_ESPERA_CON_CONTACTO_COMPLETO','speaker_role':role,
+                    'start':None,'end':None,'callback_evidence':phone})
+                break
     return {"family": families, "acceptance": acceptances,
             "refusal": refusals, "unknown_recipient": unknown}
 
@@ -727,6 +752,72 @@ SENSITIVE = re.compile(
 CARD = re.compile(r"\b(?:tarjeta|referencia|plastico|numero de cuenta)\s*(?:(?:numero|de pago|es|de)\s*)?(?:\d[ -]?){15}\d\b")
 
 
+def financial_answer_evidence(text,segments=()):
+    """Importe respondido a una pregunta de saldo, conservando contexto y rol."""
+    from app.services.reported_payment_amounts import NUMBER
+    units=sentence_evidence(text,segments);found=[];source=normalize(text);recipient_role=None
+    for index,question in enumerate(units):
+        if question['speaker_role'] in {'TITULAR','TERCERO','INTERLOCUTOR'}:
+            recipient_role=question['speaker_role']
+        q=normalize(question['text'])
+        if '?' not in q or not re.search(r'\b(?:de )?cuanto\b',q):continue
+        if re.search(r'\b(?:telefono|folio|referencia|digitos|terminacion|fecha|dias|horas|pago)\b',q):continue
+        explicit=bool(re.search(r'\b(?:saldo|deuda|adeudo|monto|total)\b',q))
+        position=source.find(q)
+        prior=source[max(0,position-650):position]
+        asr_context=bool(re.search(r'\b(?:tal|lo que presenta)\b',q) and re.search(r'\bsaldo (?:pendiente|vencido)\b',prior))
+        if not (explicit or asr_context):continue
+        for answer in units[index+1:index+3]:
+            a=normalize(answer['text'])
+            if re.fullmatch(r'(?:disculpe|perdon)[.!]?',a):continue
+            match=re.fullmatch(r'(?:(?:como le menciono|son|es|por|la cantidad es|la cantidad de)[, ]+){0,3}'
+                               rf'\$?\s*(?P<amount>{NUMBER})(?:\s*pesos?)?[.!]?',a)
+            if match and match['amount'] not in {'un','una','uno'}:
+                found.append(dict(answer,question_text=question['text'],phrase=match['amount'],
+                                  recipient_role=recipient_role,method='IMPORTE_RESPONDIDO_A_PREGUNTA_DE_SALDO'))
+            break
+    return found
+
+
+def assess_home_recovery_warning(text,segments=(),mora=''):
+    applies=mora in {'1PV','2PV'};evidence=[]
+    if applies:
+        for unit in sentence_evidence(text,segments):
+            s=normalize(unit['text'])
+            match=re.search(r'\b(?:se estara|estaremos|se va a estar|vamos a estar) trabajando sobre '
+                            r'(?:la )?recuperacion total en (?:el |su )?domicil(?:io)?\b',s)
+            if not match:continue
+            prefix=s[:match.start()]
+            if (re.search(r'\b(?:no|nunca)\s*$',prefix)
+                    or re.search(r'\b(?:dice que|dijo que|me dijeron que)\b[^.!?]{0,90}$',prefix)
+                    or '?' in s or '¿' in s):continue
+            if unit['speaker_role'] in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+            evidence.append(dict(unit,phrase=match.group(),confirmed=unit['speaker_role']=='GESTOR'))
+    confirmed=any(e['confirmed'] for e in evidence)
+    return {'applies':applies,'confirmed':confirmed,'review_required':bool(evidence) and not confirmed,'evidence':evidence}
+
+
+def reported_card_clarification(text,segments=()):
+    """Pérdida/robo reportado, folio confirmado y seguimiento de resolución."""
+    source=normalize(text)
+    loss=False
+    for unit in sentence_evidence(text,segments):
+        if unit['speaker_role']=='GESTOR' or '?' in unit['text'] or '¿' in unit['text']:continue
+        s=normalize(unit['text'])
+        for m in re.finditer(r'\b(?:yo )?(?:perdi (?:la|mi) tarjeta|me robaron (?:la|mi) tarjeta)\b',s):
+            if not re.search(r'\b(?:no|no se si|no es verdad que|supongamos que|dice que|dijo que|si hubiera)\s*$',s[:m.start()]):loss=True
+    folio=False
+    for m in re.finditer(r'\b(?:le (?:otorgaron|atorgaron|dieron)|tiene|cuenta con)[^?!]{0,30}\bfolio\b[^?!]{0,15}\?\s*(?P<answer>si|asi es)\b',source):
+        if (_role_at(text,segments,m.start('answer'))!='GESTOR'
+                and not re.search(r'\b(?:no|dice que|dijo que)\s*$',source[max(0,m.start()-35):m.start()])
+                and not re.match(r'\s*(?:\?|[, ]+pero no)',source[m.end():])):folio=True
+    followup=bool(re.search(r'\b(?:resolucion|dictamen?|proceso tardaba|proceso tarda)\b',source)
+                  and re.search(r'\b(?:comuniquese|marcar[ae]?|seguimiento|verificar|me dijeron)\b',source))
+    return {'confirmed':bool(loss and folio and followup),'reported_loss':bool(loss),
+            'case_number_acknowledged':folio,'resolution_followup':followup,
+            'method':'PERDIDA_REPORTADA_FOLIO_CONFIRMADO_Y_SEGUIMIENTO'}
+
+
 def sensitive_financial_matches(text):
     """«Saldo pendiente» sin importe está permitido por aclaración del usuario.
 
@@ -802,6 +893,16 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
         evidence.append({"text": "Señal financiera contextual sin atribución de voz confirmada.",
                          "speaker_role": "NO DETERMINADO", "start": None, "end": None,
                          "phrase": "", "confirmed": False, "review_required": True})
+    for answer in financial_answer_evidence(text,segments):
+        role=answer['speaker_role']
+        if role in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+        protected=third_party_confirmed and answer.get('recipient_role')!='TITULAR'
+        disclosed=role=='GESTOR' and protected
+        relevant=third_party_confirmed or expected_third_party or not titular
+        uncertain=role=='NO DETERMINADO' or (role=='GESTOR' and not titular and not protected
+                                            and answer.get('recipient_role')!='TITULAR')
+        evidence.append(dict(answer,confirmed=bool(disclosed),
+                             review_required=bool(relevant and uncertain)))
     confirmed = any(e["confirmed"] for e in evidence)
     review = any(e["review_required"] for e in evidence) and not confirmed
     return {"confirmed_disclosure": confirmed, "review_required": review,

@@ -9,11 +9,11 @@ from app.services.checkpoint_privacy_review import confirm_checkpoint_disclosure
 from app.services.privacy_disclosure_review import disclosure_candidates
 
 
-def choose_confirmation(root, candidates, call_label):
+def choose_confirmation(root, candidates, call_label,*,home_warning=False):
     from tkinter import BooleanVar, StringVar, Toplevel, Listbox, END
     from tkinter import ttk
     dialog = Toplevel(root)
-    dialog.title('Divulgación ya confirmada por el usuario')
+    dialog.title('Advertencia en domicilio confirmada' if home_warning else 'Divulgación ya confirmada por el usuario')
     dialog.geometry('900x540')
     ttk.Label(dialog, text=call_label, wraplength=850).pack(padx=15, pady=5)
     ttk.Label(dialog, text='Seleccione el fragmento que escuchó y confirme ambos hechos.\n'
@@ -27,10 +27,13 @@ def choose_confirmation(root, candidates, call_label):
     detail = StringVar(master=dialog)
     ttk.Label(dialog, textvariable=detail, wraplength=850).pack(padx=15, pady=8)
     listing.bind('<<ListboxSelect>>', lambda event: detail.set(
-        candidates[listing.curselection()[0]]['text'] if listing.curselection() else ''))
+        ((('Contexto: '+candidates[listing.curselection()[0]]['question_text']+'\nFragmento: ')
+          if candidates[listing.curselection()[0]].get('question_text') else '')
+         +candidates[listing.curselection()[0]]['text']) if listing.curselection() else ''))
     actor, recipient = BooleanVar(master=dialog, value=False), BooleanVar(master=dialog, value=False)
-    ttk.Checkbutton(dialog, text='Confirmé que el gestor dice esta información financiera.', variable=actor).pack(anchor='w', padx=15, pady=7)
-    ttk.Checkbutton(dialog, text='Confirmé que la recibe un tercero, no el titular.', variable=recipient).pack(anchor='w', padx=15)
+    ttk.Checkbutton(dialog, text='Confirmé que el gestor dice el fragmento seleccionado.', variable=actor).pack(anchor='w', padx=15, pady=7)
+    ttk.Checkbutton(dialog, text=('Confirmé en el audio esta advertencia de recuperación en domicilio.' if home_warning
+                                else 'Confirmé que la recibe un tercero, no el titular.'), variable=recipient).pack(anchor='w', padx=15)
     message = StringVar(master=dialog)
     ttk.Label(dialog, textvariable=message).pack(pady=5)
     selected = []
@@ -62,6 +65,8 @@ def main():
     parser.add_argument('--candidate', type=int, help='Fragmento de la lista, empezando en 1.')
     parser.add_argument('--confirm-gestor', action='store_true')
     parser.add_argument('--confirm-tercero', action='store_true')
+    parser.add_argument('--home-warning',action='store_true')
+    parser.add_argument('--confirm-warning',action='store_true')
     parser.add_argument('--output-dir', type=Path)
     args = parser.parse_args()
     root = None
@@ -85,21 +90,29 @@ def main():
             raise ValueError('Número de llamada fuera del lote seleccionado.')
         item = items[args.call_number-1]
         print('Buscando fragmentos de la llamada seleccionada...', flush=True)
-        candidates = disclosure_candidates(item['result'], item.get('relation') or {}, item.get('audio_block_evidence'))
+        if args.home_warning:
+            from app.services.home_warning_review import warning_candidates
+            candidates=warning_candidates(item['result'],item.get('relation') or {},item.get('audio_block_evidence'))
+        else:candidates = disclosure_candidates(item['result'], item.get('relation') or {}, item.get('audio_block_evidence'))
         if not candidates:
             raise ValueError('No hay un fragmento financiero declarativo válido para vincular; conserve la revisión.')
         if args.candidate is None:
             # Mostrar la identidad exacta antes de registrar; no hay llamada ni fragmento preseleccionado.
             print('Abriendo la ventana de fragmentos y confirmación...', flush=True)
-            selection = choose_confirmation(root, candidates, f"Llamada {args.call_number}: {item['file_name']}")
+            label=f"Llamada {args.call_number}: {item['file_name']}"
+            selection=(choose_confirmation(root,candidates,label,home_warning=True) if args.home_warning
+                       else choose_confirmation(root, candidates,label))
             if selection is None: print('Cancelado.'); return 0
             args.candidate = selection+1
-            args.confirm_gestor = args.confirm_tercero = True
+            args.confirm_gestor = True
+            if args.home_warning:args.confirm_warning=True
+            else:args.confirm_tercero=True
         if not 1 <= args.candidate <= len(candidates):
             raise ValueError('Fragmento fuera de la lista de evidencias.')
         print('Generando el checkpoint y el reporte. Espere a que termine...', flush=True)
         result = confirm_checkpoint_disclosure(args.checkpoint, item['file_name'], candidates[args.candidate-1],
-            args.output_dir, actor_confirmed=args.confirm_gestor, third_party_confirmed=args.confirm_tercero)
+            args.output_dir, actor_confirmed=args.confirm_gestor, third_party_confirmed=args.confirm_tercero,
+            home_warning=args.home_warning,warning_confirmed=args.confirm_warning)
     except Exception as error:
         print('No se registró la confirmación:', error); return 1
     finally:

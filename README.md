@@ -1,15 +1,46 @@
-# MRS Speech Analytics · revisión 31 — recado aceptado y pago previo
+# MRS Speech Analytics · revisión 32 — segundo bloque y seguridad confirmada
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_31_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_32_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
+
+La revisión incorpora las diez lecturas del segundo bloque conservando el
+checkpoint final r31. Recupera aprobaciones con evidencia en las llamadas
+11 (aclaración), 65 y 88 (recado). El usuario confirmó divulgación del monto al
+esposo en la 56 y advertencia de recuperación en domicilio en la 90, cuenta 1PV.
+Corresponden a PEN003 y PEN012: ambas quedan FALLA_GRAVE con registro separado.
+
+Para reproducir el resultado local, extraiga el ZIP completo y use las herramientas
+de la carpeta principal en este orden. **En cada paso seleccione el checkpoint
+nuevo generado por el anterior.**
+
+1. `INCORPORAR_LECTURAS_BLOQUE.bat`: seleccione el último checkpoint final r31
+   de las 103 llamadas y el `revision_audios_bloque.json` de las **diez** lecturas.
+   La consola debe informar diez lecturas incorporadas. El origen anterior de
+   la lectura se admite solo cuando archivo, cuenta y transcripción coinciden.
+2. `CONFIRMAR_DIVULGACION_A_TERCERO.bat`: seleccione el checkpoint recién
+   generado, indique **56**, elija el fragmento ORIGINAL **81,88–83,88 segundos**
+   y marque las dos afirmaciones ya confirmadas: gestor y destinatario tercero.
+3. `CONFIRMAR_ADVERTENCIA_DOMICILIO.bat`: seleccione la salida del paso 2,
+   indique **90**, elija ORIGINAL **68,95–77,33 segundos** y marque que lo dice
+   el gestor y que confirmó la advertencia en el audio. No hay datos preseleccionados.
+
+El resultado calculado final es **17 APROBADO, 77 REVISAR y 9 FALLA_GRAVE**.
+Se conservan las 14 aprobaciones previas, 103 moras, 31 nombres corregidos y
+las confirmaciones de las llamadas 10 y 74. Las quince lecturas quedan separadas
+del texto original; los cierres repetitivos de 4 y 39 se marcan como advertencias
+técnicas, sin penalizar al gestor. Estas operaciones no ejecutan Whisper,
+no mueven audios y generan checkpoints y reportes nuevos. No se necesitan
+otra transcripción del bloque ni un nuevo modelo.
+
+### Historial: recepción y pago previo r31
 
 Para aplicar r31 al lote ya confirmado, extraiga el ZIP completo y ejecute
 `REANALIZAR_CHECKPOINT.bat` desde la carpeta principal. Seleccione el último

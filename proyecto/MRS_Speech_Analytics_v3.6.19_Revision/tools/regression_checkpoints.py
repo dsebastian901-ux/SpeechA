@@ -59,6 +59,13 @@ def invariants(row):
         failures.append("divulgación confirmada sin bloqueo crítico")
     if "PEN003" in pen and not privacy.get("confirmed_disclosure"):
         failures.append("PEN003 sin atribución confirmada")
+    home=m.get('home_recovery_warning') or {}
+    if home.get('review_required') and approved:
+        failures.append('advertencia en domicilio sin voz confirmada aprobada')
+    if home.get('confirmed') and ('PEN012' not in pen or m['final_result'] not in {'INCORRECTA','FALLA_GRAVE'}):
+        failures.append('advertencia confirmada en domicilio sin bloqueo crítico')
+    if (m.get('home_warning_validation') or {}).get('review_required') and approved:
+        failures.append('confirmación de advertencia inválida aprobada')
     card = str((m.get("card_validation") or {}).get("result", ""))
     if (card == "TARJETA INCORRECTA" or card.startswith("REVISAR -")) and approved:
         failures.append("referencia pendiente aprobada")

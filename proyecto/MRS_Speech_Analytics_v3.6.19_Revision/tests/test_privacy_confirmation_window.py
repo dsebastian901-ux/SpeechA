@@ -131,3 +131,30 @@ def test_number_entry_then_real_confirmation_generates_checkpoint_and_excel(tmp_
     book = load_workbook(final['last_report_path'], read_only=True, data_only=True)
     assert 'PEN003' in str(list(book['RESULTADOS'].values)[1])
     book.close()
+
+
+def test_home_warning_mode_shows_both_unchecked_facts_and_requires_selection():
+    import tkinter as tk
+    from tkinter import ttk
+    root=tk.Tk();root.withdraw();states=[];problems=[]
+    def interact():
+        dialog=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
+        try:
+            assert dialog.winfo_viewable()
+            children=list(widgets(dialog));toggles=[w for w in children if isinstance(w,ttk.Checkbutton)]
+            assert len(toggles)==2 and all(not w.instate(['selected']) for w in toggles)
+            assert 'domicilio' in toggles[1].cget('text')
+            next(w for w in children if isinstance(w,tk.Listbox)).selection_set(0)
+            for toggle in toggles:toggle.invoke()
+            states.append(True)
+            next(w for w in children if isinstance(w,ttk.Button)).invoke()
+        except Exception as error:
+            problems.append(error);dialog.destroy()
+    root.after(350,interact)
+    try:
+        result=choose_confirmation(root,[{'source':'ORIGINAL','start':70,'end':76,
+            'text':'Se estará trabajando sobre la recuperación total en el domicilio.'}],
+            'Llamada de prueba: sample.ogg',home_warning=True)
+        assert not problems and states==[True] and result==0
+        assert root.grab_current() is None
+    finally:root.destroy()

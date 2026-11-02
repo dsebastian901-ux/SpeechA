@@ -22,6 +22,8 @@ from app.services.audio_block_evidence import validate_evidence
 from app.services.arco_validation import assess_arco, qualitative_line_tenure
 from app.services.family_contact_review import validate_family_confirmation
 from app.services.privacy_disclosure_review import validate_disclosure_confirmation
+from app.services.home_warning_review import validate_warning_confirmation
+from app.services.conversation_evidence import assess_home_recovery_warning,reported_card_clarification
 from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing
 from app.services.installment_validation import installment_plan, installment_dates
 from app.services.asr_amount_recovery import validated_entries
@@ -48,7 +50,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r31"
+    ENGINE_REVISION = "3.6.19-r32"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -69,6 +71,8 @@ class AnalyticsService:
         disclosure_review=metadata.get('privacy_disclosure_validation') or {}
         if disclosure_review.get('review_required'):
             reasons.append(disclosure_review.get('reason') or 'Confirmación de divulgación pendiente de revisión.')
+        if (metadata.get('home_warning_validation') or {}).get('review_required'):
+            reasons.append(metadata['home_warning_validation']['reason'])
         additional=metadata.get('audio_block_evidence_validation') or {}
         if additional.get('review_required'):
             if additional.get('valid') and additional.get('risks') and all(
@@ -78,6 +82,8 @@ class AnalyticsService:
                 reasons.append(additional.get('reason') or 'Lectura adicional pendiente de revisión.')
         if negotiation.get("liquidation_offer_review_required"):
             reasons.append("Posible liquidación total sin atribución u oferta confirmada; revisar audio")
+        if (metadata.get('home_recovery_warning') or {}).get('review_required'):
+            reasons.append('Posible advertencia de recuperación en domicilio en 1–2 PV; confirmar voz y frase en audio.')
         account = metadata.get("account_source_validation") or {}
         if account.get("review_required"):
             reasons.append(account.get("reason") or "Datos de cuenta inconsistentes; revisar nombre de salida")
@@ -449,6 +455,9 @@ class AnalyticsService:
             (transcription.metadata or {}).get('privacy_disclosure_confirmation'),
             (transcription.metadata or {}).get('audio_block_evidence'))
         enriched_context['_privacy_disclosure_validation']=disclosure_review
+        warning_review=validate_warning_confirmation(contact_source,operational_context or {},
+            (transcription.metadata or {}).get('home_warning_confirmation'),(transcription.metadata or {}).get('audio_block_evidence'))
+        enriched_context['_home_warning_validation']=warning_review
 
         compliance = cls.calculate_basic_compliance(
             text,
@@ -526,6 +535,7 @@ class AnalyticsService:
         analysis.metadata['intermediary_contact_validation'] = compliance.get('intermediary_contact_validation', {})
         analysis.metadata['family_contact_validation']=family_review
         analysis.metadata['privacy_disclosure_validation']=disclosure_review
+        analysis.metadata['home_warning_validation']=warning_review
         analysis.metadata["quality_blocks"] = compliance.get("blocks", {})
         analysis.metadata["quality_checks"] = compliance.get("checks", {})
         analysis.metadata["operational_context"] = compliance.get(
@@ -558,6 +568,8 @@ class AnalyticsService:
         )
         analysis.metadata["payment_reference_validation"] = compliance.get("payment_reference_validation", {})
         analysis.metadata["privacy_validation"] = compliance.get("privacy_validation", {})
+        analysis.metadata['home_recovery_warning']=compliance.get('home_recovery_warning',{})
+        analysis.metadata['clarification_validation']=compliance.get('clarification_validation',{})
         exception = (operational_context or {}).get("hostile_interlocutor_exception") or (getattr(transcription, "metadata", {}) or {}).get("hostile_interlocutor_exception")
         if isinstance(exception, dict):
             analysis.metadata["hostile_interlocutor_exception"] = {
@@ -1402,7 +1414,8 @@ class AnalyticsService:
             r"(?:le menciona que|le mencion[eo] que|es un numero para (?:que|aquellos)|"
             r"(?:indiquele|digale|mencionele) (?:a|al|a la) ))\b", normalized))
         recado_transmitted=recado_transmitted or any(
-            e.get('method') in {'REPETICION_NUMERO_CONTACTO_SOLICITADA','ACEPTA_INFORMACION_Y_RECIBE_CONTACTO'}
+            e.get('method') in {'REPETICION_NUMERO_CONTACTO_SOLICITADA','ACEPTA_INFORMACION_Y_RECIBE_CONTACTO',
+                               'SOLICITA_DICTADO_TRAS_ESPERA_CON_CONTACTO_COMPLETO'}
             for e in recado_assessment['acceptance'])
         # Un rechazo explícito bloquea la aprobación aunque el gestor haya dictado un número.
         # "Le puedo dejar" es una solicitud del gestor, NO prueba aceptación del interlocutor.
@@ -2053,6 +2066,13 @@ class AnalyticsService:
         prohibited_visit_wording = bool(re.search(
             r"\b(?:embarg\w*|retir\w*|quit\w*|recog\w*)\b.{0,45}\b(?:bienes|muebles|casa|vehiculo|propiedad)\b|"
             r"\b(?:bienes|muebles)\b.{0,45}\b(?:retir\w*|quit\w*|recog\w*|embarg\w*)\b", normalized))
+        home_recovery_warning=assess_home_recovery_warning(text,segments,mora)
+        warning_review=context.get('_home_warning_validation') or {}
+        if warning_review.get('valid'):
+            home_recovery_warning.update(confirmed=True,review_required=False)
+            home_recovery_warning['evidence'].append(dict(warning_review['record']['evidence'],confirmed=True,
+                speaker_role='GESTOR',attribution_source='EXPLICIT_USER_HOME_WARNING_CONFIRMATION'))
+        prohibited_visit_wording=bool(prohibited_visit_wording or home_recovery_warning['confirmed'])
         if mora in {"1PV", "2PV"}:
             visit_instruction = re.compile(
                 r"\b(?:vamos a|voy a|se va a|se puede|procederemos a)\s+"
@@ -2880,7 +2900,7 @@ class AnalyticsService:
             add_penalty(
                 "PEN012",
                 "Respeto / Amenazas",
-                "Se detectó una amenaza prohibida por el manual.",
+                "Se detectó una amenaza prohibida por el manual."+(' Confirmado por usuario.' if warning_review.get('valid') else ''),
                 100,
                 True,
                 ["FP011", "FP012", "FP013", "FP014", "FP015"],
@@ -2925,6 +2945,7 @@ class AnalyticsService:
                 r"\b(?:se le esta requiriendo|se le esta solicitando|se le requiere) (?:un |el |su )?pago\b")
                 or (prior_payment_total is not None and minimum_for_attempt is not None
                     and not prior_payment_covers_minimum and negotiation_attempt)))
+        clarification_validation=reported_card_clarification(text,segments)
         if contact_type == "TITULAR" and not detected_status:
             agreement_evidence = bool(re.search(
                 r"\b(?:gener(?:o|amos|are|amos)\s+(?:su\s+|el\s+)?convenio|"
@@ -2943,6 +2964,11 @@ class AnalyticsService:
                 status_detection_confidence = "ALTA"
                 status_evidence = commitment_confirmation["evidence"]
                 status_evidence_method = "COMPROMISO_ACEPTADO_CON_FECHA"
+            elif clarification_validation['confirmed'] and not confirms_commitment and not negotiation_attempt:
+                detected_status='ACLARACION'
+                status_detection_confidence='MEDIA'
+                status_evidence='Pérdida de tarjeta reportada, folio confirmado y seguimiento de resolución.'
+                status_evidence_method=clarification_validation['method']
             elif refusal_evidence and not confirms_commitment:
                 detected_status = "NEGATIVA DE PAGO"
                 status_detection_confidence = "ALTA"
@@ -4094,6 +4120,8 @@ class AnalyticsService:
         # pero obligan a revisión porque la clasificación operativa es incorrecta.
         requires_review = (
             uncertain_disclosure
+            or home_recovery_warning['review_required']
+            or warning_review.get('review_required',False)
             or abandonment_review
             or contact_type == "CONTACTO NO DETERMINADO"
             or missing_collection_attempt
@@ -4284,6 +4312,8 @@ class AnalyticsService:
             "card_validation": card_validation_data,
             "payment_reference_validation": payment_reference_validation,
             "privacy_validation": privacy_validation,
+            'home_recovery_warning':home_recovery_warning,
+            'clarification_validation':clarification_validation,
             "status_validation": status_validation,
             "negotiation_validation": negotiation_validation,
             "penalties": penalties,

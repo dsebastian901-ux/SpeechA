@@ -39,7 +39,11 @@ def reading_quality(segments):
         while end<len(segments) and key==re.findall(r'\w+',str(segments[end].get('text') or '').casefold()):end+=1
         span=segments[cursor:end];count=len(key)*len(span)
         duration=_number(span[-1].get('end'))-_number(span[0].get('start'))
-        if len(span)>=6 and count>=18 and count/max(.01,duration)>=10 and all(_number(s.get('compression_ratio'))>=3.5 for s in span):
+        words=[w for s in span for w in (s.get('words') or [])]
+        zero=sum(_number(w.get('end'))<=_number(w.get('start')) for w in words)
+        compressed=all(_number(s.get('compression_ratio'))>=3.5 for s in span)
+        misaligned=bool(words) and zero/len(words)>=.25
+        if len(span)>=6 and count>=12 and (compressed or misaligned):
             for index in range(cursor,end):
                 if index not in already:
                     s=segments[index];warnings.append({'segment_index':index,'start':_number(s.get('start')),
