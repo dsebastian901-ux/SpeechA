@@ -345,7 +345,7 @@
     "unit_tests": 1189,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Current103:14 approved,82 review,7 severe; only case59 changes category, all103 scores and penalties and prior13 approvals preserved. Case67 false financial review removed while message-status review remains. All source data,103 moras,31 names,five readings and both user confirmations preserved;9785 report cells verified. Historical categories unchanged;two past-payment cases have five evidence-reviewed penalty removals and score corrections. Native r31 output verification remains pending."
+    "scope": "Current103:14 approved,82 review,7 severe; only case59 changes category, all103 scores and penalties and prior13 approvals preserved. Case67 false financial review removed while message-status review remains. All source data,103 moras,31 names,five readings and both user confirmations preserved;9785 report cells verified. Historical categories unchanged;two past-payment cases have five evidence-reviewed penalty removals and score corrections. Returned native r31 checkpoint verified: all 103 items match the cloud result ignoring analysis_date, source hash matches, and all prior facts are preserved. The native r31 Excel has not been received; verification is limited to the returned checkpoint."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -1188,6 +1188,36 @@
     "native_r31_outputs_verified": false,
     "root_launcher": "REANALIZAR_CHECKPOINT.bat",
     "continuation_input": "LATEST_FINAL_R30_CHECKPOINT",
-    "all13_operational_issues_closed": false
+    "all13_operational_issues_closed": false,
+    "native_r31_checkpoint_verified": true,
+    "native_r31_excel_received": false
+  },
+  "r31_returned_native_checkpoint": {
+    "evaluations": 103,
+    "engine_revision": "3.6.19-r31",
+    "completed": true,
+    "checkpoint_verified": true,
+    "source_checkpoint_hash_verified": true,
+    "cloud_item_matches_ignoring_analysis_date": 103,
+    "outcomes": {
+      "APROBADO": 14,
+      "REVISAR": 82,
+      "FALLA_GRAVE": 7
+    },
+    "changed_categories_from_r30": [
+      59
+    ],
+    "case59_approved_with_accepted_message_and_callback_evidence": true,
+    "case67_financial_review_removed_and_message_status_pending": true,
+    "all103_scores_penalties_and_prior13_approvals_preserved": true,
+    "all_raw_asr_accounts_cards103_moras31_names_five_readings_and_both_user_facts_preserved": true,
+    "case10_confirmed_PEN003_preserved": true,
+    "case74_confirmed_family_fact_preserved": true,
+    "safety_failures": 0,
+    "native_r31_excel_received": false,
+    "scope": "RETURNED_CHECKPOINT_ONLY_NO_NEW_EXCEL_OR_ACOUSTIC_VERIFICATION",
+    "whisper_executed": false,
+    "new_human_audio_listening_in_cloud": false,
+    "continuation_base": "checkpoint_reanalizado.json"
   }
 }

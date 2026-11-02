@@ -27,6 +27,11 @@ se conservan. Se mantienen las 103 moras, 31 nombres, cinco lecturas y las dos
 confirmaciones del usuario. El reanálisis genera otro checkpoint y Excel sin
 Whisper, sin mover audios y sin cambiar los originales. Continúe desde esa salida.
 
+El checkpoint final r31 devuelto por el usuario ya se verificó: sus 103
+evaluaciones coinciden con la entrega comprobada y conservan todos los datos
+y confirmaciones anteriores. Si ya lo generó, úselo como base sin repetir el
+reanálisis. Esta última devolución incluyó el checkpoint, no el Excel r31.
+
 ### Historial: saldo genérico y divulgación confirmada r30
 
 Si la herramienta anterior se quedaba después de pedir el número de llamada,

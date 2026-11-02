@@ -90,7 +90,28 @@ es el nuevo checkpoint final, no un archivo intermedio.
   lecturas y hechos confirmados, con 13 y siete aprobaciones respectivamente.
 - Las 9.785 celdas del reporte de las 103 llamadas coinciden con el JSON.
 - Se prueba en Python 3.10 y Tk gráfico real en Linux. Las salidas nativas r30
-  ya se verificaron; falta devolución de las nuevas salidas r31 de Windows.
+  ya se verificaron. El checkpoint final r31 devuelto también se comprobó;
+  todavía no se recibió el Excel nativo correspondiente a r31.
+
+## Checkpoint r31 devuelto y verificado
+
+Se recibió el checkpoint final generado por el usuario. Coincide el hash de
+origen con su último checkpoint final r30 y las 103 evaluaciones coinciden con
+la entrega verificada, salvo la fecha de ejecución del análisis. No se encontraron
+errores de procesamiento ni violaciones de los controles de seguridad.
+
+Se confirman 14 APROBADO, 82 REVISAR y siete FALLA_GRAVE. Solo la 59 cambia de
+categoría frente a r30 y conserva 100 puntos. La 67 mantiene 100 puntos, sin
+alerta de privacidad o revisión financiera; conserva la revisión independiente
+del estatus y del recado. La 10 mantiene PEN003 confirmado y la 74 conserva el
+parentesco confirmado y su aprobación. Permanecen intactos los 103 puntajes y
+penalizaciones, las 103 moras, 31 nombres corregidos, cinco lecturas, tarjetas,
+cuentas, transcripciones y las dos confirmaciones del usuario.
+
+La base para continuar es este último `checkpoint_reanalizado.json` r31. No
+hace falta repetir el reanálisis ni descargar otra versión. Esta verificación
+se limita al checkpoint recibido: no incluye un nuevo cotejo del Excel r31 ni
+escucha acústica en la nube.
 
 Los resultados y datos reales permanecen fuera del repositorio público. Esta
 revisión corrige los bloqueos descritos; no cierra los otros casos pendientes.
