@@ -24,7 +24,7 @@ def main():
         root = Tk()
         root.withdraw()
         title=('Seleccionar Checkpoint_r27_Recuperado.json para completar mora'
-               if args.fill_mora_from_excel or args.relation_excel else 'Seleccionar batch_checkpoint.json')
+               if args.fill_mora_from_excel or args.relation_excel else 'Seleccionar checkpoint completo ACTUAL para reanalizar')
         selected = filedialog.askopenfilename(title=title,
                                              filetypes=[("Checkpoint JSON", "*.json")])
         root.destroy()
@@ -48,6 +48,7 @@ def main():
                                     require_readings=False)
         print('Identificadores de nombre corregidos con numero_de_tarjeta:', result['output_names_corrected'])
     else:
+        print('Reanalizando reglas y generando reporte. Espere a que termine; no se ejecuta Whisper.',flush=True)
         result = reanalyze_checkpoint(source, args.output_dir,relation_excel=excel)
     if excel is not None:
         import json

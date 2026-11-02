@@ -48,7 +48,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r30"
+    ENGINE_REVISION = "3.6.19-r31"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -1402,7 +1402,8 @@ class AnalyticsService:
             r"(?:le menciona que|le mencion[eo] que|es un numero para (?:que|aquellos)|"
             r"(?:indiquele|digale|mencionele) (?:a|al|a la) ))\b", normalized))
         recado_transmitted=recado_transmitted or any(
-            e.get('method')=='REPETICION_NUMERO_CONTACTO_SOLICITADA' for e in recado_assessment['acceptance'])
+            e.get('method') in {'REPETICION_NUMERO_CONTACTO_SOLICITADA','ACEPTA_INFORMACION_Y_RECIBE_CONTACTO'}
+            for e in recado_assessment['acceptance'])
         # Un rechazo explícito bloquea la aprobación aunque el gestor haya dictado un número.
         # "Le puedo dejar" es una solicitud del gestor, NO prueba aceptación del interlocutor.
         # Si el texto carece de confirmación, se conserva REVISAR (no se fabrica una aprobación).
@@ -1872,6 +1873,8 @@ class AnalyticsService:
         # suficiente para no penalizar simultáneamente "sin fecha".
         if promise_date is not None and not payment_confirmation_case:
             confirms_payment_date = True
+        if payment_confirmation_case:
+            confirms_payment_date = False  # Una fecha de pago pasado no confirma una promesa nueva.
 
         confirms_commitment = bool(commitment_confirmation["accepted"])
 
@@ -2777,7 +2780,7 @@ class AnalyticsService:
         )
         # Un reporte sin importe comprobable es incertidumbre, no una falta de
         # gestión confirmada. No afirmar que cubre el mínimo ni restar 15 puntos.
-        reported_amount_pending = bool(payment_confirmation_case and not negotiation_attempt
+        reported_amount_pending = bool(contact_type == 'TITULAR' and payment_confirmation_case and not negotiation_attempt
             and (prior_payment_total is None or minimum_for_attempt is None
                  or prior_payment_binding["review_required"]))
         missing_collection_attempt = bool(
@@ -3303,9 +3306,13 @@ class AnalyticsService:
 
         money_mentions = [normalize_asr_thousands(mm) for mm in money_mentions]
         data_inconsistency = bool(minimum_expected and total_expected and minimum_expected > total_expected)
-        regularization_claim = bool(regularization_wording or non_liquidation_effect_wording or any_of([
+        # «Saldo restante» sirve para detectar una contradicción de liquidación,
+        # pero por sí solo no promete regularizar ni crea una negociación nueva.
+        regularization_claim = bool(regularization_wording
+            or (non_liquidation_effect_wording and requires_new_negotiation_validation) or any_of([
             "con eso regulariza", "con eso regularizaria", "sale de cobranza", "salga de cobranza",
-            "pone al corriente", "queda al corriente"
+            "pone al corriente", "queda al corriente", "cubre mensualidad vencida", "cubre el pago vencido",
+            "solo cubre", "unicamente cubre"
         ]))
         financial_claim = bool(regularization_claim or total_liquidation_wording or liquidation_words)
 

@@ -418,7 +418,7 @@ def completed_payment(text, segments=()):
             r"\b(?:ya pague|yo pague|lo pague|pague (?:ayer|hoy)|ya (?:hice|realice) (?:mi |el |un )?pago|"
             r"(?:hice|realice) (?:mi|el|un) pago|lo realice|lo hice|depositamos|fui a realizar mi pago|"
             r"ya (?:mande|envie) (?:el |mi )?comprobante|ya (?:le )?di (?:un )?abono|"
-            r"ya se pago|(?:ayer |hoy |ya )pagamos|(?:el |mi )?pago ya esta (?:hecho|realizado)|"
+            r"ya se pago|ya se (?:hizo|realizo) (?:el |un )?pago|(?:ayer |hoy |ya )pagamos|(?:el |mi )?pago ya esta (?:hecho|realizado)|"
             r"fui a abonar|ya abone|tengo registrado (?:un )?reporte de pago)\b", s))
         candidates.extend(re.finditer(r"\bpagué\b", verbatim, re.I))
         candidates.extend(re.finditer(r"\brealicé (?:mi|el|un) pago\b", verbatim, re.I))
@@ -437,6 +437,10 @@ def completed_payment(text, segments=()):
                         or not re.search(r"\b(?:ya|hoy|ayer|pasado|pasada)\b",prefix+' '+candidate.group())):
                     continue
             if re.search(r"\b(?:no|aun no|todavia no)\s+(?:he |lo )?$", s[:candidate.start()]):
+                continue
+            if (re.match(r'ya se (?:hizo|realizo) ',candidate.group())
+                    and re.search(r'\b(?:si|cuando|una vez que|en caso de que|dijo que|dice que|creo que|'
+                                  r'no es (?:cierto|verdad) que|supongamos que|no se si)\s*$',s[:candidate.start()])):
                 continue
             if candidate.group() in {'lo realice', 'lo hice'} and re.search(
                     r"\b(?:que|para que|cuando|si)\s*$", s[:candidate.start()]):
@@ -609,6 +613,25 @@ def assess_recado(text, segments=()):
                 and _role_at(text,segments,match.start('number')) not in {'GESTOR','TITULAR'}):
             acceptances.append({'text':match.group(),'method':'REPETICION_NUMERO_CONTACTO_SOLICITADA',
                                 'speaker_role':_role_at(text,segments,match.start('number')),'start':None,'end':None})
+    information_offer=re.compile(
+        r'\b(?:puedo|podre|podria|podemos) dejar(?:le)? (?:una |la |esta )informacion con usted'
+        r'[^.!?]{0,30}[.!?]\s*(?P<answer>si(?:[, ]+claro)?|claro|de acuerdo)\b')
+    from app.services.payment_reference_validation import callback_numbers
+    for match in information_offer.finditer(source):
+        role=_role_at(text,segments,match.start('answer'))
+        prefix=source[max(0,match.start()-50):match.start()]
+        tail=source[match.end():match.end()+900]
+        if (role in {'GESTOR','TITULAR'}
+                or re.search(r'\b(?:no|dice que|dijo que|diga que)(?: le)?\s*$',prefix)
+                or not re.match(r'\s*[.!]',tail)
+                or re.search(r'\b(?:pero no|no quiero|no puedo|no le voy)\b',tail[:70])):
+            continue
+        phones=callback_numbers(tail)
+        phones=[p for p in phones if _role_at(text,segments,match.end()+p['text_start'])
+                not in {'TITULAR','TERCERO','INTERLOCUTOR'}]
+        if phones:
+            acceptances.append({'text':match.group(),'method':'ACEPTA_INFORMACION_Y_RECIBE_CONTACTO',
+                'speaker_role':role,'start':None,'end':None,'callback_evidence':phones[0]})
     return {"family": families, "acceptance": acceptances,
             "refusal": refusals, "unknown_recipient": unknown}
 

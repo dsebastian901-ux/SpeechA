@@ -1,15 +1,33 @@
-# MRS Speech Analytics · revisión 30 — saldo pendiente genérico y divulgación confirmada
+# MRS Speech Analytics · revisión 31 — recado aceptado y pago previo
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_30_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_31_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
+
+Para aplicar r31 al lote ya confirmado, extraiga el ZIP completo y ejecute
+`REANALIZAR_CHECKPOINT.bat` desde la carpeta principal. Seleccione el último
+`checkpoint_reanalizado.json` **final r30 de las 103 llamadas**. No seleccione el
+archivo intermedio `checkpoint_con_divulgacion_confirmada.json` ni el batch original.
+No pide volver a registrar la llamada 10, el parentesco de la 74 o las lecturas.
+
+La 59 recupera aprobación al reconocer «dejar una información», respuesta
+afirmativa y teléfono completo de retorno, con familiar identificado. La 67
+conserva revisión de estatus/recado, pero ya se reconoce su reporte de pago
+previo y no se trata «saldo restante» como una afirmación de regularización.
+El resultado calculado es **14 APROBADO, 82 REVISAR y 7 FALLA_GRAVE**.
+Solo la 59 cambia de categoría; todos los puntajes y penalizaciones del lote
+se conservan. Se mantienen las 103 moras, 31 nombres, cinco lecturas y las dos
+confirmaciones del usuario. El reanálisis genera otro checkpoint y Excel sin
+Whisper, sin mover audios y sin cambiar los originales. Continúe desde esa salida.
+
+### Historial: saldo genérico y divulgación confirmada r30
 
 Si la herramienta anterior se quedaba después de pedir el número de llamada,
 use el ZIP r30 corregido. Se reprodujo y corrigió una ventana de confirmación

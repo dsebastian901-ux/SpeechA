@@ -41,6 +41,42 @@ def _digits(token):
     return _number(token)
 
 
+def callback_numbers(text):
+    """Teléfonos completos en un dictado de contacto; no corrige sus dígitos."""
+    source=normalize(text)
+    found=[]
+    for context in re.finditer(r'\b(?:numero(?: telefonico| de contacto| de telefono)?|telefono)\b',source):
+        lead=source[max(0,context.start()-90):context.start()]
+        if re.search(r'\b(?:no (?:le )?(?:voy a|puedo|quiero|podria) (?:dar|dejar|dictar)(?:le)? (?:un |el )?|'
+                     r'no (?:le )?(?:dejare|dare|dictare) (?:un |el )?|'
+                     r'(?:dice|dijo|diga) que[^.!?]{0,70}|por ejemplo[^.!?]{0,50})$',lead):
+            continue
+        tail=source[context.end():context.end()+330]
+        tokens=list(TOKEN.finditer(tail))
+        if not tokens or tokens[0].start()>180:
+            continue
+        prefix=tail[:tokens[0].start()]
+        if re.search(r'\b(?:tarjeta|referencia|digitos|terminacion|folio|saldo|pesos|importe|pago)\b',prefix):
+            continue
+        group=[tokens[0]]
+        for token in tokens[1:]:
+            if not SEPARATOR.fullmatch(tail[group[-1].end():token.start()]):
+                break
+            group.append(token)
+        parts=[_digits(t.group()) for t in group]
+        if any(p is None for p in parts):continue
+        digits=''.join(parts)
+        if len(digits)!=10:continue
+        before=source[max(0,context.start()-250):context.end()+tokens[0].start()]
+        if not CALLBACK_INTENT.search(before):continue
+        if re.search(r'\b(?:no se comunique|no (?:me |nos )?(?:llame|marque))\b',before):continue
+        if re.match(r'^[\W_]*(?:pesos|por ciento|digitos)\b',tail[group[-1].end():]):continue
+        found.append({'digits':digits,'text':tail[group[0].start():group[-1].end()],
+                      'text_start':context.end()+group[0].start(),'text_end':context.end()+group[-1].end(),
+                      'method':'TELEFONO_COMPLETO_EN_CONTEXTO_DE_RECONTACTO'})
+    return found
+
+
 def find_reference(text, expected=''):
     """Extraer una dictación completa, sin ventanas móviles ni ceros inventados.
 
