@@ -585,6 +585,21 @@ def assess_recado(text, segments=()):
                 and not re.search(r'\b(?:pero no|no quiero|no puedo|no le voy)\b',source[match.end():match.end()+70])):
             acceptances.append({'text':match.group(),'speaker_role':_role_at(text,segments,match.start('answer')),
                                 'start':None,'end':None})
+    contact_offer=re.compile(
+        r'\ble (?:voy a dejar|dejare|dejo|podria dejar) (?:un |el )?(?:numero|telefono)\b'
+        r'(?P<purpose>[^.!?]{0,230})[.?]\s*'
+        r'(?P<answer>a ver(?:[, ]+diga(?:me|nme))?|diga(?:me|nme)|si[, ]+digame)[.!]\s*'
+        r'(?:(?:mire|bien|muy bien|ok)[, ]+)?'
+        r'(?:el (?:numero|telefono) (?:es|seria) (?:el )?|es (?:el )?)'
+        r'(?P<number>\d[\d\s,.-]{7,30}\d)')
+    for match in contact_offer.finditer(source):
+        prefix=source[max(0,match.start()-60):match.start()]
+        if (len(re.sub(r'\D','',match['number']))==10
+                and re.search(r'\b(?:se comunique|pueda comunicarse|se pueda comunicar|(?:nos|me) llame|llame al)\b',match['purpose'])
+                and _role_at(text,segments,match.start('answer')) not in {'GESTOR','TITULAR'}
+                and not re.search(r'\b(?:no|dice que|dijo que|diga que|repita que)\s*$',prefix)):
+            acceptances.append({'text':match.group(),'method':'SOLICITA_DICTADO_TRAS_OFERTA_DE_CONTACTO',
+                                'speaker_role':_role_at(text,segments,match.start('answer')),'start':None,'end':None})
     readback=re.compile(r'\bme (?:lo |puede )?rectifi(?:ca|car)\b[^?!.]{0,80}\?\s*'
                         r'(?P<number>\d+(?:[\s,.-]+\d+){2,8})')
     for match in readback.finditer(source):

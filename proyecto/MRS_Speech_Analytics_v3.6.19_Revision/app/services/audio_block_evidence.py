@@ -89,7 +89,7 @@ def validate_evidence(record,result,relation,contact_type,positive_evaluator=Non
             'human_verified':False,'reason':('Lectura adicional con señales contradictorias o de cumplimiento pendientes de confirmar; revisar audio.' if risks else '')}
 
 
-def attach_audio_block(master_path,evidence_path,output_directory=None,*,source_checkpoint=None):
+def attach_audio_block(master_path,evidence_path,output_directory=None,*,source_checkpoint=None,family_confirmations=None):
     from app.services.checkpoint_output import create_checkpoint_output
     from app.services.checkpoint_reanalysis import reanalyze_checkpoint
     from app.services.analytics_service import AnalyticsService
@@ -146,11 +146,23 @@ def attach_audio_block(master_path,evidence_path,output_directory=None,*,source_
         record['record_sha256']=record_digest(record)
         record['quality']=block_reading_quality(record['segments'],record['tail_segments']);records[name]=record
     updated=deepcopy(original)
+    family_confirmations=family_confirmations or {}
+    if set(family_confirmations)-set(records):
+        raise ValueError('La confirmación de parentesco debe pertenecer a una llamada del bloque seleccionado.')
     for item in updated['items']:
         if item['file_name'] in records:
             previous=item.get('audio_block_evidence')
             if previous and previous!=records[item['file_name']]:item.setdefault('audio_block_evidence_history',[]).append(previous)
             item['audio_block_evidence']=records[item['file_name']]
+        if item['file_name'] in family_confirmations:
+            from app.services.family_contact_review import make_family_confirmation,validate_family_confirmation
+            previous=item.get('family_contact_confirmation')
+            relationship=family_confirmations[item['file_name']]
+            current=validate_family_confirmation(item['result'],item.get('relation') or {},previous)
+            if not current['valid'] or current['relationship']!=str(relationship).upper():
+                if previous:item.setdefault('family_contact_confirmation_history',[]).append(deepcopy(previous))
+                item['family_contact_confirmation']=make_family_confirmation(item['result'],item.get('relation') or {},
+                    relationship,user_confirmed=True)
     target=create_checkpoint_output(output_directory,'Evidencia_Audios_'+AnalyticsService.ENGINE_REVISION.rsplit('-',1)[-1]+'_',nested_results=True)
     intermediate=target/'checkpoint_con_lecturas.json';intermediate.write_text(json.dumps(updated,ensure_ascii=False,indent=2),encoding='utf-8')
     output=reanalyze_checkpoint(intermediate,target/'resultados')
@@ -159,13 +171,18 @@ def attach_audio_block(master_path,evidence_path,output_directory=None,*,source_
         'matched_calls':len(records),'human_verified':False,'original_results_preserved':True,'whisper_executed':False}
     payload['audio_block_import']['source_engine_revision']=evidence.get('engine_revision')
     payload['audio_block_import']['source_whisper_executed']=evidence.get('whisper_executed') is True
+    payload['audio_block_import']['user_family_confirmations']=len(family_confirmations)
+    payload['audio_block_import']['asr_speaker_roles_confirmed']=False
     final.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding='utf-8')
     from openpyxl import load_workbook
     book=load_workbook(output['report']);note=book['NOTA_REANALISIS']
     note['A2']='Esta incorporación no ejecutó Whisper ni copió audios; usa las lecturas ASR recibidas por separado.'
     note.append(['Lecturas adicionales vinculadas',len(records)])
     note.append(['Lecturas con alertas técnicas (no infracciones)',sum(r['quality']['degraded'] for r in records.values())])
-    note.append(['Voces o hechos confirmados por una persona en esta incorporación',0])
+    note.append(['Voces ASR confirmadas por una persona en esta incorporación',0])
+    if family_confirmations:
+        note.append(['Parentescos confirmados explícitamente por el usuario',len(family_confirmations)])
+        note.append(['El parentesco confirmado no asigna voces ASR ni exime privacidad, recepción de recado u otras reglas.'])
     note.append(['Las transcripciones originales y las confirmaciones previas permanecen intactas.'])
     book.save(output['report']);book.close()
     assert master_path.read_bytes()==raw and evidence_path.read_bytes()==evidence_raw

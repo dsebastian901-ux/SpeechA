@@ -1,21 +1,44 @@
-# MRS Speech Analytics · revisión 28 — carga de mora desde el Excel
+# MRS Speech Analytics · revisión 29 — recepción de recados y parentesco confirmado
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_28_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_29_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
 
+Para incorporar el bloque devuelto de cinco lecturas y el parentesco ya
+confirmado, extraiga el ZIP completo y ejecute `INCORPORAR_Y_CONFIRMAR_PARENTESCO.bat`
+en la carpeta principal. Seleccione el checkpoint final de r28 y después
+`revision_audios_bloque.json`. Indique la llamada **74** y el parentesco **HIJA**
+para guardar esa confirmación en el archivo local. El programa no incluye los
+datos privados del lote. El parentesco no se aplica a otra llamada por número
+de fila: se vincula al archivo y su contexto de cuenta y transcripción.
+
+Se conservan las 103 moras, 31 nombres corregidos y las cinco lecturas como
+evidencia separada, sin modificar el texto de Whisper. La 47 recupera aprobación
+al reconocer la solicitud de dictado del teléfono; la 74 se aprueba con el
+parentesco confirmado y la recepción del mensaje. El resultado calculado es
+13 APROBADO, 84 REVISAR y 6 FALLA_GRAVE. Los 103 puntajes y penalizaciones no
+cambian. Las 10, 59 y 67 conservan revisión de privacidad con voz sin confirmar.
+
+No se ejecuta Whisper ni se mueven audios durante la incorporación. La consola
+imprime motor r29 y las rutas de otro checkpoint y Excel. Conserve ese checkpoint
+para continuar: la confirmación se preserva en posteriores reanálisis.
+`INCORPORAR_LECTURAS_BLOQUE.bat` también está en la raíz para bloques que no
+requieren registrar un parentesco nuevo. Los campos de confirmación comienzan vacíos.
+
 `REVISAR_BLOQUE_AUDIOS.bat` está disponible en la carpeta principal del ZIP y
 dentro de `proyecto/MRS_Speech_Analytics_v3.6.19_Revision`. Si ya tiene el paquete
 anterior, puede usar el lanzador de esa subcarpeta. El acceso de la carpeta
-principal abre la misma herramienta; el motor y las reglas r28 no cambian.
+principal abre la misma herramienta de lectura adicional con el modelo existente.
 Extraiga el ZIP completo antes de ejecutar cualquiera de los lanzadores.
+
+## Historial: carga de mora r28
 
 La devolución de r27 desde Windows se comprobó: 103 llamadas, 11 APROBADO,
 86 REVISAR, 6 FALLA_GRAVE, las 31 correcciones de nombre intactas y las 9.785
@@ -261,8 +284,8 @@ La regresión contra r21 usa como base su carpeta de aplicación extraída y
 `--reviewed-changes tests/reviewed_r22_changes.json`. El documento original de
 cambios permanece intacto. Ambos recorridos de 268 evaluaciones verifican hashes
 de origen, causas de retiro de penalizaciones e invariantes; no copian etiquetas
-históricas de aprobación. La suite actual contiene 1.016 pruebas. La regresión
-de r28 con 268 evaluaciones contra r27 no cambia clasificaciones ni retira
+históricas de aprobación. La suite actual contiene 1.064 pruebas. La regresión
+de r29 con 268 evaluaciones contra r28 no cambia clasificaciones ni retira
 penalizaciones sin causa.
 
 ## Revisión adicional de un bloque de audio

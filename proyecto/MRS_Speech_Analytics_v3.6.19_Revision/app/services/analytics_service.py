@@ -20,6 +20,7 @@ from app.models.transcriptions import TranscriptionModel
 from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment, unknown_recipient_response, dictated_privacy_email, associate_relationship
 from app.services.audio_block_evidence import validate_evidence
 from app.services.arco_validation import assess_arco, qualitative_line_tenure
+from app.services.family_contact_review import validate_family_confirmation
 from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing
 from app.services.installment_validation import installment_plan, installment_dates
 from app.services.asr_amount_recovery import validated_entries
@@ -46,7 +47,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r28"
+    ENGINE_REVISION = "3.6.19-r29"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -61,6 +62,9 @@ class AnalyticsService:
         arco = metadata.get('arco_validation') or {}
         if arco.get('applies') and not arco.get('valid'):
             reasons.extend(arco.get('reasons') or ['Procedimiento ARCO incompleto; requiere revisión.'])
+        family_review=metadata.get('family_contact_validation') or {}
+        if family_review.get('review_required'):
+            reasons.append(family_review.get('reason') or 'Confirmación de parentesco pendiente de revisión.')
         additional=metadata.get('audio_block_evidence_validation') or {}
         if additional.get('review_required'):
             if additional.get('valid') and additional.get('risks') and all(
@@ -432,6 +436,11 @@ class AnalyticsService:
         financial_source.setdefault("segmentos", transcription.segments)
         enriched_context["_financial_source"] = financial_source
         enriched_context["_financial_review"] = financial_source.get("financial_audio_review")
+        contact_source={'archivo':transcription.file_name,'texto':transcription.text,
+                        'segmentos':transcription.segments,'duracion_segundos':transcription.duration_seconds}
+        family_review=validate_family_confirmation(contact_source,operational_context or {},
+            (getattr(transcription,'metadata',{}) or {}).get('family_contact_confirmation'))
+        enriched_context['_family_contact_validation']=family_review
 
         compliance = cls.calculate_basic_compliance(
             text,
@@ -507,6 +516,7 @@ class AnalyticsService:
         analysis.metadata["contact_validation"] = compliance.get("contact_validation", {})
         analysis.metadata['associate_contact_validation'] = compliance.get('associate_contact_validation', {})
         analysis.metadata['intermediary_contact_validation'] = compliance.get('intermediary_contact_validation', {})
+        analysis.metadata['family_contact_validation']=family_review
         analysis.metadata["quality_blocks"] = compliance.get("blocks", {})
         analysis.metadata["quality_checks"] = compliance.get("checks", {})
         analysis.metadata["operational_context"] = compliance.get(
@@ -1173,6 +1183,11 @@ class AnalyticsService:
         unknown_debtor = unknown_debtor or unknown_response['confirmed']
 
         recado_assessment = assess_recado(text, context.get("_segments") or [])
+        confirmed_family=context.get('_family_contact_validation') or {}
+        if confirmed_family.get('valid'):
+            recado_assessment['family'].append({'text':'Parentesco confirmado explícitamente por el usuario.',
+                'phrase':'familiar confirmado por usuario: '+confirmed_family['relationship'].lower(),
+                'source':'EXPLICIT_USER_FAMILY_CONFIRMATION','speaker_role':'NO DETERMINADO','start':None,'end':None})
         family = bool(recado_assessment["family"])
         spouse = any(re.search(r"\b(?:espos[oa]|marido|mujer)\b", e["phrase"])
                      for e in recado_assessment["family"])
@@ -1377,6 +1392,8 @@ class AnalyticsService:
             r"(?:le dejare|le estaria dejando|le estare dejando) (?:un |el )?(?:numero|recado|mensaje)|"
             r"(?:le menciona que|le mencion[eo] que|es un numero para (?:que|aquellos)|"
             r"(?:indiquele|digale|mencionele) (?:a|al|a la) ))\b", normalized))
+        recado_transmitted=recado_transmitted or any(
+            e.get('method')=='REPETICION_NUMERO_CONTACTO_SOLICITADA' for e in recado_assessment['acceptance'])
         # Un rechazo explícito bloquea la aprobación aunque el gestor haya dictado un número.
         # "Le puedo dejar" es una solicitud del gestor, NO prueba aceptación del interlocutor.
         # Si el texto carece de confirmación, se conserva REVISAR (no se fabrica una aprobación).
@@ -1385,7 +1402,7 @@ class AnalyticsService:
         # La pregunta de si puede anotar no demuestra que se dictó un mensaje.
         recado_callback = bool(re.search(
             r"\b(?:que (?:se comunique|(?:nos |me )?(?:llame|marque))|"
-            r"(?:se|pueda) comunicar con nosotros|se comunique al|puede comunicarse|"
+            r"(?:se|pueda) comunicar con nosotros|se comunique (?:inmediatamente |a la brevedad )?(?:al|con nosotros)|puede comunicarse|"
             r"(?:me|nos) (?:pued[ae]|podria|podia|pudiera) (?:regalar|regresar) (?:una? |la )?llamada|"
             r"numero (?:telefonico|de telefonico|de telefono|de contacto|de atencion))\b",
             normalized))
@@ -2923,6 +2940,9 @@ class AnalyticsService:
             if recado_real and detected_status.startswith('MENSAJE '):
                 status_evidence=' / '.join(u['text'] for u in recado_assessment['acceptance'])
                 status_evidence_method='RECADO_ACEPTADO_CON_CONTACTO'
+                if confirmed_family.get('valid'):
+                    status_evidence='Parentesco confirmado por usuario: '+confirmed_family['relationship']+'. '+status_evidence
+                    status_evidence_method='RECADO_ACEPTADO_Y_PARENTESCO_CONFIRMADO_POR_USUARIO'
             if unknown_response['confirmed'] and detected_status=='NO CONOCEN A DEUDOR':
                 status_evidence=unknown_response['evidence']
                 status_evidence_method=unknown_response['method']

@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r28-diagnostic",
+  "revision": "3.6.19-r29-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -21,14 +21,14 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 1016,
+    "passed": 1064,
     "failed": 0,
     "skipped": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Read the actual mora column as an alias of asignacion and safely fill missing checkpoint mora from matching Excel accounts, preserving original transcripts, cards, corrected names and evidence records.",
+  "additional_fix": "Recognize complete callback dictation reception, keep user-confirmed kinship in a context-bound record separate from ASR, and preserve independent privacy and financial approval gates.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -291,7 +291,7 @@
       "No unaccepted new payment instruction approved as followup"
     ]
   },
-  "engine_revision": "3.6.19-r28",
+  "engine_revision": "3.6.19-r29",
   "r22_review_backlog": {
     "calls": 95,
     "previous_review_calls": 85,
@@ -341,11 +341,11 @@
     "all_13_issues_closed": false
   },
   "current_validation": {
-    "engine_revision": "3.6.19-r28",
-    "unit_tests": 1016,
+    "engine_revision": "3.6.19-r29",
+    "unit_tests": 1064,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Returned native r28 checkpoint verified: 103 moras, 31 preserved name corrections and all103 original results, accounts, cards, scores, penalties, classifications and analytics match the verified r28 output. Origin checkpoint and Excel hashes verified. No returned native r28 Excel received; full new-audio and acoustic certification remain pending."
+    "scope": "Five Windows ASR readings match the returned r28 source. Callback reception fix and one explicit user-confirmed family relationship yield 13 approved, 84 review, 6 severe. All103 scores, penalties, source data, 103 moras and31 names preserved; 9785 report cells verified. Native r29 import and speaker/acoustic validation remain pending."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -904,5 +904,82 @@
     "full_new_audio_pipeline_certified": false,
     "all13_operational_issues_closed": false,
     "runtime_changed_for_this_validation": false
+  },
+  "r29_five_readings_and_user_family_fact": {
+    "master_calls": 103,
+    "matched_readings": 5,
+    "actual_block_cases": [
+      10,
+      47,
+      59,
+      67,
+      74
+    ],
+    "reading_errors": 0,
+    "technical_degraded_readings": 0,
+    "source_master_hash_matches": true,
+    "original_text_segments_duration_and_context_checked": true,
+    "returned_reader_engine_revision": "3.6.19-r28",
+    "returned_windows_reader_completed": true,
+    "new_whisper_execution_in_cloud": false,
+    "new_local_audio_listening": false,
+    "source_readings_are_automated_only": true,
+    "asr_speaker_roles_confirmed": false,
+    "explicit_user_family_confirmations": 1,
+    "family_fact_scope": "FAMILY_RELATIONSHIP_ONLY",
+    "family_fact_context_bound_and_checksum_checked": true,
+    "family_fact_not_transferred_by_row_number": true,
+    "family_fact_preserved_on_reanalysis": true,
+    "stale_or_tampered_fact_blocks_approval": true,
+    "raw_transcripts_not_rewritten": true,
+    "family_fact_does_not_waive_other_quality_rules": true,
+    "r28_outcomes": {
+      "APROBADO": 11,
+      "REVISAR": 86,
+      "FALLA_GRAVE": 6
+    },
+    "r29_outcomes_with_user_confirmation": {
+      "APROBADO": 13,
+      "REVISAR": 84,
+      "FALLA_GRAVE": 6
+    },
+    "changed_call_categories": [
+      47,
+      74
+    ],
+    "all103_scores_and_penalties_unchanged": true,
+    "original_accounts_cards_asr103_moras_and31_name_records_preserved": true,
+    "report_columns": 95,
+    "report_cells_verified": 9785,
+    "report_cell_mismatches": 0,
+    "unit_tests": 1064,
+    "new_tests": 48,
+    "historical_evaluations": 268,
+    "historical_changed_categories": 0,
+    "safety_failures": 0,
+    "undocumented_penalty_removals": 0,
+    "prior95": {
+      "outcomes": {
+        "APROBADO": 13,
+        "REVISAR": 80,
+        "FALLA_GRAVE": 2
+      },
+      "name_records_preserved": 22,
+      "asr_readings_preserved": 10
+    },
+    "prior36": {
+      "outcomes": {
+        "APROBADO": 7,
+        "REVISAR": 29
+      },
+      "name_records_preserved": 13,
+      "financial_confirmations_preserved": true
+    },
+    "native_r29_import_and_family_registration_verified": false,
+    "all13_operational_issues_closed": false,
+    "audio_files_moved_or_copied": false,
+    "root_launcher": "INCORPORAR_Y_CONFIRMAR_PARENTESCO.bat",
+    "default_user_fact_selection": null,
+    "ordinary_import_launcher_available_at_root": true
   }
 }
