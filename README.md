@@ -1,15 +1,47 @@
-# MRS Speech Analytics · revisión 32 — segundo bloque y seguridad confirmada
+# MRS Speech Analytics · revisión 33 — aceptación de recado confirmada
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_32_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_33_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
+
+La devolución final r32 ya se comprobó: 103 llamadas y 9.785 celdas del Excel
+coinciden, con 17 APROBADO, 77 REVISAR y 9 FALLA_GRAVE. Ese checkpoint final
+es la base para continuar, sin reconstruir el lote ni volver a confirmar las
+llamadas anteriores.
+
+El usuario confirmó que la familiar **sí toma el recado en la llamada 96**.
+R33 registra exclusivamente esa aceptación, vinculada al archivo, cuenta y
+transcripción. No corrige el ASR, no inventa dígitos del teléfono ni confirma
+todas las voces. El parentesco y el contexto de contacto ya están presentes;
+el motor vuelve a comprobar las demás reglas antes de aprobar.
+
+Para registrar localmente una aceptación ya comprobada, extraiga el ZIP completo
+y ejecute **`CONFIRMAR_ACEPTACION_RECADO.bat`** desde la carpeta principal.
+Seleccione el último checkpoint **final r32**, indique la llamada confirmada
+y acepte únicamente si ya comprobó la recepción del recado. No hay llamada
+preseleccionada. La salida se guarda bajo `MRS_Resultados`, en una carpeta
+`Confirmacion_Recado_MRS_…`, y dentro de ella en `resultados`:
+
+- `checkpoint_reanalizado.json`
+- `04_Reportes/Reporte_Reanalisis_Reglas.xlsx`
+
+Con la confirmación de la 96, el resultado calculado es **18 APROBADO,
+76 REVISAR y 9 FALLA_GRAVE**. Solo cambia la categoría de esa llamada, con
+100 puntos; los 103 puntajes, penalizaciones, quince lecturas y confirmaciones
+previas permanecen. Si ya dispone de esta copia final, úsela directamente.
+Reanalizarla conserva la confirmación. La aceptación no exime rechazos,
+desconocimiento del titular, privacidad, amenazas, maltrato, ARCO, referencia
+de tarjeta o cualquier otro control aplicable. No se ejecuta Whisper ni se
+copian audios. Las 76 revisiones pendientes no equivalen a 76 faltas confirmadas.
+
+### Historial: segundo bloque y seguridad confirmada r32
 
 La revisión incorpora las diez lecturas del segundo bloque conservando el
 checkpoint final r31. Recupera aprobaciones con evidencia en las llamadas

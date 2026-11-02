@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r32-diagnostic",
+  "revision": "3.6.19-r33-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -21,14 +21,14 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 1250,
+    "passed": 1282,
     "failed": 0,
     "skipped": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Audit the second ten-call block, recognize card-loss clarification and contextual message reception, detect standalone balance answers and low-mora home recovery warnings, preserve technical loop warnings without invented penalties, and record two explicit user confirmations in scoped context-bound records.",
+  "additional_fix": "Preserve a scoped user confirmation of message acceptance without changing raw ASR, scores, penalties or other quality gates; reanalysis keeps the confirmation.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -1305,12 +1305,80 @@
     },
     "whisper_executed_in_cloud": false,
     "new_human_audio_listening_in_cloud": false,
-    "native_r32_outputs_verified": false,
+    "native_r32_outputs_verified": true,
     "launchers": [
       "INCORPORAR_LECTURAS_BLOQUE.bat",
       "CONFIRMAR_DIVULGACION_A_TERCERO.bat",
       "CONFIRMAR_ADVERTENCIA_DOMICILIO.bat"
     ],
     "all13_operational_issues_closed": false
+  },
+  "r32_returned_native_outputs": {
+    "evaluations": 103,
+    "outcomes": {
+      "APROBADO": 17,
+      "REVISAR": 77,
+      "FALLA_GRAVE": 9
+    },
+    "active_valid_readings": 15,
+    "all103_items_match_canonical_ignoring_runtime_dates": true,
+    "report_cells_verified": 9785,
+    "report_cell_mismatches": 0,
+    "safety_failures": 0,
+    "acoustic_verification": false
+  },
+  "r33_recado_acceptance_confirmation": {
+    "engine_revision": "3.6.19-r33",
+    "scope": "RECIPIENT_ACCEPTED_RECADO_ONLY",
+    "explicit_user_confirmation_required": true,
+    "source_context_bound": true,
+    "stale_tampered_or_revoked_confirmation_requires_review": true,
+    "raw_asr_and_speaker_roles_unchanged": true,
+    "confirmation_survives_reanalysis": true,
+    "acceptance_does_not_waive_other_quality_rules": true,
+    "current_batch": {
+      "evaluations": 103,
+      "outcomes": {
+        "APROBADO": 18,
+        "REVISAR": 76,
+        "FALLA_GRAVE": 9
+      },
+      "changed_categories": [
+        96
+      ],
+      "all102_other_categories_preserved": true,
+      "all103_scores_and_penalties_preserved": true,
+      "all_original_source_facts_and_previous_confirmations_preserved": true,
+      "active_readings": 15,
+      "report_cells_verified": 9785,
+      "report_cell_mismatches": 0
+    },
+    "unit_tests": 1282,
+    "new_tests": 32,
+    "historical_evaluations": 268,
+    "historical_changed_categories": 0,
+    "historical_penalty_removals": 0,
+    "safety_failures": 0,
+    "whisper_executed": false,
+    "assistant_audio_listening": false,
+    "native_r33_outputs_verified": false,
+    "root_launcher": "CONFIRMAR_ACEPTACION_RECADO.bat",
+    "all13_operational_issues_closed": false,
+    "real103_reanalysis_keeps_confirmation_and_all_decisions": true,
+    "prior95": {
+      "outcomes": {
+        "APROBADO": 13,
+        "REVISAR": 80,
+        "FALLA_GRAVE": 2
+      },
+      "all_source_facts_scores_penalties_and_categories_preserved": true
+    },
+    "prior36": {
+      "outcomes": {
+        "APROBADO": 7,
+        "REVISAR": 29
+      },
+      "all_source_facts_scores_penalties_and_categories_preserved": true
+    }
   }
 }

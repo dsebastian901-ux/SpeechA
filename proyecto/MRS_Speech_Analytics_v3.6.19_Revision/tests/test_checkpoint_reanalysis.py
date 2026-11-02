@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from openpyxl import load_workbook
 from app.services.checkpoint_reanalysis import reanalyze_checkpoint
+from app.services.analytics_service import AnalyticsService
 
 
 def test_reanalysis_generates_excel_without_original_audio_or_whisper(tmp_path):
@@ -19,7 +20,7 @@ def test_reanalysis_generates_excel_without_original_audio_or_whisper(tmp_path):
     assert source.read_bytes() == original
     saved = json.loads(Path(result["checkpoint"]).read_text(encoding="utf-8"))
     assert saved["reanalysis"]["whisper_executed"] is False
-    assert saved["reanalysis"]["engine_revision"] == result["engine_revision"] == "3.6.19-r32"
+    assert saved["reanalysis"]["engine_revision"] == result["engine_revision"] == AnalyticsService.ENGINE_REVISION
     assert saved["items"][0]["analytics_metadata"]["engine_revision"] == result["engine_revision"]
     assert saved["items"][0]["classified_audio_path"] is None
     book = load_workbook(result["report"], read_only=True, data_only=True)

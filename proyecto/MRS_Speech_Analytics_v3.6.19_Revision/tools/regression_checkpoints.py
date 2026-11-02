@@ -66,6 +66,8 @@ def invariants(row):
         failures.append('advertencia confirmada en domicilio sin bloqueo crítico')
     if (m.get('home_warning_validation') or {}).get('review_required') and approved:
         failures.append('confirmación de advertencia inválida aprobada')
+    if (m.get('recado_acceptance_validation') or {}).get('review_required') and approved:
+        failures.append('confirmación de recado inválida aprobada')
     card = str((m.get("card_validation") or {}).get("result", ""))
     if (card == "TARJETA INCORRECTA" or card.startswith("REVISAR -")) and approved:
         failures.append("referencia pendiente aprobada")

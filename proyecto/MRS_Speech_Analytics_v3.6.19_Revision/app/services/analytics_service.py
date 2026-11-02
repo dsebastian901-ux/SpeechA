@@ -21,6 +21,7 @@ from app.services.conversation_evidence import assess_recado, assess_privacy, ev
 from app.services.audio_block_evidence import validate_evidence
 from app.services.arco_validation import assess_arco, qualitative_line_tenure
 from app.services.family_contact_review import validate_family_confirmation
+from app.services.recado_acceptance_review import validate_recado_confirmation
 from app.services.privacy_disclosure_review import validate_disclosure_confirmation
 from app.services.home_warning_review import validate_warning_confirmation
 from app.services.conversation_evidence import assess_home_recovery_warning,reported_card_clarification
@@ -50,7 +51,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r32"
+    ENGINE_REVISION = "3.6.19-r33"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -68,6 +69,9 @@ class AnalyticsService:
         family_review=metadata.get('family_contact_validation') or {}
         if family_review.get('review_required'):
             reasons.append(family_review.get('reason') or 'Confirmación de parentesco pendiente de revisión.')
+        recado_review = metadata.get('recado_acceptance_validation') or {}
+        if recado_review.get('review_required'):
+            reasons.append(recado_review['reason'])
         disclosure_review=metadata.get('privacy_disclosure_validation') or {}
         if disclosure_review.get('review_required'):
             reasons.append(disclosure_review.get('reason') or 'Confirmación de divulgación pendiente de revisión.')
@@ -451,6 +455,9 @@ class AnalyticsService:
         family_review=validate_family_confirmation(contact_source,operational_context or {},
             (getattr(transcription,'metadata',{}) or {}).get('family_contact_confirmation'))
         enriched_context['_family_contact_validation']=family_review
+        recado_review = validate_recado_confirmation(contact_source, operational_context or {},
+            (transcription.metadata or {}).get('recado_acceptance_confirmation'))
+        enriched_context['_recado_acceptance_validation'] = recado_review
         disclosure_review=validate_disclosure_confirmation(contact_source,operational_context or {},
             (transcription.metadata or {}).get('privacy_disclosure_confirmation'),
             (transcription.metadata or {}).get('audio_block_evidence'))
@@ -589,6 +596,7 @@ class AnalyticsService:
         analysis.metadata['audio_block_evidence_validation']=validate_evidence(
             data.get('audio_block_evidence'),data,operational_context or {},
             analysis.metadata['quality_contact_type'],cls.calculate_basic_compliance)
+        analysis.metadata['recado_acceptance_validation'] = recado_review
         analysis.metadata["final_result"] = compliance.get(
             "final_result", "REVISAR"
         )
@@ -1204,6 +1212,12 @@ class AnalyticsService:
         unknown_debtor = unknown_debtor or unknown_response['confirmed']
 
         recado_assessment = assess_recado(text, context.get("_segments") or [])
+        confirmed_recado = context.get('_recado_acceptance_validation') or {}
+        if confirmed_recado.get('valid'):
+            recado_assessment['acceptance'].append({
+                'text': 'El usuario confirmó que el interlocutor acepta transmitir el recado.',
+                'source': 'EXPLICIT_USER_RECADO_ACCEPTANCE_CONFIRMATION',
+                'speaker_role': 'TERCERO', 'start': None, 'end': None})
         confirmed_family=context.get('_family_contact_validation') or {}
         if confirmed_family.get('valid'):
             recado_assessment['family'].append({'text':'Parentesco confirmado explícitamente por el usuario.',
