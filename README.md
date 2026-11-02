@@ -1,15 +1,36 @@
-# MRS Speech Analytics · revisión 27 — recados y comparación del lote nuevo
+# MRS Speech Analytics · revisión 28 — carga de mora desde el Excel
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_27_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_28_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
+
+La devolución de r27 desde Windows se comprobó: 103 llamadas, 11 APROBADO,
+86 REVISAR, 6 FALLA_GRAVE, las 31 correcciones de nombre intactas y las 9.785
+celdas del reporte coincidentes. La mora faltaba porque el Excel tiene la columna
+`mora` y el lector solo aceptaba `asignacion`; los datos sí estaban en el archivo.
+
+R28 acepta ambas columnas. Para completar el lote ya procesado, extraiga el ZIP
+y ejecute `ACTUALIZAR_MORAS_Y_REANALIZAR.bat` desde la carpeta principal.
+Seleccione primero `Checkpoint_r27_Recuperado.json` y luego `Calidad Noviembre.xlsx`.
+Genera otro `checkpoint_reanalizado.json` y Excel en una carpeta `Reanalisis_MRS_r28_...`.
+Se recuperan las 103 moras, cotejando archivo, tarjeta y los datos existentes;
+se conservan transcripciones, tarjetas, importes, nombres corregidos y originales.
+No se ejecuta Whisper ni se mueve audio. Conserve el nuevo checkpoint como base.
+
+El resultado sigue siendo 11 APROBADO, 86 REVISAR y 6 FALLA_GRAVE: completar mora
+no elimina otros motivos de revisión. Los 1.053 registros del Excel se cargan
+con su mora para los próximos análisis. Los textos de las hojas de instrucciones
+no se usan como reglas del programa. R28 se probó en Linux; su ejecución nativa
+en Windows aún requiere devolución, aunque el reanálisis anterior r27 sí se verificó.
+
+## Historial de la comparación y recuperación r27
 
 Para el lote nuevo de 103, extraiga el ZIP completo y ejecute
 `REANALIZAR_CON_TARJETA_EXCEL.bat` desde la carpeta principal. Seleccione el
@@ -231,8 +252,8 @@ La regresión contra r21 usa como base su carpeta de aplicación extraída y
 `--reviewed-changes tests/reviewed_r22_changes.json`. El documento original de
 cambios permanece intacto. Ambos recorridos de 268 evaluaciones verifican hashes
 de origen, causas de retiro de penalizaciones e invariantes; no copian etiquetas
-históricas de aprobación. La suite actual contiene 984 pruebas. La regresión
-de r27 con 268 evaluaciones contra r26 no cambia clasificaciones ni retira
+históricas de aprobación. La suite actual contiene 1.016 pruebas. La regresión
+de r28 con 268 evaluaciones contra r27 no cambia clasificaciones ni retira
 penalizaciones sin causa.
 
 ## Revisión adicional de un bloque de audio

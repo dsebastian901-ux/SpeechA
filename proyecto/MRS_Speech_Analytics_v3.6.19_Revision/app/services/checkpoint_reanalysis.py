@@ -12,7 +12,7 @@ from app.services.transcription_services import TranscriptionService
 from app.services.checkpoint_output import create_checkpoint_output
 
 
-def reanalyze_checkpoint(checkpoint_path, output_directory=None):
+def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_excel=None):
     source = Path(checkpoint_path).expanduser().resolve()
     raw = source.read_bytes()
     payload = json.loads(raw.decode("utf-8-sig"))
@@ -23,12 +23,16 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None):
             and not any(isinstance(i.get('result'),dict) for i in payload['items'])):
         raise ValueError('Seleccionó una lectura adicional, no el checkpoint del lote. '
                          'Use INCORPORAR_LECTURAS_BLOQUE para incorporarla sin sustituir transcripciones.')
+    updated = deepcopy(payload)
+    mora_update=None
+    if relation_excel is not None:
+        from app.services.checkpoint_mora_update import fill_missing_mora
+        updated,mora_update=fill_missing_mora(payload,relation_excel)
     target = create_checkpoint_output(output_directory,
         "Reanalisis_MRS_" + AnalyticsService.ENGINE_REVISION.rsplit("-", 1)[-1] + "_")
     destination = target/"checkpoint_reanalizado.json"
     if destination == source or destination.exists():
         raise ValueError("Elija una carpeta nueva; no se sobrescriben checkpoints.")
-    updated = deepcopy(payload)
     outcomes = {}
     for item in updated["items"]:
         try:
@@ -89,6 +93,10 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None):
     note.append(["La columna 'Clasificación física' muestra la clasificación calculada; no acredita una copia nueva."])
     note.append(["El checkpoint y el reporte originales permanecen sin cambios."])
     note.append(["Revisión del motor", AnalyticsService.ENGINE_REVISION])
+    if mora_update is not None:
+        note.append(['Moras faltantes recuperadas del Excel',mora_update['filled']])
+        note.append(['Moras existentes conservadas',mora_update['already_present']])
+        note.append(['Solo se completó asignacion/mora; tarjetas, nombres y transcripciones conservados.'])
     workbook.save(report)
     workbook.close()
     updated["completed"] = not outcomes.get("ERROR")

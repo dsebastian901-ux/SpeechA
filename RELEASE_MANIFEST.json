@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r27-diagnostic",
+  "revision": "3.6.19-r28-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -12,7 +12,8 @@
     "app/services/payment_reference_validation.py",
     "app/services/transcription_services.py",
     "app/ui/views/analytics_view.py",
-    "app/services/whisper_service.py"
+    "app/services/whisper_service.py",
+    "app/services/relation_service.py"
   ],
   "excluded_private_csv_reports": [
     "AUDITORIA_REFERENCIAS_CHECKPOINT_20261021.csv",
@@ -20,14 +21,14 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 984,
+    "passed": 1016,
     "failed": 0,
     "skipped": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Recognize contextual recado reception and kinship, keep real refusals, distinguish callback phones from incomplete card references, preserve unassigned privacy review, and apply the authorized Excel-card output-name policy in a copy without Whisper.",
+  "additional_fix": "Read the actual mora column as an alias of asignacion and safely fill missing checkpoint mora from matching Excel accounts, preserving original transcripts, cards, corrected names and evidence records.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -290,7 +291,7 @@
       "No unaccepted new payment instruction approved as followup"
     ]
   },
-  "engine_revision": "3.6.19-r27",
+  "engine_revision": "3.6.19-r28",
   "r22_review_backlog": {
     "calls": 95,
     "previous_review_calls": 85,
@@ -340,11 +341,11 @@
     "all_13_issues_closed": false
   },
   "current_validation": {
-    "engine_revision": "3.6.19-r27",
-    "unit_tests": 984,
+    "engine_revision": "3.6.19-r28",
+    "unit_tests": 1016,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Paired prior/r26 new103 analyzed by exact file, identical accounts and 86 identical transcripts. Targeted recado and phone corrections plus 31 authorized output-name corrections yield 11 approved, 86 review, 6 severe. Prior95 and prior36 facts and approvals retained. Native r27 execution and acoustic validation remain pending."
+    "scope": "Returned native r27 reanalysis and Excel export verified for 103 calls and 9785 cells. Mora loader fixed for 1053 Excel accounts and 103 missing checkpoint moras filled safely. Classifications remain 11 approved, 86 review, 6 severe. Native r28 execution and acoustic validation remain pending."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -773,7 +774,7 @@
       "financial_confirmations_preserved": true,
       "report_cells_verified": 3420
     },
-    "native_r27_windows_execution_verified": false,
+    "native_r27_windows_execution_verified": true,
     "new_asr_execution": false,
     "new_human_audio_facts": 0,
     "ordinary_batch_processing_and_whisper_dependencies_retained": true,
@@ -787,6 +788,95 @@
       "audio_copies_reported_successful": 103,
       "export_cells_verified": 9785,
       "scope": "Returned r26 batch checkpoint and Excel consistency; not acoustic or all-application certification."
-    }
+    },
+    "native_verification_scope": "RETURNED_REANALYSIS_AND_EXCEL_EXPORT_ONLY"
+  },
+  "r27_returned_native_reanalysis": {
+    "calls": 103,
+    "outcomes": {
+      "APROBADO": 11,
+      "REVISAR": 86,
+      "FALLA_GRAVE": 6
+    },
+    "all_results_accounts_categories_scores_and_analytics_match_verified_delivery": true,
+    "name_review_records_preserved": 31,
+    "review_timestamp_variation_expected": true,
+    "excel_cells_verified": 9785,
+    "excel_cell_mismatches": 0,
+    "new_human_audio_facts": 0,
+    "full_new_audio_pipeline_certified": false
+  },
+  "r28_excel_mora_alias_and_import": {
+    "source_header": "mora",
+    "internal_field": "asignacion",
+    "legacy_header_supported": true,
+    "contradictory_columns_reported": true,
+    "duplicate_mora_headers_rejected": true,
+    "excel_account_records_loaded": 1053,
+    "excel_loader_row_errors": 0,
+    "target_calls": 103,
+    "matched_accounts_and_cards": 103,
+    "missing_moras_filled": 103,
+    "mora_distribution": {
+      "1": 47,
+      "2": 13,
+      "3": 15,
+      "4PV": 1,
+      "5PV": 2,
+      "6PV": 2,
+      "C1": 9,
+      "C2": 7,
+      "C3": 4,
+      "C4": 3
+    },
+    "policy_counts": {
+      "CORTE_Y_VENCIMIENTO": 75,
+      "MES_DE_LLAMADA": 28
+    },
+    "outcomes": {
+      "APROBADO": 11,
+      "REVISAR": 86,
+      "FALLA_GRAVE": 6
+    },
+    "all103_categories_scores_and_penalties_unchanged": true,
+    "source_asr_cards_accounts_and31_name_records_preserved": true,
+    "field_fill_only_no_existing_mora_overwrite": true,
+    "all_other_account_fields_checked": true,
+    "excel_and_checkpoint_originals_unchanged": true,
+    "context_bound_evidence_not_silently_rebound": true,
+    "row_import_provenance_recorded": true,
+    "new_human_audio_facts": 0,
+    "new_whisper_execution": false,
+    "audio_files_moved_or_copied": false,
+    "report_columns": 95,
+    "report_cells_verified": 9785,
+    "report_cell_mismatches": 0,
+    "unit_tests": 1016,
+    "new_tests": 32,
+    "historical_evaluations": 268,
+    "historical_changed_categories": 0,
+    "safety_failures": 0,
+    "undocumented_penalty_removals": 0,
+    "prior95": {
+      "outcomes": {
+        "APROBADO": 13,
+        "REVISAR": 80,
+        "FALLA_GRAVE": 2
+      },
+      "name_records_preserved": 22,
+      "asr_records_preserved": 10
+    },
+    "prior36": {
+      "outcomes": {
+        "APROBADO": 7,
+        "REVISAR": 29
+      },
+      "name_records_preserved": 13,
+      "all_financial_facts_preserved": true
+    },
+    "native_r28_windows_execution_verified": false,
+    "all13_operational_issues_closed": false,
+    "launcher": "ACTUALIZAR_MORAS_Y_REANALIZAR.bat",
+    "inputs": "Final r27 checkpoint and accounts Excel; no extra ASR receipt required."
   }
 }

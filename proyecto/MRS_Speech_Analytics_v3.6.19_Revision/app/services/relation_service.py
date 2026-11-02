@@ -214,6 +214,9 @@ class RelationService:
             raise ValueError("La hoja Relacion_Audios está vacía.")
 
         headers = [self._normalize_header(value) for value in header_row]
+        for name in ('asignacion','mora'):
+            if headers.count(name)>1:
+                raise ValueError(f'Columna de mora duplicada: {name}.')
         header_map = {name: index for index, name in enumerate(headers) if name}
 
         missing = [name for name in self.REQUIRED_COLUMNS if name not in header_map]
@@ -253,6 +256,14 @@ class RelationService:
                 )
 
             row_errors: List[str] = []
+            # El Excel operativo usa «mora»; «asignacion» es el nombre interno.
+            # Si ambas existen, no escoger silenciosamente valores distintos.
+            mora_index=header_map.get('mora')
+            mora=self._clean_cell(row[mora_index] if mora_index is not None and mora_index<len(row) else '')
+            if values['asignacion'] and mora and self._mora_key(values['asignacion'])!=self._mora_key(mora):
+                row_errors.append('Las columnas mora y asignacion no coinciden.')
+            elif not values['asignacion']:
+                values['asignacion']=mora
 
             for column in self.REQUIRED_ROW_FIELDS:
                 if not values[column]:
@@ -583,6 +594,12 @@ class RelationService:
     # ------------------------------------------------------------------
     # Utilidades
     # ------------------------------------------------------------------
+    @staticmethod
+    def _mora_key(value: Any) -> str:
+        token=re.sub(r'[\s_-]','',str(value or '').upper())
+        token=re.sub(r'^MORA','',token)
+        return token+'PV' if token in {'1','2','3','4','5','6'} else token
+
     @staticmethod
     def _clean_cell(value: Any) -> str:
         if value is None:
