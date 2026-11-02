@@ -11,6 +11,12 @@ se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
 
+`REVISAR_BLOQUE_AUDIOS.bat` está disponible en la carpeta principal del ZIP y
+dentro de `proyecto/MRS_Speech_Analytics_v3.6.19_Revision`. Si ya tiene el paquete
+anterior, puede usar el lanzador de esa subcarpeta. El acceso de la carpeta
+principal abre la misma herramienta; el motor y las reglas r28 no cambian.
+Extraiga el ZIP completo antes de ejecutar cualquiera de los lanzadores.
+
 La devolución de r27 desde Windows se comprobó: 103 llamadas, 11 APROBADO,
 86 REVISAR, 6 FALLA_GRAVE, las 31 correcciones de nombre intactas y las 9.785
 celdas del reporte coincidentes. La mora faltaba porque el Excel tiene la columna
