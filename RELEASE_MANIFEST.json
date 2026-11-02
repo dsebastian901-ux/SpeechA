@@ -345,7 +345,7 @@
     "unit_tests": 1137,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "User-confirmed disclosure in call10 adds PEN003; generic pending balance without amount is allowed. Calls59and67 have no privacy alert and retain independent review gates. Current103:13 approved,83 review,7 severe; only call10 changes category and score. All source data,103 moras,31 names,five ASR readings and family fact preserved;9785 report cells verified. Native r30 registration remains pending."
+    "scope": "User-confirmed disclosure in call10 adds PEN003; generic pending balance without amount is allowed. Calls59and67 have no privacy alert and retain independent review gates. Current103:13 approved,83 review,7 severe; only call10 changes category and score. All source data,103 moras,31 names,five ASR readings and family fact preserved;9785 report cells verified. Returned native registration, reanalysis and Excel files verified: all 103 items match the cloud result ignoring runtime dates, source/intermediate hashes match, and 9785 report cells have no differences. Direct observation of the Windows dialog is not claimed."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -1059,7 +1059,7 @@
     "new_whisper_execution": false,
     "new_human_audio_listening_in_cloud": false,
     "audio_files_moved_or_copied": false,
-    "native_r30_registration_verified": false,
+    "native_r30_registration_verified": true,
     "root_launcher": "CONFIRMAR_DIVULGACION_A_TERCERO.bat",
     "all13_operational_issues_closed": false
   },
@@ -1086,6 +1086,39 @@
     "graphical_platform": "Linux Xorg dummy display, Tk 9.0, Python 3.10",
     "native_windows_fix_execution_verified": false,
     "whisper_executed": false,
-    "private_inputs_in_repository": false
+    "private_inputs_in_repository": false,
+    "returned_native_outputs_verified": true,
+    "native_verification_scope": "RETURNED_FILES_NOT_DIRECT_OBSERVATION_OF_WINDOWS_DIALOG"
+  },
+  "r30_returned_native_outputs": {
+    "evaluations": 103,
+    "engine_revision": "3.6.19-r30",
+    "completed": true,
+    "registration_reanalysis_and_export_verified": true,
+    "source_and_intermediate_hashes_verified": true,
+    "cloud_item_matches_ignoring_runtime_dates": 103,
+    "outcomes": {
+      "APROBADO": 13,
+      "REVISAR": 83,
+      "FALLA_GRAVE": 7
+    },
+    "changed_categories_from_r29": [
+      10
+    ],
+    "case10_PEN003_confirmation_valid": true,
+    "prior13_approvals_preserved": true,
+    "cases59and67_without_privacy_alert_but_independent_reviews": true,
+    "generic_only_privacy_review_removals": 10,
+    "other102_scores_and_all_previous_penalties_preserved": true,
+    "all_source_asr_accounts_cards103_moras31_names_five_readings_and_family_fact_preserved": true,
+    "report_rows": 103,
+    "report_columns": 95,
+    "report_cells_verified": 9785,
+    "report_cell_mismatches": 0,
+    "safety_failures": 0,
+    "new_whisper_execution": false,
+    "new_human_audio_listening_in_cloud": false,
+    "verification_scope": "RETURNED_FILES_NOT_DIRECT_OBSERVATION_OF_WINDOWS_DIALOG",
+    "continuation_base": "checkpoint_reanalizado.json"
   }
 }

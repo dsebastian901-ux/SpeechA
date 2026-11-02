@@ -78,8 +78,9 @@ La operación recalcula reglas sin Whisper, no mueve audios y no cambia original
   nombres, lecturas y hechos financieros: 13 y siete aprobaciones respectivamente.
 - 9.785 celdas del reporte del lote actual cotejadas con el checkpoint, sin diferencias.
 - r29 devuelta por el usuario ya se verificó. El registro r30 se probó en Linux
-  con Python 3.10 y Tk gráfico real; falta la devolución nativa
-  de este nuevo paso en Windows. No se declara escucha acústica en la nube.
+  con Python 3.10 y Tk gráfico real. Después se recibieron del usuario los dos
+  JSON y el Excel finales de r30: las 103 evaluaciones coinciden con la entrega
+  verificada, salvo fechas de ejecución. No se declara escucha acústica en la nube.
 
 ### Corrección de ventana de confirmación
 
@@ -99,7 +100,31 @@ el número hasta el checkpoint y Excel. El flujo gráfico también se ejecutó c
 el checkpoint real de 103: los resultados coinciden con r30 y se cotejaron las
 9.785 celdas del Excel sin diferencias. Las 268 evaluaciones históricas no cambian.
 Esta comprobación gráfica se hizo en Linux; no se declara una nueva ejecución
-nativa de Windows. El motor sigue siendo r30 y las reglas no cambian por este arreglo.
+gráfica observada directamente en Windows. El motor sigue siendo r30 y las reglas
+no cambian por este arreglo.
+
+### Verificación de las salidas devueltas por el usuario
+
+Se verificaron `checkpoint_con_divulgacion_confirmada.json`,
+`checkpoint_reanalizado.json` y `Reporte_Reanalisis_Reglas.xlsx` generados por el
+usuario. Coinciden el hash del checkpoint de origen, el del archivo intermedio y
+el registro de divulgación de la llamada 10. Las cinco lecturas, el parentesco
+confirmado de la 74, las 103 moras y 31 correcciones de nombre permanecen intactos.
+Las 103 evaluaciones coinciden con el resultado en nube y las 9.785 celdas del
+Excel recibido con el JSON: cero diferencias y cero violaciones de seguridad.
+
+La 10 tiene FALLA_GRAVE y PEN003 de 100 puntos; las otras 102 conservan sus
+puntajes y penalizaciones. Las 59 y 67 no tienen alerta de privacidad y mantienen
+revisión independiente de estatus y recado; la 67 también conserva un control de
+negociación pendiente. Se mantienen las 13 aprobaciones y el lote final contiene
+83 revisiones y siete fallas graves.
+
+La base para continuar es `checkpoint_reanalizado.json`. El archivo
+`checkpoint_con_divulgacion_confirmada.json` es intermedio y conserva todavía
+los dictámenes previos. No es necesario repetir el registro ni descargar otra
+versión para conservar el resultado comprobado. La verificación acredita las
+salidas de registro, reanálisis y exportación; no supone observación directa de
+la ventana de Windows ni certificación de todos los controles o audio nuevo.
 
 No se cierran los otros controles pendientes por esta corrección. Los datos
 reales y resultados privados permanecen fuera del repositorio público.

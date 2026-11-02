@@ -39,6 +39,12 @@ Solo la 10 cambia de categoría y puntaje por PEN003 confirmado. Las 13 aprobaci
 Continúe desde el nuevo `checkpoint_reanalizado.json`. No se ejecuta Whisper
 ni se necesitan otra instalación de modelo o nuevas lecturas del bloque.
 
+Las salidas r30 devueltas por el usuario ya se comprobaron: 103 evaluaciones y
+9.785 celdas del Excel coincidentes, sin pérdida de las confirmaciones ni datos
+anteriores. Si ya generó estas salidas, conserve `checkpoint_reanalizado.json`
+como base; `checkpoint_con_divulgacion_confirmada.json` es el archivo intermedio
+con los dictámenes previos. No hace falta repetir el paso.
+
 ### Historial: incorporación de lecturas y parentesco r29
 
 Para incorporar el bloque devuelto de cinco lecturas y el parentesco ya
