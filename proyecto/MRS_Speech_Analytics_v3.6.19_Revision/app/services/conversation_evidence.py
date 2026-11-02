@@ -704,16 +704,65 @@ SENSITIVE = re.compile(
 CARD = re.compile(r"\b(?:tarjeta|referencia|plastico|numero de cuenta)\s*(?:(?:numero|de pago|es|de)\s*)?(?:\d[ -]?){15}\d\b")
 
 
+def sensitive_financial_matches(text):
+    """«Saldo pendiente» sin importe está permitido por aclaración del usuario.
+
+    Se mantiene protección para importes, mora, deuda explícita y tarjeta completa.
+    La mención genérica no convierte teléfonos o terminaciones en montos.
+    """
+    # Importación local: este módulo también proporciona normalize al extractor.
+    from app.services.reported_payment_amounts import NUMBER
+    source = normalize(text)
+    matches = []
+    for match in SENSITIVE.finditer(source):
+        if match.group() == 'saldo pendiente':
+            tail = source[match.end():match.end()+200]
+            immediate = re.match(
+                rf'[\s,.:]*(?:(?:es|de|por|son|asciende a|la cantidad de|un total de|con un monto de)\s+){{0,4}}'
+                rf'(?P<currency>\$?)\s*(?P<amount>{NUMBER})(?!\w)', tail)
+            if (immediate and immediate['amount'] in {'un', 'uno', 'una'}
+                    and not immediate['currency']
+                    and not re.match(r'\s*pesos?\b', tail[immediate.end():])):
+                immediate = None  # «de una tarjeta» no comunica un importe de un peso.
+            explicit_money = re.match(
+                rf'[^.!?]{{0,120}}?\b(?:por|de|es|son|monto|cantidad)\s+'
+                rf'\$?\s*(?:{NUMBER})\s+pesos?\b', tail)
+            if not immediate and not explicit_money:
+                continue
+        matches.append(match)
+    return matches + list(CARD.finditer(source))
+
+
 def assess_privacy(text, segments=(), *, third_party_confirmed=False,
                    expected_third_party=False, titular=False, legacy_financial=False):
     evidence = []
+    allowed_mentions = []
     last_recipient = None
-    for unit in sentence_evidence(text, segments):
+    privacy_units = sentence_evidence(text, segments)
+    for unit_index, unit in enumerate(privacy_units):
         role = unit["speaker_role"]
         if role in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:
             last_recipient = role
         s = normalize(unit["text"])
-        matches = list(SENSITIVE.finditer(s)) + list(CARD.finditer(s))
+        matches = sensitive_financial_matches(s)
+        # Un punto o un corte ASR no debe ocultar «Saldo pendiente. Son $500».
+        # El rol decisivo es el de quien proporciona el importe, nunca el de
+        # un familiar que informa su propio pago en el turno siguiente.
+        if (not matches and re.search(r'\bsaldo pendiente\s*[.,:]?$', s)
+                and unit_index+1 < len(privacy_units)):
+            following = privacy_units[unit_index+1]
+            combined = s+' '+normalize(following['text'])
+            joined_matches = [m for m in sensitive_financial_matches(combined)
+                              if m.group() == 'saldo pendiente' and m.start() < len(s)]
+            if joined_matches and following['speaker_role'] not in {'TITULAR', 'TERCERO', 'INTERLOCUTOR'}:
+                role = following['speaker_role']
+                unit = dict(unit, text=unit['text']+' '+following['text'], speaker_role=role, end=following['end'])
+                s = combined
+                matches = joined_matches
+        sensitive_spans = {(m.start(), m.end()) for m in matches}
+        if any(m.group() == 'saldo pendiente' and (m.start(), m.end()) not in sensitive_spans
+               for m in SENSITIVE.finditer(s)):
+            allowed_mentions.append(dict(unit, policy='SALDO_PENDIENTE_SIN_IMPORTE_PERMITIDO'))
         for match in matches:
             prefix = s[max(0, match.start()-30):match.start()]
             hypothetical = bool("?" in s or "¿" in s or re.search(r"\b(?:si|no|nunca)\s*$", prefix)
@@ -734,6 +783,7 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
     review = any(e["review_required"] for e in evidence) and not confirmed
     return {"confirmed_disclosure": confirmed, "review_required": review,
             "third_party_confirmed": bool(third_party_confirmed), "evidence": evidence,
+            "allowed_generic_balance_mentions": allowed_mentions,
             "reason": ("Divulgación atribuida al gestor ante un tercero confirmado." if confirmed else
                        "Posible divulgación financiera; confirmar hablante y destinatario en audio." if review else
                        "Sin divulgación a terceros confirmada.")}

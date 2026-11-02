@@ -1,15 +1,39 @@
-# MRS Speech Analytics · revisión 29 — recepción de recados y parentesco confirmado
+# MRS Speech Analytics · revisión 30 — saldo pendiente genérico y divulgación confirmada
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_29_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_30_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
+
+La aclaración del usuario permite decir **«saldo pendiente» sin cantidad**.
+La regla distingue esa mención de revelar el importe a un tercero. Se aplica
+tanto al texto original como a las lecturas adicionales; no se confunden
+teléfonos o terminaciones con montos. Las demás protecciones se conservan.
+
+Para registrar la divulgación del importe ya confirmada en la llamada **10**,
+extraiga el ZIP completo y ejecute `CONFIRMAR_DIVULGACION_A_TERCERO.bat` desde
+la carpeta principal. Seleccione el **checkpoint final r29 de 103 llamadas**,
+indique **10**, seleccione el fragmento **ASR_ADICIONAL, 25,87–30,89 segundos**
+y marque los dos hechos ya confirmados: lo dice el gestor y lo recibe un tercero.
+Pulse «Registrar confirmación y generar reporte». No hay campos preseleccionados.
+No registre las llamadas 59 o 67 como divulgación: la 59 solo menciona saldo
+pendiente sin monto; en la 67 el tercero reporta su pago y el gestor recibe esa
+información. Se retiran sus alertas genéricas de privacidad y mantienen revisión
+por los otros controles pendientes.
+
+Genera otro checkpoint y Excel con **13 APROBADO, 83 REVISAR y 7 FALLA_GRAVE**.
+Solo la 10 cambia de categoría y puntaje por PEN003 confirmado. Las 13 aprobaciones,
+103 moras, 31 nombres corregidos, cinco lecturas y parentesco de la 74 se conservan.
+Continúe desde el nuevo `checkpoint_reanalizado.json`. No se ejecuta Whisper
+ni se necesitan otra instalación de modelo o nuevas lecturas del bloque.
+
+### Historial: incorporación de lecturas y parentesco r29
 
 Para incorporar el bloque devuelto de cinco lecturas y el parentesco ya
 confirmado, extraiga el ZIP completo y ejecute `INCORPORAR_Y_CONFIRMAR_PARENTESCO.bat`

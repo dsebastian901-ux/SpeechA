@@ -7,7 +7,7 @@ from pathlib import Path
 import re
 
 from app.services.asr_evidence_quality import block_reading_quality,usable_groups
-from app.services.conversation_evidence import normalize,SENSITIVE
+from app.services.conversation_evidence import normalize,sensitive_financial_matches
 from app.services.transcription_services import TranscriptionService
 
 
@@ -58,9 +58,10 @@ def validate_evidence(record,result,relation,contact_type,positive_evaluator=Non
     for mode,segments in [('LECTURA_COMPLETA',primary),('CIERRE',tail)]:
         for text in usable_groups(segments):
             s=normalize(text)
-            if contact_type!='TITULAR' and SENSITIVE.search(s):
+            sensitive = sensitive_financial_matches(s)
+            if contact_type!='TITULAR' and sensitive:
                 risks.append({'type':'PRIVACIDAD_SIN_HABLANTE_CONFIRMADO','source':mode,
-                              'evidence':SENSITIVE.search(s).group()})
+                              'evidence':sensitive[0].group()})
             offensive=re.search(r'\b(?:que poca madre|pendej[oa]|cabron[a]?|mierda|pinche|puta|puto)\b|(?<!\w)uta[.!?¡¿\s]*$',s)
             if offensive:risks.append({'type':'EXPRESION_OFENSIVA_SIN_HABLANTE_CONFIRMADO','source':mode,'evidence':offensive.group()})
             if positive_evaluator is not None:

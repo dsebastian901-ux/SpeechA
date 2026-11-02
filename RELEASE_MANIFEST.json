@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r29-diagnostic",
+  "revision": "3.6.19-r30-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -21,14 +21,14 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 1064,
+    "passed": 1133,
     "failed": 0,
     "skipped": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Recognize complete callback dictation reception, keep user-confirmed kinship in a context-bound record separate from ASR, and preserve independent privacy and financial approval gates.",
+  "additional_fix": "Honor the user policy allowing generic pending balance without an amount; record confirmed gestor-to-third-party financial disclosure separately from ASR with context binding and preserve all prior fixes.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -291,7 +291,7 @@
       "No unaccepted new payment instruction approved as followup"
     ]
   },
-  "engine_revision": "3.6.19-r29",
+  "engine_revision": "3.6.19-r30",
   "r22_review_backlog": {
     "calls": 95,
     "previous_review_calls": 85,
@@ -341,11 +341,11 @@
     "all_13_issues_closed": false
   },
   "current_validation": {
-    "engine_revision": "3.6.19-r29",
-    "unit_tests": 1064,
+    "engine_revision": "3.6.19-r30",
+    "unit_tests": 1133,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Returned native r29 import, family registration, reanalysis and Excel export verified against the cloud result for all 103 calls, ignoring runtime dates only. Five ASR readings and one user-confirmed family relationship yield 13 approved, 84 review, 6 severe. All 103 scores, penalties, source data, 103 moras and 31 names preserved; 9785 returned report cells verified. Speaker/acoustic validation remains pending."
+    "scope": "User-confirmed disclosure in call10 adds PEN003; generic pending balance without amount is allowed. Calls59and67 have no privacy alert and retain independent review gates. Current103:13 approved,83 review,7 severe; only call10 changes category and score. All source data,103 moras,31 names,five ASR readings and family fact preserved;9785 report cells verified. Native r30 registration remains pending."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -999,5 +999,68 @@
     "root_launcher": "INCORPORAR_Y_CONFIRMAR_PARENTESCO.bat",
     "default_user_fact_selection": null,
     "ordinary_import_launcher_available_at_root": true
+  },
+  "r30_generic_balance_and_confirmed_disclosure": {
+    "engine_revision": "3.6.19-r30",
+    "policy_source": "EXPLICIT_USER_CLARIFICATION",
+    "generic_pending_balance_without_amount_allowed": true,
+    "quantified_balance_remains_protected": true,
+    "recipient_payment_report_not_gestor_disclosure": true,
+    "manual_confirmation_scope": "GESTOR_FINANCIAL_DISCLOSURE_TO_THIRD_PARTY_ONLY",
+    "manual_fact_context_and_source_reading_bound": true,
+    "both_actor_and_recipient_confirmations_required": true,
+    "default_fact_selection": null,
+    "call_ordinals_not_used_for_persisted_identity": true,
+    "stale_or_tampered_fact_reviewed_without_false_PEN003": true,
+    "current_batch": {
+      "evaluations": 103,
+      "outcomes": {
+        "APROBADO": 13,
+        "REVISAR": 83,
+        "FALLA_GRAVE": 7
+      },
+      "changed_categories": [
+        10
+      ],
+      "new_confirmed_disclosure_cases": [
+        10
+      ],
+      "generic_only_privacy_reviews_removed": 10,
+      "original13_approvals_preserved": true,
+      "other102_scores_and_all_previous_penalties_preserved": true,
+      "case10_score_before": 100,
+      "case10_score_after": 0,
+      "cause": "USER_CONFIRMED_PEN003_100",
+      "all_source_asr_accounts_cards103_moras31_names_five_readings_and_family_fact_preserved": true,
+      "report_columns": 95,
+      "report_cells_verified": 9785,
+      "report_cell_mismatches": 0
+    },
+    "prior95": {
+      "outcomes": {
+        "APROBADO": 13,
+        "REVISAR": 80,
+        "FALLA_GRAVE": 2
+      },
+      "facts_scores_penalties_and_categories_preserved": true
+    },
+    "prior36": {
+      "outcomes": {
+        "APROBADO": 7,
+        "REVISAR": 29
+      },
+      "facts_scores_penalties_and_categories_preserved": true
+    },
+    "unit_tests": 1133,
+    "new_tests": 69,
+    "historical_evaluations": 268,
+    "historical_category_changes": 0,
+    "safety_failures": 0,
+    "new_whisper_execution": false,
+    "new_human_audio_listening_in_cloud": false,
+    "audio_files_moved_or_copied": false,
+    "native_r30_registration_verified": false,
+    "root_launcher": "CONFIRMAR_DIVULGACION_A_TERCERO.bat",
+    "all13_operational_issues_closed": false
   }
 }

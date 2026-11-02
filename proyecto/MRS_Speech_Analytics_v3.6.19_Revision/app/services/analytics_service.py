@@ -21,6 +21,7 @@ from app.services.conversation_evidence import assess_recado, assess_privacy, ev
 from app.services.audio_block_evidence import validate_evidence
 from app.services.arco_validation import assess_arco, qualitative_line_tenure
 from app.services.family_contact_review import validate_family_confirmation
+from app.services.privacy_disclosure_review import validate_disclosure_confirmation
 from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing
 from app.services.installment_validation import installment_plan, installment_dates
 from app.services.asr_amount_recovery import validated_entries
@@ -47,7 +48,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r29"
+    ENGINE_REVISION = "3.6.19-r30"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -65,6 +66,9 @@ class AnalyticsService:
         family_review=metadata.get('family_contact_validation') or {}
         if family_review.get('review_required'):
             reasons.append(family_review.get('reason') or 'Confirmación de parentesco pendiente de revisión.')
+        disclosure_review=metadata.get('privacy_disclosure_validation') or {}
+        if disclosure_review.get('review_required'):
+            reasons.append(disclosure_review.get('reason') or 'Confirmación de divulgación pendiente de revisión.')
         additional=metadata.get('audio_block_evidence_validation') or {}
         if additional.get('review_required'):
             if additional.get('valid') and additional.get('risks') and all(
@@ -441,6 +445,10 @@ class AnalyticsService:
         family_review=validate_family_confirmation(contact_source,operational_context or {},
             (getattr(transcription,'metadata',{}) or {}).get('family_contact_confirmation'))
         enriched_context['_family_contact_validation']=family_review
+        disclosure_review=validate_disclosure_confirmation(contact_source,operational_context or {},
+            (transcription.metadata or {}).get('privacy_disclosure_confirmation'),
+            (transcription.metadata or {}).get('audio_block_evidence'))
+        enriched_context['_privacy_disclosure_validation']=disclosure_review
 
         compliance = cls.calculate_basic_compliance(
             text,
@@ -517,6 +525,7 @@ class AnalyticsService:
         analysis.metadata['associate_contact_validation'] = compliance.get('associate_contact_validation', {})
         analysis.metadata['intermediary_contact_validation'] = compliance.get('intermediary_contact_validation', {})
         analysis.metadata['family_contact_validation']=family_review
+        analysis.metadata['privacy_disclosure_validation']=disclosure_review
         analysis.metadata["quality_blocks"] = compliance.get("blocks", {})
         analysis.metadata["quality_checks"] = compliance.get("checks", {})
         analysis.metadata["operational_context"] = compliance.get(
@@ -1536,10 +1545,10 @@ class AnalyticsService:
                          r"presenta (?:un |una )?(?:adeudo|deuda)|"
                          r"cubrir (?:el |su )?atraso|"
                          r"cuenta (?:que ha sido )?asignada (?:a |al )?(?:juridico|cobranza))\b", normalized)
-            or re.search(r"\b(?:saldo pendiente|saldo vencido|deuda pendiente|adeudo pendiente|"
+            or re.search(r"\b(?:saldo vencido|deuda pendiente|adeudo pendiente|"
                          r"negativa de pago|recuperacion (?:del|de su|en el) saldo|"
                          r"respecto a su atraso|en relacion a su atraso|"
-                         r"presenta (?:un )?(?:atraso|adeudo|saldo pendiente))\b", normalized)
+                         r"presenta (?:un )?(?:atraso|adeudo))\b", normalized)
         )
 
         financial_information = any([
@@ -2698,12 +2707,21 @@ class AnalyticsService:
             titular=titular,
             legacy_financial=bool(financial_information or payment_reference_validation["detected"]),
         )
+        confirmed_review = context.get('_privacy_disclosure_validation') or {}
+        if confirmed_review.get('valid') and confirmed_review.get('confirmed_disclosure'):
+            confirmed_evidence = confirmed_review['record']['evidence']
+            privacy_validation.update(confirmed_disclosure=True, review_required=False,
+                third_party_confirmed=True, reason=confirmed_review['reason'])
+            privacy_validation['evidence'].append(dict(confirmed_evidence, speaker_role='GESTOR',
+                recipient_role='TERCERO', confirmed=True, review_required=False,
+                attribution_source='EXPLICIT_USER_DISCLOSURE_CONFIRMATION'))
         uncertain_disclosure = privacy_validation["review_required"]
         if privacy_validation["confirmed_disclosure"]:
             add_penalty(
                 "PEN003",
                 "Protección de Datos",
-                "Se divulgó a un tercero información de deuda, mora, negativa de pago, saldo o tarjeta; requiere bloqueo de aprobación.",
+                ("Se divulgó a un tercero información de deuda, mora, negativa de pago, saldo o tarjeta; requiere bloqueo de aprobación."
+                 + (" Confirmado por usuario: " + confirmed_review['record']['evidence']['text'] if confirmed_review.get('valid') else "")),
                 100,
                 True,
                 ["LEG003", "LEG004", "RN019", "FP004", "FP005", "FP006"],

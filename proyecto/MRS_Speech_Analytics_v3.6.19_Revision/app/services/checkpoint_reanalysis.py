@@ -53,6 +53,7 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
             transcription.metadata["financial_audio_review"] = deepcopy(financial_review)
             transcription.metadata['audio_block_evidence']=deepcopy(item.get('audio_block_evidence'))
             transcription.metadata['family_contact_confirmation']=deepcopy(item.get('family_contact_confirmation'))
+            transcription.metadata['privacy_disclosure_confirmation']=deepcopy(item.get('privacy_disclosure_confirmation'))
             relation = item.get("relation") or {}
             analysis = AnalyticsService.analyze_transcription(transcription, relation)
             old = item.get("classification") or {}
