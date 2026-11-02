@@ -21,7 +21,7 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 1133,
+    "passed": 1137,
     "failed": 0,
     "skipped": 0
   },
@@ -342,7 +342,7 @@
   },
   "current_validation": {
     "engine_revision": "3.6.19-r30",
-    "unit_tests": 1133,
+    "unit_tests": 1137,
     "historical_evaluations": 268,
     "passed": true,
     "scope": "User-confirmed disclosure in call10 adds PEN003; generic pending balance without amount is allowed. Calls59and67 have no privacy alert and retain independent review gates. Current103:13 approved,83 review,7 severe; only call10 changes category and score. All source data,103 moras,31 names,five ASR readings and family fact preserved;9785 report cells verified. Native r30 registration remains pending."
@@ -1051,8 +1051,8 @@
       },
       "facts_scores_penalties_and_categories_preserved": true
     },
-    "unit_tests": 1133,
-    "new_tests": 69,
+    "unit_tests": 1137,
+    "new_tests": 73,
     "historical_evaluations": 268,
     "historical_category_changes": 0,
     "safety_failures": 0,
@@ -1062,5 +1062,30 @@
     "native_r30_registration_verified": false,
     "root_launcher": "CONFIRMAR_DIVULGACION_A_TERCERO.bat",
     "all13_operational_issues_closed": false
+  },
+  "r30_confirmation_window_fix": {
+    "reported_failure": "Confirmation did not appear after call number entry",
+    "reproduced_with_real_tk": true,
+    "root_hidden": true,
+    "dialog_hidden_while_holding_input_grab_before_fix": true,
+    "transient_parent_only_when_visible": true,
+    "dialog_visible_before_input_grab": true,
+    "confirmation_fields_still_unselected": true,
+    "console_progress_added": true,
+    "real_graphical_tests": 4,
+    "full_suite_passed": 1137,
+    "real_103_call_graphical_flow_completed": true,
+    "all103_results_match_previous_r30_ignoring_runtime_dates": true,
+    "report_cells_verified": 9785,
+    "report_cell_mismatches": 0,
+    "historical_evaluations": 268,
+    "historical_category_changes": 0,
+    "safety_failures": 0,
+    "engine_revision": "3.6.19-r30",
+    "business_rules_changed": false,
+    "graphical_platform": "Linux Xorg dummy display, Tk 9.0, Python 3.10",
+    "native_windows_fix_execution_verified": false,
+    "whisper_executed": false,
+    "private_inputs_in_repository": false
   }
 }

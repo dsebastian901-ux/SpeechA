@@ -70,7 +70,7 @@ La operación recalcula reglas sin Whisper, no mueve audios y no cambia original
 
 ## Verificación y límites
 
-- 1.133 pruebas aprobadas; 69 nuevas de privacidad, contexto, conservación,
+- 1.137 pruebas aprobadas; 73 nuevas de privacidad, contexto, conservación,
   selección, cancelación, mención genérica, importes y voces.
 - 268 evaluaciones históricas comparadas con r29: cero cambios de categoría,
   cero violaciones de seguridad y cero retiros de otras penalizaciones.
@@ -78,8 +78,28 @@ La operación recalcula reglas sin Whisper, no mueve audios y no cambia original
   nombres, lecturas y hechos financieros: 13 y siete aprobaciones respectivamente.
 - 9.785 celdas del reporte del lote actual cotejadas con el checkpoint, sin diferencias.
 - r29 devuelta por el usuario ya se verificó. El registro r30 se probó en Linux
-  con Python 3.10 y selección simulada de archivos; falta la devolución nativa
+  con Python 3.10 y Tk gráfico real; falta la devolución nativa
   de este nuevo paso en Windows. No se declara escucha acústica en la nube.
+
+### Corrección de ventana de confirmación
+
+El usuario informó que la herramienta quedaba esperando después del número
+de llamada. Se reprodujo en Tk real: el diálogo quedaba retirado e invisible,
+pero retenía teclado y ratón. La causa era declararlo transitorio de la raíz
+oculta que se usa para seleccionar archivos y número de llamada.
+
+La confirmación solo se hace transitoria cuando la raíz es visible. Se espera
+a que aparezca antes de capturar entrada y se le da foco. No se preseleccionan
+fragmentos ni hechos. Se añaden mensajes de progreso al buscar los fragmentos,
+abrir la confirmación y generar el checkpoint y el reporte.
+
+Cuatro pruebas con ventanas Tk reales verifican raíz oculta y visible, bloqueo
+de guardado hasta confirmar ambos hechos, cancelación y el flujo completo desde
+el número hasta el checkpoint y Excel. El flujo gráfico también se ejecutó con
+el checkpoint real de 103: los resultados coinciden con r30 y se cotejaron las
+9.785 celdas del Excel sin diferencias. Las 268 evaluaciones históricas no cambian.
+Esta comprobación gráfica se hizo en Linux; no se declara una nueva ejecución
+nativa de Windows. El motor sigue siendo r30 y las reglas no cambian por este arreglo.
 
 No se cierran los otros controles pendientes por esta corrección. Los datos
 reales y resultados privados permanecen fuera del repositorio público.

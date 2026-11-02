@@ -11,6 +11,12 @@ se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
 
+Si la herramienta anterior se quedaba después de pedir el número de llamada,
+use el ZIP r30 corregido. Se reprodujo y corrigió una ventana de confirmación
+invisible asociada a una raíz oculta. Ahora aparece la selección de fragmento y
+las dos casillas; la consola también informa cuándo está generando las salidas.
+Las reglas y resultados de r30 se conservan.
+
 La aclaración del usuario permite decir **«saldo pendiente» sin cantidad**.
 La regla distingue esa mención de revelar el importe a un tercero. Se aplica
 tanto al texto original como a las lecturas adicionales; no se confunden
