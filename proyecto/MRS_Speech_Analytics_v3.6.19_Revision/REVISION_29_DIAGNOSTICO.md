@@ -91,8 +91,15 @@ ordinaria, sin un parentesco nuevo, sigue disponible en
   revisiones de nombre, las diez lecturas del primero y los hechos financieros.
 - Las 9.785 celdas del reporte nuevo se comparan con el JSON sin diferencias;
   se conservan las 95 columnas del reporte y todos los datos de origen.
-- El lector r28 ya se ejecutó en Windows. La incorporación y registro de r29
-  se probaron en Linux con Python 3.10; falta devolución nativa de ese paso.
+- El lector r28 ya se ejecutó en Windows. Se recibieron después las dos salidas
+  JSON y el Excel de la incorporación r29 del usuario: las 103 evaluaciones
+  coinciden con el resultado en nube, salvo fechas de ejecución. Se verifican
+  los hashes de origen y lectura, las cinco lecturas completas, el parentesco
+  confirmado y las 9.785 celdas del Excel recibido, sin diferencias.
+- `checkpoint_con_lecturas.json` es el archivo intermedio: conserva las
+  clasificaciones r28 mientras añade lecturas y parentesco. La base para
+  continuar es `checkpoint_reanalizado.json`, evaluado con r29, con 13 aprobadas,
+  84 por revisar y seis fallas graves. No hace falta repetir esta incorporación.
 
 No se declara verificación acústica de voces ni cierre de los 13 problemas
 operativos. Los archivos reales y las confirmaciones privadas permanecen fuera

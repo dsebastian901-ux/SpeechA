@@ -345,7 +345,7 @@
     "unit_tests": 1064,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Five Windows ASR readings match the returned r28 source. Callback reception fix and one explicit user-confirmed family relationship yield 13 approved, 84 review, 6 severe. All103 scores, penalties, source data, 103 moras and31 names preserved; 9785 report cells verified. Native r29 import and speaker/acoustic validation remain pending."
+    "scope": "Returned native r29 import, family registration, reanalysis and Excel export verified against the cloud result for all 103 calls, ignoring runtime dates only. Five ASR readings and one user-confirmed family relationship yield 13 approved, 84 review, 6 severe. All 103 scores, penalties, source data, 103 moras and 31 names preserved; 9785 returned report cells verified. Speaker/acoustic validation remains pending."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -975,7 +975,25 @@
       "name_records_preserved": 13,
       "financial_confirmations_preserved": true
     },
-    "native_r29_import_and_family_registration_verified": false,
+    "native_r29_import_and_family_registration_verified": true,
+    "returned_native_r29_outputs": {
+      "evaluations": 103,
+      "engine_revision": "3.6.19-r29",
+      "cloud_item_matches_ignoring_runtime_dates": 103,
+      "source_and_reading_hashes_verified": true,
+      "intermediate_checkpoint_preserved": true,
+      "reanalysis_source_hash_matches_intermediate": true,
+      "family_fact_valid_and_preserved": true,
+      "report_rows": 103,
+      "report_columns": 95,
+      "report_cells_verified": 9785,
+      "report_cell_mismatches": 0,
+      "safety_invariant_failures": 0,
+      "new_whisper_execution": false,
+      "new_human_audio_listening": false,
+      "verification_scope": "RETURNED_IMPORT_FAMILY_REGISTRATION_REANALYSIS_AND_EXCEL_ONLY",
+      "continuation_base": "checkpoint_reanalizado.json"
+    },
     "all13_operational_issues_closed": false,
     "audio_files_moved_or_copied": false,
     "root_launcher": "INCORPORAR_Y_CONFIRMAR_PARENTESCO.bat",
