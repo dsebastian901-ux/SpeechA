@@ -82,9 +82,14 @@ este lote ya trae sus nombres corregidos en r27. No se modifica el archivo Excel
   las confirmaciones financieras anteriores.
 - Los 1.053 registros del Excel se leen sin errores de fila. Eso no significa
   que se hayan transcrito o evaluado 1.053 llamadas.
-- R28 aún no tiene devolución de ejecución nativa Windows. No se ejecutó
-  Whisper ni se escucharon audios en esta revisión. No se declara cierre de
-  las 86 revisiones pendientes ni de los 13 problemas operativos.
+- Se verificó el checkpoint r28 devuelto desde Windows: 103 moras incorporadas,
+  31 revisiones de nombre intactas y todos los resultados y metadatos de
+  evaluación coincidentes con la entrega comprobada. También coinciden los
+  hashes del checkpoint r27 de origen y del Excel usado para recuperar mora.
+  Los tiempos de importación son los de cada ejecución y varían como corresponde.
+- La última devolución solo incluye JSON, sin cotejo directo de su Excel r28.
+  No se ejecutó Whisper ni se escucharon audios en esta revisión. No se declara
+  cierre de las 86 revisiones pendientes ni de los 13 problemas operativos.
 
 Los archivos reales, hashes de cuentas, reportes y auditorías permanecen fuera
 de Git. La entrega de código permite generar los datos actualizados en el PC.

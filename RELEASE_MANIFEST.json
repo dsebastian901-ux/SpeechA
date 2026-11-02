@@ -345,7 +345,7 @@
     "unit_tests": 1016,
     "historical_evaluations": 268,
     "passed": true,
-    "scope": "Returned native r27 reanalysis and Excel export verified for 103 calls and 9785 cells. Mora loader fixed for 1053 Excel accounts and 103 missing checkpoint moras filled safely. Classifications remain 11 approved, 86 review, 6 severe. Native r28 execution and acoustic validation remain pending."
+    "scope": "Returned native r28 checkpoint verified: 103 moras, 31 preserved name corrections and all103 original results, accounts, cards, scores, penalties, classifications and analytics match the verified r28 output. Origin checkpoint and Excel hashes verified. No returned native r28 Excel received; full new-audio and acoustic certification remain pending."
   },
   "r23_ten_audio_block": {
     "uploaded_audio_files": 10,
@@ -874,9 +874,35 @@
       "name_records_preserved": 13,
       "all_financial_facts_preserved": true
     },
-    "native_r28_windows_execution_verified": false,
+    "native_r28_windows_execution_verified": true,
     "all13_operational_issues_closed": false,
     "launcher": "ACTUALIZAR_MORAS_Y_REANALIZAR.bat",
-    "inputs": "Final r27 checkpoint and accounts Excel; no extra ASR receipt required."
+    "inputs": "Final r27 checkpoint and accounts Excel; no extra ASR receipt required.",
+    "native_verification_scope": "RETURNED_CHECKPOINT_MORA_IMPORT_AND_REANALYSIS_ONLY",
+    "returned_native_r28_excel_received": false
+  },
+  "r28_returned_native_checkpoint": {
+    "scope": "CHECKPOINT_MORA_IMPORT_AND_REANALYSIS_ONLY",
+    "calls": 103,
+    "outcomes": {
+      "APROBADO": 11,
+      "REVISAR": 86,
+      "FALLA_GRAVE": 6
+    },
+    "technical_errors": 0,
+    "filled_mora_records": 103,
+    "preserved_name_records": 31,
+    "all_original_asr_cards_accounts_and_human_records_preserved": true,
+    "all_categories_scores_and_penalties_unchanged": true,
+    "all_results_and_analytics_match_verified_delivery": true,
+    "origin_r27_and_excel_source_hashes_verified": true,
+    "import_timestamp_variation_expected": true,
+    "returned_excel_received": false,
+    "new_whisper_execution": false,
+    "audio_files_moved_or_copied": false,
+    "new_human_audio_facts": 0,
+    "full_new_audio_pipeline_certified": false,
+    "all13_operational_issues_closed": false,
+    "runtime_changed_for_this_validation": false
   }
 }

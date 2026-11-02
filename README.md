@@ -27,8 +27,11 @@ No se ejecuta Whisper ni se mueve audio. Conserve el nuevo checkpoint como base.
 El resultado sigue siendo 11 APROBADO, 86 REVISAR y 6 FALLA_GRAVE: completar mora
 no elimina otros motivos de revisión. Los 1.053 registros del Excel se cargan
 con su mora para los próximos análisis. Los textos de las hojas de instrucciones
-no se usan como reglas del programa. R28 se probó en Linux; su ejecución nativa
-en Windows aún requiere devolución, aunque el reanálisis anterior r27 sí se verificó.
+no se usan como reglas del programa. El checkpoint r28 devuelto desde Windows
+ya se comprobó: las 103 moras y 31 correcciones de nombre coinciden con la
+entrega verificada, sin cambios de puntaje, penalizaciones o clasificación.
+Esta comprobación corresponde al checkpoint; no incluye cotejo de un Excel r28
+devuelto ni certifica el procesamiento completo de audio nuevo o la escucha humana.
 
 ## Historial de la comparación y recuperación r27
 
