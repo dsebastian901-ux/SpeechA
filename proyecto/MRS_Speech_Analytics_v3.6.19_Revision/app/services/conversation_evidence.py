@@ -661,6 +661,44 @@ def assess_recado(text, segments=()):
             "refusal": refusals, "unknown_recipient": unknown}
 
 
+def directed_callback_message(text, segments=()):
+    """Contenido del mensaje de retorno; no acredita recepción ni dígitos."""
+    found = []
+    source, cursor = normalize(text), 0
+    for unit in sentence_evidence(text, segments):
+        s = normalize(unit['text'])
+        position = source.find(s, cursor)
+        if position < 0:
+            continue
+        cursor = position + len(s)
+        if unit['speaker_role'] in {'TITULAR', 'TERCERO', 'INTERLOCUTOR'}:
+            continue
+        if any(c in s for c in '?¿"«»“”'):
+            continue
+        match = re.search(r'\ba (?:ese|este) numero[, ]+que se comunique con nosotros\b', s)
+        if not match:
+            continue
+        # No convertir una negación, cita o ejemplo condicional en un mensaje
+        # realmente proporcionado. La aceptación se valida por separado.
+        prefix = s[:match.start()]
+        if re.search(r'\b(?:no|dice|dicen|dijo|dijeron|diga|digale|repita|supongamos|si|cuando)\b', prefix):
+            continue
+        if re.search(r'\b(?:pero no|es un ejemplo|hipoteticamente)\b', s[match.end():]):
+            continue
+        # Debe existir dictado cercano, no solo «a ese número». Contar los
+        # fragmentos no reconstruye un teléfono ni certifica sus dígitos: ASR
+        # puede repetir grupos. Tampoco se toma el dictado conocido del tercero.
+        begin = max(0, position-220)
+        nearby = source[begin:position+match.start()]
+        digits = sum(len(number.group()) for number in re.finditer(r'\b\d{1,10}\b', nearby)
+                     if _role_at(text, segments, begin+number.start()) not in
+                     {'TITULAR', 'TERCERO', 'INTERLOCUTOR'})
+        if digits < 10:
+            continue
+        found.append(dict(unit, method='INSTRUCCION_DE_RETORNO_AL_CONTACTO_DADO'))
+    return found
+
+
 def recipient_statement(text, segments, pattern):
     """No usar preguntas, negaciones ni palabras del gestor como identidad."""
     for unit in sentence_evidence(text, segments):

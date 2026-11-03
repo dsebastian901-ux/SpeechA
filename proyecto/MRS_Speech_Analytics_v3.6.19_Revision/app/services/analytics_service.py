@@ -25,6 +25,7 @@ from app.services.recado_acceptance_review import validate_recado_confirmation
 from app.services.privacy_disclosure_review import validate_disclosure_confirmation
 from app.services.home_warning_review import validate_warning_confirmation
 from app.services.conversation_evidence import assess_home_recovery_warning,reported_card_clarification
+from app.services.conversation_evidence import directed_callback_message
 from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing
 from app.services.installment_validation import installment_plan, installment_dates
 from app.services.asr_amount_recovery import validated_entries
@@ -51,7 +52,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r33"
+    ENGINE_REVISION = "3.6.19-r34"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -1431,6 +1432,11 @@ class AnalyticsService:
             e.get('method') in {'REPETICION_NUMERO_CONTACTO_SOLICITADA','ACEPTA_INFORMACION_Y_RECIBE_CONTACTO',
                                'SOLICITA_DICTADO_TRAS_ESPERA_CON_CONTACTO_COMPLETO'}
             for e in recado_assessment['acceptance'])
+        if confirmed_recado.get('valid'):
+            callback_message = directed_callback_message(text, segments)
+            if callback_message:
+                recado_assessment['message'] = callback_message
+                recado_transmitted = True
         # Un rechazo explícito bloquea la aprobación aunque el gestor haya dictado un número.
         # "Le puedo dejar" es una solicitud del gestor, NO prueba aceptación del interlocutor.
         # Si el texto carece de confirmación, se conserva REVISAR (no se fabrica una aprobación).

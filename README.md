@@ -1,15 +1,40 @@
-# MRS Speech Analytics · revisión 33 — aceptación de recado confirmada
+# MRS Speech Analytics · revisión 34 — contenido del recado de retorno
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_33_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_34_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
+
+R34 reconoce el contenido «a ese número que se comunique con nosotros» cuando
+ya existe una aceptación del recado confirmada por el usuario y dictado numérico
+cercano atribuible al gestor o de voz no determinada. No convierte la instrucción
+sola en recepción, no reconstruye un teléfono a partir de grupos repetidos y
+excluye preguntas, negaciones, citas y ejemplos condicionales. Las demás reglas
+siguen aplicando.
+
+La llamada 57 tenía parentesco y contexto de retorno, pero faltaba reconocer ese
+contenido sin exigir la palabra «recado». Con la aceptación confirmada por el
+usuario pasa a APROBADO con 100 puntos. Partiendo de la copia que ya incluye
+las confirmaciones de 4 y 96, el resultado calculado es **20 APROBADO,
+74 REVISAR y 9 FALLA_GRAVE**. Solo la 57 cambia de categoría; ningún puntaje
+o penalización se retira. Las llamadas 29 y 39, donde el usuario confirmó que
+no se dejó recado, mantienen revisión de dictamen.
+
+Use `CONFIRMAR_ACEPTACION_RECADO.bat` para registrar localmente una recepción
+que ya comprobó, seleccionando el último checkpoint completo y la llamada.
+Si ya tiene la confirmación guardada en el checkpoint, basta con
+`REANALIZAR_CHECKPOINT.bat` de esta revisión. Continúe siempre desde la salida
+final nueva, sin repetir las confirmaciones anteriores ni ejecutar Whisper.
+El resultado en su equipo depende de cuáles confirmaciones contenga su base;
+las nuevas salidas r33/r34 aún no han sido devueltas para validación nativa.
+
+### Historial: aceptación confirmada r33
 
 La devolución final r32 ya se comprobó: 103 llamadas y 9.785 celdas del Excel
 coinciden, con 17 APROBADO, 77 REVISAR y 9 FALLA_GRAVE. Ese checkpoint final
