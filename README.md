@@ -1,15 +1,47 @@
-# MRS Speech Analytics · revisión 34 — contenido del recado de retorno
+# MRS Speech Analytics · revisión 35 — recado y contacto confirmados
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_34_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_35_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
+
+R35 conserva dos hechos distintos: la aceptación de recado ya soportada en
+r33/r34, y la entrega efectiva de un recado y un contacto para el titular
+confirmada por el usuario. Esta última no exige inventar los dígitos que ASR no
+recoge ni atribuye al gestor todo lo que dice el familiar. El parentesco, los
+rechazos y los demás controles siguen aplicando.
+
+En la llamada 67 el usuario confirmó que se deja un número para que la titular
+negocie el restante. Se conserva su aclaración anterior: el familiar reporta
+el pago y el gestor no divulga un saldo. Con los hechos previos de 4, 57 y 96,
+el resultado calculado es **21 APROBADO, 73 REVISAR y 9 FALLA_GRAVE**. Solo la
+67 cambia desde la copia r34: conserva 100 puntos. Los 103 puntajes y todas las
+penalizaciones permanecen; 29 y 39 siguen en revisión por no haberse dejado recado.
+
+Para guardar localmente los hechos ya comprobados, extraiga el ZIP completo:
+
+1. Use el último checkpoint completo de 103 llamadas, conservando las
+   confirmaciones existentes. Si faltan las aceptaciones de **4, 57 y 96**,
+   regístrelas con `CONFIRMAR_ACEPTACION_RECADO.bat`, una llamada por ejecución.
+2. Ejecute **`CONFIRMAR_RECADO_Y_CONTACTO.bat`** para la **67**. Confirme por
+   separado que se entrega el recado y el contacto, y describa el mensaje
+   comprobado: número para que la titular negocie el restante.
+3. En cada paso seleccione el checkpoint **final nuevo** del anterior, dentro
+   de `MRS_Resultados/Confirmacion_Recado_MRS_…/resultados`. No use el archivo
+   intermedio `checkpoint_con_recado_confirmado.json` para continuar.
+
+Cada operación genera checkpoint y Excel nuevos, sin Whisper ni copia/movimiento
+de audios. Si los hechos ya están guardados, `REANALIZAR_CHECKPOINT.bat` de r35
+los conserva. Las cifras locales dependen de las confirmaciones presentes en
+la base; la ejecución nativa de r35 en Windows sigue pendiente.
+
+### Historial: contenido del recado de retorno r34
 
 R34 reconoce el contenido «a ese número que se comunique con nosotros» cuando
 ya existe una aceptación del recado confirmada por el usuario y dictado numérico

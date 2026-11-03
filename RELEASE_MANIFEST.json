@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r34-diagnostic",
+  "revision": "3.6.19-r35-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -21,14 +21,14 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 1313,
+    "passed": 1363,
     "failed": 0,
     "skipped": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Recognize a directed callback instruction as delivered message content only with a valid scoped user acceptance and nearby numeric dictation; preserve all other quality gates and raw ASR.",
+  "additional_fix": "Record two explicit scoped user facts that a message and callback contact were delivered to the recipient for the holder, preserving raw ASR, old acceptance facts and all other quality gates.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -1425,6 +1425,72 @@
     "root_launcher": "CONFIRMAR_ACEPTACION_RECADO.bat",
     "reanalysis_of_existing_fact": "REANALIZAR_CHECKPOINT.bat",
     "all13_operational_issues_closed": false,
+    "real103_reanalysis_preserves_facts_and_results": true,
+    "prior95": {
+      "outcomes": {
+        "APROBADO": 13,
+        "REVISAR": 80,
+        "FALLA_GRAVE": 2
+      },
+      "all_source_facts_scores_penalties_and_categories_preserved": true
+    },
+    "prior36": {
+      "outcomes": {
+        "APROBADO": 7,
+        "REVISAR": 29
+      },
+      "all_source_facts_scores_penalties_and_categories_preserved": true
+    }
+  },
+  "r35_confirmed_recado_and_contact_delivery": {
+    "engine_revision": "3.6.19-r35",
+    "scope": "RECADO_AND_CALLBACK_DELIVERED_ONLY",
+    "two_explicit_user_facts_and_description_required": true,
+    "source_context_bound": true,
+    "does_not_invent_phone_digits_or_rewrite_asr": true,
+    "does_not_assign_all_speaker_roles": true,
+    "legacy_acceptance_record_hashes_preserved": true,
+    "changes_preserve_history_and_identical_proof_is_idempotent": true,
+    "stale_tampered_or_revoked_proof_requires_review": true,
+    "other_quality_rules_still_apply": true,
+    "current_batch": {
+      "evaluations": 103,
+      "outcomes": {
+        "APROBADO": 21,
+        "REVISAR": 73,
+        "FALLA_GRAVE": 9
+      },
+      "changed_categories": [
+        67
+      ],
+      "new_approval_score": 100,
+      "case67_no_PEN003_preserved": true,
+      "all103_scores_and_penalties_preserved": true,
+      "other102_categories_preserved": true,
+      "valid_recado_confirmations": [
+        4,
+        57,
+        67,
+        96
+      ],
+      "no_recado_confirmations29_and39_preserved_and_still_review": true,
+      "all_previous_source_facts_and_user_confirmations_preserved": true,
+      "active_readings": 15,
+      "report_cells_verified": 9785,
+      "report_cell_mismatches": 0
+    },
+    "unit_tests": 1363,
+    "new_tests": 50,
+    "historical_evaluations": 268,
+    "historical_category_changes": 0,
+    "historical_penalty_removals": 0,
+    "safety_failures": 0,
+    "whisper_executed": false,
+    "assistant_audio_listening": false,
+    "native_windows_r35_outputs_verified": false,
+    "root_launcher": "CONFIRMAR_RECADO_Y_CONTACTO.bat",
+    "all13_operational_issues_closed": false,
+    "financial_information_in_human_description_requires_review_without_invented_PEN003": true,
     "real103_reanalysis_preserves_facts_and_results": true,
     "prior95": {
       "outcomes": {

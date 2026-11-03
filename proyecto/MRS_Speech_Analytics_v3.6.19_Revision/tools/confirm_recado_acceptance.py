@@ -1,4 +1,4 @@
-"""Guardar aceptación de recado ya confirmada y reanalizar sin Whisper."""
+"""Guardar aceptación o entrega de recado y contacto ya confirmadas, sin Whisper."""
 import argparse
 import json
 from pathlib import Path
@@ -13,11 +13,21 @@ def main():
     parser.add_argument('--checkpoint', type=Path)
     parser.add_argument('--call', dest='call_number', type=int)
     parser.add_argument('--confirm-acceptance', action='store_true')
+    parser.add_argument('--delivered-recado', action='store_true')
+    parser.add_argument('--description')
+    parser.add_argument('--confirm-message', action='store_true')
+    parser.add_argument('--confirm-callback', action='store_true')
     parser.add_argument('--output-dir', type=Path)
     args = parser.parse_args()
+    if not args.delivered_recado and (args.description is not None or args.confirm_message or args.confirm_callback):
+        parser.error('Use --delivered-recado para confirmar la entrega del recado y del contacto.')
+    if args.delivered_recado and args.confirm_acceptance:
+        parser.error('Seleccione un solo alcance: aceptación o recado y contacto entregados.')
     root = None
     try:
-        if args.checkpoint is None or args.call_number is None or not args.confirm_acceptance:
+        needs_confirmation = (not (args.confirm_message and args.confirm_callback and args.description is not None)
+                              if args.delivered_recado else not args.confirm_acceptance)
+        if args.checkpoint is None or args.call_number is None or needs_confirmation:
             from tkinter import Tk, filedialog, simpledialog, messagebox
             root = Tk()
             root.withdraw()
@@ -39,7 +49,23 @@ def main():
         if not 1 <= args.call_number <= len(items):
             raise ValueError('Número de llamada fuera del lote seleccionado.')
         item = items[args.call_number-1]
-        if not args.confirm_acceptance:
+        if args.delivered_recado:
+            label = f"Llamada {args.call_number}: {item['file_name']}\n\n"
+            for field, prompt in [
+                ('confirm_message', '¿Ya comprobó que el gestor entrega al interlocutor un recado para el titular?'),
+                ('confirm_callback', '¿Ya comprobó que también entrega un contacto para que el titular se comunique?')]:
+                if not getattr(args, field):
+                    if not messagebox.askyesno('Recado y contacto entregados', label+prompt,
+                                               parent=root, default=messagebox.NO):
+                        print('Cancelado; no se registró la confirmación.'); return 0
+                    setattr(args, field, True)
+            if args.description is None:
+                args.description = simpledialog.askstring('Contenido del recado',
+                    label+'Describa brevemente el recado que comprobó en el audio.\n'
+                    'No complete palabras o números que no haya confirmado.', parent=root)
+                if args.description is None:
+                    print('Cancelado; no se registró la confirmación.'); return 0
+        elif not args.confirm_acceptance:
             confirmed = messagebox.askyesno('Aceptación del recado',
                 f"Llamada {args.call_number}: {item['file_name']}\n\n"
                 '¿Ya comprobó que el interlocutor acepta transmitir el recado?\n'
@@ -49,7 +75,8 @@ def main():
                 print('Cancelado; no se registró una confirmación.'); return 0
         print('Generando checkpoint y reporte; espere a que termine...', flush=True)
         result = confirm_checkpoint_recado(args.checkpoint, item['file_name'], args.output_dir,
-                                           user_confirmed=True)
+            user_confirmed=not args.delivered_recado, message_description=args.description,
+            message_confirmed=args.confirm_message, callback_confirmed=args.confirm_callback)
     except Exception as error:
         print('No se registró la confirmación:', error)
         return 1

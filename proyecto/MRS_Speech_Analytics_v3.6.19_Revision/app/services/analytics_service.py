@@ -52,7 +52,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r34"
+    ENGINE_REVISION = "3.6.19-r35"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -1216,9 +1216,15 @@ class AnalyticsService:
         confirmed_recado = context.get('_recado_acceptance_validation') or {}
         if confirmed_recado.get('valid'):
             recado_assessment['acceptance'].append({
-                'text': 'El usuario confirmó que el interlocutor acepta transmitir el recado.',
-                'source': 'EXPLICIT_USER_RECADO_ACCEPTANCE_CONFIRMATION',
+                'text': ('El usuario confirmó la entrega del recado y del contacto para el titular.'
+                         if confirmed_recado.get('message_delivered')
+                         else 'El usuario confirmó que el interlocutor acepta transmitir el recado.'),
+                'source': confirmed_recado['record']['source'],
                 'speaker_role': 'TERCERO', 'start': None, 'end': None})
+            if confirmed_recado.get('message_delivered'):
+                recado_assessment['message'] = [{'text': confirmed_recado['record']['message_description'],
+                    'source': confirmed_recado['record']['source'], 'speaker_role': 'GESTOR',
+                    'start': None, 'end': None}]
         confirmed_family=context.get('_family_contact_validation') or {}
         if confirmed_family.get('valid'):
             recado_assessment['family'].append({'text':'Parentesco confirmado explícitamente por el usuario.',
@@ -1432,6 +1438,8 @@ class AnalyticsService:
             e.get('method') in {'REPETICION_NUMERO_CONTACTO_SOLICITADA','ACEPTA_INFORMACION_Y_RECIBE_CONTACTO',
                                'SOLICITA_DICTADO_TRAS_ESPERA_CON_CONTACTO_COMPLETO'}
             for e in recado_assessment['acceptance'])
+        recado_transmitted = recado_transmitted or bool(
+            confirmed_recado.get('valid') and confirmed_recado.get('message_delivered'))
         if confirmed_recado.get('valid'):
             callback_message = directed_callback_message(text, segments)
             if callback_message:
@@ -1449,6 +1457,8 @@ class AnalyticsService:
             r"(?:me|nos) (?:pued[ae]|podria|podia|pudiera) (?:regalar|regresar) (?:una? |la )?llamada|"
             r"numero (?:telefonico|de telefonico|de telefono|de contacto|de atencion))\b",
             normalized))
+        recado_callback = recado_callback or bool(
+            confirmed_recado.get('valid') and confirmed_recado.get('callback_delivered'))
         recado_real = bool(recado_callback and (recado_transmitted or leaves_message)
                            and not (recado_declines or recado_refusal)
                            and recado_recibido_explicito)

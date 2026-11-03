@@ -1,4 +1,4 @@
-"""Aceptación de recado confirmada por el usuario, sin sustituir la lectura ASR."""
+"""Hechos de recado confirmados por el usuario, separados de la lectura ASR."""
 from copy import deepcopy
 from datetime import datetime, timezone
 import hashlib
@@ -7,13 +7,17 @@ from pathlib import Path
 import re
 
 from app.services.audio_block_evidence import binding, digest
+from app.services.conversation_evidence import assess_privacy
 
 SCOPE = 'RECIPIENT_ACCEPTED_RECADO_ONLY'
+DELIVERY_SCOPE = 'RECADO_AND_CALLBACK_DELIVERED_ONLY'
 
 
 def review_digest(record):
-    return digest({k: record.get(k) for k in (
-        'schema', 'scope', 'source_binding', 'source', 'user_confirmed', 'active')})
+    keys = ('schema', 'scope', 'source_binding', 'source', 'user_confirmed', 'active')
+    if record.get('scope') == DELIVERY_SCOPE:
+        keys += ('message_description', 'message_confirmed', 'callback_confirmed')
+    return digest({k: record.get(k) for k in keys})
 
 
 def make_recado_confirmation(data, relation, *, user_confirmed=False):
@@ -31,27 +35,59 @@ def make_recado_confirmation(data, relation, *, user_confirmed=False):
     return record
 
 
+def make_recado_delivery_confirmation(data, relation, message_description, *,
+                                     message_confirmed=False, callback_confirmed=False):
+    if message_confirmed is not True or callback_confirmed is not True:
+        raise ValueError('Confirme por separado la entrega del recado y del contacto para el titular.')
+    if (not isinstance(message_description, str) or not 5 <= len(message_description.strip()) <= 500):
+        raise ValueError('Describa el recado escuchado, entre 5 y 500 caracteres.')
+    record = make_recado_confirmation(data, relation, user_confirmed=True)
+    record.update(scope=DELIVERY_SCOPE, source='EXPLICIT_USER_RECADO_DELIVERY_CONFIRMATION',
+                  message_description=message_description.strip(), message_confirmed=True, callback_confirmed=True)
+    record['record_sha256'] = review_digest(record)
+    return record
+
+
 def validate_recado_confirmation(data, relation, record):
     status = {'present': record is not None, 'valid': False, 'review_required': False,
-              'recipient_accepted': False, 'record': deepcopy(record)}
+              'recipient_accepted': False, 'message_delivered': False,
+              'callback_delivered': False, 'record': deepcopy(record)}
     if record is None:
         return status
     status.update(review_required=True,
                   reason='La confirmación de recado no corresponde a la llamada actual; revisar o revocar.')
     try:
-        expected = make_recado_confirmation(data, relation, user_confirmed=record.get('user_confirmed'))
+        if record.get('scope') == DELIVERY_SCOPE:
+            expected = make_recado_delivery_confirmation(data, relation, record.get('message_description'),
+                message_confirmed=record.get('message_confirmed'), callback_confirmed=record.get('callback_confirmed'))
+        else:
+            expected = make_recado_confirmation(data, relation, user_confirmed=record.get('user_confirmed'))
         if (record.get('active') is not True or record.get('record_sha256') != review_digest(record)
                 or any(record.get(k) != expected[k] for k in
-                       ('schema', 'scope', 'source_binding', 'source'))):
+                       ('schema', 'scope', 'source_binding', 'source', 'user_confirmed'))):
             return status
     except (ValueError, TypeError, AttributeError):
         return status
-    status.update(valid=True, review_required=False, recipient_accepted=True)
+    delivered = expected['scope'] == DELIVERY_SCOPE
+    status.update(valid=True, review_required=False, recipient_accepted=not delivered,
+                  message_delivered=delivered, callback_delivered=delivered)
     status.pop('reason', None)
+    if delivered:
+        description = expected['message_description']
+        privacy = assess_privacy(description, [{'text': description, 'speaker_role': 'GESTOR'}],
+                                 third_party_confirmed=True)
+        if privacy['confirmed_disclosure'] or privacy['review_required']:
+            # Este alcance acredita entrega, no autoriza contenido financiero.
+            # Una descripción humana puede ser un resumen y no una cita literal:
+            # se revisa, sin inventar PEN003 ni certificar la atribución completa.
+            status.update(review_required=True,
+                reason='El recado descrito contiene información financiera por verificar; '
+                       'la confirmación de entrega no exime privacidad.')
     return status
 
 
-def confirm_checkpoint_recado(checkpoint_path, file_name, output_directory=None, *, user_confirmed=False):
+def confirm_checkpoint_recado(checkpoint_path, file_name, output_directory=None, *, user_confirmed=False,
+                              message_description=None, message_confirmed=False, callback_confirmed=False):
     from app.services.checkpoint_output import create_checkpoint_output
     from app.services.checkpoint_reanalysis import reanalyze_checkpoint
     source = Path(checkpoint_path).expanduser().resolve()
@@ -65,11 +101,16 @@ def confirm_checkpoint_recado(checkpoint_path, file_name, output_directory=None,
     item = items[index]
     if item.get('result', {}).get('archivo') != file_name:
         raise ValueError('El nombre interno de la llamada no coincide con el checkpoint.')
-    record = make_recado_confirmation(item.get('result'), item.get('relation'), user_confirmed=user_confirmed)
+    if message_description is None:
+        record = make_recado_confirmation(item.get('result'), item.get('relation'), user_confirmed=user_confirmed)
+    else:
+        record = make_recado_delivery_confirmation(item.get('result'), item.get('relation'), message_description,
+            message_confirmed=message_confirmed, callback_confirmed=callback_confirmed)
     updated = deepcopy(original)
     target_item = updated['items'][index]
     previous = target_item.get('recado_acceptance_confirmation')
-    if validate_recado_confirmation(item['result'], item['relation'], previous)['valid']:
+    if (validate_recado_confirmation(item['result'], item['relation'], previous)['valid']
+            and previous['record_sha256'] == record['record_sha256']):
         record = previous
     elif previous is not None:
         target_item.setdefault('recado_acceptance_confirmation_history', []).append(deepcopy(previous))
@@ -85,13 +126,16 @@ def confirm_checkpoint_recado(checkpoint_path, file_name, output_directory=None,
     if final.get('recado_confirmation_import'):
         final.setdefault('recado_confirmation_import_history', []).append(deepcopy(final['recado_confirmation_import']))
     final['recado_confirmation_import'] = {'source_checkpoint_sha256': hashlib.sha256(raw).hexdigest(),
-        'file_name': file_name, 'confirmed_calls': 1, 'scope': SCOPE,
+        'file_name': file_name, 'confirmed_calls': 1, 'scope': record['scope'],
         'whisper_executed': False, 'audio_files_copied': False}
     final_path.write_text(json.dumps(final, ensure_ascii=False, indent=2), encoding='utf-8')
     from openpyxl import load_workbook
     book = load_workbook(result['report'])
-    book['NOTA_REANALISIS'].append(['Aceptación de recado confirmada por el usuario', file_name])
-    book['NOTA_REANALISIS'].append(['La confirmación solo acredita aceptación; se mantienen las demás validaciones.'])
+    book['NOTA_REANALISIS'].append([
+        'Recado y contacto entregados, confirmados por el usuario' if record['scope'] == DELIVERY_SCOPE
+        else 'Aceptación de recado confirmada por el usuario', file_name])
+    book['NOTA_REANALISIS'].append(['Alcance de la confirmación', record['scope']])
+    book['NOTA_REANALISIS'].append(['Se conservan las transcripciones y las demás validaciones.'])
     book.save(result['report'])
     book.close()
     assert source.read_bytes() == raw, 'El origen cambió durante la confirmación.'
