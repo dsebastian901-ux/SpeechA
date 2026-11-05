@@ -1,15 +1,49 @@
-# MRS Speech Analytics · revisión 35 — recado y contacto confirmados
+# MRS Speech Analytics · revisión 36 — confirmar varias llamadas en una operación
 
 Continuación de la versión 06 recibida en el paquete de migración. El código de
 la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
 
 La revisión incorpora correcciones para fallos reproducidos del lote informado. Los 13 errores siguen pendientes de validación por casos reales.
 Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_35_DIAGNOSTICO.md` dentro de la aplicación para
+las llamadas originales. Consulte `REVISION_36_DIAGNOSTICO.md` dentro de la aplicación para
 resultados, cambios y límites por regla. Los documentos de validación anteriores
 se conservan como historial, no como certificación de esta revisión.
 
 ## Windows
+
+La herramienta anterior admitía una llamada por ejecución. R36 añade
+**`CONFIRMAR_RECADOS_LOTE.bat`**, con una sola selección de checkpoint y una
+ventana para registrar varias confirmaciones juntas, revisar sus archivos y
+generar un único checkpoint y Excel.
+
+Para el bloque ya comprobado por el usuario:
+
+1. Extraiga el ZIP completo y ejecute `CONFIRMAR_RECADOS_LOTE.bat` desde su raíz.
+2. Seleccione el checkpoint completo de 103 llamadas. Puede utilizar el último
+   `checkpoint_con_recado_confirmado.json` recibido, que conserva las quince
+   lecturas y solo contiene aceptación de la 67 además de los hechos anteriores.
+3. En **Aceptación del recado**, escriba `4,57,96` y marque que ya comprobó esas
+   aceptaciones. En **Recado y contacto entregados**, escriba una línea:
+   `67 | Número para que negocie el restante`. Marque los dos hechos ya comprobados.
+4. Pulse **Revisar llamadas seleccionadas**, compruebe los cuatro archivos y
+   después **Guardar todas y generar checkpoint y Excel**.
+5. Al terminar, **Abrir resultados** lleva a la carpeta del checkpoint final y
+   el Excel. Continúe con `checkpoint_reanalizado.json`, dentro de `resultados`.
+
+El resultado calculado sigue siendo **21 APROBADO, 73 REVISAR y 9 FALLA_GRAVE**.
+Se aplica el mismo motor de reglas y hechos de r35: no se restan penalizaciones
+ni se obliga a aprobar las llamadas seleccionadas. La ventana permanece activa
+mientras se genera el reporte. Todos los hechos se validan antes de escribir;
+si una selección es inválida no se registra parcialmente. El archivo intermedio
+queda en `auditoria/entrada.json`, marcado como pendiente de reanálisis; la
+salida final queda identificada como tal en `resultados`.
+
+Las entradas y casillas empiezan vacías. No se ejecuta Whisper, no se mueven
+audios y se conservan los archivos originales. La ejecución nativa de r36 en
+Windows sigue pendiente; la ventana y el trabajo en segundo plano se probaron
+con Tk en Linux.
+
+### Historial: recado y contacto confirmados r35
 
 R35 conserva dos hechos distintos: la aceptación de recado ya soportada en
 r33/r34, y la entrega efectiva de un recado y un contacto para el titular

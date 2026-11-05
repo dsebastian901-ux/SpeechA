@@ -1,5 +1,5 @@
 {
-  "revision": "3.6.19-r35-diagnostic",
+  "revision": "3.6.19-r36-diagnostic",
   "original_archive_sha256": "483ee333da8d5d2fa6b54481f66558bad006a61437bc7135e1b857c6270bf3f6",
   "original_archive_files_verified_unchanged": 138,
   "original_application_files_retained_unchanged": 96,
@@ -21,14 +21,14 @@
     "RESULTADOS_REGRESION_1061.csv"
   ],
   "tests": {
-    "passed": 1363,
+    "passed": 1386,
     "failed": 0,
     "skipped": 0
   },
   "checkpoint_evaluations": 268,
   "acoustic_verification": false,
   "windows_validation": false,
-  "additional_fix": "Record two explicit scoped user facts that a message and callback contact were delivered to the recipient for the holder, preserving raw ASR, old acceptance facts and all other quality gates.",
+  "additional_fix": "Register multiple scoped recado confirmations in one operation, with explicit preview, source-change protection, one rules evaluation, responsive Tk UI and a single clearly marked final checkpoint and Excel.",
   "uploaded_audio_review": {
     "files_fully_decoded": 8,
     "checkpoint_calls": [
@@ -1507,5 +1507,59 @@
       },
       "all_source_facts_scores_penalties_and_categories_preserved": true
     }
+  },
+  "r36_bulk_recado_confirmation": {
+    "engine_revision": "3.6.19-r36",
+    "root_launcher": "CONFIRMAR_RECADOS_LOTE.bat",
+    "single_checkpoint_selection_and_single_reanalysis": true,
+    "multiple_acceptances_and_multiple_deliveries_supported": true,
+    "defaults_blank_and_unchecked": true,
+    "preview_shows_actual_file_names": true,
+    "source_changed_after_preview_is_rejected": true,
+    "all_facts_validated_before_any_output_write": true,
+    "invalid_duplicate_or_out_of_batch_selection_rejected": true,
+    "background_worker_keeps_Tk_responsive": true,
+    "intermediate_kept_in_audit_directory_and_marked_incomplete": true,
+    "final_output_explicitly_marked_and_results_folder_button_available": true,
+    "classification_rules_unchanged_from_r35": true,
+    "current_batch": {
+      "evaluations": 103,
+      "outcomes": {
+        "APROBADO": 21,
+        "REVISAR": 73,
+        "FALLA_GRAVE": 9
+      },
+      "confirmations_registered_together": [
+        4,
+        57,
+        67,
+        96
+      ],
+      "changed_categories_from_received_intermediate": [
+        4,
+        57,
+        67,
+        96
+      ],
+      "all103_classifications_match_r35_canonical": true,
+      "all103_scores_penalties_and_source_facts_preserved": true,
+      "previous_recado67_acceptance_preserved_in_history": true,
+      "active_readings": 15,
+      "report_cells_verified": 9785,
+      "report_cell_mismatches": 0,
+      "confirmation_sheet_records": 4
+    },
+    "unit_tests": 1386,
+    "new_tests": 23,
+    "real_graphical_tests_in_suite": 7,
+    "new_real_graphical_tests": 2,
+    "historical_evaluations": 268,
+    "historical_category_changes": 0,
+    "historical_penalty_removals": 0,
+    "safety_failures": 0,
+    "whisper_executed": false,
+    "assistant_audio_listening": false,
+    "native_windows_r36_outputs_verified": false,
+    "all13_operational_issues_closed": false
   }
 }
