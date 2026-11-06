@@ -1,0 +1,90 @@
+{
+  "revision": "3.6.19-r39",
+  "baseline": "Paquete r38 entregado y checkpoint nativo devuelto",
+  "tests": {
+    "passed": 1535,
+    "skipped": 7,
+    "failures": 0,
+    "python": "3.10.22",
+    "platform": "Linux",
+    "native_windows_verified": false,
+    "audio_listened": false
+  },
+  "regression": {
+    "1007": {
+      "calls": 1007,
+      "outcomes": {
+        "REVISAR": 969,
+        "APROBADO": 27,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 98686,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007,
+      "motives_formulas": 0
+    },
+    "103": {
+      "calls": 103,
+      "outcomes": {
+        "REVISAR": 73,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 103,
+      "excel_cells_verified": 10094,
+      "excel_differences": 0,
+      "motives_rows_verified": 103,
+      "motives_formulas": 0
+    },
+    "1007_nombres": {
+      "calls": 1007,
+      "outcomes": {
+        "REVISAR": 950,
+        "APROBADO": 45,
+        "FALLA_GRAVE": 11,
+        "NO_APROBADO_MENOR_80": 1
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 98686,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007,
+      "motives_formulas": 0
+    }
+  },
+  "unique_calls": 1110,
+  "evaluated_rows_including_name_correction": 2117,
+  "originals_and_existing_transcripts_preserved": true,
+  "whisper_executed": false,
+  "source_requirements_changed": false,
+  "acoustic_verification": false,
+  "source_zip_has_real_checkpoints_reports_or_audio": false,
+  "source_excel_authority": "numero_de_tarjeta; nombres solo en copia mediante herramienta ya autorizada",
+  "large_batch_penalties_removed": {
+    "PEN001": 16,
+    "PEN_CONV_LUGARES": 6,
+    "PEN_CONV_WHATSAPP": 83
+  },
+  "large_batch_penalties_added": {
+    "PEN001": 0,
+    "PEN_CONV_LUGARES": 0,
+    "PEN_CONV_WHATSAPP": 0
+  },
+  "limitations": [
+    "7 pruebas gráficas requieren pantalla; no se certifica ejecución nativa Windows.",
+    "Las correcciones se contrastaron con ASR; no se escucharon audios.",
+    "No se declaran cerrados los trece problemas generales; la incertidumbre conserva REVISAR."
+  ]
+}

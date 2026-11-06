@@ -45,6 +45,10 @@ class ReportsView(ctk.CTkFrame):
         )
 
         self._build_header()
+        self.consolidate_button = ctk.CTkButton(
+            self.header, text='Reportes de varios lotes', width=210,
+            command=self.open_consolidated_reports)
+        self.consolidate_button.grid(row=2, column=0, columnspan=2, padx=24, pady=(0, 14), sticky='w')
         self._build_content()
 
         self.load_report()
@@ -143,6 +147,14 @@ class ReportsView(ctk.CTkFrame):
             pady=18,
             sticky="e",
         )
+
+    def open_consolidated_reports(self):
+        from app.ui.views.consolidated_reports_dialog import ConsolidatedReportsDialog
+        existing = getattr(self, '_consolidated_dialog', None)
+        if existing is not None and existing.winfo_exists():
+            existing.lift()
+            return
+        self._consolidated_dialog = ConsolidatedReportsDialog(self)
 
     # =========================================================
     # CONTENIDO
@@ -525,7 +537,7 @@ class ReportsView(ctk.CTkFrame):
             self._clear_report()
 
             self.status_label.configure(
-                text="Abra un proyecto para consultar los reportes."
+                text="Use Reportes de varios lotes para consolidar checkpoints, o abra un proyecto para los reportes individuales."
             )
 
             return

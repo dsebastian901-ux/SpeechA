@@ -45,6 +45,8 @@ class BatchService:
         self.relation_enabled = False
         self.relation_validation = None
         self.last_report_path = None
+        self.last_nonpayment_report_path = None
+        self.nonpayment_report_error = None
         self.last_partial_report_path = None
         self.checkpoint_path = None
         self.partial_report_every = 10
@@ -90,6 +92,8 @@ class BatchService:
             "mode": "A" if self.has_relation_excel() else "B",
             "relation_excel": self.relation_excel if self.has_relation_excel() else None,
             "last_report_path": self.last_report_path,
+            "last_nonpayment_report_path": self.last_nonpayment_report_path,
+            "nonpayment_report_error": self.nonpayment_report_error,
             "batch_elapsed_seconds": self.batch_elapsed_seconds,
             "items": self._json_safe(self.items),
         }
@@ -596,6 +600,9 @@ class BatchService:
                 transcription = TranscriptionService.load_from_json(
                     json_path
                 )
+                # Conservar la evidencia antes del análisis: un error de reglas
+                # no debe borrar una transcripción ya completada.
+                item["result"] = json.loads(Path(json_path).read_text(encoding="utf-8-sig"))
 
                 record = (
                     self.relation_service.find_record(item["path"])
@@ -691,6 +698,7 @@ class BatchService:
                     record_data = record.to_dict()
 
                     operational_context = {
+                        "nombre_final": record_data.get("nombre_final"),
                         "estatus_grabacion": record_data.get("estatus_grabacion"),
                         "campana": record_data.get("campana"),
                         "fecha_asignacion": record_data.get("fecha_asignacion"),
@@ -893,7 +901,7 @@ class BatchService:
                 if isinstance(analytics_data, dict):
                     analytics_data.setdefault("metadata", {})["final_result"] = analytics_metadata["final_result"]
                 if manual_reasons:
-                    classification["motivo"] = " | ".join(dict.fromkeys(manual_reasons))
+                    classification["motivo"] = " | ".join(dict.fromkeys(part.strip() for reason in manual_reasons for part in str(reason).split("|") if part.strip()))
 
                 item["analytics"] = analytics_data
                 item["analytics_metadata"] = analytics_metadata
@@ -944,7 +952,13 @@ class BatchService:
             except Exception as error:
                 item["status"] = "error"
                 item["message"] = str(error)
-                item["result"] = None
+                item["analytics"] = {}
+                item["analytics_metadata"] = {"final_result": "ERROR"}
+                item["classification"] = {"clasificacion": "ERROR", "aprobado": False,
+                                          "motivo": str(error)}
+                item["compliance_score"] = None
+                item["classified_audio_path"] = None
+                item["copy_status"] = "ERROR_ANALISIS_O_PROCESAMIENTO"
             finally:
                 # Guarda primero los tiempos de trabajo y mide por separado el checkpoint.
                 item["elapsed_seconds"] = max(0.0, perf_counter() - item_started)
@@ -1005,6 +1019,11 @@ class BatchService:
                 for item in self.items:
                     if item.get("status") == "completado":
                         item["report_error"] = str(report_error)
+
+        from app.services.nonpayment_report_service import NonpaymentReportService
+        companion_status = NonpaymentReportService.report_status(self.last_report_path)
+        self.last_nonpayment_report_path = companion_status['path']
+        self.nonpayment_report_error = companion_status['error']
 
         # v3.6.18: "completed" significa lote terminado sin errores. Si hubo
         # errores, el checkpoint queda recuperable y no aparenta éxito total.

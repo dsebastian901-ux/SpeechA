@@ -1,0 +1,12 @@
+{
+  "target_date": "2026-11-14",
+  "status": "NO_LISTO_PARA_DISTRIBUIR",
+  "authentication_integrated": false,
+  "offline_usb_accounts_integrated": false,
+  "operator_permissions_enforced": false,
+  "administrator_reviews_guarded": false,
+  "user_data_outside_program_directory": false,
+  "full_model_and_runtime_bundled": false,
+  "windows_offline_two_computers_verified": false,
+  "regression_for_installed_candidate_passed": false
+}

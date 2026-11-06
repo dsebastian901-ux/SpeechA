@@ -4,3 +4,6 @@ openpyxl>=3.1,<4
 faster-whisper>=1.0,<2
 av>=12,<16
 imageio-ffmpeg>=0.5,<1
+
+# Exportación Word local; se incluirá en el instalador sin conexión.
+python-docx>=1.2,<2

@@ -1,0 +1,82 @@
+{
+  "revision": "3.6.19-r40",
+  "baseline": "Paquete r39 entregado; checkpoint grande disponible de 1007 registros",
+  "tests": {
+    "passed": 1580,
+    "skipped": 7,
+    "failures": 0,
+    "python": "3.10.22",
+    "platform": "Linux",
+    "native_windows_verified": false,
+    "audio_listened": false
+  },
+  "regression": {
+    "1007": {
+      "calls": 1007,
+      "outcomes": {
+        "REVISAR": 969,
+        "APROBADO": 27,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 98686,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007,
+      "motives_formulas": 0
+    },
+    "103": {
+      "calls": 103,
+      "outcomes": {
+        "REVISAR": 73,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 103,
+      "excel_cells_verified": 10094,
+      "excel_differences": 0,
+      "motives_rows_verified": 103,
+      "motives_formulas": 0
+    },
+    "1007_nombres": {
+      "calls": 1007,
+      "outcomes": {
+        "REVISAR": 950,
+        "APROBADO": 45,
+        "FALLA_GRAVE": 11,
+        "NO_APROBADO_MENOR_80": 1
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 98686,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007,
+      "motives_formulas": 0
+    }
+  },
+  "unique_calls": 1110,
+  "evaluated_rows_including_name_copy": 2117,
+  "originals_and_existing_transcripts_preserved": true,
+  "whisper_executed": false,
+  "requirements_changed": false,
+  "acoustic_verification": false,
+  "real_data_in_source_zip": false,
+  "nonpayment_new_batch_integration": "2 audios nuevos con ASR controlado; generación automática una sola vez al finalizar; columnas extra originales conservadas",
+  "payment_place_penalties_removed": 41,
+  "payment_place_penalties_added": 0,
+  "limitations": [
+    "7 pruebas gráficas requieren pantalla; no se certifica ejecución nativa Windows.",
+    "Reglas contrastadas con transcripciones, sin escucha acústica.",
+    "Las incertidumbres restantes conservan REVISAR."
+  ]
+}

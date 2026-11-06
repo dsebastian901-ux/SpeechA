@@ -1,0 +1,696 @@
+[
+  {
+    "case": "batch_checkpoint(20261021-154002):008",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):011",
+    "allowed_removed": [
+      "PEN005"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN005": "contact_number_not_payment_date"
+    },
+    "reason": "La fecha 2077 deriva de fragmentos de teléfono para comprobantes, no de una promesa. La llamada conserva revisión y no confirma convenio."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):018",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):021",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):025",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_FRAUDE",
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment",
+      "PEN_CONV_FRAUDE": "callback_numbers_not_bank_account",
+      "PEN_CONV_LUGARES": "two_distinct_payment_places"
+    },
+    "reason": "Causas reproducibles por regla; hash de origen y todas las validaciones independientes siguen obligatorios."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):027",
+    "allowed_removed": [
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_TRANSFER_REV"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):028",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_FRAUDE",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_WHATSAPP"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_FRAUDE": "callback_numbers_not_bank_account",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_WHATSAPP": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):031",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):034",
+    "allowed_removed": [
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_LUGARES": "two_distinct_payment_places"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):036",
+    "allowed_removed": [
+      "PEN_CONV_TRANSFER_REV"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):037",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):040",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_WHATSAPP"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_WHATSAPP": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):041",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):042",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_TRANSFER_REV"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):047",
+    "allowed_removed": [
+      "PEN005"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN005": "contact_number_not_payment_date"
+    },
+    "reason": "Dictado y rectificación de teléfono para WhatsApp no son fecha de pago. Se conserva revisión por compromiso e identidad no confirmados."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):053",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):056",
+    "allowed_removed": [
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_LUGARES": "two_distinct_payment_places"
+    },
+    "reason": "Causas reproducibles por regla; hash de origen y todas las validaciones independientes siguen obligatorios."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):059",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):060",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_WHATSAPP"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_WHATSAPP": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):062",
+    "allowed_removed": [
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_LUGARES": "two_distinct_payment_places"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):064",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):065",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):069",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_WHATSAPP"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_WHATSAPP": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):071",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):072",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):074",
+    "allowed_removed": [
+      "PEN005",
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_WHATSAPP"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN005": "payment_already_reported",
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_WHATSAPP": "payment_already_reported"
+    },
+    "reason": "Declaración explícita ya le di un abono el viernes y otro ayer y petición de comprobantes: pagos anteriores sin compromiso nuevo. No se evalúa viernes como promesa futura ni se exige nuevo convenio; conserva revisión."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):078",
+    "allowed_removed": [
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_LUGARES": "two_distinct_payment_places"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):081",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):088",
+    "allowed_removed": [
+      "PEN007",
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_WHATSAPP"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN007": "payment_already_reported",
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_WHATSAPP": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):091",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):094",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):098",
+    "allowed_removed": [
+      "PEN_CONV_WHATSAPP"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_WHATSAPP": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):099",
+    "allowed_removed": [
+      "PEN010"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN010": "capture_instruction_not_recipient"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):100",
+    "allowed_removed": [
+      "PEN005",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_WHATSAPP"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN005": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_WHATSAPP": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):101",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_WHATSAPP"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_WHATSAPP": "payment_already_reported"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):103",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):106",
+    "allowed_removed": [
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_TRANSFER_REV"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):108",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment",
+      "PEN_CONV_LUGARES": "two_distinct_payment_places"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):110",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):111",
+    "allowed_removed": [
+      "PEN007"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN007": "spoken_payment_date"
+    },
+    "reason": "La fecha veintidós de octubre consta literalmente en el texto; no es ausencia de fecha. La llamada conserva otros bloqueos de revisión."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):115",
+    "allowed_removed": [
+      "PEN005"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN005": "payment_store_not_date"
+    },
+    "reason": "La tienda 7-11 generaba una fecha falsa posterior al vencimiento; el texto dice 17 de octubre. La llamada conserva otros bloqueos de revisión."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):117",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):120",
+    "allowed_removed": [
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_LUGARES": "two_distinct_payment_places"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):125",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):127",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):130",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):132",
+    "allowed_removed": [
+      "PEN_CONV_TRANSFER_REV"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):133",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):136",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):142",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_TRANSFER_REV"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):144",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_FRAUDE"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment",
+      "PEN_CONV_FRAUDE": "callback_numbers_not_bank_account"
+    },
+    "reason": "Causas reproducibles por regla; hash de origen y todas las validaciones independientes siguen obligatorios."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):147",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):152",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES",
+      "PEN_CONV_TRANSFER_REV"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported",
+      "PEN_CONV_TRANSFER_REV": "reported_transfer_not_new_instruction"
+    },
+    "reason": "Pago anterior reportado con evidencia explícita y sin nueva promesa; si se elimina revisión de transferencia, tampoco hay nueva instrucción, discusión futura ni datos no autorizados. La llamada conserva sus otros bloqueos."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):155",
+    "allowed_removed": [
+      "PEN009",
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):156",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):157",
+    "allowed_removed": [
+      "PEN005",
+      "PEN009",
+      "PEN_CONV_LUGARES"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN005": "payment_already_reported",
+      "PEN009": "payment_already_reported",
+      "PEN_CONV_LUGARES": "payment_already_reported"
+    },
+    "reason": "Cambio de regla reproducible, con evidencia explícita en el resultado y sin aprobar automáticamente la llamada."
+  }
+]

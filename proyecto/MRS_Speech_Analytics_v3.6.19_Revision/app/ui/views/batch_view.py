@@ -177,13 +177,13 @@ class BatchView(ctk.CTkFrame):
             command=self.open_last_report,
             state="disabled",
         )
-        self.report_button.grid(
-            row=0,
-            column=4,
-            rowspan=2,
-            padx=(0, 8),
-            pady=18,
+        self.report_button.grid(row=0, column=4, padx=(0, 8), pady=(14, 3))
+        self.nonpayment_report_button = ctk.CTkButton(
+            self.header, text="Motivos de no pago", width=145, height=32,
+            fg_color="#6F5CC2", hover_color="#5E4DA8", corner_radius=9,
+            command=self.open_nonpayment_report,
         )
+        self.nonpayment_report_button.grid(row=1, column=4, padx=(0, 8), pady=(3, 14))
 
         self.partial_report_button = ctk.CTkButton(
             self.header,
@@ -1038,6 +1038,13 @@ class BatchView(ctk.CTkFrame):
                 "\n\nNo se encontró un reporte Excel generado para este lote."
             )
 
+        from app.services.nonpayment_report_service import NonpaymentReportService
+        companion = NonpaymentReportService.report_status(report_path)
+        if companion['path']:
+            report_message += "\nMotivos de no pago generado. Use el botón 'Motivos de no pago'."
+        else:
+            report_message += "\nReporte de motivos no generado: " + companion['error']
+
         messagebox.showinfo(
             "Procesamiento por lotes",
             (
@@ -1135,6 +1142,17 @@ class BatchView(ctk.CTkFrame):
     # =========================================================
     # ABRIR ÚLTIMO REPORTE EXCEL
     # =========================================================
+
+    def open_nonpayment_report(self):
+        from app.services.nonpayment_report_service import NonpaymentReportService
+        status = NonpaymentReportService.report_status(self.last_report_path)
+        if not status['path']:
+            messagebox.showwarning('Motivos de no pago', status['error'])
+            return
+        try:
+            os.startfile(status['path'])
+        except Exception as error:
+            messagebox.showerror('Motivos de no pago', f"No fue posible abrir el reporte.\n\n{error}")
 
     def open_last_report(self):
         report_path = (
@@ -1562,6 +1580,7 @@ class BatchView(ctk.CTkFrame):
         self.select_button.configure(
             state=state
         )
+        self.nonpayment_report_button.configure(state=state)
 
         self.start_button.configure(
             state=state

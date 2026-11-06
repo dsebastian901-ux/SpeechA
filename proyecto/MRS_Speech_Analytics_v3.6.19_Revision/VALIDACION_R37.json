@@ -1,0 +1,42 @@
+{
+  "revision": "3.6.19-r37",
+  "tests": {
+    "tests": "1385",
+    "failures": "0",
+    "errors": "0",
+    "skipped": "2",
+    "time": "108.821",
+    "passed_total": 1386,
+    "supplementary_long_path_tests_passed": 3,
+    "gui_not_verified": 7
+  },
+  "excluded_environment_checks": [
+    "5 pruebas de ventanas Tk excluidas: Tcl no utilizable en el runtime de pruebas; sin cambios en esa interfaz.",
+    "2 pruebas gráficas de recados omitidas por falta de pantalla Tk.",
+    "3 casos de rutas profundas pasaron usando prefijo Windows de rutas extendidas; ejecución normal falla al crear el fixture, también en r36."
+  ],
+  "regression": {
+    "baseline": "r36",
+    "comparable_calls": 952,
+    "changed_classifications_scores_or_penalties": 0
+  },
+  "recovery": {
+    "calls": 55,
+    "errors": 0,
+    "whisper_executed": false
+  },
+  "small_batch": {
+    "APROBADO": 21,
+    "REVISAR": 73,
+    "FALLA_GRAVE": 9
+  },
+  "large_batch": {
+    "APROBADO": 25,
+    "REVISAR": 962,
+    "FALLA_GRAVE": 20
+  },
+  "excel_checkpoint_rows_checked": 1110,
+  "excel_score_classification_differences": 0,
+  "acoustic_verification": false,
+  "historical_268_evaluations": "No disponibles en el repositorio descargado; no se afirma su repetición."
+}

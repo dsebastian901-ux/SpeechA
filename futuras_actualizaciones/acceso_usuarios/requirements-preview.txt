@@ -1,0 +1,3 @@
+# Dependencia para la base de firmas. Se empaquetará dentro del instalador;
+# los equipos finales no ejecutarán pip ni descargarán esta dependencia.
+cryptography>=44,<47

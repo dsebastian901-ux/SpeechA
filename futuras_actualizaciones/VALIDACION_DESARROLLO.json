@@ -1,0 +1,35 @@
+{
+  "state": "PREPARACION_NO_INSTALADOR_FINAL",
+  "target_date": "2026-11-14",
+  "application_tests": {
+    "passed": 1688,
+    "skipped_graphical": 7,
+    "failures": 0,
+    "python": "3.10.22",
+    "platform": "Linux"
+  },
+  "accounts_core_isolated_tests": {
+    "passed": 7,
+    "login_gui_integrated": false,
+    "permissions_enforced_in_application": false
+  },
+  "reports_validation": {
+    "source_checkpoints": 3,
+    "evaluations_counted_per_batch": 2117,
+    "grave_evaluations_reported": 31,
+    "originals_unchanged": true,
+    "whisper_used": false,
+    "redictation_used": false,
+    "excel_and_word_verified": true
+  },
+  "offline": {
+    "model_lookup_local_only": true,
+    "missing_tokenizer_blocked": true,
+    "model_weights_bundled_for_windows": false
+  },
+  "windows": {
+    "installer_built": false,
+    "desktop_icon_file_prepared": true,
+    "installed_candidate_tested": false
+  }
+}

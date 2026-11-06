@@ -17,7 +17,27 @@ from typing import Dict, List, Optional
 
 from app.models.analytics_model import AnalyticsModel
 from app.models.transcriptions import TranscriptionModel
-from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement
+from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment, unknown_recipient_response, dictated_privacy_email, associate_relationship
+from app.services.audio_block_evidence import validate_evidence
+from app.services.arco_validation import assess_arco, qualitative_line_tenure
+from app.services.family_contact_review import validate_family_confirmation
+from app.services.recado_acceptance_review import validate_recado_confirmation
+from app.services.privacy_disclosure_review import validate_disclosure_confirmation
+from app.services.home_warning_review import validate_warning_confirmation
+from app.services.conversation_evidence import assess_home_recovery_warning,reported_card_clarification
+from app.services.conversation_evidence import directed_callback_message
+from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing
+from app.services.installment_validation import installment_plan, installment_dates
+from app.services.asr_amount_recovery import validated_entries
+from app.services.mora_payment_policy import payment_policy, two_installment_window, LIQUIDATION_MORAS
+from app.services.amount_review_service import amount_review_status
+from app.services.account_source_validation import validate_account_source
+from app.services.context_rules import unknown_debtor_statement, prohibited_threat, announced_hangup
+from app.services.operational_script_evidence import company_alias_evidence, receipt_request_evidence, remaining_payment_proposals
+from app.services.treatment_evidence import mistreatment_reports, dismissive_message_evidence, offensive_asr_variants
+from app.services.call_wait_evidence import assess_call_wait
+from app.services.financial_review_service import apply_financial_review
+from app.services.reported_payment_amounts import reported_amounts, NUMBER, money_value
 
 
 class AnalyticsService:
@@ -36,6 +56,8 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
+    ENGINE_REVISION = "3.6.19-r41"
+
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
         """Puerta de aprobación común: lote, solo audios y análisis individual."""
@@ -46,6 +68,42 @@ class AnalyticsService:
         status = metadata.get("status_validation") or {}
         negotiation = metadata.get("negotiation_validation") or {}
         reasons = []
+        arco = metadata.get('arco_validation') or {}
+        if arco.get('applies') and not arco.get('valid'):
+            reasons.extend(arco.get('reasons') or ['Procedimiento ARCO incompleto; requiere revisión.'])
+        family_review=metadata.get('family_contact_validation') or {}
+        if family_review.get('review_required'):
+            reasons.append(family_review.get('reason') or 'Confirmación de parentesco pendiente de revisión.')
+        recado_review = metadata.get('recado_acceptance_validation') or {}
+        if recado_review.get('review_required'):
+            reasons.append(recado_review['reason'])
+        disclosure_review=metadata.get('privacy_disclosure_validation') or {}
+        if disclosure_review.get('review_required'):
+            reasons.append(disclosure_review.get('reason') or 'Confirmación de divulgación pendiente de revisión.')
+        if (metadata.get('home_warning_validation') or {}).get('review_required'):
+            reasons.append(metadata['home_warning_validation']['reason'])
+        additional=metadata.get('audio_block_evidence_validation') or {}
+        if additional.get('review_required'):
+            if additional.get('valid') and additional.get('risks') and all(
+                    r.get('type')=='EXPRESION_OFENSIVA_SIN_HABLANTE_CONFIRMADO' for r in additional['risks']):
+                reasons.append('Lenguaje ofensivo requiere revisión')
+            else:
+                reasons.append(additional.get('reason') or 'Lectura adicional pendiente de revisión.')
+        if (metadata.get('convenio_payment_validation') or {}).get('receipt_request_review_required'):
+            reasons.append('Posible solicitud de comprobante deformada por ASR; confirmar frase, sin atribuir omisión.')
+        if negotiation.get("liquidation_offer_review_required"):
+            reasons.append("Posible liquidación total sin atribución u oferta confirmada; revisar audio")
+        if (metadata.get('home_recovery_warning') or {}).get('review_required'):
+            reasons.append('Posible advertencia de recuperación en domicilio en 1–2 PV; confirmar voz y frase en audio.')
+        account = metadata.get("account_source_validation") or {}
+        if account.get("review_required"):
+            reasons.append(account.get("reason") or "Datos de cuenta inconsistentes; revisar nombre de salida")
+        recovery = metadata.get("amount_recovery_validation") or {}
+        if recovery.get("review_required"):
+            reasons.append("Importe recuperado por lecturas adicionales de audio; conserva revisión de evidencia")
+        financial = metadata.get("financial_review_validation") or {}
+        if financial.get("review_required"):
+            reasons.append(financial.get("reason") or "Confirmación financiera pendiente de revisión")
         if metadata.get("quality_contact_type") == "CONTACTO NO DETERMINADO":
             reasons.append("Interlocutor sin identificar; requiere revisión")
         critical = any(isinstance(f, dict) and f.get("invalidates") is True for f in failures)
@@ -63,7 +121,7 @@ class AnalyticsService:
         for penalty in penalties:
             if not isinstance(penalty, dict):
                 continue
-            if penalty.get("id") in {"PEN_GROSERIA_SIN_ATRIBUCION", "PEN_QUEJA_MALTRATO"}:
+            if penalty.get("id") in {"PEN_GROSERIA_SIN_ATRIBUCION", "PEN_QUEJA_MALTRATO", "PEN_ESPERA_PROLONGADA"}:
                 reasons.append(str(penalty.get("reason") or "Trato al cliente requiere revisión"))
             if penalty.get("id") == "PEN_CONV_LUGARES":
                 reasons.append("Faltan dos lugares de pago autorizados en convenio")
@@ -87,10 +145,19 @@ class AnalyticsService:
         if checks.get("groseria_bloquea_aprobacion"):
             reasons.append("Lenguaje ofensivo requiere revisión")
         treatment = metadata.get("treatment_validation") or {}
+        if treatment.get("mistreatment_report_evidence"):
+            reasons.append("Queja de atención o maltrato requiere revisión, aunque supere el puntaje mínimo")
+        waiting = metadata.get("wait_validation") or {}
+        if waiting.get("review_required") or checks.get('espera_prolongada_detectada'):
+            reasons.append(waiting.get('reason') or 'Espera de 65 segundos o más sin retoma confirmada; revisar audio.')
+        if treatment.get("dismissive_review_required"):
+            reasons.append("Expresión despectiva en gestión de recado; revisar emisor y contexto")
         if treatment.get("confrontation_review_required"):
             reasons.append("Confrontación sin hablante confirmado; requiere revisión")
         if treatment.get("hostile_interlocutor_review_required"):
             reasons.append("Hostilidad del interlocutor requiere validación")
+        if (metadata.get("call_end_validation") or {}).get("review_required"):
+            reasons.append(metadata["call_end_validation"].get("reason") or "Silencio o finalización sin responsable confirmado; revisar audio")
         if duration_seconds is not None and float(duration_seconds) < 60:
             reasons.append("Duración inferior a 60 segundos")
         duration = metadata.get("duration_validation") or {}
@@ -390,6 +457,28 @@ class AnalyticsService:
         enriched_context = dict(operational_context or {})
         enriched_context["_segments"] = list(getattr(transcription, "segments", []) or [])
         enriched_context["_duration_seconds"] = float(getattr(transcription, "duration_seconds", 0.0) or 0.0)
+        enriched_context["_amount_recovery"] = (getattr(transcription, "metadata", {}) or {}).get("recuperacion_importes")
+        financial_source = dict(getattr(transcription, "metadata", {}) or {})
+        financial_source.setdefault("archivo", transcription.file_name)
+        financial_source.setdefault("texto", transcription.text)
+        financial_source.setdefault("segmentos", transcription.segments)
+        enriched_context["_financial_source"] = financial_source
+        enriched_context["_financial_review"] = financial_source.get("financial_audio_review")
+        contact_source={'archivo':transcription.file_name,'texto':transcription.text,
+                        'segmentos':transcription.segments,'duracion_segundos':transcription.duration_seconds}
+        family_review=validate_family_confirmation(contact_source,operational_context or {},
+            (getattr(transcription,'metadata',{}) or {}).get('family_contact_confirmation'))
+        enriched_context['_family_contact_validation']=family_review
+        recado_review = validate_recado_confirmation(contact_source, operational_context or {},
+            (transcription.metadata or {}).get('recado_acceptance_confirmation'))
+        enriched_context['_recado_acceptance_validation'] = recado_review
+        disclosure_review=validate_disclosure_confirmation(contact_source,operational_context or {},
+            (transcription.metadata or {}).get('privacy_disclosure_confirmation'),
+            (transcription.metadata or {}).get('audio_block_evidence'))
+        enriched_context['_privacy_disclosure_validation']=disclosure_review
+        warning_review=validate_warning_confirmation(contact_source,operational_context or {},
+            (transcription.metadata or {}).get('home_warning_confirmation'),(transcription.metadata or {}).get('audio_block_evidence'))
+        enriched_context['_home_warning_validation']=warning_review
 
         compliance = cls.calculate_basic_compliance(
             text,
@@ -424,6 +513,7 @@ class AnalyticsService:
         # -----------------------------------------------------
 
         analysis.metadata = {
+            "engine_revision": cls.ENGINE_REVISION,
             "source_language": str(
                 getattr(
                     transcription,
@@ -461,6 +551,12 @@ class AnalyticsService:
         analysis.metadata["quality_contact_type"] = compliance.get(
             "contact_type", "CONTACTO NO DETERMINADO"
         )
+        analysis.metadata["contact_validation"] = compliance.get("contact_validation", {})
+        analysis.metadata['associate_contact_validation'] = compliance.get('associate_contact_validation', {})
+        analysis.metadata['intermediary_contact_validation'] = compliance.get('intermediary_contact_validation', {})
+        analysis.metadata['family_contact_validation']=family_review
+        analysis.metadata['privacy_disclosure_validation']=disclosure_review
+        analysis.metadata['home_warning_validation']=warning_review
         analysis.metadata["quality_blocks"] = compliance.get("blocks", {})
         analysis.metadata["quality_checks"] = compliance.get("checks", {})
         analysis.metadata["operational_context"] = compliance.get(
@@ -478,12 +574,14 @@ class AnalyticsService:
         analysis.metadata["treatment_validation"] = compliance.get(
             "treatment_validation", {}
         )
+        analysis.metadata['wait_validation'] = compliance.get('wait_validation', {})
         analysis.metadata["call_end_validation"] = compliance.get(
             "call_end_validation", {}
         )
         analysis.metadata["status_validation"] = compliance.get(
             "status_validation", {}
         )
+        analysis.metadata['arco_validation'] = compliance.get('arco_validation', {})
         analysis.metadata["convenio_payment_validation"] = compliance.get(
             "convenio_payment_validation", {}
         )
@@ -492,6 +590,8 @@ class AnalyticsService:
         )
         analysis.metadata["payment_reference_validation"] = compliance.get("payment_reference_validation", {})
         analysis.metadata["privacy_validation"] = compliance.get("privacy_validation", {})
+        analysis.metadata['home_recovery_warning']=compliance.get('home_recovery_warning',{})
+        analysis.metadata['clarification_validation']=compliance.get('clarification_validation',{})
         exception = (operational_context or {}).get("hostile_interlocutor_exception") or (getattr(transcription, "metadata", {}) or {}).get("hostile_interlocutor_exception")
         if isinstance(exception, dict):
             analysis.metadata["hostile_interlocutor_exception"] = {
@@ -500,6 +600,18 @@ class AnalyticsService:
         analysis.metadata["negotiation_validation"] = compliance.get(
             "negotiation_validation", {}
         )
+        data = dict(transcription.metadata or {})
+        data.setdefault("archivo", transcription.file_name)
+        data.setdefault("texto", transcription.text)
+        data.setdefault("segmentos", transcription.segments)
+        data.setdefault('duracion_segundos',transcription.duration_seconds)
+        analysis.metadata["amount_recovery_validation"] = amount_review_status(data, data.get("amount_audio_review"))
+        analysis.metadata["account_source_validation"] = validate_account_source(operational_context or {})
+        analysis.metadata["financial_review_validation"] = (compliance.get("negotiation_validation") or {}).get("financial_review", {})
+        analysis.metadata['audio_block_evidence_validation']=validate_evidence(
+            data.get('audio_block_evidence'),data,operational_context or {},
+            analysis.metadata['quality_contact_type'],cls.calculate_basic_compliance)
+        analysis.metadata['recado_acceptance_validation'] = recado_review
         analysis.metadata["final_result"] = compliance.get(
             "final_result", "REVISAR"
         )
@@ -767,7 +879,7 @@ class AnalyticsService:
         return None
 
     @classmethod
-    def _extract_payment_promise_date(cls, text, call_date_value=None):
+    def _extract_payment_promise_date(cls, text, call_date_value=None, _details=False):
         """
         Extrae la fecha de compromiso más probable.
 
@@ -800,9 +912,17 @@ class AnalyticsService:
         def add_candidate(match, candidate):
             if candidate is None:
                 return
+            if re.fullmatch(r"\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?", match.group()):
+                prefix = normalized[max(0, match.start()-65):match.start()]
+                if not re.search(r"\b(?:el|pago|pagar|depositar|fecha|promesa|para|dia)\s+"
+                                 r"(?:(?:es|sera|el|para|dia|de|pago)\s+){0,5}$", prefix):
+                    return  # Fragmentos de teléfono no son fechas de promesa.
             left = max(0, match.start() - 100)
             right = min(len(normalized), match.end() + 100)
             context = normalized[left:right]
+            if re.fullmatch(r"7[/-]11", match.group()) and not re.search(
+                    r"(?:dia|fecha|para el|pagar el|pago el)\s*$", normalized[max(0,match.start()-25):match.start()]):
+                return  # La tienda 7-11 no es una fecha de pago.
 
             near_left = max(0, match.start() - 55)
             near_right = min(len(normalized), match.end() + 55)
@@ -827,7 +947,7 @@ class AnalyticsService:
             payment_context = payment_context and not inability_context and not incidental_date and not visit_context
             acceptance_context = bool(re.search(
                 r"\b(?:esta bien|de acuerdo|correcto|si|sale|va|"
-                r"queda|quedamos|confirm)\b",
+                r"queda|quedamos|confirm\w*)\b",
                 context,
             ))
 
@@ -871,6 +991,33 @@ class AnalyticsService:
             except ValueError:
                 pass
 
+        # «Confirmo el pago el día 24» es una fecha; no se exige que el
+        # interlocutor repita el nombre del mes en cada confirmación.
+        for m in re.finditer(r"\b(?:el dia|para el dia)\s+([0-3]?\d)\b(?!\s*[/:-])", normalized):
+            if re.match(r"\s+de\s+(?:"+'|'.join(months)+r")\b", normalized[m.end():]):
+                continue  # La fecha completa ya se evaluó arriba.
+            try:
+                add_candidate(m,date(base.year,base.month,int(m[1])))
+            except ValueError:
+                pass
+
+        day_names = {"uno":1, "dos":2, "tres":3, "cuatro":4, "cinco":5, "seis":6,
+                     "siete":7, "ocho":8, "nueve":9, "diez":10, "once":11, "doce":12,
+                     "trece":13, "catorce":14, "quince":15, "dieciseis":16, "diecisiete":17,
+                     "dieciocho":18, "diecinueve":19, "veinte":20, "veintiuno":21,
+                     "veintidos":22, "veintitres":23, "veinticuatro":24, "veinticinco":25,
+                     "veintiseis":26, "veintisiete":27, "veintiocho":28, "veintinueve":29,
+                     "treinta":30, "treinta y uno":31}
+        for m in re.finditer(r"\b("+"|".join(sorted(day_names, key=len, reverse=True))+
+                             r")\s+de\s+("+"|".join(months)+r")\b", normalized):
+            try:
+                candidate = date(base.year, months[m[2]], day_names[m[1]])
+                if candidate < base - timedelta(days=31):
+                    candidate = candidate.replace(year=base.year+1)
+                add_candidate(m, candidate)
+            except ValueError:
+                pass
+
         # dd/mm/yyyy, dd-mm-yyyy, dd/mm, dd-mm
         numeric_pattern = (
             r"\b([0-3]?\d)[/-]([01]?\d)(?:[/-](\d{2,4}))?\b"
@@ -908,41 +1055,16 @@ class AnalyticsService:
 
         # Mayor score = contexto de compromiso más fuerte y mención más tardía.
         candidates.sort(key=lambda item: (item[0], item[1]))
-        return candidates[-1][2]
+        selected = candidates[-1]
+        return {"date": selected[2], "text": selected[3], "evidence": selected[4]} if _details else selected[2]
 
     @classmethod
     def _extract_payment_promise_date_details(cls, text, call_date_value=None):
         """Devuelve fecha + evidencia textual; nunca crea evidencia desde Excel."""
-        base = cls._parse_context_date(call_date_value)
-        if base is None:
-            return {"date": None, "text": "", "evidence": ""}
-        normalized = cls._normalize_for_analysis(cls._normalize_spaces(text))
-        # Reutiliza el extractor estricto para obtener la fecha final.
-        candidate = cls._extract_payment_promise_date(text, call_date_value)
-        if candidate is None:
-            return {"date": None, "text": "", "evidence": ""}
-        # Localiza una mención que realmente explique esa fecha.
-        patterns = [r"\bpasado\s+manana\b", r"(?<!pasado\s)\bmanana\b", r"\bhoy\b",
-                    r"\b[0-3]?\d\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)(?:\s+(?:de\s+)?\d{4})?\b",
-                    r"\b[0-3]?\d[/-][01]?\d(?:[/-]\d{2,4})?\b",
-                    r"\b(?:el\s+|este\s+|proximo\s+)?(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)\b"]
-        hits=[]
-        pay=re.compile(r"\b(?:pago|pagar|pague|page|deposit|transfer|abono|convenio|compromiso|queda|quedamos|acuerdo|liquid|cantidad|monto|pesos|confirm)\w*\b")
-        for pat in patterns:
-            for m in re.finditer(pat, normalized):
-                a=max(0,m.start()-100); b=min(len(normalized),m.end()+100); ctx=normalized[a:b]
-                near=normalized[max(0,m.start()-55):min(len(normalized),m.end()+55)]
-                inability=bool(re.search(r"\b(?:no\s+(?:tengo|puedo|voy|podre|podria)\b.{0,24}(?:pagar|pago)|sin\s+dinero|no\s+hay\s+dinero)\b", near))
-                incidental=bool(re.search(r"\b(?:vence|vencimiento|fecha\s+limite|estado\s+de\s+cuenta|corte)\b", near))
-                visit=bool(re.search(r"\b(?:visita|domicilio|domiciliaria|diligencia|licenciad[oa]s?|abogad[oa]s?|recuperacion|recuperar|bienes|muebles|folio\s+de\s+la\s+negativa|negativa\s+de\s+pago)\b", near))
-                if pay.search(near) and not inability and not incidental and not visit:
-                    hits.append((m.start(),m.group(0).strip(),ctx.strip()))
-        if not hits:
-            return {"date": None, "text": "", "evidence": ""}
-        _, raw, ev=sorted(hits,key=lambda x:x[0])[-1]
-        return {"date": candidate, "text": raw, "evidence": ev}
+        return cls._extract_payment_promise_date(text, call_date_value, _details=True) or {
+            "date": None, "text": "", "evidence": ""}
 
-    # v3.6.14 · Tabla oficial 04_Moras_Cortes del Manual Operativo v2.1.
+    # Tabla 04_Moras_Cortes contrastada con el manual operativo recibido (portada 2.0).
     # Bradescard conserva Asignación y Vencimiento; solo se deriva Fecha de Pago.
     CUT_PAYMENT_DAY = {3: 26, 5: 28, 8: 1, 10: 3, 11: 4, 15: 8, 19: 12, 20: 13, 23: 16, 25: 18, 28: 21}
 
@@ -971,10 +1093,8 @@ class AnalyticsService:
             return cut, None
         from calendar import monthrange
         year, month = base.year, base.month
-        if day < cut:
-            month += 1
-            if month == 13:
-                month, year = 1, year + 1
+        # La tabla da el día de pago del periodo gestionado. No desplazarlo
+        # automáticamente al mes siguiente por ser menor al número de corte.
         try:
             return cut, date(year, month, min(day, monthrange(year, month)[1]))
         except Exception:
@@ -1092,38 +1212,73 @@ class AnalyticsService:
             "A": "A",
         }
         mora = mora_aliases.get(assignment_norm, assignment)
+        mora_policy = payment_policy(mora, parsed_call_date, parsed_due_date)
+        if not mora_policy["uses_cut"] and mora in LIQUIDATION_MORAS:
+            cut_applied, calculated_payment_date, parsed_limit_date = None, None, None
 
         # ---------------------------------------------------------
         # DETECCIÓN DE INTERLOCUTOR / ESTATUS
         # ---------------------------------------------------------
         segments = context.get("_segments") or []
-        unknown_debtor = recipient_statement(text, segments,
-            r"\b(?:no (?:lo|la) conozco|ni (?:lo|la) conozco|no conozco a|"
-            r"no se quien es|nunca ha vivido aqui|numero (?:equivocado|incorrecto))\b")
+        unknown_debtor = unknown_debtor_statement(text, segments)
+        unknown_response = unknown_recipient_response(text, segments)
+        unknown_debtor = unknown_debtor or unknown_response['confirmed']
 
         recado_assessment = assess_recado(text, context.get("_segments") or [])
+        confirmed_recado = context.get('_recado_acceptance_validation') or {}
+        if confirmed_recado.get('valid'):
+            recado_assessment['acceptance'].append({
+                'text': ('El usuario confirmó la entrega del recado y del contacto para el titular.'
+                         if confirmed_recado.get('message_delivered')
+                         else 'El usuario confirmó que el interlocutor acepta transmitir el recado.'),
+                'source': confirmed_recado['record']['source'],
+                'speaker_role': 'TERCERO', 'start': None, 'end': None})
+            if confirmed_recado.get('message_delivered'):
+                recado_assessment['message'] = [{'text': confirmed_recado['record']['message_description'],
+                    'source': confirmed_recado['record']['source'], 'speaker_role': 'GESTOR',
+                    'start': None, 'end': None}]
+        confirmed_family=context.get('_family_contact_validation') or {}
+        if confirmed_family.get('valid'):
+            recado_assessment['family'].append({'text':'Parentesco confirmado explícitamente por el usuario.',
+                'phrase':'familiar confirmado por usuario: '+confirmed_family['relationship'].lower(),
+                'source':'EXPLICIT_USER_FAMILY_CONFIRMATION','speaker_role':'NO DETERMINADO','start':None,'end':None})
         family = bool(recado_assessment["family"])
         spouse = any(re.search(r"\b(?:espos[oa]|marido|mujer)\b", e["phrase"])
                      for e in recado_assessment["family"])
         third_party = recipient_statement(text, segments,
-            r"\bsoy (?:su )?(?:companero|companera|vecino|vecina|amigo|amiga|conocido|conocida|encargado de la casa|encargada de la casa)\b")
+            r"\b(?:soy (?:su )?(?:companero|companera|vecino|vecina|amigo|amiga|conocido|conocida|encargado de la casa|encargada de la casa)|es mi amig[oa]|vivimos aqui juntos|es nuestro proveedor|lo conoci en una fiesta)\b")
         work_contact = recipient_statement(text, segments,
-            r"\b(?:soy (?:su )?compan(er[oa]) de trabajo|(?:es|era) mi (?:trabajador|trabajadora|empleado|empleada)|trabaja (?:conmigo|para mi))\b")
+            r"\b(?:soy (?:su )?compan(er[oa]) de trabajo|(?:es|era) mi (?:trabajador|trabajadora|empleado|empleada)|trabaja (?:conmigo|para mi)|ya no trabaja con nosotros)\b")
         titular = recipient_statement(text, segments,
             r"\b(?:soy yo|(?:si )?soy (?:el |la )?titular|habla (?:el |la )titular)\b")
+        contact_confirmation = holder_confirmation(text, segments)
+        titular = titular or contact_confirmation["confirmed"]
+        associate_confirmation = associate_relationship(text, segments)
+        third_party = third_party or (not titular and associate_confirmation['confirmed'])
+        # La ausencia declarada confirma un tercero, no su parentesco. Una
+        # entrega posterior al titular prevalece sobre esa respuesta inicial.
+        intermediary_response = bool(not titular and recipient_statement(text, segments,
+            r"^(?:(?:no|bueno|pues)[, ]+)?(?:(?:el|ella) )?(?:(?:por|en) (?:el|este|ese) momento[, ]+)?"
+            r"(?:no se encuentra(?: aqui| en casa| en este momento)?|"
+            r"no esta(?: aqui| en casa| ahorita| por el momento)?|no (?:llega|ha llegado)|esta trabajando)[.!]?$"))
+        message_for_named_person = bool(not titular and recado_assessment['acceptance'] and agent_statement(
+            text,segments,r'\b(?:el senor|la senora|la senorita|el titular|la titular)\b[^.!?]{0,65}'
+            r'\b(?:se pueda comunicar|se comunique|pueda comunicarse)\b'))
+        intermediary_response = intermediary_response or message_for_named_person
+        third_party = third_party or intermediary_response
 
         if unknown_debtor:
             contact_type = "NO CONOCEN A DEUDOR"
             detected_status = "NO CONOCEN A DEUDOR"
         elif family:
             contact_type = "TERCERO / FAMILIAR"
-            detected_status = "MENSAJE CON FAMILIAR"
+            detected_status = ""
         elif work_contact:
             contact_type = "TERCERO / TRABAJO"
-            detected_status = "MENSAJE EN TRABAJO"
+            detected_status = ""
         elif third_party:
             contact_type = "TERCERO"
-            detected_status = "MENSAJE CON TERCERO"
+            detected_status = ""
         elif titular:
             contact_type = "TITULAR"
             detected_status = ""
@@ -1178,7 +1333,7 @@ class AnalyticsService:
         # cuenta cuando está ligado a uno de estos contextos; no se acepta MR
         # aislado en cualquier parte de la conversación.
         mrs_context_pattern = (
-            r"(?:corporativo(?:\s+juridico)?|despacho|juridico|consultores?|consultoria|"
+            r"(?:corporativo(?:\s+juridico)?|despacho|juridico|consultor(?:es)?|consultoria|"
             r"le\s+habl(?:o|amos)|habl(?:o|amos)|le\s+llam(?:o|amos)|llam(?:o|amos)|"
             r"somos|por\s+parte\s+de)"
         )
@@ -1193,12 +1348,16 @@ class AnalyticsService:
                 mrs_initialism_text,
             )
         )
+        mrs_smr_context_variant = bool(re.search(
+            r"\b(?:consultor(?:es)?|despacho|juridico|corporativo)\s+(?:de\s+)?smr\b",
+            mrs_initialism_text))
 
         # Formas explícitas completas también son válidas. Para MR simple se
         # exige el contexto anterior.
+        company_aliases = company_alias_evidence(text, segments)
         identifies_mrs_explicit = mrs_known_variant
-        identifies_mrs_asr = mrs_known_variant or mrs_mr_context_variant
-        identifies_mrs = bool(identifies_mrs_explicit or mrs_mr_context_variant)
+        identifies_mrs_asr = bool(mrs_known_variant or mrs_mr_context_variant or mrs_smr_context_variant or company_aliases)
+        identifies_mrs = bool(identifies_mrs_explicit or mrs_mr_context_variant or mrs_smr_context_variant or company_aliases)
         mrs_asr_variant = mrs_known_variant
         mrs_presentation_context = bool(re.search(mrs_context_pattern, mrs_initialism_text))
 
@@ -1257,6 +1416,7 @@ class AnalyticsService:
             "le dejo el recado",
             "recado",
             "mensaje",
+            "mensajito",
         ])
 
         # RECADO REF1/REF2: análisis contextual del destinatario del recado.
@@ -1265,9 +1425,7 @@ class AnalyticsService:
         recado_applies = recado_expected or (not excel_status and family)
         recado_family_evidence = [e["phrase"] for e in recado_assessment["family"]]
         # Distinguir "no vive aquí" de "no conozco"; el primero no niega parentesco.
-        recado_unknown_explicit = bool(re.search(
-            r"\b(?:no (?:lo|la) conozco|ni (?:lo|la) conozco|no se quien es|"
-            r"nunca (?:lo|la) he conocido|numero equivocado)\b", normalized))
+        recado_unknown_explicit = unknown_debtor_statement(text, segments)
         # Negativas explícitas a tomar/transmitir el mensaje: no equivalen a recado válido.
         recado_refusal = bool(re.search(
             r"\b(?:yo tampoco voy a andar|no voy a andar)\b.{0,50}\b(?:buscando|pasando|mensaje)|"
@@ -1284,12 +1442,20 @@ class AnalyticsService:
             r"en cuanto (?:lo|la) vea le (?:comento|digo|aviso)|"
             r"(?:diga(?:le)?|indiquele|mencionele|comentele|avis(?:e|ele)) (?:por favor )?que|"
             r"(?:le puedo dejar|le dejo|le voy a dejar|le voy a dictar) (?:un |el )?(?:numero|recado|mensaje)|"
+            r"(?:le dejare|le estaria dejando|le estare dejando) (?:un |el )?(?:numero|recado|mensaje)|"
             r"(?:le menciona que|le mencion[eo] que|es un numero para (?:que|aquellos)|"
             r"(?:indiquele|digale|mencionele) (?:a|al|a la) ))\b", normalized))
-        recado_callback = bool(re.search(
-            r"\b(?:que se comunique|que (?:nos )?llame|que (?:nos )?marque|"
-            r"(?:se|pueda) comunicar con nosotros|numero (?:de telefono|de contacto|de atencion)|"
-            r"tiene donde anotar|tenga donde anotar)\b", normalized))
+        recado_transmitted=recado_transmitted or any(
+            e.get('method') in {'REPETICION_NUMERO_CONTACTO_SOLICITADA','ACEPTA_INFORMACION_Y_RECIBE_CONTACTO',
+                               'SOLICITA_DICTADO_TRAS_ESPERA_CON_CONTACTO_COMPLETO'}
+            for e in recado_assessment['acceptance'])
+        recado_transmitted = recado_transmitted or bool(
+            confirmed_recado.get('valid') and confirmed_recado.get('message_delivered'))
+        if confirmed_recado.get('valid'):
+            callback_message = directed_callback_message(text, segments)
+            if callback_message:
+                recado_assessment['message'] = callback_message
+                recado_transmitted = True
         # Un rechazo explícito bloquea la aprobación aunque el gestor haya dictado un número.
         # "Le puedo dejar" es una solicitud del gestor, NO prueba aceptación del interlocutor.
         # Si el texto carece de confirmación, se conserva REVISAR (no se fabrica una aprobación).
@@ -1298,11 +1464,19 @@ class AnalyticsService:
         # La pregunta de si puede anotar no demuestra que se dictó un mensaje.
         recado_callback = bool(re.search(
             r"\b(?:que (?:se comunique|(?:nos |me )?(?:llame|marque))|"
-            r"(?:se|pueda) comunicar con nosotros|numero (?:de telefono|de contacto|de atencion))\b",
+            r"(?:se|pueda) comunicar con nosotros|se comunique (?:inmediatamente |a la brevedad )?(?:al|con nosotros)|puede comunicarse|"
+            r"(?:me|nos) (?:pued[ae]|podria|podia|pudiera) (?:regalar|regresar) (?:una? |la )?llamada|"
+            r"numero (?:telefonico|de telefonico|de telefono|de contacto|de atencion))\b",
             normalized))
+        recado_callback = recado_callback or bool(
+            confirmed_recado.get('valid') and confirmed_recado.get('callback_delivered'))
         recado_real = bool(recado_callback and (recado_transmitted or leaves_message)
                            and not (recado_declines or recado_refusal)
                            and recado_recibido_explicito)
+        if recado_real:
+            detected_status = {"TERCERO / FAMILIAR": "MENSAJE CON FAMILIAR",
+                               "TERCERO / TRABAJO": "MENSAJE EN TRABAJO",
+                               "TERCERO": "MENSAJE CON TERCERO"}.get(contact_type, detected_status)
         if recado_applies:
             # La relación familiar explícita prevalece sobre "soy yo" (identidad del referente).
             if recado_family_evidence and not recado_unknown_explicit:
@@ -1426,10 +1600,10 @@ class AnalyticsService:
                          r"presenta (?:un |una )?(?:adeudo|deuda)|"
                          r"cubrir (?:el |su )?atraso|"
                          r"cuenta (?:que ha sido )?asignada (?:a |al )?(?:juridico|cobranza))\b", normalized)
-            or re.search(r"\b(?:saldo pendiente|saldo vencido|deuda pendiente|adeudo pendiente|"
+            or re.search(r"\b(?:saldo vencido|deuda pendiente|adeudo pendiente|"
                          r"negativa de pago|recuperacion (?:del|de su|en el) saldo|"
                          r"respecto a su atraso|en relacion a su atraso|"
-                         r"presenta (?:un )?(?:atraso|adeudo|saldo pendiente))\b", normalized)
+                         r"presenta (?:un )?(?:atraso|adeudo))\b", normalized)
         )
 
         financial_information = any([
@@ -1456,9 +1630,6 @@ class AnalyticsService:
         # ---------------------------------------------------------
         # REGLAS NO CONOCEN A DEUDOR
         # ---------------------------------------------------------
-        arco_process = agent_statement(text, segments,
-            r"\b(?:puede ejercer|para ejercer|solicitar|tramitar|ejercer|procedimiento|proceso|tramite)\b"
-            r".{0,65}\b(?:derechos? (?:a )?arco|arco)\b")
         asks_line_tenure = any_of([
             "cuanto tiempo tiene con la linea",
             "cuanto tiempo lleva con la linea",
@@ -1481,12 +1652,17 @@ class AnalyticsService:
             r"(?:cuanto tiempo.{0,50}(?:linea|numero)|desde hace cuanto.{0,50}(?:linea|numero))"
             r"[.?!,; ]{1,8}(?:(?:tengo|llevo|hace) )?(?:un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|\d+) (?:anos?|mes(?:es)?)\b",
             normalized))
-        line_tenure_confirmed = bool(confirms_line_tenure or tenure_answer)
-
-        asks_ine_or_line_proof = agent_statement(text, segments,
-            r"\b(?:ine|identificacion oficial|comprobante de (?:la linea|telefono|propiedad de la linea))\b")
+        qualitative_tenure = recipient_statement(text, segments,
+            r"\b(?:yo )?tengo (?:varios |muchos )?anos con (?:este |el |mi )?numero\b")
+        tenure_reply = qualitative_line_tenure(text, segments)
+        line_tenure_confirmed = bool(confirms_line_tenure or tenure_answer or qualitative_tenure or tenure_reply['confirmed'])
         gives_privacy_email = agent_statement(text, segments,
-            r"\bprivacidad1?@bradesco\.com\.mx\b")
+            r"(?<![\w.+-])privacidad1?@bradesco\.com\.mx(?![\w-]|\.[\w.-])")
+        email_dictation=dictated_privacy_email(text,segments)
+        gives_privacy_email=bool(gives_privacy_email or email_dictation['detected'])
+        arco_validation = assess_arco(text, segments, email_given=gives_privacy_email)
+        arco_process = arco_validation['process_explained']
+        asks_ine_or_line_proof = arco_validation['both_documents_requested']
 
         no_conocen_valid = (
             unknown_debtor
@@ -1495,6 +1671,11 @@ class AnalyticsService:
             and asks_ine_or_line_proof
             and gives_privacy_email
         )
+        arco_validation.update(applies=bool(unknown_debtor or canonical_excel_status=='NO CONOCEN A DEUDOR'),
+                               valid=bool(no_conocen_valid),line_tenure_confirmed=line_tenure_confirmed,
+                               line_tenure_reply=tenure_reply,unknown_recipient_confirmed=bool(unknown_debtor))
+        if not unknown_debtor:arco_validation['reasons'].append('No se confirmó desconocimiento del titular.')
+        if not line_tenure_confirmed:arco_validation['reasons'].append('No se confirmó antigüedad de la línea.')
 
         # ---------------------------------------------------------
         # REGLAS DE NEGOCIACIÓN
@@ -1512,16 +1693,63 @@ class AnalyticsService:
             normalized,
         ))
         liquidation_offer_pattern = re.compile(
-            r"\bcon\s+(?:este|ese|el)\s+pago\b.{0,80}\b(?:liquida|liquidaria|liquidar)\b"
-            r"|\b(?:usted\s+)?(?:puede|podra|debe|debera|tiene\s+que|tendria\s+que)\b.{0,80}\b(?:liquidar|liquida)\b"
-            r"|\b(?:le\s+ofrecemos|le\s+podemos\s+ofrecer|la\s+opcion\s+es)\b.{0,100}\b(?:liquidar|liquidacion)\b"
-            r"|\b(?:liquida|liquidaria)\s+(?:su\s+cuenta|la\s+cuenta|saldo\s+total|el\s+saldo\s+total|saldo\s+vencido|el\s+saldo\s+vencido|lo\s+vencido)\b",
+            r"(?P<payment>\bcon\s+(?:este|ese|el)\s+pago\b.{0,80}\b(?:liquida|liquidaria|liquidar)\b)"
+            r"|(?P<directive>\b(?:usted\s+)?(?:puede|podra|debe|debera|tiene\s+que|tendria\s+que)\b.{0,80}\b(?:liquidar|liquida)\b)"
+            r"|(?P<offer>\b(?:le\s+ofrecemos|le\s+podemos\s+ofrecer|la\s+opcion\s+es)\b.{0,100}\b(?:liquidar|liquidacion)\b)"
+            r"|(?P<bare>\b(?:liquida|liquidaria)\s+(?:su\s+cuenta|la\s+cuenta|saldo\s+total|el\s+saldo\s+total)\b"
+            r"|\b(?:tendria|tendra|dejaria|dejara)\s+(?:su|la)\s+cuenta\s+en\s+ceros\b)",
         )
-        agent_liquidation_offer = any(
-            liquidation_offer_pattern.search(norm(unit["text"]))
-            and unit["speaker_role"] not in {"TITULAR", "TERCERO", "INTERLOCUTOR"}
-            and not re.search(r"\b(?:me dijeron|me habian dicho|segun yo|yo pague|yo quiero|crei|pense)\b", norm(unit["text"]))
-            for unit in evidence_units(text, context.get("_segments") or []))
+        # «Finiquitar la deuda» expresa liquidación total, aunque la oferta
+        # termine con una pregunta o quede partida entre ventanas de Whisper.
+        settlement_pattern = (
+            r"\b(?:se le esta ofreciendo|le (?:ofrecemos|ofrezco)|le podemos ofrecer)\b"
+            r".{0,80}\b(?:descuento|opcion)\b.{0,45}\bpara\s+"
+            r"(?:(?:finiquitar|fin de quitar) (?:la |su )?(?:deuda|cuenta)|liquidar (?:la |su )?cuenta|"
+            r"liquidar lo que (?:ya )?es la cuenta)\b")
+        explicit_settlement_offer = any(
+            unit["speaker_role"] not in {"TITULAR", "TERCERO", "INTERLOCUTOR"}
+            and not re.search(r"\b(?:me dijeron|me habian dicho|segun yo|crei|pense)\b", norm(unit["text"]))
+            and agent_statement(unit["text"], (), settlement_pattern)
+            for unit in sentence_evidence(text, segments))
+        agent_liquidation_offer = explicit_settlement_offer
+        liquidation_offer_evidence = []
+        for unit in sentence_evidence(text, segments):
+            if unit["speaker_role"] in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:
+                continue
+            for clause in re.split(r"[;]|(?=¿)", unit["text"]):
+                folded = norm(clause)
+                for candidate in liquidation_offer_pattern.finditer(folded):
+                    if re.search(r"\b(?:me dijeron|me habian dicho|segun yo|yo pague|yo quiero|crei|pense)\b", folded) or re.search(
+                            r"\b(?:el cliente|la cliente|el titular|la titular|usted)\s+(?:dijo|dice|menciona|comenta|confirmo|me dijo)\b", folded):
+                        continue
+                    prefix = folded[max(0, candidate.start()-60):candidate.start()]
+                    if re.search(r"\b(?:no|nunca|jamas)\s+(?:(?:se|le)\s+)?$", prefix) or re.search(
+                            r"\bno\s+(?:puede|podra|debe|debera|liquida|liquidaria)\b", candidate.group()):
+                        continue
+                    if re.search(r"\bno\s+(?:(?:es|seria|sera)\s+)?para\s+liquid(?:ar|a)\b", candidate.group()):
+                        continue
+                    # Cubrir lo vencido no equivale a liquidar la cuenta completa.
+                    if re.match(r"\s+(?:lo que es\s+)?(?:(?:su|el|la)\s+)?(?:saldo vencido|mensualidad(?: vencida)?|pago (?:minimo|vencido)|lo vencido)\b",
+                                folded[candidate.end():]):
+                        continue
+                    question = bool("?" in folded or "¿" in folded or re.search(
+                        r"\b(?:por que|no sera que|sera que)\s*$", prefix))
+                    # «Debe 1800 ... voy a liquidar» combina saldo e intención del
+                    # cliente. El verbo deber seguido de un monto no es una orden.
+                    owed_amount = candidate.lastgroup == "directive" and bool(re.match(
+                        r"(?:usted\s+)?(?:debe|debera)\s+(?:\$?\s*\d|mil\b|dos\b|tres\b|cuatro\b|cinco\b|seis\b|siete\b|ocho\b|nueve\b|diez\b|once\b|doce\b|quince\b|veinte\b|treinta\b|cien\b|ciento\b|doscientos\b|trescientos\b|cuatrocientos\b|quinientos\b|seiscientos\b|setecientos\b|ochocientos\b|novecientos\b)",
+                        candidate.group()))
+                    personal_intent = bool(re.search(r"\b(?:voy (?:a|al)|quiero|queria|yo)\b.{0,35}\bliquidar\b", candidate.group()))
+                    uncertain_claim = bool(re.search(r"\b(?:no creo|no creemos|no se si|no sabria si|tal vez|quizas|puede que)\b", prefix))
+                    confirmed = not (question or owed_amount or personal_intent or uncertain_claim) and (candidate.lastgroup != "bare" or unit["speaker_role"] == "GESTOR")
+                    liquidation_offer_evidence.append({"text": clause.strip(), "speaker_role": unit["speaker_role"],
+                        "start": unit.get("start"), "end": unit.get("end"), "confirmed": confirmed,
+                        "reason": "OFERTA_DIRECTA" if confirmed else "SALDO_E_INTENCION_PERSONAL" if owed_amount or personal_intent else "PREGUNTA_O_ENUNCIADO_SIN_ATRIBUCION"})
+                    agent_liquidation_offer = agent_liquidation_offer or confirmed
+        liquidation_offer_review_required = bool(liquidation_offer_evidence and not agent_liquidation_offer)
+        holder_liquidation_report = holder_liquidation_report or bool(re.search(
+            r"\b(?:voy (?:a|al) liquidar|yo liquido|liquidare)\b"
+            r"|\bya les habia dicho\b[^.!?]{0,100}\bliquid(?:o|ar)\b", normalized))
         liquidation_words = agent_liquidation_offer
         liquidation_attribution = (
             "GESTOR" if agent_liquidation_offer
@@ -1632,6 +1860,7 @@ class AnalyticsService:
 
         # v3.5.8 · pago previo estructurado. Un pago histórico puede coexistir
         # con una NUEVA promesa en la misma llamada; no debe anularla.
+        completed_payment_confirmation = completed_payment(text, segments)
         completed_payment_matches = list(re.finditer(
             r"\b(?:ya\s+(?:pague|page|hice|realice)|pague\s+(?:ayer|hoy)|"
             r"hice\s+el\s+pago|realice\s+(?:mi|el|un)\s+pago|"
@@ -1639,79 +1868,39 @@ class AnalyticsService:
             r"(?:lo|el\s+pago)\s+hizo\s+el\s+dia|"
             r"(?:realizo|hizo)\s+el\s+pago\s+el\s+dia|"
             r"ya\s+se\s+(?:hizo|pago)|pago\s+(?:realizado|efectuado)|"
+            r"depositamos|ya (?:pudo|puedo|realizo|ha realizado|ha podido|hizo)\b[^?!]{0,95}\b(?:pago|pado)|"
             r"tengo\s+registrado\s+(?:un\s+)?reporte\s+de\s+pago)\b", normalized))
-        payment_already_made = bool(payment_already_made or completed_payment_matches)
-        prior_payment_evidence = []
-        prior_payment_amounts = []
-        prior_payment_spans = []
-
-        def _parse_prior_payment_number(token):
-            raw = str(token or "").strip().replace("$", "").replace(" ", "")
-            try:
-                # 3,900 / 3.900 = miles; 3900 / 3900.00 = formato normal.
-                if re.fullmatch(r"\d{1,3}(?:[.,]\d{3})+", raw):
-                    return float(re.sub(r"[.,]", "", raw))
-                if "," in raw and "." in raw:
-                    return float(raw.replace(",", ""))
-                if "," in raw:
-                    parts = raw.split(",")
-                    if len(parts) == 2 and len(parts[1]) in (1, 2):
-                        return float(raw.replace(",", "."))
-                    return float(raw.replace(",", ""))
-                return float(raw)
-            except Exception:
-                return None
-
-        # v3.6.11: pago previo = evento, no coincidencia de regex. Las distintas frases
-        # "ya pagué / hice mi pago / pago realizado" de un mismo tramo no deben sumar
-        # dos veces la misma cantidad. Además 3,900 debe conservarse como 3900, no 900.
-        for pm in completed_payment_matches:
-            a=max(0, pm.start()-70); b=min(len(normalized), pm.end()+150)
-            # Si el contexto se solapa ampliamente con un pago previo ya procesado,
-            # se considera el mismo evento y no se vuelve a sumar.
-            if any(not (b < sa or a > sb) for sa, sb in prior_payment_spans):
+        # Extraer importes históricos solo de declaraciones ya acreditadas;
+        # las instrucciones futuras no pueden aportar pagos ni complementos.
+        completed_payment_matches = [m for m in completed_payment_matches if any(
+            u["text_start"] < m.end() and u["text_end"] > m.start()
+            for u in completed_payment_confirmation["evidence"])]
+        additional_payment_starts = set()
+        for unit in completed_payment_confirmation["evidence"]:
+            start, end = unit["text_start"], unit["text_end"]
+            if any(m.start() < end and m.end() > start for m in completed_payment_matches):
                 continue
-            ctx=normalized[a:b]
-            prior_payment_evidence.append(ctx.strip())
-            prior_payment_spans.append((a,b))
-            candidates=[]
-            for am in re.finditer(r"(?:\$\s*)?(\d{1,3}(?:[.,]\d{3})+|\d{2,7}(?:[.,]\d{1,2})?)(?:\s*pesos?)?", ctx):
-                val=_parse_prior_payment_number(am.group(1))
-                if val is None or not (10 <= val <= 9999999):
-                    continue
-                # Excluir teléfono/WhatsApp/referencia/terminación cercanos.
-                before=ctx[max(0,am.start()-55):am.start()]
-                if re.search(r"(?:telefono|teléfono|whatsapp|referencia|terminacion|terminación|digitos|dígitos|folio)\s*(?:es|:|numero|número)?\s*$", before):
-                    continue
-                candidates.append((am.start(), val))
-            # v3.6.18: pagos previos expresados con palabras ("pagué mil pesos").
-            if True:
-                word_map = {"un":1,"uno":1,"dos":2,"tres":3,"cuatro":4,"cinco":5,"seis":6,"siete":7,"ocho":8,"nueve":9,
-                            "diez":10,"once":11,"doce":12,"trece":13,"catorce":14,"quince":15,"veinte":20,"treinta":30,"cuarenta":40,"cincuenta":50,
-                            "cien":100,"ciento":100,"doscientos":200,"trescientos":300,"cuatrocientos":400,"quinientos":500,"seiscientos":600,"setecientos":700,"ochocientos":800,"novecientos":900}
-                wm = re.search(r"\b((?:(?:un|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|veinte|treinta|cuarenta|cincuenta|cien|ciento|doscientos|trescientos|cuatrocientos|quinientos|seiscientos|setecientos|ochocientos|novecientos|mil|y)\s*){1,7})pesos?\b", ctx)
-                if wm:
-                    total_w=0; current_w=0
-                    for w in wm.group(1).split():
-                        if w == "y": continue
-                        if w == "mil": total_w += (current_w or 1)*1000; current_w=0
-                        elif w in word_map: current_w += word_map[w]
-                    val=float(total_w+current_w)
-                    if val >= 10:
-                        candidates.append((wm.start(), val))
-            if candidates:
-                # Prioriza la cantidad más próxima a la expresión de pago realizado.
-                rel_pm=max(0, pm.start()-a)
-                _, val=min(candidates, key=lambda x: abs(x[0]-rel_pm))
-                prior_payment_amounts.append(val)
-        prior_payment_total = sum(prior_payment_amounts) if prior_payment_amounts else None
+            fragment = normalized[start:end]
+            match = re.compile(re.escape(fragment)).match(normalized, start) if fragment else None
+            if match:
+                completed_payment_matches.append(match)
+                additional_payment_starts.add(start)
+        completed_payment_matches.sort(key=lambda m: m.start())
+        payment_already_made = bool(payment_already_made or completed_payment_matches)
+        prior_payment_binding = reported_amounts(text, completed_payment_confirmation)
+        prior_payment_evidence = list(dict.fromkeys(u["text"] for u in completed_payment_confirmation["evidence"]))
+        prior_payment_amounts = prior_payment_binding["amounts"]
+        prior_payment_total = prior_payment_binding["total"]
 
         promise_is_future = bool(promise_date and parsed_call_date and promise_date > parsed_call_date)
         prior_cue_in_promise = bool(re.search(
             r"\b(?:ya\s+(?:pague|page|hice|realice)|pague\s+(?:ayer|hoy)|(?:lo|el\s+pago)\s+hizo\s+el\s+dia|(?:realizo|hizo)\s+el\s+pago\s+el\s+dia|ya\s+se\s+(?:hizo|pago)|pago\s+(?:realizado|efectuado))\b",
             norm(promise_date_evidence)))
+        commitment_confirmation = payment_commitment(text, segments)
+        payment_already_made = completed_payment_confirmation["confirmed"]
         explicit_new_promise = bool(
             promise_date and promise_date_evidence and (promise_is_future or not prior_cue_in_promise)
+            and commitment_confirmation["accepted"]
         )
         payment_confirmation_case = bool(payment_already_made and not explicit_new_promise)
         # Solo se elimina la fecha cuando la llamada es exclusivamente confirmación
@@ -1735,31 +1924,16 @@ class AnalyticsService:
             "confirmo su compromiso",
             "confirmamos su pago",
             "fecha de pago",
-        ]) or bool(
-            re.search(
-                r"\b(?:0?[1-9]|[12]\d|3[01])[/-](?:0?[1-9]|1[0-2])(?:[/-]\d{2,4})?\b",
-                normalized,
-            )
-        )
+        ])
 
         # Coherencia interna: una fecha de promesa extraída es evidencia
         # suficiente para no penalizar simultáneamente "sin fecha".
         if promise_date is not None and not payment_confirmation_case:
             confirms_payment_date = True
+        if payment_confirmation_case:
+            confirms_payment_date = False  # Una fecha de pago pasado no confirma una promesa nueva.
 
-        confirms_commitment = any_of([
-            "confirmo su compromiso",
-            "confirmamos su pago",
-            "entonces queda su pago",
-            "queda su pago para",
-            "acuerdo de pago",
-            "convenio",
-            "queda para",
-            "quedamos para",
-            "esta bien",
-            "está bien",
-            "de acuerdo",
-        ])
+        confirms_commitment = bool(commitment_confirmation["accepted"])
 
         regularization_wording = any_of([
             "se pone al corriente",
@@ -1777,6 +1951,15 @@ class AnalyticsService:
             "solo una parte",
             "pago incompleto",
         ])
+        # Una advertencia para evitar un parcial no constituye su aceptación.
+        if partial_payment:
+            partial_payment = any(
+                not re.search(r"\b(?:no (?:se )?(?:vaya a |va a )?"
+                              r"(?:tomar|tome|toma|considerar|considere) como (?:un )?|"
+                              r"no (?:es|hare|realizare|acepto) (?:un )?|evitar (?:un )?)$",
+                              norm(u['text'])[:m.start()])
+                for u in sentence_evidence(text, segments)
+                for m in re.finditer(r"\b(?:pago parcial|abono parcial|solo una parte|pago incompleto)\b", norm(u['text'])))
         partial_explanation = any_of([
             "no regulariza la cuenta",
             "no queda al corriente",
@@ -1849,10 +2032,7 @@ class AnalyticsService:
         # Si la misma llamada presenta el pago como liquidación y también
         # como simple puesta al corriente/regularización, se manda a revisión
         # sin inventar una penalización que no exista en el Manual.
-        high_mora_liquidation = mora in {
-            "3HN", "4PV", "5PV", "6PV",
-            "C1", "C2", "C3", "C4", "B", "A",
-        }
+        high_mora_liquidation = mora in LIQUIDATION_MORAS
         liquidation_effect_asr_variant = bool(
             re.search(
                 r"\b(?:"
@@ -1894,7 +2074,7 @@ class AnalyticsService:
                 normalized,
             )
         )
-        total_liquidation_wording = any_of([
+        total_liquidation_wording = explicit_settlement_offer or any_of([
             "liquidacion total",
             "liquidar saldo total",
             "liquida saldo total",
@@ -1927,20 +2107,15 @@ class AnalyticsService:
 
         visit_management_context = bool(re.search(
             r"\b(?:visita|domicilio|domiciliaria|diligencia|licenciad[oa]s?|abogad[oa]s?|recuperacion|recuperar)\b", normalized))
-        prohibited_visit_wording = bool(re.search(
-            r"\b(?:embarg\w*|retir\w*|quit\w*|recog\w*)\b.{0,45}\b(?:bienes|muebles|casa|vehiculo|propiedad)\b|"
-            r"\b(?:bienes|muebles)\b.{0,45}\b(?:retir\w*|quit\w*|recog\w*|embarg\w*)\b", normalized))
-        if mora in {"1PV", "2PV"}:
-            visit_instruction = re.compile(
-                r"\b(?:vamos a|voy a|se va a|se puede|procederemos a)\s+"
-                r"(?:realizar|generar|presentar|efectuar|hacer|programar|agendar)\s+(?:una?\s+)?"
-                r"(?:visita|diligencia|cobro)\b.{0,60}\b(?:domicilio|domiciliaria|casa|recuperacion)\b|"
-                r"\b(?:se realizara|se programara|se generara|se presentara|realizaremos|programaremos|enviaremos)\s+(?:una?\s+)?"
-                r"(?:visita|diligencia|cobro)\b.{0,60}\b(?:domicilio|domiciliaria|casa|recuperacion)\b|"
-                r"\b(?:iremos|acudiremos)\s+a\s+(?:su\s+)?(?:domicilio|casa)\b")
-            prohibited_visit_wording = prohibited_visit_wording or any(
-                not re.search(r"\bno\s*$", normalized[max(0, m.start()-8):m.start()])
-                for m in visit_instruction.finditer(normalized))
+        threat_evidence = prohibited_threat(text, segments, mora)
+        prohibited_visit_wording = bool(threat_evidence)
+        home_recovery_warning=assess_home_recovery_warning(text,segments,mora)
+        warning_review=context.get('_home_warning_validation') or {}
+        if warning_review.get('valid'):
+            home_recovery_warning.update(confirmed=True,review_required=False)
+            home_recovery_warning['evidence'].append(dict(warning_review['record']['evidence'],confirmed=True,
+                speaker_role='GESTOR',attribution_source='EXPLICIT_USER_HOME_WARNING_CONFIRMATION'))
+        prohibited_visit_wording=bool(prohibited_visit_wording or home_recovery_warning['confirmed'])
         # Una visita nunca confirma por sí misma una promesa de pago.
         visit_only_management = bool(visit_management_context and not promise_date_evidence)
 
@@ -1955,6 +2130,9 @@ class AnalyticsService:
         # ambiguas se solicita revisión, evitando culpar al gestor por el
         # comportamiento del titular o por un corte técnico.
         confrontation_patterns = [
+            "mentirosa", "mentiroso",
+            "sabes escuchar", "sabe escuchar", "aprende como funciona una tarjeta",
+            "me esta poniendo muchas trabas", "si te molesta que te generen las llamadas",
             "si no quiere pagar es su problema",
             "usted fue quien se endeudo",
             "usted se endeudo",
@@ -1972,7 +2150,7 @@ class AnalyticsService:
             "usted es una deudora",
         ]
         confrontation_details = [dict(unit, phrase=phrase)
-            for unit in evidence_units(text, context.get("_segments") or [])
+            for unit in sentence_evidence(text, context.get("_segments") or [])
             for phrase in confrontation_patterns if re.search(r"(?<!\w)" + re.escape(norm(phrase)) + r"(?!\w)", norm(unit["text"]))]
         confrontation_evidence = list(dict.fromkeys(e["phrase"] for e in confrontation_details))
         confrontation_review = any(e["speaker_role"] == "NO DETERMINADO" for e in confrontation_details)
@@ -1985,11 +2163,15 @@ class AnalyticsService:
             "pinche vieja", "pinche viejo", "pinche", "cabron", "cabrona",
             "mierda", "hijo de puta", "hija de puta", "vete a la chingada",
             "puta", "puto", "chingar", "chinga tu madre", "jodete", "vete al carajo",
+            "que poca madre",
             "quiero acostarme contigo", "quiero tener sexo contigo", "quiero cogerte",
         ]
         insult_evidence = [p for p in insult_patterns if re.search(r"(?<!\w)" + re.escape(norm(p)) + r"s?(?!\w)", normalized)]
+        insult_evidence.extend(offensive_asr_variants(text))
+        ambiguous_tail_insult = bool(re.search(r"(?<!\w)uta[.!?¡¿ ]*$",normalized)
+            and re.search(r"\b(?:hasta luego|gracias|buen dia)\b",normalized[-260:]))
         offensive_language_evidence = [dict(unit, phrase=phrase)
-            for unit in evidence_units(text, context.get("_segments") or [])
+            for unit in sentence_evidence(text, context.get("_segments") or [])
             for phrase in insult_evidence if norm(phrase) in norm(unit["text"])]
         # No inferir autor de groserías desde texto sin diarización.
         # Se bloquea la aprobación en cualquier caso; la responsabilidad queda por verificar.
@@ -2001,8 +2183,13 @@ class AnalyticsService:
             "su compañero me trato mal", "la gestora me trato mal",
             "me ofendieron", "me agredieron", "me estaban ofendiendo",
             "el gestor me insulto", "su gestor me agredio", "me hablo de forma grosera",
+            "se puso muy grosera", "se puso muy grosero", "fue muy grosera", "fue muy grosero",
+            "personas que amenazan", "me han amenazado", "me esta hablando muy fuerte",
+            "no me hable como me habla", "me esta insultando", "me estaba insultando", "me callaba",
         ]
-        mistreatment_report_evidence = [p for p in reported_mistreatment_patterns if norm(p) in normalized]
+        mistreatment_details = mistreatment_reports(text, segments, reported_mistreatment_patterns)
+        mistreatment_report_evidence = list(dict.fromkeys(e['phrase'] for e in mistreatment_details))
+        dismissive_evidence = dismissive_message_evidence(text, segments)
         gestor_confrontation = any(e["speaker_role"] == "GESTOR" for e in confrontation_details)
         confrontation_evidence = list(dict.fromkeys(confrontation_evidence + insult_evidence))
 
@@ -2038,10 +2225,9 @@ class AnalyticsService:
             "no me deja hablar", "usted no me deja hablar",
         ])
 
-        explicit_agent_hangup = any_of([
-            "le voy a colgar", "voy a colgar la llamada",
-            "le cuelgo", "procedo a colgar", "terminare la llamada",
-        ])
+        hangup_evidence = announced_hangup(text, segments)
+        explicit_agent_hangup = bool(hangup_evidence['unilateral'])
+        callback_proposed = bool(hangup_evidence['callback'])
         explicit_holder_hangup = any_of([
             "voy a colgar", "ya le voy a colgar", "te voy a colgar",
             "yo le cuelgo",
@@ -2072,8 +2258,10 @@ class AnalyticsService:
 
         if explicit_agent_hangup:
             call_end_result = "CUELGA GESTOR - GRAVE"
+        elif callback_proposed:
+            call_end_result = "DEVOLUCION DE LLAMADA PROPUESTA - REVISION"
         elif abandonment_review:
-            call_end_result = "SILENCIO/ABANDONO - GRAVE PARA REVISION"
+            call_end_result = "SILENCIO FINAL - RESPONSABLE NO DETERMINADO"
         elif explicit_holder_hangup:
             call_end_result = "CUELGA TITULAR - PASA"
         elif explicit_farewell:
@@ -2125,6 +2313,9 @@ class AnalyticsService:
             "offensive_language_evidence": offensive_language_evidence,
             "confrontation": treatment_state,
             "confrontation_details": confrontation_details,
+            "dismissive_evidence": dismissive_evidence,
+            "dismissive_review_required": bool(dismissive_evidence),
+            "mistreatment_report_evidence": mistreatment_details,
             "confrontation_review_required": confrontation_review,
             "hostile_interlocutor_review_required": hostile_interlocutor_review,
             "confrontation_evidence": confrontation_evidence,
@@ -2145,7 +2336,16 @@ class AnalyticsService:
             "explicit_agent_hangup": explicit_agent_hangup,
             "explicit_holder_hangup": explicit_holder_hangup,
             "abandonment_review": abandonment_review,
+            "callback_proposed": callback_proposed,
+            "callback_evidence": hangup_evidence['callback'],
+            "reason": "Devolución de llamada propuesta; confirmar acuerdo y continuación." if callback_proposed else "Silencio o finalización sin responsable confirmado; revisar audio",
+            "review_required": bool(abandonment_review or callback_proposed),
         }
+
+        # Los tiempos pertenecen al ASR original; la normalización visual de
+        # importes para reglas financieras no debe descartar segmentos hablados.
+        timing_source = (context.get('_financial_source') or {}).get('texto') or text
+        wait_validation = assess_call_wait(timing_source, segments, duration_seconds)
 
         # ---------------------------------------------------------
         # CONVENIOS: COMPROBANTE WHATSAPP Y LUGARES DE PAGO
@@ -2158,53 +2358,26 @@ class AnalyticsService:
         # el gestor instruye o solicita realizar un pago, aunque el estatus Excel
         # no sea literalmente CONVENIO (por ejemplo 1PV).
 
-        whatsapp_receipt_patterns = [
-            "comprobante por whatsapp", "comprobante de pago por whatsapp",
-            "envie su comprobante por whatsapp", "envia su comprobante por whatsapp",
-            "mande su comprobante por whatsapp", "manda su comprobante por whatsapp",
-            "comparta su comprobante por whatsapp", "comparte su comprobante por whatsapp",
-            "whatsapp para que comparta su comprobante", "whatsapp para que envie su comprobante",
-            "linea de whatsapp", "linea de validacion",
-        ]
-        # V4: tolerancia a las formas reales observadas en Whisper.
-        # Ejemplos del lote de prueba: "número de WhatsApp para que pueda mandar
-        # su comprobante de pago" y "reporte de pago por WhatsApp".
-        whatsapp_receipt_evidence = [p for p in whatsapp_receipt_patterns if norm(p) in normalized]
-
-        whatsapp_receipt_regexes = [
-            # comprobante / ticket / ficha + WhatsApp, en cualquier orden cercano
-            r"\b(?:comprobante|ticket|ficha|captura)\b.{0,100}\b(?:whatsapp|whats app|guasap|wasap)\b",
-            r"\b(?:whatsapp|whats app|guasap|wasap)\b.{0,140}\b(?:comprobante|ticket|ficha|captura)\b",
-            # reporte de pago por WhatsApp (forma exacta encontrada en la llamada 4)
-            r"\b(?:reporte|reportar|reporteme|rep[oó]rteme)\b.{0,60}\b(?:pago|deposito|abono)\b.{0,80}\b(?:whatsapp|whats app|guasap|wasap)\b",
-            # número/línea de WhatsApp seguido de petición de mandar evidencia (llamada 3)
-            r"\b(?:numero|linea)\b.{0,35}\b(?:whatsapp|whats app|guasap|wasap)\b.{0,140}\b(?:mandar|mande|enviar|envie|compartir|comparta)\b.{0,70}\b(?:comprobante|ticket|ficha|captura|reporte)\b",
-            # petición de mandar comprobante seguida del canal WhatsApp
-            r"\b(?:mandar|mande|enviar|envie|compartir|comparta)\b.{0,70}\b(?:comprobante|ticket|ficha|captura|reporte)\b.{0,140}\b(?:whatsapp|whats app|guasap|wasap)\b",
-        ]
-        for rx in whatsapp_receipt_regexes:
-            m = re.search(rx, normalized, flags=re.IGNORECASE | re.DOTALL)
-            if m:
-                ev = re.sub(r"\s+", " ", m.group(0)).strip()
-                if ev and ev not in whatsapp_receipt_evidence:
-                    whatsapp_receipt_evidence.append(ev)
-
-        requests_receipt_whatsapp = bool(whatsapp_receipt_evidence)
+        receipt_assessment = receipt_request_evidence(text, segments)
+        requests_payment_receipt = bool(receipt_assessment['requested'] or receipt_assessment['reported_sent'])
+        requests_receipt_whatsapp = bool(requests_payment_receipt and receipt_assessment['channel'] == 'WHATSAPP')
+        whatsapp_receipt_evidence = list(dict.fromkeys(
+            e['text'] for e in receipt_assessment['request_evidence'] + receipt_assessment['reported_sent_evidence'])) if requests_receipt_whatsapp else []
 
         authorized_payment_places = {
-            "FARMACIAS DEL AHORRO": ["farmacias del ahorro", "farmacia del ahorro"],
-            "7-ELEVEN": ["7 eleven", "seven eleven"],
-            "CHEDRAUI": ["chedraui"],
-            "WOOLWORTH": ["woolworth"],
+            "FARMACIAS DEL AHORRO": ["farmacias del ahorro", "farmacia del ahorro", "farmacias de la oro", "farmacia de la oro", "farmacias de la ahorro", "farmacia de la ahorro", "farmacia de la horro", "farmacias de la horro", "farmacia de la orro", "farmacias de la orro", "formacia de la oro", "formacias de la oro"],
+            "7-ELEVEN": ["7 eleven", "seven eleven", "7-11", "7/11", "7 y 11", "seven y leven", "7 11", "salvenileven", "sevenileven"],
+            "CHEDRAUI": ["chedraui", "che dragui", "chedragui", "che draui", "chedrawi", "chedrague", "chedraguy"],
+            "WOOLWORTH": ["woolworth", "bulbor", "bulbo", "bulvor", "hulbor", "hulvor", "ulbor", "wulbor", "wulvor", "wulworth", "bulboard"],
             "TIENDAS DEL SOL": ["tiendas del sol", "tienda del sol", "del sol"],
-            "CIRCLE K": ["circle k", "circulo k"],
-            "KIOSKO": ["kiosko", "kiosco"],
+            "CIRCLE K": ["circle k", "circulo k", "circulo que", "circulquei", "circuloquei", "circuluka", "circulcay"],
+            "KIOSKO": ["kiosko", "kiosco", "kyosko", "quiosco", "quiosko", "qiosco"],
             "TIENDAS NETO": ["tiendas neto", "tienda neto", "neto"],
-            "ABARREY": ["abarrey", "abarrey"],
+            "ABARREY": ["abarrey", "abarray"],
             "7/24 MIX": ["7 24 mix", "7/24 mix", "724 mix"],
-            "FARMACIAS YZA": ["farmacias yza", "farmacia yza"],
+            "FARMACIAS YZA": ["farmacias yza", "farmacia yza", "farmacias isa", "farmacia isa"],
             "FARMACIAS ROMA": ["farmacias roma", "farmacia roma"],
-            "TIENDAS 3B": ["tiendas 3b", "tienda 3b"],
+            "TIENDAS 3B": ["tiendas 3b", "tienda 3b", "tiendas tres b", "tienda tres b"],
             "TIENDAS SIX": ["tiendas six", "tienda six", "tiendas 6", "tienda 6"],
             # IMPORTANTE: mencionar solamente el banco NO acredita un lugar de pago
             # autorizado. Para bancos se exige el convenio/servicio correcto.
@@ -2242,6 +2415,10 @@ class AnalyticsService:
             "dieciseis digitos de su tarjeta", "nombre completo",
         ])
         authorized_transfer = bool(transfer_wording and authorized_transfer_account)
+        transfer_instruction_evidence = transfer_instructions(text, segments)
+        authorized_transfer_instruction = any("014320655030560466" in re.sub(r"\D", "", e["text"])
+                                              for e in transfer_instruction_evidence)
+        authorized_transfer = bool(authorized_transfer and authorized_transfer_instruction)
         if authorized_transfer:
             detected_payment_places.append("TRANSFERENCIA A SANTANDER BRADESCARD")
             payment_place_evidence.append("transferencia a cuenta Santander autorizada")
@@ -2280,43 +2457,40 @@ class AnalyticsService:
             bank: any(norm(v) in normalized for v in variants)
             for bank, variants in bank_variants.items()
         }
-        account_wording = any_of([
-            "a esa cuenta", "esa cuenta", "a la cuenta", "numero de cuenta",
-            "número de cuenta", "cuenta bancaria", "depositar a", "abonar a esa cuenta",
-            "directamente a esa cuenta",
-        ])
-        # Captura secuencias largas de dígitos aun cuando Whisper inserte comas/espacios.
-        digit_groups = re.findall(r"(?:\d[\s,.-]*){7,18}", text or "")
-        spoken_numbers = [re.sub(r"\D", "", g) for g in digit_groups]
-        spoken_numbers = [n for n in spoken_numbers if len(n) >= 7]
-        wrong_bank_data = []
-        for bank, mentioned in bank_mentioned.items():
-            if not mentioned:
-                continue
-            required = bank_authorized_tokens[bank]
-            has_required = required in digits_only
-            if payment_instruction_context and account_wording and spoken_numbers and not has_required:
-                wrong_bank_data.append({
-                    "bank": bank,
-                    "expected_convenio": required,
-                    "numbers_detected": spoken_numbers[:5],
-                })
-                unauthorized_payment_evidence.append(
-                    f"{bank}: se indicó una cuenta/numeración para pago sin el convenio autorizado {required}"
-                )
+        wrong_bank_data = wrong_bank_instructions(
+            text, context.get("_segments") or [], bank_variants, bank_authorized_tokens,
+            "014320655030560466")
+        for entry in wrong_bank_data:
+            unauthorized_payment_evidence.append(
+                f"{entry['bank']}: instrucción explícita de pago a una cuenta/numeración no autorizada")
 
         unauthorized_payment_method = bool(
             payment_instruction_context and (unauthorized_payment_evidence or wrong_bank_data)
         )
 
-        transfer_data_review = bool(
-            transfer_wording and not authorized_transfer_account
-            and payment_instruction_context and not unauthorized_payment_method
-        )
+        bank_destination_context = bool(re.search(
+            r"\b(?:clabe|cuenta bancaria|numero de cuenta|cuenta de destino|cuenta personal)\b", normalized))
+        new_transfer_discussion = future_transfer_discussion(text, segments)
+        reported_transfer_only = bool(payment_confirmation_case and not transfer_instruction_evidence
+                                      and not bank_destination_context and not new_transfer_discussion)
+        transfer_option_listing = transfer_is_option_listing(text,segments,detected_payment_places)
+        transfer_data_review = bool(not unauthorized_payment_method and (
+            (transfer_instruction_evidence and not authorized_transfer_instruction)
+            or (transfer_wording and not authorized_transfer_account and payment_instruction_context
+                and not reported_transfer_only and not transfer_option_listing and not only_negated_transfers(text))))
 
         convenio_payment_validation = {
             "applies": is_convenio,
             "requests_receipt_whatsapp": requests_receipt_whatsapp,
+            "requests_payment_receipt": requests_payment_receipt,
+            "receipt_requested": receipt_assessment['requested'],
+            "receipt_request_review_required": receipt_assessment['review_required'],
+            "receipt_uncertain_evidence": receipt_assessment['uncertain_request_evidence'],
+            "receipt_reported_sent": receipt_assessment['reported_sent'],
+            "receipt_channel": receipt_assessment['channel'],
+            "receipt_request_evidence": receipt_assessment['request_evidence'],
+            "receipt_sent_evidence": receipt_assessment['reported_sent_evidence'],
+            "receipt_channel_evidence": receipt_assessment['channel_evidence'],
             "whatsapp_evidence": whatsapp_receipt_evidence,
             "authorized_places_detected": detected_payment_places,
             "authorized_places_count": len(set(detected_payment_places)),
@@ -2334,6 +2508,11 @@ class AnalyticsService:
             "transfer_beneficiary_detected": transfer_beneficiary,
             "transfer_reference_detected": transfer_reference,
             "transfer_data_review": transfer_data_review,
+            "transfer_instruction_evidence": transfer_instruction_evidence,
+            "authorized_transfer_instruction_confirmed": authorized_transfer_instruction,
+            "reported_transfer_only": reported_transfer_only,
+            "future_transfer_discussion": new_transfer_discussion,
+            "transfer_option_listing_only": transfer_option_listing,
             "authorized_transfer_account": "014320655030560466",
             "authorized_transfer_bank": "Santander",
             "authorized_transfer_beneficiary": "Bradescard México S. de R.L.",
@@ -2345,11 +2524,22 @@ class AnalyticsService:
         # terminación. Los dígitos detectados aquí nunca participan como montos.
         expected_card_digits = re.sub(r"\D", "", str(context.get("numero_de_tarjeta") or ""))
         card_mentions = []
+        def refers_to_card(match):
+            context_before = normalized[max(0, match.start()-200):match.start()]
+            targets = list(re.finditer(r"\b(?:tarjeta|plastico|whatsapp|telefono|celular|linea)\b", context_before))
+            # «¿Terminación de cuál número? De WhatsApp [...] termina en 0880»
+            # identifica el canal del comprobante, no la tarjeta de la cuenta.
+            if not targets and re.search(
+                    r"\b(?:este|ese|es el) (?:es el )?numero (?:personal|telefonico|celular)\b",
+                    normalized[match.end():match.end()+160]):
+                return False
+            return not targets or targets[-1].group() in {"tarjeta", "plastico"}
         # Terminación explícita: aceptar exactamente 4 dígitos cercanos.
         for cm in re.finditer(
             r"(?:terminacion|terminación|termina\s+en|ultimos?\s+(?:cuatro|4)\s+digitos?|"
             r"últimos?\s+(?:cuatro|4)\s+dígitos?).{0,25}?(\d{4})\b", normalized, re.I):
-            card_mentions.append({"digits": cm.group(1), "evidence": cm.group(0).strip()})
+            if refers_to_card(cm):
+                card_mentions.append({"digits": cm.group(1), "evidence": cm.group(0).strip()})
         # Número completo: solo secuencias de 13 a 19 dígitos, con o sin espacios/guiones,
         # asociadas explícitamente a tarjeta o a la instrucción de 16 dígitos.
         for cm in re.finditer(
@@ -2365,11 +2555,15 @@ class AnalyticsService:
         # v3.6.18: si Whisper deja 5-12 dígitos inmediatamente después de
         # "terminación/termina en", no recortamos cuatro dígitos y no declaramos
         # tarjeta incorrecta: la evidencia es ambigua y debe revisarse.
-        ambiguous_card_mentions = []
+        ambiguous_card_mentions = [
+            {'digits': cm.group(1), 'evidence': normalized[cm.start():cm.end()+20]}
+            for cm in re.finditer(r"\bterminacion\s+(\d{4})\b(?=\s*,\s*\d{1,3}\b)", normalized)
+            if refers_to_card(cm)]
         for cm in re.finditer(
             r"(?:terminacion|terminación|termina\s+en|ultimos?\s+(?:cuatro|4)\s+digitos?|últimos?\s+(?:cuatro|4)\s+dígitos?).{0,25}?(\d{5,12})\b",
             normalized, re.I):
-            ambiguous_card_mentions.append({"digits": cm.group(1), "evidence": cm.group(0).strip()})
+            if refers_to_card(cm):
+                ambiguous_card_mentions.append({"digits": cm.group(1), "evidence": cm.group(0).strip()})
 
         card_validation = "NO SE PROPORCIONO TARJETA"
         card_validation_reason = "No se detectó un número/terminación de tarjeta proporcionado en la llamada."
@@ -2454,6 +2648,9 @@ class AnalyticsService:
             )
         # Bloqueos independientes del puntaje: no confundir grosería del titular
         # con agresión confirmada del gestor.
+        if ambiguous_tail_insult:
+            add_penalty('PEN_GROSERIA_CIERRE_REV','Trato',
+                'Posible grosería recortada al final («uta»); verificar audio y hablante.',0,False,['TRATO_REV'])
         if insult_evidence:
             add_penalty(
                 "PEN_GROSERIA_SIN_ATRIBUCION", "Trato",
@@ -2466,12 +2663,19 @@ class AnalyticsService:
                 "Lenguaje ofensivo atribuido explícitamente al gestor en la transcripción; bloquea aprobación.",
                 100, True, ["TRATO003"],
             )
+        if wait_validation['review_required']:
+            add_penalty('PEN_ESPERA_PROLONGADA', 'Espera',
+                wait_validation['reason'], 0, False, ['ESPERA_REV'])
         if mistreatment_report_evidence:
             add_penalty(
                 "PEN_QUEJA_MALTRATO", "Trato",
-                "El titular reporta maltrato. Bloquea aprobación hasta verificar la queja.",
+                "Se reporta mala atención, agresión o maltrato. Bloquea aprobación hasta verificar la queja, incluso si ocurrió en una llamada anterior.",
                 0, False, ["TRATO004"],
             )
+        if dismissive_evidence:
+            add_penalty('PEN_TRATO_DESPECTIVO_REV', 'Trato',
+                'Expresión despectiva al gestionar un mensaje («chisme»); bloquea aprobación y requiere cotejo de emisor y contexto.',
+                0, False, ['TRATO_REV'])
         if repeated_interruption_review:
             add_penalty(
                 "PEN_TRATO_INTERRUPCION", "Trato",
@@ -2487,8 +2691,8 @@ class AnalyticsService:
         if abandonment_review:
             add_penalty(
                 "PEN_ABANDONO_GESTOR", "Finalización",
-                "Silencio final prolongado con intentos de respuesta del interlocutor; grave para revisión por posible abandono del gestor.",
-                100, True, ["FIN002"],
+                "Silencio final prolongado; no confirma abandono del gestor. Revisar audio y quién dejó de responder.",
+                0, False, ["FIN002"],
             )
 
         if not identifies_mrs:
@@ -2512,11 +2716,16 @@ class AnalyticsService:
             )
 
         if unknown_debtor and not arco_process:
-            add_penalty(
-                "PEN_ARCO_OMISION", "Protección de Datos",
-                "Interlocutor confirma desconocer al titular y no se detecta el proceso de derechos ARCO obligatorio.",
-                100, True, ["ARCO001"],
-            )
+            if arco_validation['partial_guidance_requires_audio']:
+                add_penalty('PEN_ARCO_REV', 'Protección de Datos',
+                    'Hay indicios de orientación del trámite, pero no se confirmó la mención de derecho(s) ARCO; cotejar audio.',
+                    0, False, ['ARCO001'])
+            else:
+                add_penalty(
+                    "PEN_ARCO_OMISION", "Protección de Datos",
+                    "Interlocutor confirma desconocer al titular y no se detecta el proceso de derechos ARCO obligatorio.",
+                    100, True, ["ARCO001"],
+                )
 
         protected_third_statuses = {
             "MENSAJE CON FAMILIAR",
@@ -2542,8 +2751,8 @@ class AnalyticsService:
         # un parentesco: petición de comunicar con el titular seguida de ausencia,
         # o declaración explícita de que la persona es referencia del titular.
         third_party_dialogue = bool(
-            re.search(r"\b(?:me (?:podria|puede) comunicar|se encuentra|esta (?:el|la) senor|busco (?:a|al))\b", normalized)
-            and re.search(r"\b(?:no (?:esta|se encuentra)|no vive aqui|salio|no esta aqui)\b", normalized)
+            not titular and recipient_statement(text, segments,
+                r"^(?:(?:no|bueno|pues)[, ]+)?(?:el |ella )?(?:no esta aqui|no se encuentra(?: aqui)?|no vive aqui|salio)[.!]?$" )
         )
         reference_recipient = bool(re.search(
             r"\b(?:lo|la|le) dejo como (?:numero de )?referencia|"
@@ -2552,7 +2761,7 @@ class AnalyticsService:
         ))
         third_party_confirmed = bool(
             observed_third_party or family or third_party or work_contact
-            or third_party_dialogue or reference_recipient
+            or third_party_dialogue or (reference_recipient and not titular)
             or contact_type in ("TERCERO / FAMILIAR", "TERCERO / TRABAJO", "TERCERO", "NO CONOCEN A DEUDOR")
         )
         privacy_validation = assess_privacy(
@@ -2562,12 +2771,21 @@ class AnalyticsService:
             titular=titular,
             legacy_financial=bool(financial_information or payment_reference_validation["detected"]),
         )
+        confirmed_review = context.get('_privacy_disclosure_validation') or {}
+        if confirmed_review.get('valid') and confirmed_review.get('confirmed_disclosure'):
+            confirmed_evidence = confirmed_review['record']['evidence']
+            privacy_validation.update(confirmed_disclosure=True, review_required=False,
+                third_party_confirmed=True, reason=confirmed_review['reason'])
+            privacy_validation['evidence'].append(dict(confirmed_evidence, speaker_role='GESTOR',
+                recipient_role='TERCERO', confirmed=True, review_required=False,
+                attribution_source='EXPLICIT_USER_DISCLOSURE_CONFIRMATION'))
         uncertain_disclosure = privacy_validation["review_required"]
         if privacy_validation["confirmed_disclosure"]:
             add_penalty(
                 "PEN003",
                 "Protección de Datos",
-                "Se divulgó a un tercero información de deuda, mora, negativa de pago, saldo o tarjeta; requiere bloqueo de aprobación.",
+                ("Se divulgó a un tercero información de deuda, mora, negativa de pago, saldo o tarjeta; requiere bloqueo de aprobación."
+                 + (" Confirmado por usuario: " + confirmed_review['record']['evidence']['text'] if confirmed_review.get('valid') else "")),
                 100,
                 True,
                 ["LEG003", "LEG004", "RN019", "FP004", "FP005", "FP006"],
@@ -2592,11 +2810,21 @@ class AnalyticsService:
         # intento real de negociación, salvo reporte de pago ya realizado que
         # cubra el mínimo (o cuyo monto no pueda determinarse con seguridad).
         negotiation_attempt = bool(
-            (promise_date_evidence and not payment_confirmation_case)
+            explicit_settlement_offer
+            or (promise_date_evidence and not payment_confirmation_case)
             or re.search(r"\b(?:cuanto\s+puede\s+pagar|que\s+cantidad\s+puede|"
                          r"que\s+dia\s+puede\s+pagar|cuando\s+puede\s+pagar|"
                          r"propuesta\s+de\s+pago|opcion\s+de\s+pago|convenio|"
                          r"reestructura|pago\s+minimo|liquidar|abono|parcialidad)\b", normalized)
+            or agent_statement(text, segments,
+                r"\b(?:tendria que|tendriamos que|tiene que|puede|podria|necesitaria) (?:realizar|aplicar|hacer) (?:un |el |su )?(?:pago|deposito)\b|"
+                r"\b(?:se le esta solicitando|se le esta pidiendo) (?:un |el |su )?(?:pago|\d+|dos mil|mil)\b|"
+                r"\b(?:cuando|que dia) (?:lo )?estaria (?:haciendo|pagando)|"
+                r"\bpodemos contar con (?:su |el )?pago\b")
+            or any(u['speaker_role'] not in {'TITULAR','TERCERO','INTERLOCUTOR'} and re.search(
+                r"\b(?:cuento con (?:su|el) pago|podemos contar con (?:su|el) pago|"
+                r"(?:tiene|tendria) que (?:depositar|pagar|abonar))\b",norm(u['text']))
+                for u in sentence_evidence(text,segments))
         )
         try:
             minimum_for_attempt = float(str(context.get("pago_minimo") or "").replace(",", ""))
@@ -2611,10 +2839,17 @@ class AnalyticsService:
             and minimum_for_attempt is not None
             and prior_payment_total + 0.009 >= minimum_for_attempt
         )
+        # Un reporte sin importe comprobable es incertidumbre, no una falta de
+        # gestión confirmada. No afirmar que cubre el mínimo ni restar 15 puntos.
+        reported_amount_pending = bool(contact_type == 'TITULAR' and payment_confirmation_case and not negotiation_attempt
+            and (prior_payment_total is None or minimum_for_attempt is None
+                 or prior_payment_binding["review_required"]))
         missing_collection_attempt = bool(
             contact_type == "TITULAR"
+            and canonical_excel_status != 'ACLARACION'
             and not negotiation_attempt
             and not prior_payment_covers_minimum
+            and not reported_amount_pending
         )
         if missing_collection_attempt:
             add_penalty(
@@ -2626,10 +2861,10 @@ class AnalyticsService:
         # v3.6.11: un convenio de Excel que en realidad es SOLO confirmación de un pago
         # ya realizado no requiere volver a ofrecer lugares de pago. Sí debe pedirse
         # comprobante cuando corresponda, pero no se penaliza como nueva negociación.
-        if is_convenio and (not payment_confirmation_case) and not requests_receipt_whatsapp:
+        if is_convenio and (not payment_confirmation_case) and not requests_payment_receipt and not receipt_assessment["review_required"]:
             add_penalty(
                 "PEN_CONV_WHATSAPP", "Cierre",
-                "En convenio con nueva gestión de pago no se detectó solicitud del comprobante de pago por WhatsApp.",
+                "En convenio con nueva gestión de pago no se detectó solicitud, expectativa ni reporte de envío del comprobante/ticket de pago.",
                 10, False, ["CONV001"],
             )
         if is_convenio and (not payment_confirmation_case) and len(set(detected_payment_places)) < 2:
@@ -2693,20 +2928,12 @@ class AnalyticsService:
                 ["FRA003"],
             )
 
-        threats = any_of([
-            "lo vamos a embargar",
-            "la vamos a embargar",
-            "lo vamos a demandar",
-            "la vamos a demandar",
-            "va a ir a la carcel",
-            "le vamos a quitar sus bienes",
-            "le vamos a quitar su casa",
-        ]) or prohibited_visit_wording
+        threats = prohibited_visit_wording
         if threats:
             add_penalty(
                 "PEN012",
                 "Respeto / Amenazas",
-                "Se detectó una amenaza prohibida por el manual.",
+                "Se detectó una amenaza prohibida por el manual."+(' Confirmado por usuario.' if warning_review.get('valid') else ''),
                 100,
                 True,
                 ["FP011", "FP012", "FP013", "FP014", "FP015"],
@@ -2727,35 +2954,79 @@ class AnalyticsService:
         # Se preserva la identificación original de terceros/familiares.
         # ---------------------------------------------------------
         status_detection_confidence = "NO DETERMINADA"
+        status_evidence = ""
+        status_evidence_method = "SIN_EVIDENCIA"
+        prior_payment_with_current_decline = bool(payment_confirmation_case and negotiation_attempt
+            and commitment_confirmation['declined'] and not re.search(
+                r"\b(?:me comprometo a|voy a (?:pagar|depositar|abonar)|"
+                r"(?:yo )?(?:el )?(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo) pago)\b",normalized))
+        prior_payment_with_current_condition = bool(payment_confirmation_case and negotiation_attempt
+            and commitment_confirmation.get('conditional') and not confirms_commitment)
+        receipt_followup_question = any(
+            u['speaker_role'] not in {'TITULAR','TERCERO','INTERLOCUTOR'} and re.search(
+                r"\b(?:tiene|cuenta con)\s+(?:usted\s+)?(?:el |la |su |un |una )?"
+                r"(?:comprobante|captura|ticket)\b", norm(u['text']))
+            for u in sentence_evidence(text,segments))
+        payment_followup_case = bool(payment_confirmation_case and (
+            requests_payment_receipt or payment_registration or agent_statement(text, segments,
+                r"\b(?:tiene|cuenta con|mande|envie|comparta|enviar|mandar|enviarnos|haga llegar)\b[^.!?]{0,60}"
+                r"\b(?:comprobante|captura|ticket)\b") or receipt_followup_question))
+        new_payment_proposals = remaining_payment_proposals(text, segments)
+        unaccepted_new_payment_instruction = bool(is_convenio and payment_confirmation_case
+            and not confirms_commitment and (bool(new_payment_proposals) or agent_statement(text, segments,
+                r"\b(?:tiene|tendria|tendriamos|necesita) que (?:realizar|aplicar|cubrir|hacer) (?:un |el |su )?(?:pago|deposito)\b|"
+                r"\bseria que realice (?:un |el |su )?pago\b|"
+                r"\b(?:se le esta requiriendo|se le esta solicitando|se le requiere) (?:un |el |su )?pago\b")
+                or (prior_payment_total is not None and minimum_for_attempt is not None
+                    and not prior_payment_covers_minimum and negotiation_attempt)))
+        clarification_validation=reported_card_clarification(text,segments)
         if contact_type == "TITULAR" and not detected_status:
             agreement_evidence = bool(re.search(
                 r"\b(?:gener(?:o|amos|are|amos)\s+(?:su\s+|el\s+)?convenio|"
                 r"su\s+convenio\s+quedaria|quedamos\s+en\s+(?:tres|dos|3|2)\s+pagos|"
                 r"confirmo\s+(?:su\s+)?convenio)\b", normalized
             ))
-            refusal_evidence = bool(re.search(
+            refusal_evidence = recipient_statement(text, segments,
                 r"\b(?:no\s+voy\s+a\s+pagar|no\s+le\s+voy\s+a\s+pagar|"
-                r"no\s+pienso\s+pagar|me\s+niego\s+a\s+pagar)\b", normalized
-            ))
-            no_date_evidence = bool(re.search(
+                r"no\s+pienso\s+pagar|me\s+niego\s+a\s+pagar)\b")
+            no_date_evidence = recipient_statement(text, segments,
                 r"\b(?:no\s+se\s+cuando\s+(?:pueda|voy\s+a)\s+pagar|"
                 r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
-                r"no\s+tengo\s+fecha|lo\s+voy\s+a\s+revisar)\b", normalized
-            ))
-            if agreement_evidence and confirms_commitment and not payment_confirmation_case:
+                r"no\s+tengo\s+fecha|lo\s+voy\s+a\s+revisar)\b")
+            if (agreement_evidence or promise_date is not None) and confirms_commitment and not payment_confirmation_case:
                 detected_status = "CONVENIO"
                 status_detection_confidence = "ALTA"
-            elif refusal_evidence and not agreement_evidence:
+                status_evidence = commitment_confirmation["evidence"]
+                status_evidence_method = "COMPROMISO_ACEPTADO_CON_FECHA"
+            elif clarification_validation['confirmed'] and not confirms_commitment and not negotiation_attempt:
+                detected_status='ACLARACION'
+                status_detection_confidence='MEDIA'
+                status_evidence='Pérdida de tarjeta reportada, folio confirmado y seguimiento de resolución.'
+                status_evidence_method=clarification_validation['method']
+            elif refusal_evidence and not confirms_commitment:
                 detected_status = "NEGATIVA DE PAGO"
                 status_detection_confidence = "ALTA"
-            elif no_date_evidence and not explicit_new_promise and not agreement_evidence:
+                status_evidence_method = "NEGATIVA_EXPLICITA_DEL_INTERLOCUTOR"
+            elif (no_date_evidence or commitment_confirmation["declined"] or commitment_confirmation.get("conditional")) and (not payment_confirmation_case or prior_payment_with_current_decline or prior_payment_with_current_condition) and not explicit_new_promise and not confirms_commitment:
                 detected_status = "NO DEFINE FECHA DE PAGO"
                 status_detection_confidence = "ALTA"
-            elif payment_confirmation_case and not agreement_evidence:
+                status_evidence = commitment_confirmation["evidence"]
+                status_evidence_method = "SIN_COMPROMISO_FIRME_RESPUESTA_EXPLICITA"
+            elif payment_confirmation_case and not confirms_commitment and not (negotiation_attempt and not payment_followup_case):
                 detected_status = "PAGO REPORTADO / ACLARACION"
                 status_detection_confidence = "MEDIA"
+                status_evidence_method = "PAGO_ANTERIOR_REPORTADO"
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
+            if recado_real and detected_status.startswith('MENSAJE '):
+                status_evidence=' / '.join(u['text'] for u in recado_assessment['acceptance'])
+                status_evidence_method='RECADO_ACEPTADO_CON_CONTACTO'
+                if confirmed_family.get('valid'):
+                    status_evidence='Parentesco confirmado por usuario: '+confirmed_family['relationship']+'. '+status_evidence
+                    status_evidence_method='RECADO_ACEPTADO_Y_PARENTESCO_CONFIRMADO_POR_USUARIO'
+            if unknown_response['confirmed'] and detected_status=='NO CONOCEN A DEUDOR':
+                status_evidence=unknown_response['evidence']
+                status_evidence_method=unknown_response['method']
 
         # ---------------------------------------------------------
         # VALIDACIÓN ESPECÍFICA DEL ESTATUS EXCEL
@@ -2769,10 +3040,22 @@ class AnalyticsService:
             "valid": True,
             "reasons": [],
             "detection_confidence": status_detection_confidence,
+            "evidence_method": status_evidence_method,
+            "evidence": status_evidence,
         }
 
         if excel_status:
-            if excel_status == "NO CONOCEN A DEUDOR":
+            if (contact_type == "TITULAR" and payment_followup_case
+                    and excel_status in {"CONVENIO", "NO DEFINE FECHA DE PAGO"}):
+                # Regla operativa aclarada por el usuario el 28/oct/2026:
+                # conservar el estatus original al verificar pago/comprobante.
+                # No constituye una promesa futura ni exime otras validaciones.
+                status_validation.update(matches=True, valid=True, review_required=False,
+                    evidence_method="SEGUIMIENTO_PAGO_REPORTADO_ESTATUS_ORIGINAL",
+                    policy_source="ACLARACION_USUARIO_20261028",
+                    payment_followup_case=True,
+                    evidence=" / ".join(u['text'] for u in completed_payment_confirmation['evidence'][:2]))
+            elif excel_status == "NO CONOCEN A DEUDOR":
                 status_validation["matches"] = detected_status == "NO CONOCEN A DEUDOR"
 
                 if not unknown_debtor:
@@ -2819,8 +3102,14 @@ class AnalyticsService:
                 status_validation["line_tenure_confirmed"] = line_tenure_confirmed
                 status_validation["privacy_email"] = gives_privacy_email
                 status_validation["ine_or_line_proof"] = asks_ine_or_line_proof
-                if not asks_ine_or_line_proof:
-                    status_validation["reasons"].append("No se detectó solicitud de identificación o comprobante de titularidad de línea.")
+                status_validation['ine_requested'] = arco_validation['ine_requested']
+                status_validation['line_proof_requested'] = arco_validation['line_proof_requested']
+                if not arco_validation['ine_requested']:
+                    status_validation["reasons"].append("No se detectó solicitud de INE o identificación oficial.")
+                if not arco_validation['line_proof_requested']:
+                    status_validation["reasons"].append("No se detectó solicitud del comprobante de la línea.")
+                if arco_validation['documents_as_alternatives']:
+                    status_validation['reasons'].append('Se requieren INE y comprobante, no uno u otro documento.')
                 if not gives_privacy_email:
                     status_validation["reasons"].append("No se detectó el correo de privacidad para derechos ARCO.")
                 status_validation["valid"] = bool(no_conocen_valid)
@@ -2875,6 +3164,11 @@ class AnalyticsService:
 
         # No interpretar falta de evidencia como coincidencia válida.
         # Con Excel y estatus no detectable: revisión, nunca mal dictaminado automático.
+        if contact_type in {"TERCERO", "TERCERO / FAMILIAR", "TERCERO / TRABAJO"} and not recado_real:
+            status_validation["valid"] = False
+            status_validation["review_required"] = True
+            status_validation["evidence_method"] = "TERCERO_SIN_RECADO_CONFIRMADO"
+            status_validation["reasons"].append("Tercero identificado sin recado efectivamente confirmado; revisar conversación.")
         if excel_status and status_validation["matches"] is None:
             status_validation["valid"] = False
             status_validation["review_required"] = True
@@ -2979,6 +3273,10 @@ class AnalyticsService:
                 ):
                     return True
 
+                # Una referencia anterior no absorbe el importe de una nueva
+                # cláusula: «tarjeta ... se requiere un pago de 1200».
+                if re.search(r"\b(?:pago|pagar|pague|saldo(?: total| pendiente| vencido)?|cantidad|monto|abono|minimo)\s*(?:de|por)?\s*$", before):
+                    return False
                 nearby = (before + " " + after).lower()
                 return bool(non_money_reference_re.search(nearby))
 
@@ -3006,7 +3304,33 @@ class AnalyticsService:
                 val=spanish_number_value(m.group(1))
                 if val is not None and val > 0:
                     found.append((m.start(),m.end(),val,m.group(0)))
-            return sorted(found, key=lambda x:x[0])
+            # Las cantidades dictadas no requieren «pesos» si una cláusula
+            # financiera las introduce directamente. No se usa el mínimo de
+            # Excel para adivinar qué número se dijo.
+            for m in re.finditer(
+                    r"\b(?:pago(?: minimo| unico)?|saldo(?: total| pendiente| vencido)?|"
+                    r"cantidad|monto|abono)\s+(?:(?:por|de|la|cantidad)\s+){0,4}"
+                    r"(?P<amount>"+NUMBER+r")(?!\w)", source):
+                raw=m['amount']
+                if not re.search(r"[a-z]", raw):
+                    continue
+                value=money_value(raw)
+                if value and value>=10 and not is_non_money_reference(m.start('amount'),m.end('amount'),raw):
+                    found.append((m.start('amount'),m.end('amount'),value,raw))
+            # La respuesta «de mil quinientos» a una pregunta de importe no
+            # necesita moneda explícita. No se toma una pregunta de fecha.
+            for m in re.finditer(r"\b(?:de|por|con) que cantidad\?\s*(?:de |por )?"
+                                 r"(?P<amount>"+NUMBER+r")(?!\w)",source):
+                value=money_value(m['amount'])
+                suffix=source[m.end('amount'):m.end('amount')+45]
+                non_money_reply=re.match(r"\s*(?:digitos?|horas?|dias?|meses?|anos?|"
+                    r"de (?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre))\b",suffix)
+                if value and value>=10 and not non_money_reply:
+                    found.append((m.start('amount'),m.end('amount'),value,m['amount']))
+            # «mil 900 pesos» aporta 1900, no otros 900 adicionales.
+            return sorted([m for m in found if not any(
+                other[0] <= m[0] and other[1] >= m[1] and
+                (other[0] < m[0] or other[1] > m[1]) for other in found)], key=lambda x:x[0])
 
         minimum_expected = parse_money_value(context.get("pago_minimo"))
         total_expected = parse_money_value(context.get("saldo_total"))
@@ -3042,9 +3366,13 @@ class AnalyticsService:
 
         money_mentions = [normalize_asr_thousands(mm) for mm in money_mentions]
         data_inconsistency = bool(minimum_expected and total_expected and minimum_expected > total_expected)
-        regularization_claim = bool(regularization_wording or non_liquidation_effect_wording or any_of([
+        # «Saldo restante» sirve para detectar una contradicción de liquidación,
+        # pero por sí solo no promete regularizar ni crea una negociación nueva.
+        regularization_claim = bool(regularization_wording
+            or (non_liquidation_effect_wording and requires_new_negotiation_validation) or any_of([
             "con eso regulariza", "con eso regularizaria", "sale de cobranza", "salga de cobranza",
-            "pone al corriente", "queda al corriente"
+            "pone al corriente", "queda al corriente", "cubre mensualidad vencida", "cubre el pago vencido",
+            "solo cubre", "unicamente cubre"
         ]))
         financial_claim = bool(regularization_claim or total_liquidation_wording or liquidation_words)
 
@@ -3053,12 +3381,12 @@ class AnalyticsService:
         # convenio, abono, parcialidad, regularización o liquidación. Una cifra que aparece
         # únicamente junto a "saldo" no confirma el monto de la negociación.
         negotiation_anchor_re = re.compile(
-            r"\b(?:pagar|pague|paga|pago|abono|abonar|parcial|parcialidad|convenio|"
+            r"\b(?:pagar|pague|paga|pago|deposito|depositar|abono|abonar|parcial|parcialidad|convenio|"
             r"propuesta|acuerdo|regulariza|regularizar|corriente|liquida|liquidar|liquidacion|"
-            r"cubrir|cubre|cantidad\s+de|monto\s+de|pago\s+minimo|minimo\s+que|mínimo\s+que)\b"
+            r"cubrir|cubre|finiquitar|finiquito|cantidad(?:\s+de)?|monto\s+de|pago\s+minimo|minimo(?:\s+que)?|mínimo\s+que)\b"
         )
         balance_anchor_re = re.compile(
-            r"\b(?:saldo(?:\s+total|\s+pendiente)?|total\s+adeudado|adeudo\s+total)\b"
+            r"\b(?:saldo(?!\s+(?:pasado|anterior)\b)(?:\s+total|\s+pendiente)?|total\s+adeudado|adeudo\s+total)\b"
         )
         negotiation_positions = [m.start() for m in negotiation_anchor_re.finditer(source_norm)]
         balance_positions = [m.start() for m in balance_anchor_re.finditer(source_norm)]
@@ -3088,6 +3416,14 @@ class AnalyticsService:
             return any(max(0, pm.start()-45) <= mm[0] <= pm.end()+75 for pm in completed_payment_matches)
 
         for mm in money_mentions:
+            before_token=source_norm[max(0,mm[0]-60):mm[0]]
+            after_token=source_norm[mm[1]:mm[1]+35]
+            # Fechas, horas y plazos se excluyen por su sintaxis inmediata;
+            # mencionar «mañana» cerca de un pago no convierte ese pago en fecha.
+            if not re.search(r"\$|peso", str(mm[3])) and (
+                    re.search(r"\b(?:dia|fecha|corte|a las|son las|hasta el|desde el|antes del)\s*(?:de|el)?\s*$",before_token)
+                    or re.match(r"\s*(?:horas?|dias?|meses?|anos?|de octubre|de noviembre|de diciembre|de enero)\b",after_token)):
+                continue
             # v3.6.11: si la cifra está inmediatamente precedida por una terminación,
             # referencia, tarjeta, teléfono, WhatsApp, convenio, etc., se descarta como
             # monto aunque exista una palabra "pago" cercana. Ej.: "terminación 1509".
@@ -3096,7 +3432,10 @@ class AnalyticsService:
 
             prior_identifier = [pos for pos in identifier_positions if pos <= mm[0]]
             identifier_distance = (mm[0] - max(prior_identifier)) if prior_identifier else 10**9
-            if identifier_distance <= 85 and not ("$" in str(mm[3]) or "peso" in str(mm[3]).lower()):
+            payment_before = list(negotiation_anchor_re.finditer(before_token))
+            direct_money = bool(payment_before and re.fullmatch(
+                r"\s*(?:(?:de|por|la|cantidad|es|un|el)\s*)*",before_token[payment_before[-1].end():]))
+            if identifier_distance <= 85 and not direct_money and not ("$" in str(mm[3]) or "peso" in str(mm[3]).lower()):
                 continue
 
             # v3.6.5: atribución DIRECCIONAL. No usar la palabra "pago" que aparece
@@ -3107,11 +3446,15 @@ class AnalyticsService:
             prior_balance = [pos for pos in balance_positions if pos <= mm[0]]
             pay_distance = (mm[0] - max(prior_pay)) if prior_pay else 10**9
             balance_distance = (mm[0] - max(prior_balance)) if prior_balance else 10**9
+            balance_intro = re.search(
+                r"\b(?:saldo(?:\s+(?:total|pendiente|vencid[oa]))?|monto de atraso)"
+                r"(?:\s+(?:por|la|cantidad|de|es|asciende|a)){0,7}\s*$",
+                source_norm[max(0,mm[0]-110):mm[0]])
 
             # El saldo domina mientras siga siendo el contexto precedente más cercano.
             # Se amplía a 120 caracteres para cubrir repeticiones de confirmación
             # inmediatamente posteriores: "saldo ... 7.200. 7.200, ok?".
-            if balance_distance <= 120 and balance_distance <= pay_distance:
+            if balance_intro or (balance_distance <= 120 and balance_distance <= pay_distance):
                 balance_amount_candidates.append((balance_distance, mm))
                 continue
             if pay_distance <= 120:
@@ -3133,25 +3476,28 @@ class AnalyticsService:
                     (total_expected is None or mm[2] <= total_expected + 0.009)
                 )
                 # Números típicos no monetarios: 7-Eleven / 7 11, horas y días sueltos.
-                store_or_calendar = bool(re.search(
-                    r"(?:7[\s-]*(?:eleven|11)|\b(?:dia|día|fecha|hora|horario|corte|terminacion|terminación)\b)",
-                    local,
-                )) and not explicit_currency
+                store_or_calendar = bool(re.match(r"\s*[- ]*(?:eleven|11)\b",local_after)
+                    and mm[2]==7) and not explicit_currency
                 if store_or_calendar:
                     continue
 
                 # v3.6.14 · CARGOS/ANUALIDADES INFORMATIVOS != MONTO NEGOCIADO.
                 # Ej.: "pago de 85 pesos al mes ... anualidad" explica un cargo
                 # recurrente; no debe desplazar a la propuesta posterior de $800.
+                # Las frases vecinas no convierten una propuesta nueva en el
+                # cargo mensual explicado antes. Tampoco una fecha «cada mes»
+                # acredita que el importe sea una anualidad recurrente.
+                recurring_local = (re.split(r'[.!?]\s+', local_before)[-1] + ' ' +
+                    evidence_raw + ' ' + re.split(r'[.!?]\s+', local_after)[0])
                 recurring_charge_info = bool(re.search(
                     r"(?:anualidad|membresia|membresía|cargo\s+(?:mensual|anual)|"
-                    r"(?:\d+|pesos?).{0,18}(?:al|por)\s+mes|cada\s+mes)",
-                    local,
+                    r"(?:\d+|pesos?).{0,18}(?:al|por|cada)\s+mes)",
+                    recurring_local,
                 ))
                 recurring_commitment = bool(re.search(
                     r"(?:pagar|cubrir|abonar).{0,35}(?:hoy|mañana|antes\s+de|"
                     r"se\s+compromete|queda\s+en|acuerda|confirma)",
-                    local,
+                    recurring_local,
                 ))
                 if recurring_charge_info and not recurring_commitment:
                     continue
@@ -3220,14 +3566,15 @@ class AnalyticsService:
 
             sequence_wording = bool(re.search(
                 r"\b(?:pago\s+inicial|primer\s+pago|segundo\s+pago|tercer\s+pago|"
-                r"despues|después|luego|posteriormente|pagos?\s+(?:semanales|quincenales)|"
-                r"hoy.{0,80}(?:mañana|dia|día)|(?:dia|día)\s+\d{1,2}.{0,80}(?:dia|día)\s+\d{1,2})\b",
+                r"(?:dos|tres|2|3)\s+pagos|pagos?\s+(?:semanales|quincenales)|"
+                r"hoy.{0,80}(?:mañana|manana|(?:el\s+)?dia\s+\d{1,2})|"
+                r"(?:dia|día)\s+\d{1,2}.{0,80}(?:dia|día)\s+\d{1,2})\b",
                 source_norm))
             distinct = []
             for v in multi_payment_amounts:
                 if not any(abs(v-u) < 0.01 for u in distinct):
                     distinct.append(v)
-            if minimum_expected is not None and sequence_wording and len(distinct) >= 2:
+            if minimum_expected is not None and sequence_wording and len(distinct) == 2:
                 total_multi = sum(distinct)
                 if total_multi + 0.009 >= minimum_expected and (total_expected is None or total_multi <= total_expected + 0.009):
                     multi_payment_detected = True
@@ -3240,7 +3587,7 @@ class AnalyticsService:
             # debe sumarse al complemento comprometido para validar la regularización.
             if (minimum_expected is not None and not multi_payment_detected
                     and prior_payment_total is not None and prior_payment_total > 0
-                    and payment_already_made):
+                    and payment_already_made and explicit_new_promise):
                 future_candidates = []
                 for x in amount_candidates:
                     val = float(x[2][2])
@@ -3309,12 +3656,48 @@ class AnalyticsService:
                 detected_amount_role = "REGULARIZACION"
             else:
                 detected_amount_role = "PAGO NEGOCIADO"
+        recovered_amounts = validated_entries(text, segments, context.get("_amount_recovery"))
+        if len(recovered_amounts) == 1:
+            recovered = recovered_amounts[0]
+            detected_claim_amount = float(recovered["amount"])
+            detected_amount_raw = detected_claim_amount
+            detected_claim_evidence = (
+                f"ASR adicional {recovered['inicio']:g}–{recovered['fin']:g}s: "
+                + " | ".join(a["texto"] for a in recovered["attempts"]))
+            detected_amount_role = "OFERTA RECUPERADA ASR - REVISAR"
+            amount_asr_normalized = False
+        plan = installment_plan(source_norm, money_mentions)
+        accepted_mentions = monetary_mentions(norm(commitment_confirmation["evidence"])) if confirms_commitment else []
+        accepted_amounts = {float(m[2]) for m in accepted_mentions}
+        if plan["amounts"] and accepted_amounts and not accepted_amounts.issubset(set(plan["amounts"])):
+            plan["review_required"] = True
+            plan["conflicts"].append({"accepted_amounts": sorted(accepted_amounts), "plan_amounts": plan["amounts"]})
+        detected_balance_amount, detected_balance_evidence, plan, financial_review = apply_financial_review(
+            context.get("_financial_source"), context.get("_financial_review"),
+            detected_balance_amount, detected_balance_evidence, plan)
+        if plan["amounts"]:
+            multi_payment_detected = True
+            multi_payment_amounts = plan["amounts"]
+            multi_payment_total = plan["total"]
+        elif confirms_commitment:
+            if len(accepted_amounts) == 1:
+                detected_claim_amount = next(iter(accepted_amounts))
+                detected_claim_evidence = accepted_mentions[-1][3]
+                detected_amount_raw = detected_claim_amount
+                detected_amount_role = "PAGO NEGOCIADO"
+                amount_asr_normalized = False
+                multi_payment_detected = False
+                multi_payment_amounts = []
+                multi_payment_total = None
+
         # Una liquidación total en parcialidades debe cuadrar con el saldo total.
         # Para regularización por mínimo, el saldo total NO es el importe exigible.
         multi_payment_balance_mismatch = bool(
             multi_payment_detected and multi_payment_total is not None
             and total_expected is not None
             and (total_liquidation_wording or liquidation_words)
+            and not (mora in LIQUIDATION_MORAS and minimum_expected is not None
+                     and minimum_expected <= multi_payment_total <= total_expected)
             and abs(multi_payment_total - total_expected) > 0.01
         )
         if multi_payment_detected and multi_payment_total is not None:
@@ -3324,7 +3707,7 @@ class AnalyticsService:
             amount_asr_normalized = False
             detected_amount_role = "NEGOCIACION MULTIPAGO"
 
-        elif detected_balance_amount is not None:
+        elif detected_balance_amount is not None and detected_claim_amount is None:
             # Existe dinero en la llamada, pero solo atribuible al saldo informado.
             detected_amount_role = "SALDO INFORMADO"
             detected_claim_evidence = detected_balance_evidence
@@ -3360,10 +3743,19 @@ class AnalyticsService:
             amount_validation = "REVISAR - DATOS DE ORIGEN INCONSISTENTES"
             amount_reason = f"Pago mínimo ({minimum_expected:g}) mayor que saldo total ({total_expected:g}); revisar Excel/origen antes de penalizar."
             amount_review = True
+        elif plan["review_required"]:
+            amount_validation = "REVISAR - PARCIALIDADES CON IMPORTES CONTRADICTORIOS"
+            amount_reason = "Se mencionan importes distintos para la misma parcialidad; confirmar el acuerdo final en audio."
+            amount_review = True
         elif detected_claim_amount is not None and total_expected is not None and detected_claim_amount > total_expected + 0.009:
             amount_validation = "INVALIDA - MONTO EXCEDE SALDO TOTAL"
             amount_reason = f"Monto negociado {detected_claim_amount:g} excede el saldo total {total_expected:g}."
             amount_invalid = True
+        elif (mora in LIQUIDATION_MORAS and total_liquidation_wording and detected_claim_amount is not None
+              and (minimum_expected is None or total_expected is None)):
+            amount_validation = "REVISAR - REFERENCIA FINANCIERA INCOMPLETA"
+            amount_reason = "Para cotejar la liquidación por mora se requieren pago_minimo y saldo_total de origen."
+            amount_review = True
         elif detected_claim_amount is not None and minimum_expected is not None and detected_claim_amount + 0.009 < minimum_expected:
             if explicit_partial_exception and not positive_effect_for_partial:
                 amount_validation = "VALIDA - PAGO PARCIAL EXPLICITO"
@@ -3382,10 +3774,17 @@ class AnalyticsService:
                     amount_reason = f"Monto negociado {detected_claim_amount:g} menor al pago mínimo requerido {minimum_expected:g}. Solo se permite si se identifica y explica expresamente como pago parcial sin regularizar ni liquidar."
                     amount_invalid = True
         elif detected_claim_amount is not None:
-            # Regla universal: toda negociación no parcial debe quedar dentro del rango
-            # [pago mínimo, saldo total]. La liquidación total además debe cubrir el total,
-            # salvo descuento autorizado verificable.
-            if total_liquidation_wording and total_expected is not None and detected_claim_amount + 0.009 < total_expected:
+            # El usuario aclara que pago_minimo es la referencia para liquidar
+            # en 3HN–A; no exigir el saldo total ni otro dato de autorización.
+            if mora in LIQUIDATION_MORAS and minimum_expected is not None and total_expected is not None:
+                amount_validation = "VALIDA - MINIMO DE LIQUIDACION SEGUN MORA"
+                amount_reason = (f"En {mora}, pago_minimo de Excel ({minimum_expected:g}) es la referencia de liquidación; "
+                                 f"la oferta de {detected_claim_amount:g} cubre el mínimo sin exceder el saldo total.")
+            elif total_liquidation_wording and mora_policy["mode"] == "MORA_NO_CONFIGURADA":
+                amount_validation = "REVISAR - MORA SIN POLITICA DE LIQUIDACION"
+                amount_reason = "No se conoce la mora para determinar si el mínimo permite liquidar o solo cubrir mensualidad vencida."
+                amount_review = True
+            elif total_liquidation_wording and total_expected is not None and detected_claim_amount + 0.009 < total_expected:
                 discount_wording = any_of(["descuento", "bonificacion", "bonificación", "quita"])
                 if discount_wording:
                     amount_validation = "REVISAR - DESCUENTO NO VERIFICABLE"
@@ -3416,7 +3815,44 @@ class AnalyticsService:
             amount_reason = "Hay una afirmación de regularización/liquidación, pero no se pudo atribuir con seguridad un monto negociado a esa afirmación."
             amount_review = True
 
+        # Una propuesta válida no acredita que un saldo informado diferente
+        # sea correcto. La discrepancia requiere revisión, sin convertirla en
+        # una falla grave automática ni ocultarla detrás del nuevo importe.
+        if balance_validation == "SALDO INFORMADO DIFERENTE AL SALDO TOTAL" and not amount_invalid:
+            amount_review = True
+            amount_validation = "REVISAR - SALDO INFORMADO DIFERENTE"
+            amount_reason = balance_reason
+        if (not amount_invalid and detected_claim_amount is None and agent_statement(text, segments,
+                r"\b(?:se le esta ofreciendo|le ofrecemos|le ofrezco) un descuento\b")):
+            amount_review = True
+            amount_validation = "REVISAR - IMPORTE DEL DESCUENTO NO CONFIRMADO"
+            amount_reason = "Se ofrece un descuento, pero no se confirmó un importe atribuible a esa propuesta."
+
+        schedule_dates = installment_dates(source_norm, lambda fragment:
+            cls._extract_payment_promise_date_details(fragment, call_date)) if plan["amounts"] and not payment_confirmation_case else []
+        if len(schedule_dates) >= 2:
+            last_installment = max(schedule_dates, key=lambda item: item["date"])
+            promise_date = date.fromisoformat(last_installment["date"])
+            promise_date_text = last_installment["text"]
+            promise_date_evidence = last_installment["evidence"]
+        installment_window = (two_installment_window(schedule_dates, parsed_call_date, parsed_due_date,
+                              second_anchor="FIRST_PAYMENT") if mora_policy["uses_cut"]
+                              else {"applies": False, "valid": False, "reasons": []})
+        if installment_window.get("first_payment_valid"):
+            mora_policy["window_end"] = installment_window["second_window_end"]
+            mora_policy["installment_exception_source"] = "Usuario: primero dentro de tres días; segundo hasta siete días desde el primero, sin exceder vencimiento"
+        # Un mes aislado y antiguo no acredita por sí mismo el año siguiente.
+        # Se conserva la fecha calculada como candidato, nunca como falta grave
+        # confirmada cuando el año no se expresó y el salto excede 90 días.
+        date_year_rollover_review = bool(
+            promise_date and parsed_call_date and promise_date.year > parsed_call_date.year
+            and (promise_date - parsed_call_date).days > 90
+            and not re.search(r"\b20\d{2}\b|\b(?:proximo ano|ano (?:proximo|que viene)|ano entrante)\b",
+                              norm(promise_date_evidence)))
         negotiation_validation = {
+            "mora_payment_policy": mora_policy,
+            "installment_dates": schedule_dates,
+            "installment_window": installment_window,
             "assignment": mora,
             "assignment_date": assignment_date,
             "limit_date": limit_date,
@@ -3427,15 +3863,22 @@ class AnalyticsService:
             "promise_date": promise_date.isoformat() if promise_date else None,
             "promise_date_text": promise_date_text,
             "promise_date_evidence": promise_date_evidence,
-            "promise_date_confirmed_from_call": bool(promise_date and promise_date_evidence),
+            "promise_date_confirmed_from_call": bool(promise_date and promise_date_evidence and confirms_commitment and not date_year_rollover_review),
+            "date_year_rollover_review": date_year_rollover_review,
+            "commitment_evidence": commitment_confirmation,
+            "installment_validation": plan,
+            "financial_review": financial_review,
             "date_rule": None,
             "date_effect": None,
             "is_negotiation": requires_new_negotiation_validation,
             "payment_already_made": payment_already_made,
+            "completed_payment_evidence": completed_payment_confirmation,
             "prior_payment_evidence": prior_payment_evidence,
             "prior_payment_amounts": prior_payment_amounts,
             "prior_payment_total": prior_payment_total,
             "prior_payment_covers_minimum": prior_payment_covers_minimum,
+            "prior_payment_amount_validation": prior_payment_binding,
+            "reported_payment_amount_pending": reported_amount_pending,
             "remaining_minimum_required": (max(0.0, minimum_expected - prior_payment_total) if minimum_expected is not None and prior_payment_total is not None else None),
             "negotiation_attempt_detected": negotiation_attempt,
             "missing_collection_attempt_penalty": missing_collection_attempt,
@@ -3443,8 +3886,15 @@ class AnalyticsService:
             "prohibited_visit_wording": prohibited_visit_wording,
             "payment_registration_detected": payment_registration,
             "payment_confirmation_case": payment_confirmation_case,
+            "payment_followup_case": payment_followup_case,
+            "prior_payment_with_current_decline": prior_payment_with_current_decline,
+            "prior_payment_with_current_condition": prior_payment_with_current_condition,
+            "unaccepted_new_payment_instruction": unaccepted_new_payment_instruction,
+            "new_payment_proposal_evidence": new_payment_proposals,
             "liquidation_detected": liquidation_words,
             "liquidation_attribution": liquidation_attribution,
+            "liquidation_offer_review_required": liquidation_offer_review_required,
+            "liquidation_offer_evidence": liquidation_offer_evidence,
             "holder_liquidation_report": holder_liquidation_report,
             "liquidation_allowed": mora not in restricted_liquidation_moras,
             "amount_confirmed": bool(detected_claim_amount is not None),
@@ -3517,11 +3967,27 @@ class AnalyticsService:
             negotiation_validation["valid"] = False
             negotiation_validation["reasons"].append(amount_reason)
 
+        if (reported_amount_pending and not payment_followup_case) or prior_payment_binding["review_required"]:
+            negotiation_validation["valid"] = False
+            negotiation_validation["review_required"] = True
+            negotiation_validation["reasons"].append(prior_payment_binding["reason"] or
+                "Pago reportado sin importe y mínimo comparables; confirmar comprobante antes de dar cobertura por acreditada.")
+        if unaccepted_new_payment_instruction:
+            negotiation_validation['valid']=False
+            negotiation_validation['review_required']=True
+            negotiation_validation['reasons'].append(
+                'Se reporta pago previo y además se instruye un pago nuevo sin aceptación confirmada; revisar negociación vigente.')
+
         if liquidation_forbidden:
             negotiation_validation["valid"] = False
             negotiation_validation["reasons"].append(
                 f"Liquidación prohibida para la asignación {mora}."
             )
+        if liquidation_offer_review_required:
+            negotiation_validation["valid"] = False
+            negotiation_validation["review_required"] = True
+            negotiation_validation["reasons"].append(
+                "Posible liquidación total sin atribución u oferta confirmada; revisar audio.")
         if requires_new_negotiation_validation and detected_claim_amount is None:
             negotiation_validation["valid"] = False
             negotiation_validation["reasons"].append(
@@ -3556,6 +4022,15 @@ class AnalyticsService:
                 "recuperación o nuevo uso del crédito; requiere revisión."
             )
 
+        if (mora in LIQUIDATION_MORAS and not payment_confirmation_case
+                and agent_statement(text, segments,
+                    r"\b(?:se pone al corriente|queda al corriente|regulariza su cuenta|"
+                    r"cubre (?:la |una |solo la )?mensualidad vencida)\b")):
+            negotiation_validation["valid"] = False
+            negotiation_validation["review_required"] = True
+            negotiation_validation["reasons"].append(
+                f"En {mora} el mínimo corresponde a liquidación; se describe un efecto de regularización o mensualidad vencida.")
+
         # ---------------------------------------------------------
         # RF001-RF014 · REGLAS DE FECHAS DEL MANUAL OPERATIVO
         # ---------------------------------------------------------
@@ -3579,6 +4054,51 @@ class AnalyticsService:
         rf_id = rf_by_mora.get(mora)
         negotiation_validation["date_rule"] = rf_id
 
+        if requires_new_negotiation_validation and confirms_commitment and mora_policy["mode"] != "MORA_NO_CONFIGURADA":
+            if not parsed_call_date or not promise_date:
+                negotiation_validation["valid"] = False
+                negotiation_validation["reasons"].append("Faltan fecha de llamada o promesa interpretable para validar el plazo por mora.")
+            if not parsed_due_date:
+                negotiation_validation["valid"] = False
+                negotiation_validation["reasons"].append("Falta el vencimiento de origen para validar la negociación.")
+            if mora_policy["uses_cut"] and parsed_limit_date is None:
+                negotiation_validation["valid"] = False
+                negotiation_validation["reasons"].append("Falta corte válido para determinar el efecto de regularización o mensualidad vencida.")
+
+        if requires_new_negotiation_validation and confirms_commitment and promise_date:
+            window_end = cls._parse_context_date(mora_policy["window_end"])
+            if parsed_call_date and promise_date < parsed_call_date:
+                negotiation_validation["valid"] = False
+                negotiation_validation["reasons"].append("La fecha de una nueva promesa es anterior a la llamada.")
+            if mora_policy["mode"] == "MES_DE_LLAMADA":
+                if not parsed_call_date or not window_end:
+                    negotiation_validation["valid"] = False
+                    negotiation_validation["reasons"].append("Falta la fecha de llamada para validar el mes de liquidación.")
+                elif promise_date.year != parsed_call_date.year or promise_date.month != parsed_call_date.month:
+                    negotiation_validation["valid"] = False
+                    negotiation_validation["reasons"].append(
+                        f"Liquidación {mora}: la promesa {promise_date.isoformat()} queda fuera del mes de la llamada; "
+                        f"el vencimiento posterior no amplía el plazo {window_end.isoformat()}.")
+            elif mora_policy["mode"] == "CORTE_Y_VENCIMIENTO":
+                if installment_window["applies"]:
+                    if not installment_window["valid"]:
+                        negotiation_validation["valid"] = False
+                        negotiation_validation["reasons"].extend(installment_window["reasons"])
+                elif parsed_call_date and promise_date > parsed_call_date+timedelta(days=3):
+                    negotiation_validation["valid"] = False
+                    negotiation_validation["reasons"].append("RN004: la promesa excede los tres días posteriores a la llamada.")
+
+        if date_year_rollover_review:
+            negotiation_validation['valid'] = False
+            negotiation_validation['review_required'] = True
+            negotiation_validation['reasons'].append('Mes de pago interpretado en un año posterior sin año explícito y con salto mayor a 90 días; confirmar fecha y contexto en audio.')
+
+        if (not requires_new_negotiation_validation and not payment_confirmation_case
+                and confirms_commitment and promise_date and parsed_due_date and promise_date > parsed_due_date):
+            negotiation_validation['valid'] = False
+            negotiation_validation['review_required'] = True
+            negotiation_validation['reasons'].append('Nueva promesa posterior al vencimiento con estatus distinto de CONVENIO; verificar fecha y dictaminación antes de aprobar.')
+
         if requires_new_negotiation_validation and promise_date and parsed_due_date:
             if promise_date > parsed_due_date:
                 negotiation_validation["valid"] = False
@@ -3591,14 +4111,11 @@ class AnalyticsService:
                 )
                 negotiation_validation["reasons"].append(reason)
 
-                add_penalty(
-                    "PEN005",
-                    "Fechas",
-                    reason,
-                    100,
-                    True,
-                    [rf_id] if rf_id else [],
-                )
+                if not confirms_commitment or plan["review_required"] or date_year_rollover_review:
+                    negotiation_validation["reasons"].append("Confirmar aceptación del plan y sus fechas antes de atribuir falta grave.")
+                else:
+                    add_penalty(
+                        "PEN005", "Fechas", reason, 100, True, [rf_id] if rf_id else [])
 
             elif mora in {"1PV", "2PV", "3PV"}:
                 if parsed_limit_date and promise_date <= parsed_limit_date:
@@ -3625,26 +4142,15 @@ class AnalyticsService:
                         )
 
             elif mora == "1FLP":
-                if parsed_limit_date and promise_date > parsed_limit_date:
-                    negotiation_validation["date_effect"] = "CUBRE MENSUALIDAD VENCIDA"
-                else:
-                    negotiation_validation["date_effect"] = "N/A"
+                negotiation_validation["date_effect"] = "CUBRE MENSUALIDAD VENCIDA"
 
             elif mora in {
                 "3HN", "4PV", "5PV", "6PV",
                 "C1", "C2", "C3", "C4", "B", "A",
             }:
-                # RF005-RF014:
-                # <= fecha límite = N/A
-                # > fecha límite y <= vencimiento = LIQUIDACION VALIDA
-                if parsed_limit_date:
-                    if promise_date <= parsed_limit_date:
-                        negotiation_validation["date_effect"] = "N/A"
-                    else:
-                        negotiation_validation["date_effect"] = "LIQUIDACION VALIDA"
-                else:
-                    # Sin fecha límite no se inventa el efecto de la regla.
-                    negotiation_validation["date_effect"] = "FECHA LIMITE NO DISPONIBLE"
+                negotiation_validation["date_effect"] = (
+                    "LIQUIDACION DENTRO DEL MES" if parsed_call_date and promise_date.year == parsed_call_date.year
+                    and promise_date.month == parsed_call_date.month else "LIQUIDACION FUERA DEL MES")
 
         elif payment_confirmation_case and rf_id:
             # Pago ya realizado: no existe promesa futura que evaluar por RF.
@@ -3661,15 +4167,19 @@ class AnalyticsService:
         if any(p["id"] == "PEN005" for p in penalties):
             negotiation_validation["hard_invalid"] = True
         score = max(0.0, 100.0 - float(penalty_total))
-        # Evidencia de estatus/identidad no comprobada no equivale a 100% de calidad.
-        # Penalización informativa, sin alterar la regla de bloqueo independiente.
-        if not status_validation["valid"]:
-            score = min(score, 79.0)
+        # Puntuar solo las penalizaciones observadas. La evidencia faltante
+        # conserva su bloqueo REVISAR independiente; no inventa un descuento
+        # hasta 79 puntos ni se convierte por ello en una aprobación.
 
         # Las inconsistencias de estatus no necesariamente son -100 del score,
         # pero obligan a revisión porque la clasificación operativa es incorrecta.
         requires_review = (
             uncertain_disclosure
+            or home_recovery_warning['review_required']
+            or warning_review.get('review_required',False)
+            or abandonment_review
+            or callback_proposed
+            or receipt_assessment["review_required"]
             or contact_type == "CONTACTO NO DETERMINADO"
             or missing_collection_attempt
             or not status_validation["valid"]
@@ -3683,9 +4193,9 @@ class AnalyticsService:
             p.get("id") == "PEN_CONV_LUGARES"
             for p in penalties
         )
-        if multi_payment_balance_mismatch:
+        if multi_payment_balance_mismatch or wait_validation['review_required']:
             requires_review = True
-        if insult_evidence or mistreatment_report_evidence or transfer_data_review or contextual_confrontation or confrontation_review or hostile_interlocutor_review:
+        if insult_evidence or ambiguous_tail_insult or mistreatment_report_evidence or dismissive_evidence or transfer_data_review or contextual_confrontation or confrontation_review or hostile_interlocutor_review:
             requires_review = True
         if uncertain_disclosure:
             status_validation["review_required"] = True
@@ -3737,6 +4247,7 @@ class AnalyticsService:
 
         checks = {
             "identifica_mrs": identifies_mrs,
+            "identificacion_mrs_evidencia_asr": company_aliases,
             "identifica_mrs_explicito": identifies_mrs_explicit,
             "identifica_mrs_tolerancia_asr": identifies_mrs_asr,
             "variante_mrs_asr_detectada": mrs_asr_variant,
@@ -3749,7 +4260,9 @@ class AnalyticsService:
             "recontacto": callback,
             "no_conocen_confirmado": unknown_debtor,
             "proceso_arco": arco_process,
-            "tiempo_con_linea": asks_line_tenure,
+            "tiempo_con_linea": bool(asks_line_tenure or line_tenure_confirmed),
+            "correo_privacidad_dado": gives_privacy_email,
+            "correo_privacidad_dictado": email_dictation,
             "monto_confirmado": bool(detected_claim_amount is not None),
             "fecha_pago_confirmada": confirms_payment_date,
             "compromiso_confirmado": confirms_commitment,
@@ -3769,7 +4282,9 @@ class AnalyticsService:
             "lugares_pago_detalle": sorted(set(detected_payment_places)),
             "pago_sin_lugar_autorizado": bool(payment_instruction_context and len(set(detected_payment_places)) == 0),
             "queja_maltrato_detectada": mistreatment_report_evidence,
-            "groseria_bloquea_aprobacion": bool(insult_evidence),
+            "espera_prolongada_detectada": wait_validation['review_required'],
+            "groseria_bloquea_aprobacion": bool(insult_evidence or ambiguous_tail_insult),
+            "posible_groseria_recortada_cierre": ambiguous_tail_insult,
             "multipago_saldo_total_inconsistente": multi_payment_balance_mismatch,
             "insultos_detectados": insult_evidence,
         }
@@ -3819,12 +4334,24 @@ class AnalyticsService:
             "checks": checks,
             "blocks": blocks,
             "contact_type": contact_type,
+            "contact_validation": contact_confirmation,
+            "associate_contact_validation": associate_confirmation,
+            "intermediary_contact_validation": {
+                "confirmed": bool(intermediary_response),
+                "method": ('RECADO_ACEPTADO_PARA_OTRA_PERSONA' if message_for_named_person
+                           else 'RESPUESTA_DE_AUSENCIA' if intermediary_response else 'SIN_CONFIRMACION'),
+                "evidence": [u['text'] for u in recado_assessment['acceptance']] if message_for_named_person else [],
+                "human_verified": False,
+            },
+            "arco_validation": arco_validation,
             "detected_status": detected_status,
             "relationship": relationship,
             "observations": observations,
             "operational_context": {
                 "estatus_grabacion": excel_status,
                 "campana": campaign,
+                "corte": context.get("corte"),
+                "nombre_final": context.get("nombre_final"),
                 "corte_aplicado": cut_applied,
                 "fecha_pago_calculada": calculated_payment_date.isoformat() if calculated_payment_date else None,
                 "fecha_asignacion": assignment_date,
@@ -3840,10 +4367,13 @@ class AnalyticsService:
             },
             "treatment_validation": treatment_validation,
             "call_end_validation": call_end_validation,
+            "wait_validation": wait_validation,
             "convenio_payment_validation": convenio_payment_validation,
             "card_validation": card_validation_data,
             "payment_reference_validation": payment_reference_validation,
             "privacy_validation": privacy_validation,
+            'home_recovery_warning':home_recovery_warning,
+            'clarification_validation':clarification_validation,
             "status_validation": status_validation,
             "negotiation_validation": negotiation_validation,
             "penalties": penalties,
