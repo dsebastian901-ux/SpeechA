@@ -29,6 +29,7 @@ PENDING = re.compile(
     r'como me mandarian algo por escrito antes de pagarlo|'
     r'me podria comunicar con ustedes mas tarde|'
     r'me puede volver a llamar[^.!?]{0,40}(?:manana|tarde)|'
+    r'lo voy a (?:analizar|pensar|consultar|revisar)|'
     r'(?:no|pero) (?:te |le )?estoy diciendo que no[^.!?]{0,80}(?:quiero|convenio))\b')
 DISPUTE = re.compile(
     r'\b(?:yo no he usado (?:esa|mi|la) tarjeta|'
@@ -73,6 +74,9 @@ def scan_dialogue(text, segments=()):
                     continue
                 if re.search(r'\b(?:no es cierto que|no dije que|diga|si)\s*$', value[:match.start()]):
                     continue
+                if (kind=='PENDING_DECISION' and match.group().startswith('lo voy a ')
+                        and re.search(r'\bno\s*$',value[:match.start()])):
+                    continue  # «No lo voy a revisar» no acredita decidir revisarlo.
                 # «Ahorita no se refleja» y «hoy no puede anotar» describen
                 # trámites, no una decisión de pago del interlocutor.
                 if kind == 'PENDING_DECISION' and re.fullmatch(r'(?:(?:el dia de )?hoy|ahorita)[, ]+no',match.group()):

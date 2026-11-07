@@ -26,7 +26,7 @@ from app.services.privacy_disclosure_review import validate_disclosure_confirmat
 from app.services.home_warning_review import validate_warning_confirmation
 from app.services.conversation_evidence import assess_home_recovery_warning,reported_card_clarification
 from app.services.conversation_evidence import directed_callback_message
-from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing
+from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing, transfers_only_reported_or_asked
 from app.services.installment_validation import installment_plan, installment_dates
 from app.services.asr_amount_recovery import validated_entries
 from app.services.mora_payment_policy import payment_policy, two_installment_window, LIQUIDATION_MORAS
@@ -57,7 +57,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r45"
+    ENGINE_REVISION = "3.6.19-r46"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -794,6 +794,13 @@ class AnalyticsService:
             prefix=normalized[max(0,match.start()-100):match.start()]
             if re.search(r'\b(?:su|el) (?:proximo|siguiente) pago (?:seria|sera|es|queda)?(?:\s+(?:hasta|el|para|dia)){0,4}\s*$',prefix):
                 return  # Información del ciclo siguiente, no promesa actual.
+            if (re.search(r'\bya tendriamos\s+(?:hasta|para|el)(?:\s+el)?\s*$',prefix)
+                    and re.match(r'\s+para (?:realizar|hacer|aplicar) otro pago\b',normalized[match.end():])):
+                return  # Fecha informativa de otra mensualidad, no promesa actual.
+            local_clause=re.split(r'[.!?]',prefix)[-1]
+            if (re.search(r'\b(?:comprobante|whatsapp|recibo|ticket)\b',local_clause)
+                    and not re.search(r'\b(?:pagar|depositar|abonar|(?:realizar|hacer|aplicar) (?:el |su )?pago)\b',local_clause)):
+                return  # Fecha de enviar/recibir un comprobante, no fecha de pago.
             left = max(0, match.start() - 100)
             right = min(len(normalized), match.end() + 100)
             context = normalized[left:right]
@@ -810,6 +817,13 @@ class AnalyticsService:
                 r"cantidad|monto|pesos|confirm)\w*\b", near_context))
             if not payment_context and re.search(r'\b(?:ponerlo|ponemos|quedamos)\b',near_context):
                 payment_context=bool(re.search(r'\b(?:pago|pagar|convenio)\b',normalized[max(0,match.start()-240):match.end()]))
+            if not payment_context:
+                # «Este pago le pido de favor si lo puede realizar a más
+                # tardar para el día 8» conserva su antecedente explícito.
+                payment_context = bool(re.search(r'\b(?:este|ese|el|su) pago\b[^.!?]{0,125}$',
+                    normalized[max(0,match.start()-145):match.start()])
+                    and not re.search(r'\b(?:comprobante|whatsapp|telefono|hora)\b',
+                        normalized[max(0,match.start()-100):match.start()]))
             inability_context = bool(re.search(
                 r"\b(?:no\s+(?:tengo|puedo|voy|podre|podria)\b.{0,24}(?:pagar|pago)|"
                 r"sin\s+dinero|no\s+hay\s+dinero)\b", near_context))
@@ -1782,6 +1796,20 @@ class AnalyticsService:
         prior_payment_total = prior_payment_binding["total"]
 
         commitment_confirmation = payment_commitment(text, segments)
+        from app.services.accepted_schedule_evidence import accepted_two_part_schedule
+        accepted_schedule = accepted_two_part_schedule(text,segments,parsed_call_date)
+        if accepted_schedule['confirmed']:
+            prior_evidence = norm(commitment_confirmation.get('evidence') or '')
+            newer_firm = (commitment_confirmation.get('accepted') and prior_evidence
+                and normalized.rfind(prior_evidence)>accepted_schedule['end'])
+            if newer_firm:
+                accepted_schedule['confirmed']=False
+            else:
+                commitment_confirmation = {'accepted':True,'declined':False,'conditional':False,
+                    'evidence':accepted_schedule['evidence'],'contextual_confirmation_events':[]}
+                last=accepted_schedule['dates'][-1]
+                promise_date=date.fromisoformat(last['date'])
+                promise_date_text=last['text'];promise_date_evidence=last['evidence']
         if commitment_confirmation['accepted']:
             for event in sorted(commitment_confirmation.get('contextual_confirmation_events',[]),key=lambda v:v['position'],reverse=True):
                 detail=cls._extract_payment_promise_date_details('Confirmacion de pago: '+event['evidence'],call_date)
@@ -1864,6 +1892,12 @@ class AnalyticsService:
             "su pago solo es parcial",
         ])
         # En un pago parcial, "no liquida" es una aclaración, no una oferta de liquidación.
+        try:
+            schedule_minimum=float(str(context.get('pago_minimo') or '').replace(',',''))
+        except (TypeError,ValueError):
+            schedule_minimum=None
+        if accepted_schedule['confirmed'] and schedule_minimum is not None and accepted_schedule['total']>=schedule_minimum:
+            partial_payment=False  # El total del plan cubre el mínimo; no es un abono aislado.
         if partial_payment and partial_explanation and re.search(r"\bno\s+(?:liquida|liquidar|queda\s+en\s+ceros)\b", normalized):
             liquidation_words = False
             liquidation_forbidden = False
@@ -2381,7 +2415,9 @@ class AnalyticsService:
         bank_destination_context = bool(re.search(
             r"\b(?:clabe|cuenta bancaria|numero de cuenta|cuenta de destino|cuenta personal)\b", normalized))
         new_transfer_discussion = future_transfer_discussion(text, segments)
-        reported_transfer_only = bool(payment_confirmation_case and not transfer_instruction_evidence
+        transfer_history_or_question = transfers_only_reported_or_asked(text,segments)
+        reported_transfer_only = bool((payment_confirmation_case or transfer_history_or_question)
+                                      and not transfer_instruction_evidence
                                       and not bank_destination_context and not new_transfer_discussion)
         transfer_option_listing = transfer_is_option_listing(text,segments,detected_payment_places)
         transfer_data_review = bool(not unauthorized_payment_method and (service_payment['review_required'] or (not service_payment['separates_from_clabe'] and (
@@ -2422,6 +2458,7 @@ class AnalyticsService:
             "transfer_instruction_evidence": transfer_instruction_evidence,
             "authorized_transfer_instruction_confirmed": authorized_transfer_instruction,
             "reported_transfer_only": reported_transfer_only,
+            "transfer_history_or_question": transfer_history_or_question,
             "future_transfer_discussion": new_transfer_discussion,
             "transfer_option_listing_only": transfer_option_listing,
             "authorized_transfer_account": "014320655030560466",
@@ -2759,9 +2796,14 @@ class AnalyticsService:
         reported_amount_pending = bool(contact_type == 'TITULAR' and payment_confirmation_case and not negotiation_attempt
             and (prior_payment_total is None or minimum_for_attempt is None
                  or prior_payment_binding["review_required"]))
+        dispute_guidance = bool(contact_type == 'TITULAR'
+            and any(e['kind']=='ACCOUNT_DISPUTE' for e in dialogue['events'])
+            and re.search(r'\b(?:folio de aclaracion|aclaracion por cargos no reconocidos|estado de cuenta detallado)\b',normalized)
+            and re.search(r'\b(?:servicio a clientes?|reverso de la tarjeta|numero que viene)\b',normalized))
         missing_collection_attempt = bool(
             contact_type == "TITULAR"
             and canonical_excel_status != 'ACLARACION'
+            and not dispute_guidance
             and not negotiation_attempt
             and not prior_payment_covers_minimum
             and not reported_amount_pending
@@ -3628,6 +3670,10 @@ class AnalyticsService:
             detected_amount_role = "OFERTA RECUPERADA ASR - REVISAR"
             amount_asr_normalized = False
         plan = installment_plan(source_norm, money_mentions)
+        if accepted_schedule['confirmed']:
+            plan={'amounts':accepted_schedule['amounts'],'total':accepted_schedule['total'],
+                'method':accepted_schedule['method'],'evidence':[{'text':accepted_schedule['evidence']}],
+                'conflicts':[],'review_required':False}
         accepted_mentions = monetary_mentions(norm(commitment_confirmation["evidence"])) if confirms_commitment else []
         accepted_amounts = {float(m[2]) for m in accepted_mentions}
         if plan["amounts"] and accepted_amounts and not accepted_amounts.issubset(set(plan["amounts"])):
@@ -3720,6 +3766,19 @@ class AnalyticsService:
             amount_validation = "REVISAR - PARCIALIDADES CON IMPORTES CONTRADICTORIOS"
             amount_reason = "Se mencionan importes distintos para la misma parcialidad; confirmar el acuerdo final en audio."
             amount_review = True
+        elif (not requires_new_negotiation_validation and detected_claim_amount is not None
+                and ((minimum_expected is not None and detected_claim_amount<minimum_expected)
+                     or (total_expected is not None and detected_claim_amount>total_expected))
+                and not new_payment_proposals
+                and not agent_statement(text,segments,
+                    r"\b(?:tiene|tendria|tendriamos|necesita) que (?:realizar|aplicar|cubrir|hacer) (?:un |el |su )?(?:pago|deposito)\b")
+                and (payment_confirmation_case or dispute_guidance
+                     or (pending_decision or {}).get('method')=='ACCOUNT_DISPUTE')):
+            # Un pago previo o una compra discutida no es el importe de un
+            # convenio nuevo. El comprobante incierto y los saldos informados
+            # se validan aparte; no se inventa cobertura del mínimo.
+            amount_validation = "INFORMATIVO - IMPORTE HISTORICO O DISPUTADO"
+            amount_reason = "No se compara un antecedente o compra disputada como pago negociado vigente."
         elif detected_claim_amount is not None and total_expected is not None and detected_claim_amount > total_expected + 0.009:
             amount_validation = "INVALIDA - MONTO EXCEDE SALDO TOTAL"
             amount_reason = f"Monto negociado {detected_claim_amount:g} excede el saldo total {total_expected:g}."
@@ -3809,6 +3868,8 @@ class AnalyticsService:
 
         schedule_dates = installment_dates(source_norm, lambda fragment:
             cls._extract_payment_promise_date_details(fragment, call_date),expected_count=len(plan["amounts"])) if plan["amounts"] and not payment_confirmation_case else []
+        if accepted_schedule['confirmed'] and plan['method']==accepted_schedule['method']:
+            schedule_dates=accepted_schedule['dates']
         if len(schedule_dates) >= 2:
             last_installment = max(schedule_dates, key=lambda item: item["date"])
             promise_date = date.fromisoformat(last_installment["date"])
@@ -3845,11 +3906,13 @@ class AnalyticsService:
             "promise_date_confirmed_from_call": bool(promise_date and promise_date_evidence and confirms_commitment and not date_year_rollover_review),
             "date_year_rollover_review": date_year_rollover_review,
             "commitment_evidence": commitment_confirmation,
+            "accepted_schedule": accepted_schedule,
             "installment_validation": plan,
             "financial_review": financial_review,
             "date_rule": None,
             "date_effect": None,
             "is_negotiation": requires_new_negotiation_validation,
+            "dispute_guidance": dispute_guidance,
             "pending_decision": pending_decision,
             "payment_already_made": payment_already_made,
             "completed_payment_evidence": completed_payment_confirmation,

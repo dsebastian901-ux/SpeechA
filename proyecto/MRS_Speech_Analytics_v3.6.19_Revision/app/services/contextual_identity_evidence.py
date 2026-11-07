@@ -33,6 +33,12 @@ OWN_ACCOUNT = re.compile(
     r'no les voy a completar|me (?:atrase|he atrasado)|'
     r'no he (?:usado|utilizado) (?:mi |la |esa |esta )?tarjeta|'
     r'(?:yo )?(?:ya )?(?:voy a pagar|voy a depositar|voy a abonar)|'
+    r'(?:lo |le )?he podido realizar (?:el |mi )?pago|'
+    r'no (?:lo |le )?he podido realizar(?:lo)?|'
+    r'no lo he hecho|el contrato que (?:hicimos|hice|firme)|'
+    r'(?:me gustaria|mi intencion es) (?:liquidar|pagar)|'
+    r'no cuento con (?:esa|la) cantidad|no me niego a pagar|'
+    r'lo puedo (?:pagar|abonar|depositar)|'
     r'no (?:he podido|puedo|pude) (?:ir a )?(?:pagar|depositar|abonar|realizar (?:mi|el) pago))\b')
 
 

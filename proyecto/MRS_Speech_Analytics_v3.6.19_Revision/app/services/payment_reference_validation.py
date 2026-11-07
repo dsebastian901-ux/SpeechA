@@ -88,7 +88,7 @@ def find_reference(text, expected=''):
     """
     s=normalize(text)
     expected=re.sub(r"\D", "", str(expected or ""))
-    found, ambiguous, callbacks = [], [], []
+    found, ambiguous, callbacks, terminations = [], [], [], []
     for ctx in CONTEXT.finditer(s):
         sub=s[ctx.end():ctx.end()+420]
         matches=list(TOKEN.finditer(sub))
@@ -110,6 +110,14 @@ def find_reference(text, expected=''):
         digits="".join(parts)
         evidence=sub[group[0].start():group[-1].end()]
         record={"digits":digits, "evidence":evidence, "context":ctx.group()}
+        # «16 dígitos ... no, le doy únicamente la terminación 44-55.
+        # 44-55» expresa dos veces cuatro dígitos, no una referencia truncada.
+        lead=sub[:group[0].start()]
+        endings=list(re.finditer(r'\b(?:terminacion|ultimos (?:cuatro|4) digitos)\b',lead))
+        if (endings and not EXPLICIT_REFERENCE.search(lead[endings[-1].end():])
+                and (len(digits)==4 or (len(digits)==8 and digits[:4]==digits[4:]))):
+            terminations.append(dict(record,method='TERMINACION_EXPLICITA_REPETIDA',termination=digits[:4]))
+            continue
         number_start=ctx.end()+group[0].start()
         before=s[max(0,number_start-420):number_start]
         intentions=list(CALLBACK_INTENT.finditer(before))
@@ -130,4 +138,5 @@ def find_reference(text, expected=''):
     return {"detected":list(unique.values()), "incorrect":wrong,
             "ambiguous":ambiguous, "expected":expected,
             "excluded_callback_numbers":list({v['digits']:v for v in callbacks}.values()),
+            "excluded_explicit_terminations":terminations,
             "requires_review":bool(wrong or ambiguous or (found and len(expected)!=16))}

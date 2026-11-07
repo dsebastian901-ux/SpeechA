@@ -1,7 +1,7 @@
-# MRS Speech Analytics — r45
+# MRS Speech Analytics — r46
 
-Motor integrado de reglas, copias con estatus corregido y reporte de cuentas para que el gestor actualice su base.
+Revisión documental completa de las 59 llamadas pendientes, con correcciones de interpretación y conservación de seguridad. Resultado de las 59: una aprobación, siete rechazos por puntaje y 51 retenciones con causa individual.
 
-Extraiga TODO el ZIP en una carpeta nueva. Ejecute REANALIZAR_Y_CORREGIR_ETIQUETAS.bat; seleccione su último checkpoint completo y después la carpeta de audios originales. No requiere otro Whisper. Genera copias separadas, conserva originales y agrega CUENTAS_REETIQUETADAS y RESUMEN_REETIQUETADO al Excel final.
+Los reportes mantienen las cuentas reetiquetadas para el gestor y los motivos de no pago. No se solicita una prueba nueva del usuario. Consulte proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_46_59_LLAMADAS.md y VALIDACION_R46.json.
 
-Código y documentación completos del piloto. Consulte proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_45_DIAGNOSTICO.md y VALIDACION_R45.json para resultados, catálogo y límites. Sin datos reales ni modelos; el instalador final con usuarios se desarrolla por separado.
+Paquete completo de código: extraer todo en carpeta nueva. Conserva reanálisis sin volver a transcribir. Sin datos reales, audios ni modelos. El instalador con usuarios se desarrolla por separado.

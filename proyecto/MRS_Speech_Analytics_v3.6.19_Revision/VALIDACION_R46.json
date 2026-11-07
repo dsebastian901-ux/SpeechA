@@ -1,0 +1,125 @@
+{
+  "revision": "3.6.19-r46",
+  "review59": {
+    "complete_transcripts_read": 59,
+    "outcomes": {
+      "REVISAR": 51,
+      "NO_APROBADO_MENOR_80": 7,
+      "APROBADO": 1
+    },
+    "retained_block_groups": {
+      "FINANZAS_O_DATOS": 10,
+      "SEGURIDAD_Y_TRATO": 30,
+      "IDENTIFICACION_ESTATUS_O_VOZ": 10,
+      "RECHAZO_POR_PUNTAJE_RESUELTO": 7,
+      "APROBACION_RESUELTA": 1,
+      "DURACION_U_OTRA_RESTRICCION": 1
+    },
+    "audio_support_fragments": 10,
+    "repetitive_asr_discarded": 1,
+    "human_listening_performed": false,
+    "individual_customer_reports_public": false
+  },
+  "tests": {
+    "passed": 2161,
+    "skipped": 7,
+    "failures": 0
+  },
+  "future_preparation_tests": {
+    "passed": 2181,
+    "skipped": 7,
+    "failures": 0
+  },
+  "regression": {
+    "usuario100": {
+      "calls": 100,
+      "before": {
+        "APROBADO": 20,
+        "REVISAR": 59,
+        "NO_APROBADO_MENOR_80": 14,
+        "APROBADO_ETIQUETA_CORREGIDA": 4,
+        "FALLA_GRAVE": 3
+      },
+      "outcomes": {
+        "APROBADO": 21,
+        "REVISAR": 51,
+        "NO_APROBADO_MENOR_80": 21,
+        "APROBADO_ETIQUETA_CORREGIDA": 4,
+        "FALLA_GRAVE": 3
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 100,
+      "excel_cells_verified": 10800,
+      "excel_differences": 0,
+      "motives_rows_verified": 100,
+      "rule_rows_verified": 1300,
+      "retagged_rows_verified": 4
+    },
+    "lote103": {
+      "calls": 103,
+      "before": {
+        "REVISAR": 71,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9,
+        "NO_APROBADO_MENOR_80": 2
+      },
+      "outcomes": {
+        "REVISAR": 71,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9,
+        "NO_APROBADO_MENOR_80": 2
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 103,
+      "excel_cells_verified": 11124,
+      "excel_differences": 0,
+      "motives_rows_verified": 103,
+      "rule_rows_verified": 1339,
+      "retagged_rows_verified": 0
+    },
+    "lote1007-nombres": {
+      "calls": 1007,
+      "before": {
+        "REVISAR": 864,
+        "NO_APROBADO_MENOR_80": 51,
+        "APROBADO_ETIQUETA_CORREGIDA": 11,
+        "APROBADO": 70,
+        "FALLA_GRAVE": 11
+      },
+      "outcomes": {
+        "REVISAR": 846,
+        "NO_APROBADO_MENOR_80": 67,
+        "APROBADO_ETIQUETA_CORREGIDA": 11,
+        "APROBADO": 72,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 108756,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007,
+      "rule_rows_verified": 13091,
+      "retagged_rows_verified": 11
+    }
+  },
+  "incremental_safety_validation": {
+    "all_changed_extractors_compared_for_every_call": true,
+    "full_extractions_repeated": 6,
+    "unchanged_extractions_verified": 1204
+  },
+  "application_reanalysis_whisper_executed": false,
+  "additional_asr_support": "Locally cached Whisper medium, ten fragments; no transcript replacement or human confirmation.",
+  "source_transcripts_and_customer_data_preserved": true,
+  "native_windows_verified": false,
+  "future_installer_login_included": false,
+  "customer_data_or_model_weights_in_zip": false
+}

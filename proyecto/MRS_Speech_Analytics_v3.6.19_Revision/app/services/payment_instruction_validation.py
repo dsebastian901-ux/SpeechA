@@ -11,6 +11,24 @@ def only_negated_transfers(text):
         source[max(0, m.start()-85):m.start()]) for m in mentions)
 
 
+def transfers_only_reported_or_asked(text,segments=()):
+    """Preguntar cómo se hizo un pago no instruye una nueva transferencia."""
+    if future_transfer_discussion(text,segments) or transfer_instructions(text,segments):
+        return False
+    if re.search(r'\b(?:clabe|cuenta bancaria|cuenta interbancaria|cuenta personal|cuenta de destino|numero de cuenta|spei)\b',normalize(text)):
+        return False
+    mentions=[]
+    for unit in sentence_evidence(text,segments):
+        value=normalize(unit['text'])
+        for match in re.finditer(r'\b(?:transferencia|transferir|transfiera)\b',value):
+            prefix=value[max(0,match.start()-130):match.start()]
+            question=bool(re.search(r'\b(?:lo pago|realizo su pago|hizo su pago|pago por medio de)\b',prefix)
+                and ('?' in value or '¿' in value))
+            reported=bool(re.search(r'\b(?:hice|realice|ya pague|ya deposite|vengo haciendo|vengo realizando|he realizado|fue por|fueron por)\b[^.!?]{0,100}$',prefix))
+            mentions.append(question or reported)
+    return bool(mentions) and all(mentions)
+
+
 def future_transfer_discussion(text, segments=()):
     """Explorar una transferencia nueva impide tratar todo como pago histórico."""
     pattern = re.compile(

@@ -10,7 +10,7 @@ def mistreatment_reports(text, segments, phrases):
         r'\bme contest(?:o|aron|aban|aba) (?:muy )?mal\b|'
         r'\b(?:una? |su companer[oa] |tu companer[oa] )?me amenazo\b|'
         r'\b(?:me|nos) (?:atendieron|atendio|atienden|atendian|trataron|trato|tratan|trataban|hablaron|hablo|hablan) '
-        r'(?:(?:muy|bastante|demasiado) )?(?:mal|pesimo|pesimamente|groseramente|groser[oa]s?|agresiv[oa]s?|'
+        r'(?:(?:muy|bien|bastante|demasiado|sumamente|super) )?(?:mal|pesimo|pesimamente|groseramente|groser[oa]s?|agresiv[oa]s?|'
         r'de mala (?:manera|forma)|de (?:forma|manera) (?:grosera|agresiva)|con malos (?:modos|tratos))\b|'
         r'\b(?:me|nos) (?:estuvo|estaban|estuvieron|estaba) (?:gritando|insultando|agrediendo|amenazando|ofendiendo)\b|'
         r'\b(?:me|nos) (?:grito|insulto|agredio|ofendio|humillo|humillaron|amenazaron)\b|'
@@ -31,6 +31,7 @@ def mistreatment_reports(text, segments, phrases):
         r'\b(?:usted|tu) (?:fue|fuiste|es|eres) (?:la|el) (?:que|quien) me '
         r'(?:insulto|agredio|ofendio|amenazo|grito)\b')
     paid_source=normalize(text)
+    paid_report=bool(re.search(r'\bya (?:lo |les )?pague\b',paid_source))
     paid_call_complaint = bool(re.search(r'\b(?:mi cuenta ya esta liquidada|ceros? mi cuenta)\b',paid_source)
         and re.search(r'\b(?:respecto (?:a )?esta molestia|me molesta|estoy molest[oa]|no he tenido buenos comentarios anteriores)\b',paid_source))
     units = sentence_evidence(text, segments)
@@ -58,10 +59,21 @@ def mistreatment_reports(text, segments, phrases):
         phone_context = bool(re.search(r'\b(?:llamadas?|llame|llamar|marcan|marcando|marcado|marcaron)\b', value+' '+previous))
         if phone_context:
             matches.extend(re.finditer(r'\b(?:me tienen|estoy) inundad[oa] de llamadas\b',value))
+            if paid_report:
+                matches.extend(re.finditer(r'\b(?:(?:ya )?(?:le )?estoy recibiendo (?:las )?llamadas|me (?:llaman|marcan|hablan)) a cada rato\b',value))
             matches.extend(re.finditer(r'\b(?:no (?:me )?dejan(?: a uno)?[^.!?]{0,65}\b(?:tranquil[oa]|en paz)|'
                 r'me (?:estan|han estado|estuvieron) (?:hostigando|acosando)|'
                 r'no me (?:sigan|siguieran) (?:molestando|hostigando|acosando)|'
                 r'nunca me han (?:contestado|atendido))\b', value))
+        complaint_context=bool(re.search(r'\b(?:aclaracion|reportar|reporte|investigar|investigacion|tarjeta|compras|companeros?|cobrar|cobranza|estado de cuenta|desglose|folio)\b',value+' '+previous))
+        if complaint_context:
+            matches.extend(re.finditer(r'\b(?:nunca me avisaron|no me (?:avisaron|dieron solucion)|'
+                r'no me (?:lo |la )?quisieron (?:dar|resolver)|'
+                r'(?:me (?:enganaron|engano)|no se vale que enganen)|'
+                r'(?:muy|son|fueron|estan) (?:prepotentes|prepotantes|preputantes))\b',value))
+            matches.extend(re.finditer(r'\bno (?:les )?pedi (?:la |esa )?tarjeta\b',value))
+            if re.search(r'\b(?:estado de cuenta|desglose|folio)\b',value+' '+previous):
+                matches.extend(re.finditer(r'\b(?:ya fui[^.!?]{0,30}(?:no|tampoco) me lo dan|no me (?:dan|dieron|quieren dar) (?:el )?(?:estado de cuenta|desglose|folio))\b',value))
         if re.search(r'\b(?:ya pague|ya lo pague|ya les pague|capturas? de que ya pague)\b',value):
             matches.extend(re.finditer(r'\b(?:ya )?no (?:estarme|me esten|me sigan) (?:hablando|marcando|llamando)\b',value))
         repeated_work_interruption=re.search(

@@ -26,7 +26,20 @@ def ordinary_score_rejection(metadata, score, minimum_score, duration_seconds):
     card=metadata.get('card_validation') or {}
     if card.get('result')=='TARJETA INCORRECTA' or str(card.get('result') or '').startswith('REVISAR -'):return False
     negotiation=metadata.get('negotiation_validation') or {}
-    if negotiation.get('valid') is False or negotiation.get('review_required') or negotiation.get('date_year_rollover_review'):return False
+    missing_contract_only=bool(not (negotiation.get('commitment_evidence') or {}).get('accepted')
+        and not negotiation.get('promise_date') and not negotiation.get('hard_invalid')
+        and not negotiation.get('review_required')
+        and negotiation.get('reasons')
+        and set(negotiation['reasons']).issubset({
+            'No se pudo confirmar la fecha de pago.',
+            'Faltan fecha de llamada o promesa interpretable para validar el plazo por mora.',
+        })
+        and any(p.get('id')=='PEN007' for p in penalties))
+    # La ausencia de fecha ya descontada no exige una revisión adicional si
+    # el rechazo por puntaje es definitivo. No exime términos financieros
+    # contradictorios, importes, plazos reales ni evidencia incierta de audio.
+    if ((negotiation.get('valid') is False and not missing_contract_only)
+            or negotiation.get('review_required') or negotiation.get('date_year_rollover_review')):return False
     arco=metadata.get('arco_validation') or {}
     if arco.get('applies') and not arco.get('valid'):return False
     checks=metadata.get('quality_checks') or {}

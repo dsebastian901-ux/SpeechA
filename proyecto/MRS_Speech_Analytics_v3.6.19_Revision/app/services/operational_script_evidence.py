@@ -120,6 +120,12 @@ def remaining_payment_proposals(text, segments=()):
         if position<0:continue
         cursor=position+len(value)
         if unit['speaker_role'] in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+        calendar=re.search(r'\b(?:quedaria|quedarian|restaria|restarian) (?:el )?dia \d{1,2}\b'
+            r'[^.!?]{0,45}\bpor (?:\d[\d.,]*|mil)\b[^.!?]{0,45}\by (?:el )?dia \d{1,2}\b'
+            r'[^.!?]{0,45}\b(?:mismo monto|misma cantidad|por \d)',value)
+        if calendar and not re.search(r'\b(?:dice que|dijo que|me dijeron que|por ejemplo|no es cierto que)\b',value[:calendar.start()]):
+            found.append(dict(unit,phrase=calendar.group(),method='CALENDARIO_RESTANTE_REQUIERE_VALIDAR_TERMINOS'))
+            continue
         match=re.search(r'\b(?:puede|podria|podemos) confirmar (?:ese|este|el|su) pago\b'
                         r'[^.!?]{0,60}\b(?:el dia|para el|hoy|manana)\b',value)
         if not match:
