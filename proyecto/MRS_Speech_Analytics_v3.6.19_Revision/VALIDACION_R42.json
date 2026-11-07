@@ -1,0 +1,171 @@
+{
+  "revision": "3.6.19-r42",
+  "state": "PILOT_RULE_CORRECTION_WITH_PENDING_MANUAL_REVIEW",
+  "tests": {
+    "passed": 1819,
+    "skipped": 7,
+    "failures": 0,
+    "python": "3.10.22",
+    "platform": "Linux",
+    "native_windows_verified": false,
+    "audio_listened": false
+  },
+  "regression": {
+    "nuevo100": {
+      "calls": 100,
+      "before": {
+        "REVISAR": 96,
+        "FALLA_GRAVE": 3,
+        "APROBADO": 1
+      },
+      "outcomes": {
+        "REVISAR": 84,
+        "APROBADO": 7,
+        "NO_APROBADO_MENOR_80": 6,
+        "FALLA_GRAVE": 3
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 100,
+      "excel_cells_verified": 10400,
+      "excel_differences": 0,
+      "motives_rows_verified": 100
+    },
+    "nuevo100_nombres": {
+      "calls": 100,
+      "before": {
+        "REVISAR": 96,
+        "FALLA_GRAVE": 3,
+        "APROBADO": 1
+      },
+      "outcomes": {
+        "REVISAR": 74,
+        "APROBADO": 12,
+        "NO_APROBADO_MENOR_80": 11,
+        "FALLA_GRAVE": 3
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 100,
+      "excel_cells_verified": 10400,
+      "excel_differences": 0,
+      "motives_rows_verified": 100
+    },
+    "1007": {
+      "calls": 1007,
+      "before": {
+        "REVISAR": 969,
+        "APROBADO": 27,
+        "FALLA_GRAVE": 11
+      },
+      "outcomes": {
+        "REVISAR": 939,
+        "NO_APROBADO_MENOR_80": 18,
+        "APROBADO": 39,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 104728,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007
+    },
+    "103": {
+      "calls": 103,
+      "before": {
+        "REVISAR": 73,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9
+      },
+      "outcomes": {
+        "REVISAR": 72,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9,
+        "NO_APROBADO_MENOR_80": 1
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 103,
+      "excel_cells_verified": 10712,
+      "excel_differences": 0,
+      "motives_rows_verified": 103
+    },
+    "1007_nombres": {
+      "calls": 1007,
+      "before": {
+        "REVISAR": 950,
+        "APROBADO": 45,
+        "FALLA_GRAVE": 11,
+        "NO_APROBADO_MENOR_80": 1
+      },
+      "outcomes": {
+        "REVISAR": 889,
+        "NO_APROBADO_MENOR_80": 41,
+        "APROBADO": 66,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 104728,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007
+    }
+  },
+  "new_batch": {
+    "authorized_name_corrections": 44,
+    "unidentified_contacts": 41,
+    "status_not_confirmed": 75,
+    "score_below_80": 42,
+    "complaint_alerts": 5,
+    "wait_alerts": 1,
+    "counts_overlap": true
+  },
+  "audio_contrast": {
+    "audio_files_matched": 100,
+    "duration_mismatches": 0,
+    "sample_calls": 12,
+    "sample_windows": 27,
+    "sample_seconds_including_overlap": 692.24,
+    "repetitive_windows_excluded": 5,
+    "source_model": "faster-whisper small int8 / beam 5 / VAD true",
+    "alternative_model": "Whisper medium int8 / sherpa-onnx greedy / no VAD",
+    "controlled_model_accuracy_benchmark": false,
+    "human_verified": false,
+    "asr_alternative_applied_to_checkpoint": false
+  },
+  "unique_checkpoint_calls": 1210,
+  "evaluated_rows_including_name_copies": 2317,
+  "raw_asr_preserved": true,
+  "original_account_data_preserved": true,
+  "requirements_changed": false,
+  "source_zip_contains_customer_data": false,
+  "source_zip_contains_model_weights": false,
+  "model_change_required_for_this_rule_correction": false,
+  "payment_places_policy": {
+    "user_confirmed": true,
+    "missing_minimum_deduction": 20,
+    "extra_review_block": false,
+    "approval_still_requires_other_filters": true
+  },
+  "business_definition_pending": "Full balance cancellation in 1–3 PV without discount; user clarification requested.",
+  "limitations": [
+    "No se realizó escucha humana ni confirmación de voces mediante ASR.",
+    "La muestra adicional no cubre de nuevo el contenido completo de los 100 audios.",
+    "Las lecturas repetitivas no se usaron para aprobar ni sobrescribir las originales.",
+    "Persisten casos pendientes; no se declara resuelta la revisión manual excesiva.",
+    "7 pruebas gráficas omitidas; no se certifica ejecución nativa de Windows.",
+    "El futuro instalador y el acceso de usuarios no están incluidos en este piloto."
+  ]
+}

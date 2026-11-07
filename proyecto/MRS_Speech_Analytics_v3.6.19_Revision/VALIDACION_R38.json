@@ -1,0 +1,53 @@
+{
+  "revision": "3.6.19-r38",
+  "baseline": "ZIP r37 proporcionado por usuario",
+  "tests": {
+    "passed": 1470,
+    "skipped": 7,
+    "failures": 0,
+    "python": "3.10.22",
+    "platform": "Linux",
+    "gui_windows_verified": false
+  },
+  "regression": {
+    "1007": {
+      "calls": 1007,
+      "outcomes": {
+        "ERROR": 55,
+        "REVISAR": 916,
+        "APROBADO": 25,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "relations_preserved": true,
+      "safety_invariant_failures": 0,
+      "rows_verified": 1007,
+      "report_cells_verified": 95665,
+      "report_cell_differences": 0
+    },
+    "103": {
+      "calls": 103,
+      "outcomes": {
+        "REVISAR": 73,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "relations_preserved": true,
+      "safety_invariant_failures": 0,
+      "rows_verified": 103,
+      "report_cells_verified": 9785,
+      "report_cell_differences": 0
+    }
+  },
+  "transcripts_evaluated": 1055,
+  "original_large_batch_missing_transcripts": 55,
+  "whisper_executed": false,
+  "audio_listened": false,
+  "source_excel_names_not_automatically_overwritten": true,
+  "requirements_or_whisper_model_changed": false,
+  "scope_limit": "No certifica cierre de los trece problemas; faltan comprobación Windows y evidencia acústica. Los 55 JSON recuperados no están en esta entrega.",
+  "private_checkpoints_and_reports_in_source_zip": false
+}

@@ -1,51 +1,10 @@
-# MRS Speech Analytics · revisión 08
+# MRS Speech Analytics — piloto r42
 
-Continuación de la versión 06 recibida en el paquete de migración. El código de
-la aplicación está en `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/`.
+Resultado del lote de 100 después del reanálisis y la corrección autorizada de nombres desde tarjeta Excel: **74 REVISAR, 12 APROBADO, 11 NO_APROBADO_MENOR_80, 3 FALLA_GRAVE**. El archivo recibido tenía una aprobada. La mejora es parcial y las pendientes siguen siendo muchas.
 
-La revisión incorpora controles y pruebas para los 13 errores reportados.
-Es una versión candidata: no está certificada en Windows ni mediante escucha de
-las llamadas originales. Consulte `REVISION_08.md` dentro de la aplicación para
-resultados, cambios y límites por regla. Los documentos de validación anteriores
-se conservan como historial, no como certificación de esta revisión.
+Se aplica el criterio de identificación contextual confirmado por el usuario y se corrigen la interpretación de compromisos, pagos anteriores, comprobantes, miles y saldos. La falta de dos lugares de pago conserva la penalización de 20 puntos, sin bloquear por sí sola una aprobación con 80. Se conservan los bloqueos de seguridad, quejas, ARCO, groserías y espera de 65 segundos.
 
-## Windows
+Para aplicar las reglas a las llamadas YA procesadas: extraiga todo en una carpeta nueva, abra REANALIZAR_CON_TARJETA_EXCEL.bat y seleccione el batch_checkpoint.json actual de 100 llamadas. Se generan una copia, el checkpoint y ambos Excel. No ejecuta Whisper ni requiere cambiar el modelo. Espere el mensaje final; un lote grande puede tardar varios minutos.
 
-Use Python 3.10 de 64 bits. Extraiga el paquete completo, abra la carpeta de la
-aplicación y ejecute `INSTALAR.bat`; después `INICIAR_MRS.bat`. Los lanzadores y
-dependencias originales se conservan. La primera transcripción de audio nuevo
-necesita descargar el modelo de Whisper desde Hugging Face.
+Consulte proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_42_DIAGNOSTICO.md y VALIDACION_R42.json. Incluyen resultados, alcance de la muestra ASR y pendientes. Esta versión no incluye el futuro instalador ni el acceso de usuarios de noviembre.
 
-Para reproducir las pruebas en esa carpeta:
-
-```bat
-py -3.10 -m pip install -r requirements-dev.txt -c constraints-tested.txt
-py -3.10 -m pytest -q
-```
-
-Las versiones de `constraints-tested.txt` fueron ejecutadas en Linux con Python
-3.10.22; falta verificar la instalación y el audio en Windows.
-
-## Entorno de desarrollo en la nube
-
-Desde `/workspace/SpeechA`, ejecute `bash setup-cloud.sh`. Las dependencias quedan
-en `/workspace/SpeechA/.venv`; después:
-
-```bash
-cd proyecto/MRS_Speech_Analytics_v3.6.19_Revision
-/workspace/SpeechA/.venv/bin/python -m pytest -q
-```
-
-Para comparar la base original con esta revisión, conserve el ZIP original
-extraído en una ubicación privada y ejecute, desde la carpeta de la aplicación:
-
-```bash
-python tools/regression_checkpoints.py \
-  --input-dir /ruta/privada/pruebas_checkpoints \
-  --baseline-source /ruta/privada/proyecto/MRS_Speech_Analytics_v3.6.19_Revision \
-  --reviewed-changes tests/reviewed_baseline_changes.json \
-  --output-dir /ruta/privada/resultados_r07
-```
-
-No suba checkpoints, audios ni resultados reales a un repositorio público.
-El paquete de código excluye esos datos; la auditoría se entrega por separado.

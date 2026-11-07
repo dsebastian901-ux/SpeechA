@@ -1,0 +1,266 @@
+[
+  {
+    "case": "batch_checkpoint(20261021-154002):010",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):013",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):018",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):025",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):031",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):033",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):041",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):046",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):051",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):056",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):072",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):084",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):091",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):097",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):109",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):110",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):122",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):125",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):130",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):133",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):136",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):144",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):147",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  },
+  {
+    "case": "batch_checkpoint(20261021-154002):156",
+    "allowed_removed": [
+      "PEN009"
+    ],
+    "checkpoint_sha256": "ac5bd0453c1f75b7a9fc8e571959c75adf33009f68971b2c5ff7377baa83b63b",
+    "evidence_rules": {
+      "PEN009": "accepted_payment_commitment"
+    },
+    "reason": "Aceptación textual de pago detectada por regla general; retirar solo el falso PEN009 de 10 puntos. Las demás validaciones siguen vigentes."
+  }
+]

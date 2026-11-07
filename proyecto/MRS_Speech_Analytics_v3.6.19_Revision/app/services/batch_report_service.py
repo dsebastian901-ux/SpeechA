@@ -100,6 +100,24 @@ class BatchReportService:
         "Transcripción Completa",
         "Transcripción Depurada",
         "Ruta audio clasificado",
+        "Interlocutor detectado",
+        "Evidencia estatus",
+        "Método detección estatus",
+        "Recuperación importe audio",
+        "Evidencia recuperación importe",
+        "Efecto pago mínimo",
+        "Política de plazo",
+        "Fecha máxima de negociación",
+        "Datos de cuenta",
+        "Motivo datos de cuenta",
+        "Confirmación financiera",
+        "Saldo ASR original",
+        "Saldo confirmado por usuario",
+        "Parcialidades finales confirmadas",
+        "Historial de propuestas de parcialidades",
+        "Lectura adicional audio",
+        "Alertas lectura ASR",
+        "Riesgos lectura adicional",
     ]
 
     MODE_B_HEADERS = [
@@ -167,7 +185,36 @@ class BatchReportService:
         "Transcripción Completa",
         "Transcripción Depurada",
         "Ruta audio clasificado",
+        "Interlocutor detectado",
+        "Evidencia estatus",
+        "Método detección estatus",
+        "Recuperación importe audio",
+        "Evidencia recuperación importe",
+        "Efecto pago mínimo",
+        "Política de plazo",
+        "Fecha máxima de negociación",
+        "Datos de cuenta",
+        "Motivo datos de cuenta",
     ]
+
+    for _headers in (HEADERS, MODE_B_HEADERS):
+        _index = _headers.index('Comprobante WhatsApp')
+        _headers[_index:_index] = ['Queja de atención/maltrato', 'Evidencia queja atención/maltrato',
+                                 'Validación espera 65 s', 'Mayor intervalo sin retoma (s)',
+                                 'Intervalos espera 65 s', 'Evidencia espera',
+                                 'Solicitud comprobante/ticket', 'Canal comprobante', 'Evidencia solicitud comprobante']
+
+    MODE_B_HEADERS += HEADERS[-5:]
+
+    ARCO_HEADERS = [
+        "Mención derechos ARCO",
+        "Correo ARCO confirmado",
+        "INE solicitada",
+        "Comprobante de línea solicitado",
+        "Procedimiento ARCO completo",
+    ]
+    HEADERS += ARCO_HEADERS
+    MODE_B_HEADERS += ARCO_HEADERS
 
 
     @staticmethod
@@ -475,9 +522,12 @@ class BatchReportService:
         failures = metadata.get("critical_failures") or []
         treatment = metadata.get("treatment_validation") or {}
         call_end = metadata.get("call_end_validation") or {}
+        waiting = metadata.get('wait_validation') or {}
         convenio_payment = metadata.get("convenio_payment_validation") or {}
         card_validation = metadata.get("card_validation") or {}
         duration_validation = metadata.get("duration_validation") or {}
+        financial = metadata.get("financial_review_validation") or {}
+        reviewed_balance = ((financial.get("human_review_record") or {}).get("balance") or {})
 
         result_payload = item.get("result") or {}
         transcription = str(
@@ -602,7 +652,7 @@ class BatchReportService:
             "Clasificación física": physical,
             "Nivel de atención": cls._nivel_atencion(classification, metadata),
             "MRS detectado": cls._yes_no(checks.get("identifica_mrs")),
-            "Estatus detectado IA": metadata.get("quality_contact_type") or status.get("detected_status") or "",
+            "Estatus detectado IA": status.get("detected_status") or "",
             "Fecha de pago detectada": negotiation.get("promise_date") or "",
             "Fecha textual escuchada": negotiation.get("promise_date_text") or "",
             "Evidencia de fecha": negotiation.get("promise_date_evidence") or "",
@@ -668,6 +718,19 @@ class BatchReportService:
             "Evidencia Conciliación": cls._join_reasons(treatment.get("conciliation_evidence") or []),
             "Finalización Llamada": str(call_end.get("result") or ""),
             "Abandono/Silencio": cls._yes_no(call_end.get("abandonment_review")),
+            'Queja de atención/maltrato': cls._yes_no(bool(checks.get('queja_maltrato_detectada') or treatment.get('mistreatment_report_evidence'))),
+            'Evidencia queja atención/maltrato': cls._join_reasons(e.get('text', '') for e in treatment.get('mistreatment_report_evidence', [])),
+            'Validación espera 65 s': waiting.get('result') or 'NO EVALUABLE - REANALIZAR CON R41',
+            'Mayor intervalo sin retoma (s)': round(waiting['max_no_conversation_seconds'], 3) if waiting.get('max_no_conversation_seconds') is not None else '',
+            'Intervalos espera 65 s': cls._join_reasons(f"{e['start']:.2f}–{e['end']:.2f} s ({e['seconds']:.2f} s)" for e in waiting.get('intervals', [])),
+            'Evidencia espera': cls._join_reasons(f"{e['before_text']} / {e.get('after_text') or '[sin retoma transcrita]'}" for e in waiting.get('intervals', [])),
+            "Solicitud comprobante/ticket": (
+                'REVISAR' if convenio_payment.get('receipt_request_review_required') else
+                'SI (ENVÍO REPORTADO)' if convenio_payment.get('receipt_reported_sent') and not convenio_payment.get('receipt_requested')
+                else cls._yes_no(convenio_payment.get('requests_payment_receipt', convenio_payment.get('requests_receipt_whatsapp')))
+                if convenio_payment.get('applies') or convenio_payment.get('requests_payment_receipt') else 'N/A'),
+            "Canal comprobante": convenio_payment.get('receipt_channel') or ('WHATSAPP' if convenio_payment.get('requests_receipt_whatsapp') else 'NO CONFIRMADO' if convenio_payment.get('applies') else 'N/A'),
+            "Evidencia solicitud comprobante": cls._join_reasons([e['text'] for e in convenio_payment.get('receipt_request_evidence', []) + convenio_payment.get('receipt_sent_evidence', [])]),
             "Comprobante WhatsApp": cls._yes_no(convenio_payment.get("requests_receipt_whatsapp")) if convenio_payment.get("applies") else "N/A",
             "Evidencia Comprobante WhatsApp": cls._join_reasons(convenio_payment.get("whatsapp_evidence") or []),
             "Lugares Pago Autorizados": ", ".join(convenio_payment.get("authorized_places_detected") or []),
@@ -690,6 +753,40 @@ class BatchReportService:
             "Transcripción Completa": transcription,
             "Transcripción Depurada": transcription_clean,
             "Ruta audio clasificado": item.get("classified_audio_path") or "",
+            "Interlocutor detectado": metadata.get("quality_contact_type") or "",
+            "Evidencia estatus": status.get("evidence") or "",
+            "Método detección estatus": status.get("evidence_method") or "",
+            "Recuperación importe audio": ("CONFIRMADO POR USUARIO" if (metadata.get("amount_recovery_validation") or {}).get("human_verified") else
+                                           "REVISAR" if (metadata.get("amount_recovery_validation") or {}).get("review_required") else ""),
+            "Evidencia recuperación importe": negotiation.get("evidencia_monto") if (metadata.get("amount_recovery_validation") or {}).get("entries") else "",
+            "Efecto pago mínimo": (negotiation.get("mora_payment_policy") or {}).get("minimum_effect") or "",
+            "Política de plazo": (negotiation.get("mora_payment_policy") or {}).get("mode") or "",
+            "Fecha máxima de negociación": (negotiation.get("mora_payment_policy") or {}).get("window_end") or "",
+            "Datos de cuenta": "NOMBRE DE SALIDA POR CORREGIR" if (metadata.get("account_source_validation") or {}).get("review_required") else "",
+            "Motivo datos de cuenta": (metadata.get("account_source_validation") or {}).get("reason") or "",
+            "Confirmación financiera": ("CONFIRMADO POR USUARIO" if financial.get("human_verified") else
+                "REVISAR CONFIRMACIÓN" if financial.get("review_required") else ""),
+            "Saldo ASR original": reviewed_balance.get("original_amount", ""),
+            "Saldo confirmado por usuario": reviewed_balance.get("confirmed_amount", ""),
+            "Parcialidades finales confirmadas": (" + ".join(f"{v:g}" for v in (negotiation.get("installment_validation") or {}).get("amounts", []))
+                if financial.get("installments_applied") else ""),
+            "Historial de propuestas de parcialidades": (json.dumps((negotiation.get("installment_validation") or {}).get("evidence", []), ensure_ascii=False)
+                if financial.get("installments_applied") else ""),
+            "Lectura adicional audio": ("ASR ADICIONAL" if (metadata.get('audio_block_evidence_validation') or {}).get('valid') else "REVISAR VÍNCULO")
+                if (metadata.get('audio_block_evidence_validation') or {}).get('present') else "",
+            "Alertas lectura ASR": json.dumps((metadata.get('audio_block_evidence_validation') or {}).get('quality') or {},ensure_ascii=False)
+                if ((metadata.get('audio_block_evidence_validation') or {}).get('quality') or {}).get('degraded') else "",
+            "Riesgos lectura adicional": json.dumps((metadata.get('audio_block_evidence_validation') or {}).get('risks') or [],ensure_ascii=False)
+                if (metadata.get('audio_block_evidence_validation') or {}).get('risks') else "",
+            **{label: cls._yes_no((metadata.get('arco_validation') or {}).get(key))
+               if (metadata.get('arco_validation') or {}).get('applies') else "N/A"
+               for label, key in [
+                   ("Mención derechos ARCO", "rights_mentioned"),
+                   ("Correo ARCO confirmado", "email_given"),
+                   ("INE solicitada", "ine_requested"),
+                   ("Comprobante de línea solicitado", "line_proof_requested"),
+                   ("Procedimiento ARCO completo", "complete_procedure"),
+               ]},
         }
 
     @staticmethod
@@ -760,6 +857,9 @@ class BatchReportService:
             "Confrontación": 30, "Evidencia Confrontación": 65,
             "Interrupciones": 28, "Evidencia Interrupciones": 65,
             "Finalización Llamada": 38, "Abandono/Silencio": 20,
+            'Queja de atención/maltrato': 28, 'Evidencia queja atención/maltrato': 85,
+            'Validación espera 65 s': 45, 'Mayor intervalo sin retoma (s)': 28,
+            'Intervalos espera 65 s': 55, 'Evidencia espera': 90,
             "Transcripción Completa": 90,
             "Transcripción Depurada": 90,
             "Atribución liquidación": 22,
@@ -774,6 +874,9 @@ class BatchReportService:
             "Transferencia Detectada": 23,
             "Cuenta Santander Autorizada": 28,
             "Revisión Datos Transferencia": 28,
+            "Interlocutor detectado": 28,
+            "Evidencia estatus": 70,
+            "Método detección estatus": 48,
         }
         header_map = {str(c.value or "").strip(): c.column for c in ws[1]}
         for header, width in audit_widths.items():
@@ -951,8 +1054,8 @@ class BatchReportService:
         summary_ws.append(["Aprobados", approved])
         summary_ws.append(["Aprobados sin etiquetar", approved_untagged])
         summary_ws.append(["No aprobados menor a 80%", under_80])
-        summary_ws.append(["Mal dictaminados", bad_dictation])
-        summary_ws.append(["Negociaciones inválidas", invalid_negotiation])
+        summary_ws.append(["Clasificación calculada: MAL DICTAMINADO", bad_dictation])
+        summary_ws.append(["Clasificación calculada: NEGOCIACION_INVALIDA", invalid_negotiation])
         summary_ws.append(["Fallas graves", severe_failure])
         summary_ws.append(["Revisión manual", review])
         summary_ws.append(["Incorrectos IA", incorrect])
@@ -962,8 +1065,8 @@ class BatchReportService:
         summary_ws.append(["Score promedio", avg_score])
         summary_ws.append(["% aprobación", approval_pct])
         summary_ws.append(["Umbral mínimo", minimum_score])
-        summary_ws.append(["Mal dictaminado", sum(1 for r in rows if r.get("Validación Dictamen") == "MAL DICTAMINADO")])
-        summary_ws.append(["Negociaciones inválidas", sum(1 for r in rows if r.get("Validación Negociación") == "INVÁLIDA")])
+        summary_ws.append(["Discrepancias de estatus detectadas por reglas", sum(1 for r in rows if r.get("Validación Dictamen") == "MAL DICTAMINADO")])
+        summary_ws.append(["Validación financiera: INVÁLIDA", sum(1 for r in rows if r.get("Validación Negociación") == "INVÁLIDA")])
         summary_ws.append(["Confrontaciones del gestor", sum(1 for r in rows if "CONFRONTACION DEL GESTOR" in str(r.get("Confrontación") or "").upper())])
 
         summary_ws.column_dimensions["A"].width = 30
@@ -1098,6 +1201,25 @@ class BatchReportService:
             for col, width in gestor_widths.items():
                 gestores_ws.column_dimensions[col].width = width
             cls._style_sheet(gestores_ws)
+
+        if not processed_only:
+            from app.services.nonpayment_report_service import NonpaymentReportService
+            companion_ws = wb.create_sheet('MOTIVOS_NO_PAGO')
+            companion_ws.append(['Reporte adicional', 'Resultado'])
+            try:
+                companion = NonpaymentReportService.generate_report(items, report_path)
+                companion_ws.append(['Estado', 'GENERADO'])
+                companion_ws.append(['Archivo', Path(companion).name])
+                companion_ws['B3'].hyperlink = Path(companion).name
+                companion_ws['B3'].style = 'Hyperlink'
+                companion_ws.append(['Contenido', 'Resumen de motivos, gestor/supervisor, mora y detalle con datos de cuentas.'])
+            except Exception as error:
+                companion_ws.append(['Estado', 'NO GENERADO'])
+                companion_ws.append(['Error', str(error)])
+                companion_ws.append(['Acción', 'El reporte de calidad se conserva. Libere el archivo adicional si está abierto y vuelva a exportar.'])
+            companion_ws.column_dimensions['A'].width = 25
+            companion_ws.column_dimensions['B'].width = 95
+            cls._style_sheet(companion_ws)
 
         if report_filename:
             temp_path = report_path.with_name(report_path.stem + "_nuevo.xlsx")

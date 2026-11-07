@@ -39,7 +39,7 @@ def test_e06_linea_does_not_count_as_ine():
 
 def test_e06_complete_arco_workflow_is_not_critical():
     r = run("Habla MRS. No lo conozco. Puede ejercer sus derechos ARCO. Tengo dos años con esta línea. "
-            "Envíe identificación oficial o comprobante de teléfono a privacidad@bradesco.com.mx.",
+            "Envíe identificación oficial y comprobante de teléfono a privacidad@bradesco.com.mx.",
             estatus_grabacion="NO CONOCEN A DEUDOR")
     assert r["status_validation"]["valid"] is True
     assert "PEN_ARCO_OMISION" not in ids(r)
@@ -132,7 +132,7 @@ def test_e10_e11_exception_does_not_override_other_blockers(blocker):
 
 
 NEGOTIATION = {"estatus_grabacion": "CONVENIO", "fecha": "2026-10-20", "vencimiento": "2026-10-25",
-               "asignacion": "1PV", "pago_minimo": "500", "saldo_total": "2000", "corte": "17"}
+               "asignacion": "1PV", "pago_minimo": "500", "saldo_total": "2000", "corte": "3"}
 
 
 def test_e12_valid_negotiation_retains_amount_date_and_places():

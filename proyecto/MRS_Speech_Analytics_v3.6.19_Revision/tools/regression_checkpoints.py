@@ -8,6 +8,8 @@ import collections
 import csv
 import hashlib
 import json
+import re
+from datetime import date
 from pathlib import Path
 import subprocess
 import sys
@@ -57,6 +59,15 @@ def invariants(row):
         failures.append("divulgación confirmada sin bloqueo crítico")
     if "PEN003" in pen and not privacy.get("confirmed_disclosure"):
         failures.append("PEN003 sin atribución confirmada")
+    home=m.get('home_recovery_warning') or {}
+    if home.get('review_required') and approved:
+        failures.append('advertencia en domicilio sin voz confirmada aprobada')
+    if home.get('confirmed') and ('PEN012' not in pen or m['final_result'] not in {'INCORRECTA','FALLA_GRAVE'}):
+        failures.append('advertencia confirmada en domicilio sin bloqueo crítico')
+    if (m.get('home_warning_validation') or {}).get('review_required') and approved:
+        failures.append('confirmación de advertencia inválida aprobada')
+    if (m.get('recado_acceptance_validation') or {}).get('review_required') and approved:
+        failures.append('confirmación de recado inválida aprobada')
     card = str((m.get("card_validation") or {}).get("result", ""))
     if (card == "TARJETA INCORRECTA" or card.startswith("REVISAR -")) and approved:
         failures.append("referencia pendiente aprobada")
@@ -67,9 +78,142 @@ def invariants(row):
     checks = m.get("quality_checks") or {}
     if (checks.get("groseria_bloquea_aprobacion") or checks.get("queja_maltrato_detectada")) and approved:
         failures.append("trato pendiente aprobado")
+    if (m.get('treatment_validation') or {}).get('mistreatment_report_evidence') and approved:
+        failures.append('denuncia de mala atención aprobada')
+    if ((m.get('wait_validation') or {}).get('review_required') or checks.get('espera_prolongada_detectada')) and approved:
+        failures.append('espera de 65 segundos o más aprobada')
     if privacy.get("review_required") and row["shared_decision"].get("aprobado"):
         failures.append("puerta común aprobó privacidad incierta")
+    negotiation = m.get("negotiation_validation") or {}
+    if approved and m.get('quality_contact_type')=='CONTACTO NO DETERMINADO':
+        failures.append('interlocutor no determinado aprobado')
+    arco=m.get('arco_validation') or {}
+    if approved and arco.get('applies') and not (arco.get('valid') and arco.get('complete_procedure')):
+        failures.append('procedimiento ARCO incompleto aprobado')
+    if approved and negotiation.get('unaccepted_new_payment_instruction'):
+        failures.append('instrucción nueva de pago sin aceptación aprobada como seguimiento')
+    if approved and (negotiation.get("installment_validation") or {}).get("review_required"):
+        failures.append("parcialidades contradictorias aprobadas")
+    if approved and status.get("detected_status") == "CONVENIO" and not (negotiation.get("commitment_evidence") or {}).get("accepted"):
+        failures.append("convenio aprobado sin aceptación acreditada")
     return failures
+
+
+def verified_followup_approval(metadata):
+    """Excepción documental explícita para la regla del usuario del 28/oct.
+
+    No elimina la revisión de hashes ni las causas de cada penalización. Solo
+    permite que un seguimiento acreditado sea aprobado bajo la nueva política.
+    """
+    status=metadata.get('status_validation') or {}
+    negotiation=metadata.get('negotiation_validation') or {}
+    completed=negotiation.get('completed_payment_evidence') or {}
+    return bool(status.get('policy_source')=='ACLARACION_USUARIO_20261028'
+        and status.get('evidence_method')=='SEGUIMIENTO_PAGO_REPORTADO_ESTATUS_ORIGINAL'
+        and status.get('excel_status') in {'CONVENIO','NO DEFINE FECHA DE PAGO'}
+        and status.get('matches') is True and status.get('valid') is True and status.get('evidence')
+        and metadata.get('quality_contact_type')=='TITULAR'
+        and negotiation.get('payment_followup_case') is True
+        and negotiation.get('payment_confirmation_case') is True
+        and completed.get('confirmed') is True and completed.get('evidence')
+        and not negotiation.get('commitment_confirmed')
+        and not negotiation.get('unaccepted_new_payment_instruction')
+        and negotiation.get('valid') is True and not negotiation.get('review_required')
+        and not metadata.get('critical_failures')
+        and not (metadata.get('privacy_validation') or {}).get('review_required')
+        and not (metadata.get('privacy_validation') or {}).get('confirmed_disclosure')
+        and not invariants({'metadata':metadata,'shared_decision':{'aprobado':True}}))
+
+
+def verified_removal(rule, previous, current):
+    """Causas esperadas explícitas; una etiqueta histórica no es un oráculo."""
+    negotiation = current.get("negotiation_validation") or {}
+    payment = current.get("convenio_payment_validation") or {}
+    if rule == "payment_already_reported":
+        return bool(negotiation.get("payment_confirmation_case")
+                    and (negotiation.get("completed_payment_evidence") or {}).get("confirmed")
+                    and not (negotiation.get("commitment_evidence") or {}).get("accepted"))
+    if rule == "two_distinct_payment_places":
+        return len(set(payment.get("authorized_places_detected") or [])) >= 2 and bool(payment.get("payment_place_details"))
+    if rule == "accepted_payment_commitment":
+        return negotiation.get("commitment_confirmed") is True and (negotiation.get("commitment_evidence") or {}).get("accepted") is True
+    if rule == "reported_transfer_not_new_instruction":
+        return bool((previous.get("convenio_payment_validation") or {}).get("transfer_data_review")
+                    and negotiation.get("payment_confirmation_case")
+                    and (negotiation.get("completed_payment_evidence") or {}).get("confirmed")
+                    and payment.get("reported_transfer_only")
+                    and not payment.get("transfer_instruction_evidence")
+                    and not payment.get("future_transfer_discussion")
+                    and not payment.get("unauthorized_payment_method")
+                    and not payment.get("wrong_bank_data"))
+    if rule == "callback_numbers_not_bank_account":
+        return bool((previous.get("convenio_payment_validation") or {}).get("wrong_bank_data")) and not payment.get("unauthorized_evidence") and not payment.get("wrong_bank_data")
+    if rule == "contact_number_not_payment_date":
+        old = previous.get("negotiation_validation") or {}
+        evidence = old.get("promise_date_evidence") or ""
+        try:
+            old_date = date.fromisoformat(old["promise_date"])
+            call_date = date.fromisoformat(str(old["call_date"]).split()[0])
+        except (KeyError, TypeError, ValueError):
+            return False
+        return bool(re.search(r"\d{1,2}[/-]\d{1,2}[/-]\d{2,4}", evidence)
+                    and re.search(r"comprobante|whatsapp|numero", evidence)
+                    and old_date.year > call_date.year+2
+                    and negotiation.get("promise_date") != old.get("promise_date")
+                    and not negotiation.get("commitment_confirmed")
+                    and current.get("final_result") == "REVISAR")
+    if rule == "capture_instruction_not_recipient":
+        return (previous.get("quality_contact_type") == "TERCERO" and
+                current.get("quality_contact_type") != "TERCERO")
+    if rule in {"spoken_payment_date", "payment_store_not_date"}:
+        old = previous.get("negotiation_validation") or {}
+        raw = negotiation.get("promise_date_text") or ""
+        evidence = negotiation.get("promise_date_evidence") or ""
+        try:
+            detected = date.fromisoformat(negotiation["promise_date"])
+            due = date.fromisoformat(str(negotiation["due_date"]).split()[0])
+        except (KeyError, ValueError, TypeError):
+            return False
+        supported = raw in evidence and detected <= due
+        if rule == "spoken_payment_date":
+            return supported and not old.get("promise_date") and bool(re.search(r"[a-z]+ de [a-z]+", raw))
+        return supported and old.get("promise_date_text") == "7-11" and raw != "7-11" and old.get("promise_date", "") > due.isoformat()
+    return False
+
+
+def verified_current_agreement(metadata):
+    """Una aceptación textual nueva permite retirar solo PEN009 documentado.
+
+    No autoriza quitar faltas de privacidad, trato, referencias o finanzas. La
+    revisión por llamada sigue exigiendo hash de origen y causa verificable.
+    """
+    status=metadata.get('status_validation') or {}
+    n=metadata.get('negotiation_validation') or {}
+    commitment=n.get('commitment_evidence') or {}
+    policy=n.get('mora_payment_policy') or {}
+    try:
+        promise=date.fromisoformat(n['promise_date'])
+        call=date.fromisoformat(str(n['call_date']).split()[0])
+        due=date.fromisoformat(str(n['due_date']).split()[0])
+        end=date.fromisoformat(policy['window_end'])
+    except (KeyError,TypeError,ValueError):
+        return False
+    window_ok=promise<=end or (n.get('installment_window') or {}).get('valid') is True
+    return bool(metadata.get('quality_contact_type')=='TITULAR'
+        and (metadata.get('contact_validation') or {}).get('confirmed') is True
+        and status.get('matches') is True and status.get('valid') is True
+        and status.get('detected_status')=='CONVENIO'
+        and status.get('evidence_method')=='COMPROMISO_ACEPTADO_CON_FECHA'
+        and status.get('evidence')==commitment.get('evidence') and commitment.get('evidence')
+        and commitment.get('accepted') is True and n.get('commitment_confirmed') is True
+        and n.get('valid') is True and not n.get('review_required')
+        and not n.get('hard_invalid') and not n.get('unaccepted_new_payment_instruction')
+        and call<=promise<=due and window_ok
+        and (metadata.get('shared_classification') or {}).get('aprobado') is True
+        and not metadata.get('critical_failures')
+        and not (metadata.get('privacy_validation') or {}).get('review_required')
+        and not (metadata.get('privacy_validation') or {}).get('confirmed_disclosure')
+        and not invariants({'metadata':metadata,'shared_decision':{'aprobado':True}}))
 
 
 def main():
@@ -119,7 +263,17 @@ def main():
         review = reviewed.get(row["case"], {})
         if other_removed and other_removed == set(review.get("allowed_removed", [])):
             original = json.loads((args.input_dir/row["checkpoint"]).read_text(encoding="utf-8-sig"))["items"][row["index"]-1]
-            if review.get("required_text") not in original["result"]["texto"].lower() or str(m["final_result"]).startswith("APROBAD"):
+            valid = (not str(m["final_result"]).startswith("APROBAD") or
+                     (bool(review.get('checkpoint_sha256')) and (
+                         verified_followup_approval(m) or
+                         (other_removed=={'PEN009'} and verified_current_agreement(m)))))
+            if review.get("checkpoint_sha256"):
+                valid = valid and row["source_sha256"] == review["checkpoint_sha256"]
+                rules = review.get("evidence_rules") or {}
+                valid = valid and set(rules) == other_removed and all(verified_removal(rules[p], b, m) for p in other_removed)
+            else:
+                valid = valid and review.get("required_text") in original["result"]["texto"].lower()
+            if not valid:
                 penalty_changes.append({"case": row["case"], "removed": removed, "issue": "Revisión documental no coincide con evidencia o resultado"})
         elif other_removed:
             penalty_changes.append({"case": row["case"], "removed": removed})
