@@ -29,7 +29,9 @@ STOP=re.compile(r"\b(?:whatsapp|comprobante|saldo|pesos|bancos|establecimientos|
 SEPARATOR=re.compile(r"^(?:[\W_]|\b(?:aja|si|correcto|ok|bien)\b)*$")
 CALLBACK_INTENT=re.compile(r'\b(?:regalar(?:me)?|regresar(?:me)?) (?:una? |la )?llamada\b|'
     r'\b(?:que|para que)\b[^.!?]{0,85}\b(?:se comunique|se pueda comunicar|me llame|nos llame|comunicarse)\b|'
-    r'\bnumero (?:de contacto|telefonico|de telefono)\b')
+    r'\bnumero (?:de contacto|telefonico|de telefono)\b|'
+    r'\b(?:comuniquese|comunicarse|llame|llamar|marque|marcar) al numero\b|'
+    r'\bnumero que viene (?:al|el|en el) reverso\b')
 EXPLICIT_REFERENCE=re.compile(r'\b(?:referencia|numero de (?:la |su )?tarjeta|(?:16|dieciseis) digitos)\b')
 
 

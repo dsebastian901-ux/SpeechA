@@ -29,6 +29,9 @@ def mistreatment_reports(text, segments, phrases):
     accusatory_question = re.compile(
         r'\b(?:usted|tu) (?:fue|fuiste|es|eres) (?:la|el) (?:que|quien) me '
         r'(?:insulto|agredio|ofendio|amenazo|grito)\b')
+    paid_source=normalize(text)
+    paid_call_complaint = bool(re.search(r'\b(?:mi cuenta ya esta liquidada|ceros? mi cuenta)\b',paid_source)
+        and re.search(r'\b(?:respecto (?:a )?esta molestia|me molesta|estoy molest[oa]|no he tenido buenos comentarios anteriores)\b',paid_source))
     units = sentence_evidence(text, segments)
     for index, unit in enumerate(units):
         if unit['speaker_role'] == 'GESTOR':
@@ -36,9 +39,12 @@ def mistreatment_reports(text, segments, phrases):
         value = normalize(unit['text'])
         matches = [m for phrase in phrases for m in re.finditer(re.escape(normalize(phrase)), value)]
         matches.extend(variants.finditer(value))
+        if paid_call_complaint:
+            matches.extend(re.finditer(r'\b(?:a que se debe que|por que) me (?:sigan|siguen) llamando\b',value))
         matches.extend(re.finditer(
             r'\b(?:nunca me contest(?:a|an)|'
-            r'me (?:cortaban|cortaron) la llamada|me colgaron|'
+            r'me (?:cortaban|cortaron) la llamada|me colg(?:aron|o)|'
+            r'me (?:dice|dices|dijo) que me calle|'
             r'nadie me quiso resolver|'
             r'me hablo (?:bien|muy) enojad[oa]|'
             r'me (?:mentaba|ventaba) la madre|'
@@ -46,6 +52,8 @@ def mistreatment_reports(text, segments, phrases):
         if re.search(r'\b(?:llevo|he tratado|tratando|comunicarme|arreglar)\b',value):
             matches.extend(re.finditer(r'\bno me (?:han )?contestad[oa]\b|\bno me contestan\b',value))
         previous = normalize(units[index-1]['text']) if index and units[index-1]['speaker_role'] != 'GESTOR' else ''
+        if re.search(r'\b(?:les (?:marque|mande|envie)|hable y mande|mande muchos mensajes|llamadas por whatsapp)\b',value+' '+previous):
+            matches.extend(re.finditer(r'\bno me (?:contestaron|respondieron|respondia|respondio)\b',value))
         phone_context = bool(re.search(r'\b(?:llamadas?|llame|llamar|marcan|marcando|marcado|marcaron)\b', value+' '+previous))
         if phone_context:
             matches.extend(re.finditer(r'\b(?:no (?:me )?dejan(?: a uno)?[^.!?]{0,65}\b(?:tranquil[oa]|en paz)|'
@@ -82,7 +90,7 @@ def mistreatment_reports(text, segments, phrases):
             if re.match(r'(?:me|nos|se|nunca me|no me)\b', match.group()) and re.search(r'\b(?:mi esposo|mi esposa|mi pareja|mi vecino|mi vecina|mi jefe|mi jefa|mis companeros de trabajo)\b', before) and not service_actor.search(value):
                 continue
             if (value.rfind('¿', 0, match.start()) > max(value.rfind(c, 0, match.start()) for c in '.!?')
-                    and not accusatory_question.search(value)):
+                    and not accusatory_question.search(value) and not (paid_call_complaint and 'llamando' in match.group())):
                 continue
             evidence.append(dict(unit, phrase=match.group()))
     return evidence

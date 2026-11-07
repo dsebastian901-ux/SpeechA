@@ -1,0 +1,130 @@
+{
+  "revision": "3.6.19-r44",
+  "state": "PARTIAL_IMPROVEMENT_REVIEW_REMAINS_HIGH",
+  "tests": {
+    "passed": 1945,
+    "skipped": 7,
+    "failures": 0,
+    "python": "3.10.22",
+    "platform": "Linux",
+    "native_windows_verified": false,
+    "audio_listened": false
+  },
+  "regression": {
+    "nuevo100": {
+      "calls": 100,
+      "before": {
+        "REVISAR": 71,
+        "APROBADO": 15,
+        "NO_APROBADO_MENOR_80": 11,
+        "FALLA_GRAVE": 3
+      },
+      "outcomes": {
+        "APROBADO": 17,
+        "REVISAR": 65,
+        "NO_APROBADO_MENOR_80": 15,
+        "FALLA_GRAVE": 3
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 100,
+      "excel_cells_verified": 10400,
+      "excel_differences": 0,
+      "motives_rows_verified": 100
+    },
+    "103": {
+      "calls": 103,
+      "before": {
+        "REVISAR": 72,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9,
+        "NO_APROBADO_MENOR_80": 1
+      },
+      "outcomes": {
+        "REVISAR": 72,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9,
+        "NO_APROBADO_MENOR_80": 1
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 103,
+      "excel_cells_verified": 10712,
+      "excel_differences": 0,
+      "motives_rows_verified": 103
+    },
+    "1007": {
+      "calls": 1007,
+      "before": {
+        "REVISAR": 939,
+        "NO_APROBADO_MENOR_80": 18,
+        "APROBADO": 39,
+        "FALLA_GRAVE": 11
+      },
+      "outcomes": {
+        "REVISAR": 935,
+        "NO_APROBADO_MENOR_80": 21,
+        "APROBADO": 40,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 104728,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007
+    },
+    "1007_nombres": {
+      "calls": 1007,
+      "before": {
+        "REVISAR": 889,
+        "NO_APROBADO_MENOR_80": 41,
+        "APROBADO": 66,
+        "FALLA_GRAVE": 11
+      },
+      "outcomes": {
+        "REVISAR": 883,
+        "NO_APROBADO_MENOR_80": 44,
+        "APROBADO": 69,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 104728,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007
+    }
+  },
+  "new100_review_changes": {
+    "old_approved": 15,
+    "new_approved": 17,
+    "new_approvals": 3,
+    "approval_removed_for_prior_service_complaint": 1,
+    "ordinary_score_rejections_resolved": 4,
+    "old_review": 71,
+    "new_review": 65
+  },
+  "raw_asr_replaced": false,
+  "original_data_modified": false,
+  "requires_model_change": false,
+  "payment_places_policy": {
+    "deduction": 20,
+    "minimum_score": 80,
+    "extra_review_block": false,
+    "other_filters_required": true
+  },
+  "audio_scope": "Six targeted medium ASR windows for investigation only; one repetitive and another low-coverage hypothesis discarded. No human listening, no automatic replacement of original ASR, no controlled model benchmark.",
+  "business_policy_pending": "Full balance without discount to cancel in 1–3 PV; previous rule retained.",
+  "windows_native_verified": false,
+  "future_installer_and_login_included": false,
+  "customer_data_or_model_weights_in_source_zip": false
+}

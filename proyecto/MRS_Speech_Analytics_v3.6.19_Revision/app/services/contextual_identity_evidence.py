@@ -25,7 +25,12 @@ OWN_ACCOUNT = re.compile(
     r'(?:ya |yo )?(?:lo pague|pague|hice (?:mi|el) pago|realice (?:mi|el) pago|he pagado|he depositado)|'
     r'(?:ya |yo )?(?:lo hice|lo realice)|'
     r'(?:este|el) mes (?:yo )?(?:tengo|tenia) (?:un |el |mi )?pago minimo|'
-    r'(?:yo )?quiero pagar(?:lo|la)|no les voy a completar|me (?:atrase|he atrasado)|'
+    r'(?:yo )?quiero pagar(?:lo|la)|'
+    r'he (?:querido|intentado) (?:hacer|realizar) (?:una |la |mi )?transferencia|'
+    r'no he podido (?:realizarlo|ir(?: porque| hasta))|'
+    r'ya les digo si puedo o no|'
+    r'(?:yo )?(?:requeriria|necesito|quiero|requiero) que me (?:entreguen|den|envien) primero|'
+    r'no les voy a completar|me (?:atrase|he atrasado)|'
     r'no he (?:usado|utilizado) (?:mi |la |esa |esta )?tarjeta|'
     r'(?:yo )?(?:ya )?(?:voy a pagar|voy a depositar|voy a abonar)|'
     r'no (?:he podido|puedo|pude) (?:ir a )?(?:pagar|depositar|abonar|realizar (?:mi|el) pago))\b')
@@ -41,6 +46,9 @@ def contextual_holder_confirmation(text, segments, identification):
     source=normalize(text)
     none={'confirmed':False,'method':'SIN_CONTEXTO_NOMINAL_COMPLETO','evidence':''}
     if COUNTER.search(source):return none
+    explicit = re.search(r'\bcon (?:el senor|la senora|la senorita) (?P<identity>[a-z ]{3,85}?)\s*[,?.]?\s+(?P<answer>a sus ordenes|para servirle|su servidor|su servidora)\b',source)
+    if explicit and not BAD_IDENTITY.search(explicit['identity']) and _role_at(text,segments,explicit.start('answer')) not in {'GESTOR','TERCERO'}:
+        return {'confirmed':True,'method':'IDENTIFICACION_NOMINAL_CON_RESPUESTA_DE_SERVICIO','evidence':explicit.group(),'speaker_role':'NO DETERMINADO','human_verified':False}
     requests=[
         re.compile(rf'\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)[.?]\s*'
                    r'(?P<answer>si|asi es|correcto|aja)\b'),
@@ -75,24 +83,36 @@ def contextual_holder_confirmation(text, segments, identification):
                 if end<=request.end() or unit['speaker_role'] in {'GESTOR','TERCERO'}:continue
                 # Conservar solo declaraciones; una pregunta del gestor sobre
                 # «mi pago» no demuestra autorreferencia del interlocutor.
-                statement=value.split('¿',1)[0].strip() if '¿' in value else value
-                if not statement or '?' in statement:continue
+                statement=re.sub(r'¿[^?]*\?', ' ',value).strip()
+                if '?' in statement:statement=statement.rsplit('?',1)[-1].strip()
+                if not statement:continue
                 if re.search(r'\b(?:si tuviera|si tuviese|si yo tuviera|supongamos que|'
                              r'diga|digale|repita|usted dice|usted dijo|el cliente dice)\b',statement):continue
-                if not re.search(r'\b(?:tarjeta|cuenta|pagos?|pagar|deposito|depositar|saldo|cubierto|cubrir|cantidad|pesos)\b',
+                if not re.search(r'\b(?:tarjeta|cuenta|pagos?|pagar|deposito|depositar|transferencia|saldo|cubierto|cubrir|cantidad|pesos)\b',
                                  source[max(request.end(),start-180):end]):continue
                 own=OWN_ACCOUNT.search(statement)
                 if not own:continue
+                if own.group().startswith('ya les digo') and re.search(r'\b(?:whatsapp|numero|anotar|comprobante)\b',source[max(start-100,request.end()):start]):continue
+                if 'entreguen' in own.group() or 'envien' in own.group() or 'que me den' in own.group():
+                    if not re.search(r'\b(?:carta finiquito|carta convenio|carta de no adeudo)\b',source[max(request.end(),start-250):end]):continue
                 before=statement[:own.start()]
                 if re.search(r'\bse\s*$',before):continue
                 conditional=re.search(r'\b(?:que|cuando|si|para que)(?:\s+(?:se|usted|yo|ya|lo|le|me)){0,3}\s*$',before)
                 verbatim=re.sub(r'\s+',' ',unicodedata.normalize('NFC',unit['text']).lower()).strip()
                 accented_past=re.search(r'\b(?:pagué|realicé)\b',verbatim[own.start():own.end()])
-                if conditional and not accented_past and not re.search(r'\bes que\s*$',before):continue
+                if conditional and not accented_past and not re.search(r'\bes que\s*$',before) and not (re.search(r'\bsi yo\s*$',before) and own.group().startswith('no he usado')):continue
                 return {'confirmed':True,'method':('IDENTIFICACION_NOMINAL_Y_CONVERSACION_PROPIA' if answer else
                                                    'AUTORREFERENCIA_FINANCIERA_TRAS_PREGUNTA_NOMINAL'),
                         'evidence':request.group()+' / '+unit['text'],
                         'speaker_role':unit['speaker_role'],
                         'policy_source':'CRITERIO_USUARIO_CONTEXTO_COMPLETO',
                         'human_verified':False}
+            from app.services.conversation_evidence import payment_commitment
+            commitment=payment_commitment(text,segments)
+            if (commitment['accepted'] and source.find(normalize(commitment['evidence'])) >= request.end()
+                    and re.search(r'\b(?:pago|pagar|deposito|monto)\b',commitment['evidence'])):
+                return {'confirmed':True,'method':'PREGUNTA_NOMINAL_Y_CONFIRMACION_DE_PAGO_PROPIO',
+                        'evidence':request.group()+' / '+commitment['evidence'],
+                        'speaker_role':'NO DETERMINADO','human_verified':False,
+                        'policy_source':'CRITERIO_USUARIO_CONTEXTO_COMPLETO'}
     return none

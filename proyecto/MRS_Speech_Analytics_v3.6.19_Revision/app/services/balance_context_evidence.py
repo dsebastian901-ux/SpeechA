@@ -25,6 +25,10 @@ def balance_corrections(text):
 def balance_scope(text, segments, start, end):
     source=normalize(text);before=source[max(0,start-200):start];after=source[end:end+110]
     role=_role_at(text,segments,start)
+    if source.rfind('¿',0,start)>source.rfind('?',0,start):
+        return 'IMPORTE_EN_PREGUNTA_NO_DECLARACION_DE_SALDO'
+    if re.search(r'\b(?:me habian comentado|me habian dicho|me comentaron|me dijeron)\b[^.!?]{0,95}$',before):
+        return 'PROPUESTA_ANTERIOR_REPORTADA'
     if role in {'TITULAR','TERCERO','INTERLOCUTOR'}:
         return 'IMPORTE_DICHO_POR_INTERLOCUTOR'
     if re.search(r'\b(?:tenia|tenian|tuve|tenia registrado|habia) (?:un |el |mi )?saldo[^.!?]{0,45}$',before):

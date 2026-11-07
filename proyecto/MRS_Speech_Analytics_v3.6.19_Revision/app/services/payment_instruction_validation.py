@@ -52,6 +52,9 @@ def transfer_instructions(text, segments=()):
                         or re.search(r"\bno (?:le recomiendo|es necesario)\b[^.!?]{0,30}$", before)
                         or re.search(r"\b(?:me dijeron|me indicaron)\b", s)):
                     continue
+                if (re.search(r'\b(?:foto|fotografia|captura|screenshot|escrincho|comprobante)\b',match.group())
+                        and not re.search(r'\b(?:clabe|cuenta bancaria|cuenta interbancaria|cuenta de destino|transfiera|transferir a)\b',s)):
+                    continue  # Pedir la imagen de un pago no dicta una cuenta de destino.
                 evidence.append(dict(unit, phrase=match.group()))
     return evidence
 

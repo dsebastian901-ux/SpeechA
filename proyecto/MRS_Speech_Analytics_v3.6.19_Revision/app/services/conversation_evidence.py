@@ -287,6 +287,8 @@ def _payment_review_condition(value):
                          r'(?:checar|revisar) mis cuentas[^.!?]{0,65}para ver si|'
                          r'aun no lo tengo (?:asi )?confirmado|'
                          r'no quisiera que me (?:hiciera|hicieran) (?:hasta )?(?:el |un )?convenio|'
+                         r'ya les digo si puedo o no|'
+                         r'(?:yo )?(?:requeriria|necesito|quiero) que me (?:entreguen|den|envien) primero|'
                          r'estoy esperando (?:un |el )?dinero|ya que me caiga (?:ese |el )?dinero)\b', value)
     if explicit:
         return explicit
@@ -325,8 +327,8 @@ def payment_commitment(text, segments=()):
                 continue
         positive = re.search(
             r"\b(?:me comprometo a (?:pagar|depositar|abonar|cubrir)|"
-            r"(?:yo )?voy a (?:pagar|depositar|abonar|cubrir)|lo voy a realizar|pagare|depositare|abonare|"
-            r"(?:hoy|manana) (?:deposito|abono|lo hago|lo realizo|hago el deposito|hago el pago)|"
+            r"(?:yo )?voy a (?:ir a )?(?:pagar|depositar|abonar|cubrir)|lo voy a realizar|pagare|depositare|abonare|"
+            r"(?:hoy|manana) (?:mismo )?(?:deposito|abono|lo hago|lo realizo|hago el deposito|hago el pago)|"
             r"(?:manana|(?:el )?(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)) "
             r"(?:(?:le )?(?:pago|deposito)|mando a pagar(?:lo)?))\b", s)
         if positive and positive.group() == 'pagare' and re.search(
@@ -337,7 +339,7 @@ def payment_commitment(text, segments=()):
             positive = None  # «Lo» necesita un antecedente de pago, no otro trámite.
         negative = re.search(
             r"\b(?:no (?:voy a|puedo|pienso|quiero) (?:pagar|depositar|abonar|cubrir)|"
-            r"no les voy a completar|no voy a poder[.!]?$|"
+            r"no he podido realizarlo|no he podido ir (?:porque|hasta)|no les voy a completar|no voy a poder[.!]?$|"
             r"no puedo (?:comprometerme|confirmar|dar una fecha)|no me comprometo|"
             r"no tengo (?:esa|la) cantidad|no dispongo de (?:esa|la) cantidad|"
             r"no (?:tengo|cuento con) (?:(?:todo |una? |la |esa )?(?:cierta )?cantidad de )?dinero|"
@@ -376,7 +378,7 @@ def payment_commitment(text, segments=()):
         r"(?P<answer>si|de acuerdo|esta bien|claro|correcto)\b")
     for match in question.finditer(source):
         if (_role_at(text, segments, match.start("answer")) not in {"GESTOR","TERCERO"}
-                and not re.search(r'\b(?:realizado|efectuado|ayer|pasado|recibido|reportado)\b',source[match.start():match.start('answer')])):
+                and not re.search(r'\b(?:realizado|efectuado|ayer|pasado|recibido|reportado|whatsapp|comprobante|telefono|recibo)\b',source[match.start():match.start('answer')])):
             reply = source[match.start("answer"):match.end()+100].split(".")[0]
             if not (re.search(r"\b(?:si me da tiempo|si consigo|si puedo juntar|yo creo|a lo mejor|no puedo|no tengo)\b", reply)
                     or _payment_review_condition(reply) or _payment_review_deferral(reply)):
@@ -443,11 +445,15 @@ def payment_commitment(text, segments=()):
                 and not _payment_review_deferral(source[match.start('answer'):match.end()+100].split('.')[0])
                 and _role_at(text,segments,match.start('answer')) not in {'GESTOR','TERCERO'}):
             events.append((match.start('answer'),True,match.group()))
+    from app.services.dialogue_confirmation_evidence import future_confirmation_events
+    extra_events = future_confirmation_events(text,segments)
+    events.extend((event['position'],True,event['evidence']) for event in extra_events)
     if not events:
         return {"accepted": False, "declined": False, "evidence": ""}
     _, accepted, evidence = max(events, key=lambda e: e[0])
     return {"accepted": accepted is True, "declined": accepted is False,
-            "conditional": accepted is None, "evidence": evidence}
+            "conditional": accepted is None, "evidence": evidence,
+            "contextual_confirmation_events":extra_events}
 
 
 def completed_payment(text, segments=()):
@@ -535,6 +541,16 @@ def completed_payment(text, segments=()):
         evidence.append({"text": match.group(), "speaker_role": role, "start": None, "end": None,
                          "text_start": match.start(), "text_end": match.end(),
                          "method": "RESPUESTA_A_PAGO_REALIZADO"})
+    for state in re.finditer(r'\b(?:mi cuenta (?:ya )?esta (?:liquidada|en ceros?)|'
+                             r'ya (?:esta en|esten) ceros? mi cuenta)\b',source):
+        prefix=source[max(0,state.start()-65):state.start()]
+        if (_role_at(text,segments,state.start())=='GESTOR' or re.search(
+                r'\b(?:si|cuando|en caso de que|no se si|creo que|no es cierto que|diga que|dice que|dijo que)\s*$',prefix)):
+            continue
+        if source.rfind('¿',0,state.start())>source.rfind('?',0,state.start()):continue
+        evidence.append({'text':state.group(),'speaker_role':_role_at(text,segments,state.start()),
+                         'start':None,'end':None,'text_start':state.start(),'text_end':state.end(),
+                         'method':'CUENTA_EN_CERO_REPORTADA_NO_VERIFICACION_BANCARIA'})
     return {"confirmed": bool(evidence), "evidence": evidence}
 
 

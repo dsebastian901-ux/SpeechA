@@ -57,7 +57,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r43"
+    ENGINE_REVISION = "3.6.19-r44"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -920,6 +920,9 @@ class AnalyticsService:
                 if not re.search(r"\b(?:el|pago|pagar|depositar|fecha|promesa|para|dia)\s+"
                                  r"(?:(?:es|sera|el|para|dia|de|pago)\s+){0,5}$", prefix):
                     return  # Fragmentos de teléfono no son fechas de promesa.
+            prefix=normalized[max(0,match.start()-100):match.start()]
+            if re.search(r'\b(?:su|el) (?:proximo|siguiente) pago (?:seria|sera|es|queda)?(?:\s+(?:hasta|el|para|dia)){0,4}\s*$',prefix):
+                return  # Información del ciclo siguiente, no promesa actual.
             left = max(0, match.start() - 100)
             right = min(len(normalized), match.end() + 100)
             context = normalized[left:right]
@@ -934,6 +937,8 @@ class AnalyticsService:
                 r"\b(?:pago|pagar|pague|page|deposit|transfer|abono|"
                 r"convenio|compromiso|queda|quedamos|acuerdo|liquid|"
                 r"cantidad|monto|pesos|confirm)\w*\b", near_context))
+            if not payment_context and re.search(r'\b(?:ponerlo|ponemos|quedamos)\b',near_context):
+                payment_context=bool(re.search(r'\b(?:pago|pagar|convenio)\b',normalized[max(0,match.start()-240):match.end()]))
             inability_context = bool(re.search(
                 r"\b(?:no\s+(?:tengo|puedo|voy|podre|podria)\b.{0,24}(?:pagar|pago)|"
                 r"sin\s+dinero|no\s+hay\s+dinero)\b", near_context))
@@ -1028,6 +1033,9 @@ class AnalyticsService:
             r"\b([0-3]?\d)[/-]([01]?\d)(?:[/-](\d{2,4}))?\b"
         )
         for m in re.finditer(numeric_pattern, normalized):
+            prefix=normalized[max(0,m.start()-25):m.start()]
+            if not m.group(3) and '-' in m.group() and re.search(r'\bdia\s*$',prefix):
+                continue  # «Día 7-8» no crea un vencimiento en agosto del próximo año.
             day = int(m.group(1))
             month = int(m.group(2))
             year_text = m.group(3)
@@ -1897,11 +1905,18 @@ class AnalyticsService:
         prior_payment_amounts = prior_payment_binding["amounts"]
         prior_payment_total = prior_payment_binding["total"]
 
+        commitment_confirmation = payment_commitment(text, segments)
+        if commitment_confirmation['accepted']:
+            for event in sorted(commitment_confirmation.get('contextual_confirmation_events',[]),key=lambda v:v['position'],reverse=True):
+                detail=cls._extract_payment_promise_date_details('Confirmacion de pago: '+event['evidence'],call_date)
+                if detail['date'] is not None:
+                    promise_date=detail['date'];promise_date_text=detail['text'];promise_date_evidence=event['evidence']
+                    break
+        # Recalcular el contexto tras vincular la confirmación actual.
         promise_is_future = bool(promise_date and parsed_call_date and promise_date > parsed_call_date)
         prior_cue_in_promise = bool(re.search(
             r"\b(?:ya\s+(?:pague|page|hice|realice)|pague\s+(?:ayer|hoy)|(?:lo|el\s+pago)\s+hizo\s+el\s+dia|(?:realizo|hizo)\s+el\s+pago\s+el\s+dia|ya\s+se\s+(?:hizo|pago)|pago\s+(?:realizado|efectuado))\b",
             norm(promise_date_evidence)))
-        commitment_confirmation = payment_commitment(text, segments)
         payment_already_made = completed_payment_confirmation["confirmed"]
         explicit_new_promise = bool(
             promise_date and promise_date_evidence and (promise_is_future or not prior_cue_in_promise)
@@ -2399,7 +2414,14 @@ class AnalyticsService:
             "PROMODA": ["promoda"],
             "SUBURBIA": ["suburbia"],
         }
+        from app.services.bank_service_evidence import bank_service_payment
+        service_payment = bank_service_payment(text,segments)
         place_evidence = payment_places(text, context.get("_segments") or [], authorized_payment_places)
+        for bank in service_payment['authorized_banks']:
+            if bank not in {e['place'] for e in place_evidence}:
+                code=next(c for c in service_payment['codes'] if c['bank']==bank and c['valid'])
+                place_evidence.append({'place':bank,'text':code['text'],'phrase':code['digits'],
+                                      'speaker_role':'NO DETERMINADO','method':code['method']})
         detected_payment_places = [e["place"] for e in place_evidence]
         payment_place_evidence = [e["text"] for e in place_evidence]
 
@@ -2479,12 +2501,13 @@ class AnalyticsService:
         reported_transfer_only = bool(payment_confirmation_case and not transfer_instruction_evidence
                                       and not bank_destination_context and not new_transfer_discussion)
         transfer_option_listing = transfer_is_option_listing(text,segments,detected_payment_places)
-        transfer_data_review = bool(not unauthorized_payment_method and (
+        transfer_data_review = bool(not unauthorized_payment_method and (service_payment['review_required'] or (not service_payment['separates_from_clabe'] and (
             (transfer_instruction_evidence and not authorized_transfer_instruction)
             or (transfer_wording and not authorized_transfer_account and payment_instruction_context
-                and not reported_transfer_only and not transfer_option_listing and not only_negated_transfers(text))))
+                and not reported_transfer_only and not transfer_option_listing and not only_negated_transfers(text))))))
 
         convenio_payment_validation = {
+            'bank_service_validation':service_payment,
             "applies": is_convenio,
             "requests_receipt_whatsapp": requests_receipt_whatsapp,
             "requests_payment_receipt": requests_payment_receipt,
@@ -2822,10 +2845,13 @@ class AnalyticsService:
                          r"propuesta\s+de\s+pago|opcion\s+de\s+pago|convenio|"
                          r"reestructura|pago\s+minimo|liquidar|abono|parcialidad)\b", normalized)
             or agent_statement(text, segments,
-                r"\b(?:tendria que|tendriamos que|tiene que|puede|podria|necesitaria) (?:realizar|aplicar|hacer) (?:un |el |su )?(?:pago|deposito)\b|"
+                r"\b(?:tendria que|tendriamos que|tiene que|puede|puedes|podria|podriamos|necesitaria) (?:realizar|aplicar|hacer) (?:un |el |su )?(?:pago|deposito)\b|"
                 r"\b(?:se le esta solicitando|se le esta pidiendo) (?:un |el |su )?(?:pago|\d+|dos mil|mil)\b|"
                 r"\b(?:cuando|que dia) (?:lo )?estaria (?:haciendo|pagando)|"
                 r"\bpodemos contar con (?:su |el )?pago\b")
+            or agent_statement(text, segments,
+                r"\b(?:le requiere|le solicita|requeriria|el minimo que nos requiere|el banco le requiere)\b[^.!?]{0,95}"
+                r"\b(?:pago|pesos|mil|cantidad)\b")
             or any(u['speaker_role'] not in {'TITULAR','TERCERO','INTERLOCUTOR'} and re.search(
                 r"\b(?:cuento con (?:su|el) pago|podemos contar con (?:su|el) pago|"
                 r"(?:tiene|tendria) que (?:depositar|pagar|abonar))\b",norm(u['text']))
@@ -3298,6 +3324,10 @@ class AnalyticsService:
                 if not is_non_money_reference(mention[0],mention[1],mention[3]):
                     found.append(mention)
 
+            for grouped in re.finditer(r'(?<!\d)(?P<number>\d{1,3}(?: +\d{3})+) +pesos?\b',source):
+                if not is_non_money_reference(grouped.start(),grouped.end(),grouped.group()):
+                    found.append((grouped.start(),grouped.end(),float(grouped['number'].replace(' ','')),grouped.group()))
+
             # cifras seguidas de pesos o con signo de moneda
             # v3.6.4: el token monetario debe TERMINAR en dígito. Así una coma/punto
             # de puntuación (ej. "7," en una frase) no se incorpora como parte del monto.
@@ -3306,6 +3336,8 @@ class AnalyticsService:
                 # Evita años, teléfonos y referencias largas.
                 digits=re.sub(r"\D", "", token)
                 if 1 <= len(digits) <= 7:
+                    if any(a<=m.start()<b for a,b,*_ in found):
+                        continue
                     if is_non_money_reference(m.start(), m.end(), m.group(0)):
                         continue
                     val=parse_money_value(token)
@@ -3416,7 +3448,10 @@ class AnalyticsService:
             r"\b(?:saldo(?!\s+(?:pasado|anterior)\b)(?:\s+total|\s+pendiente)?|total\s+adeudado|adeudo\s+total)\b"
         )
         negotiation_positions = [m.start() for m in negotiation_anchor_re.finditer(source_norm)]
-        balance_positions = [m.start() for m in balance_anchor_re.finditer(source_norm)]
+        balance_positions = [m.start() for m in balance_anchor_re.finditer(source_norm)
+            if not re.search(r'\b(?:al corriente|cubrir|liquidar|regularizar)\s+(?:(?:el|su|la|todo|lo que es)\s+){0,3}$',
+                             source_norm[max(0,m.start()-65):m.start()])]
+
         # v3.6.11: identificadores nunca son montos negociados. Esta protección se aplica
         # también en la fase de atribución, no solo al extraer cifras.
         identifier_anchor_re = re.compile(
@@ -3577,6 +3612,14 @@ class AnalyticsService:
                 )
                 if not weak_below_min and confidence >= 4:
                     amount_candidates.append((confidence, -pay_distance, mm))
+
+        # Una respuesta explícita al importe o al porcentaje propuesto tiene
+        # más atribución que una alternativa anterior. Nunca usa el Excel.
+        from app.services.current_payment_amounts import explicit_current_amounts
+        current_amount_events = explicit_current_amounts(text, segments)
+        for event in current_amount_events:
+            mm = (event['amount_position'],event['amount_end'],event['amount'],event['amount_text'],False,event['amount'])
+            amount_candidates.append((60 + event['position']/max(1,len(source_norm)),0,mm))
 
         # v3.6.16 · NEGOCIACIÓN MULTIPAGO / PRIORIZACIÓN DEL COMPROMISO ACTUAL.
         multi_payment_amounts = []
@@ -3960,6 +4003,7 @@ class AnalyticsService:
             "credit_reactivation_wording": credit_reactivation_wording,
             "high_mora_credit_reactivation": high_mora_credit_reactivation,
             "monto_detectado": detected_claim_amount,
+            "importes_confirmados_contexto": current_amount_events,
             "monto_transcrito": detected_amount_raw,
             "monto_normalizado_asr": bool(amount_asr_normalized),
             "evidencia_monto": detected_claim_evidence,

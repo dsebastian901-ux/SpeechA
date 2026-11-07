@@ -44,7 +44,7 @@ def receipt_request_evidence(text, segments=()):
     requests, received, channels, pending = [], [], [], []
     explicit_refusal = False
     verbs = (r'(?:mandar|mand(?:e|a)(?:me|nos)?|mandando|enviar|envi(?:e|a)(?:me|nos)?|enviarme|enviarnos|enviando|'
-             r'compartir|comparta(?:me|nos)?|comparte|compartirnos|compartiendo|haga llegar|hacer llegar|reportar|reporte|reportarnos|regala|'
+             r'compartir|compartiria(?:mos)?|nos compartiria|comparta(?:me|nos)?|comparte|compartirnos|compartiendo|haga llegar|hacer llegar|reportar|reporte|reportarnos|regala|'
              r'proporcione|proporcionar|remitir|remita)')
     request = re.compile(rf'\b{verbs}\b[^.!?]{{0,100}}?\b{RECEIPT}\b')
     reporting = re.compile(r'\b(?:reporte|reportar|reportarnos|reportando|reporteme)\b[^.!?]{0,65}'
