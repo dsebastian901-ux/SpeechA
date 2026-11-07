@@ -15,6 +15,7 @@ from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from app.config.release import ENGINE_REVISION
 from app.models.analytics_model import AnalyticsModel
 from app.models.transcriptions import TranscriptionModel
 from app.services.conversation_evidence import assess_recado, assess_privacy, evidence_units, recipient_statement, payment_places, agent_statement, holder_confirmation, payment_commitment, sentence_evidence, completed_payment, unknown_recipient_response, dictated_privacy_email, associate_relationship
@@ -57,7 +58,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r46"
+    ENGINE_REVISION = ENGINE_REVISION
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):

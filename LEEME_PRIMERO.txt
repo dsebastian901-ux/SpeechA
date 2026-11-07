@@ -1,0 +1,18 @@
+MRS SPEECH ANALYTICS - PROGRAMA r47
+
+1. Extraiga TODO el ZIP en una carpeta nueva.
+2. Abra INICIAR_PROGRAMA.bat en esa carpeta.
+3. La barra inferior debe mostrar Version 3.6.19-r47.
+4. Cree un proyecto nuevo, entre a Procesamiento por lotes y cargue audios y Excel.
+5. Procese normalmente. Las reglas corregidas se aplican desde este proceso.
+
+No necesita cargar un checkpoint ni ejecutar reanalisis para activar las correcciones.
+Use la configuracion y el modelo de Whisper que tiene instalado.
+
+Al finalizar se conservan el reporte de calidad, las cuentas reetiquetadas
+para correccion del gestor y el reporte adicional de motivos de no pago.
+Las copias aprobadas con cambio de estatus van a APROBADOS_ETIQUETA_CORREGIDA.
+El Excel y los audios originales permanecen sin cambios.
+
+La revision del programa y el origen del procesamiento aparecen en la hoja
+CONTROL_PROCESAMIENTO del reporte de calidad.

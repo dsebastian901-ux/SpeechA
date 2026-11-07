@@ -1,7 +1,11 @@
-# MRS Speech Analytics — r46
+# MRS Speech Analytics — programa r47
 
-Revisión documental completa de las 59 llamadas pendientes, con correcciones de interpretación y conservación de seguridad. Resultado de las 59: una aprobación, siete rechazos por puntaje y 51 retenciones con causa individual.
+Programa completo para crear proyectos y procesar lotes de audios desde la interfaz normal. Las correcciones del motor están integradas en el análisis inicial; no se necesita cargar un checkpoint ni utilizar reanálisis para activarlas.
 
-Los reportes mantienen las cuentas reetiquetadas para el gestor y los motivos de no pago. No se solicita una prueba nueva del usuario. Consulte proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_46_59_LLAMADAS.md y VALIDACION_R46.json.
+Extraiga todo el ZIP y abra **INICIAR_PROGRAMA.bat**. Compruebe **Versión 3.6.19-r47** en la barra inferior. Cree su proyecto, cargue audios y Excel en **Procesamiento por lotes** y procese normalmente. Utilice su configuración y modelo de Whisper existentes.
 
-Paquete completo de código: extraer todo en carpeta nueva. Conserva reanálisis sin volver a transcribir. Sin datos reales, audios ni modelos. El instalador con usuarios se desarrolla por separado.
+Al terminar se generan el reporte de calidad, las hojas de cuentas reetiquetadas y el reporte adicional de motivos de no pago. Las copias con cambio de código de estatus se guardan en APROBADOS_ETIQUETA_CORREGIDA. Se conservan los originales y los filtros de seguridad.
+
+Consulte LEEME_PRIMERO.txt y proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_47_PROGRAMA.md. La revisión del motor y el origen de cada procesamiento quedan identificados en el reporte y en el checkpoint de recuperación generado por el programa.
+
+Incluye código, interfaz y lanzadores para el entorno Python existente. Los modelos no se redistribuyen en este ZIP. El instalador futuro con usuarios y permisos continúa por separado.

@@ -1,0 +1,45 @@
+{
+  "revision": "3.6.19-r47",
+  "calls": 100,
+  "pending59_reproduced_without_saved_decisions": 59,
+  "fresh_project": true,
+  "previous_checkpoint_loaded_by_application": false,
+  "saved_human_confirmations_imported": false,
+  "asr_boundary": "Controlled raw ASR outputs; no acoustic execution claimed",
+  "asr_boundary_calls": 100,
+  "recovered_transcriptions": 0,
+  "outcomes": {
+    "APROBADO": 21,
+    "REVISAR": 51,
+    "NO_APROBADO_MENOR_80": 21,
+    "APROBADO_ETIQUETA_CORREGIDA": 4,
+    "FALLA_GRAVE": 3
+  },
+  "reports_generated": true,
+  "excel_cells_verified": 10800,
+  "origin_rows_verified": 100,
+  "retagged_accounts_verified": 4,
+  "original_audio_copies_byte_identical": true,
+  "source_excel_unchanged": true,
+  "source_raw_transcripts_preserved": true,
+  "safety_gates_verified": true,
+  "all_13_rule_groups_applied": true,
+  "actual_model_execution": false,
+  "native_windows_verified": false,
+  "tests": {
+    "passed": 2188,
+    "skipped": 7,
+    "failures": 0
+  },
+  "future_preparation_tests": {
+    "passed": 2208,
+    "skipped": 7,
+    "failures": 0
+  },
+  "new_project_integration_scenarios": 27,
+  "changed_bank_rule_regression": {
+    "evaluations": 1210,
+    "changed_evidence": 0,
+    "prior_outcomes_preserved": true
+  }
+}

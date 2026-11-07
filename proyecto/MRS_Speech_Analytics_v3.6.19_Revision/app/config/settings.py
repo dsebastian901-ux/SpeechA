@@ -13,7 +13,7 @@ from pathlib import Path
 # -----------------------------------------------------------
 
 APP_NAME = "MRS Speech Analytics Professional"
-APP_VERSION = "1.0.0"
+from app.config.release import APP_VERSION
 
 
 # -----------------------------------------------------------

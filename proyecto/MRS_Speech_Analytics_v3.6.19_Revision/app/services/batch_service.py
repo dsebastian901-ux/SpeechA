@@ -86,6 +86,7 @@ class BatchService:
         self.checkpoint_path = str(path)
         payload = {
             "version": 1,
+            "engine_revision": AnalyticsService.ENGINE_REVISION,
             "updated_at": datetime.now().isoformat(timespec="seconds"),
             "completed": bool(completed),
             "output_directory": str(Path(output_directory).resolve()),
@@ -596,6 +597,13 @@ class BatchService:
                     0.0, perf_counter() - whisper_started
                 )
                 item["transcription_recovered"] = bool(recovered_json)
+                item["processing_origin"] = {
+                    "flow": "PROCESAMIENTO_POR_LOTES",
+                    "engine_revision": AnalyticsService.ENGINE_REVISION,
+                    "transcription_source": (
+                        "TRANSCRIPCION_EXISTENTE" if recovered_json else "WHISPER_NUEVO"
+                    ),
+                }
 
                 item["result"] = result
 

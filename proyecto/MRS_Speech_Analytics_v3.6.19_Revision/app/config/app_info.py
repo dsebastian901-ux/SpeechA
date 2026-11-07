@@ -7,7 +7,7 @@ Información General del Sistema
 
 APP_NAME = "MRS Speech Analytics Professional"
 
-APP_VERSION = "3.6.19"
+from app.config.release import APP_VERSION
 
 APP_AUTHOR = "Daniela Hernández"
 

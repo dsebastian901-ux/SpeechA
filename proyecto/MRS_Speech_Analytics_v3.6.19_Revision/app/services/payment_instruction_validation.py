@@ -50,7 +50,8 @@ def transfer_instructions(text, segments=()):
     pattern = re.compile(
         r"\b(?:puede (?:pagar|realizar|hacer|transferir)|podra (?:pagar|realizar|hacer|transferir)|"
         r"debe (?:pagar|realizar|hacer|transferir)|realice|haga|transfiera|transferir a|"
-        r"pague|deposite)\b[^.!?]{0,70}\b(?:transferencia|clabe|cuenta interbancaria)\b|"
+        r"pague|deposite)\b[^.!?]{0,70}\b(?:transferencia|clabe|cuenta interbancaria|"
+        r"cuenta bancaria|cuenta de destino|numero de cuenta|cuenta personal)\b|"
         r"\b(?:puede|podra|debe) transferir\b|\btransfiera\b")
     for unit in sentence_evidence(text, segments):
         if unit["speaker_role"] in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:

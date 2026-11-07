@@ -1227,6 +1227,24 @@ class BatchReportService:
                 gestores_ws.column_dimensions[col].width = width
             cls._style_sheet(gestores_ws)
 
+        if any(isinstance(i.get("processing_origin"), dict) for i in source_items):
+            control_ws = wb.create_sheet("CONTROL_PROCESAMIENTO")
+            control_ws.append(["Revisión del programa", "Archivo de audio", "Origen de transcripción", "Flujo"])
+            for item in source_items:
+                origin = item.get("processing_origin") or {}
+                control_ws.append([
+                    cls._fmt(origin.get("engine_revision") or "SIN REGISTRO"),
+                    cls._fmt(item.get("file_name") or ""),
+                    cls._fmt(origin.get("transcription_source") or "SIN REGISTRO"),
+                    cls._fmt(origin.get("flow") or "SIN REGISTRO"),
+                ])
+            for row in control_ws:
+                for cell in row:
+                    cell.data_type = "s"
+            for col, width in {"A": 25, "B": 75, "C": 35, "D": 38}.items():
+                control_ws.column_dimensions[col].width = width
+            cls._style_sheet(control_ws)
+
         if not processed_only:
             from app.services.nonpayment_report_service import NonpaymentReportService
             companion_ws = wb.create_sheet('MOTIVOS_NO_PAGO')
