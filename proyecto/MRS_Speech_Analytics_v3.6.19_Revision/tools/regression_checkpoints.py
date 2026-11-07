@@ -52,7 +52,7 @@ def invariants(row):
     failures = []
     privacy = m.get("privacy_validation") or {}
     pen = {p["id"] for p in m.get("penalties", [])}
-    approved = m["final_result"] in {"APROBADA", "APROBADO", "APROBADO_CON_EXCEPCION", "APROBADO_SIN_ETIQUETAR"}
+    approved = m["final_result"] in {"APROBADA", "APROBADO", "APROBADO_CON_EXCEPCION", "APROBADO_SIN_ETIQUETAR", "APROBADO_ETIQUETA_CORREGIDA"}
     if privacy.get("review_required") and approved:
         failures.append("privacidad incierta aprobada")
     if privacy.get("confirmed_disclosure") and ("PEN003" not in pen or m["final_result"] not in {"INCORRECTA", "FALLA_GRAVE"}):

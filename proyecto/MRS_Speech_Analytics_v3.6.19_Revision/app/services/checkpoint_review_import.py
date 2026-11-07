@@ -100,7 +100,15 @@ def _merge_item(base, donor):
         _review_copy(target, donor, "output_name_review")
         fields.append("output_name_review")
     elif relation.get("nombre_final") != donor_relation.get("nombre_final"):
-        raise ValueError("El nombre final cambió sin una confirmación de origen.")
+        from app.services.account_source_validation import apply_output_name_authority
+        normalized={'relation':deepcopy(relation)}
+        if (not apply_output_name_authority(normalized)
+                or normalized['relation']['nombre_final']!=donor_relation.get('nombre_final')
+                or normalized['output_name_normalization']!=donor.get('output_name_normalization')):
+            raise ValueError("El nombre final cambió sin una confirmación de origen.")
+        target['relation']['nombre_final']=donor_relation['nombre_final']
+        target['output_name_normalization']=deepcopy(normalized['output_name_normalization'])
+        fields.append('output_name_normalization')
     if not (amount or financial or naming):
         raise ValueError("La llamada fuente no contiene confirmaciones humanas que incorporar.")
     transcription = TranscriptionModel.from_dict(target["result"])

@@ -57,148 +57,13 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r44"
+    ENGINE_REVISION = "3.6.19-r45"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
-        """Puerta de aprobación común: lote, solo audios y análisis individual."""
-        metadata = metadata if isinstance(metadata, dict) else {}
-        checks = metadata.get("quality_checks") or {}
-        penalties = metadata.get("penalties") or []
-        failures = metadata.get("critical_failures") or []
-        status = metadata.get("status_validation") or {}
-        negotiation = metadata.get("negotiation_validation") or {}
-        reasons = []
-        arco = metadata.get('arco_validation') or {}
-        if arco.get('applies') and not arco.get('valid'):
-            reasons.extend(arco.get('reasons') or ['Procedimiento ARCO incompleto; requiere revisión.'])
-        family_review=metadata.get('family_contact_validation') or {}
-        if family_review.get('review_required'):
-            reasons.append(family_review.get('reason') or 'Confirmación de parentesco pendiente de revisión.')
-        recado_review = metadata.get('recado_acceptance_validation') or {}
-        if recado_review.get('review_required'):
-            reasons.append(recado_review['reason'])
-        disclosure_review=metadata.get('privacy_disclosure_validation') or {}
-        if disclosure_review.get('review_required'):
-            reasons.append(disclosure_review.get('reason') or 'Confirmación de divulgación pendiente de revisión.')
-        if (metadata.get('home_warning_validation') or {}).get('review_required'):
-            reasons.append(metadata['home_warning_validation']['reason'])
-        additional=metadata.get('audio_block_evidence_validation') or {}
-        if additional.get('review_required'):
-            if additional.get('valid') and additional.get('risks') and all(
-                    r.get('type')=='EXPRESION_OFENSIVA_SIN_HABLANTE_CONFIRMADO' for r in additional['risks']):
-                reasons.append('Lenguaje ofensivo requiere revisión')
-            else:
-                reasons.append(additional.get('reason') or 'Lectura adicional pendiente de revisión.')
-        if (metadata.get('convenio_payment_validation') or {}).get('receipt_request_review_required'):
-            reasons.append('Posible solicitud de comprobante deformada por ASR; confirmar frase, sin atribuir omisión.')
-        if negotiation.get("liquidation_offer_review_required"):
-            reasons.append("Posible liquidación total sin atribución u oferta confirmada; revisar audio")
-        if (metadata.get('home_recovery_warning') or {}).get('review_required'):
-            reasons.append('Posible advertencia de recuperación en domicilio en 1–2 PV; confirmar voz y frase en audio.')
-        account = metadata.get("account_source_validation") or {}
-        if account.get("review_required"):
-            reasons.append(account.get("reason") or "Datos de cuenta inconsistentes; revisar nombre de salida")
-        recovery = metadata.get("amount_recovery_validation") or {}
-        if recovery.get("review_required"):
-            reasons.append("Importe recuperado por lecturas adicionales de audio; conserva revisión de evidencia")
-        financial = metadata.get("financial_review_validation") or {}
-        if financial.get("review_required"):
-            reasons.append(financial.get("reason") or "Confirmación financiera pendiente de revisión")
-        if metadata.get("quality_contact_type") == "CONTACTO NO DETERMINADO":
-            reasons.append("Interlocutor sin identificar; requiere revisión")
-        critical = any(isinstance(f, dict) and f.get("invalidates") is True for f in failures)
-        if critical:
-            reasons.append("Incumplimiento crítico confirmado")
-        privacy = metadata.get("privacy_validation") or {}
-        if privacy.get("confirmed_disclosure"):
-            critical = True
-            reasons.append(privacy.get("reason") or "Divulgación confirmada a un tercero")
-        elif privacy.get("review_required"):
-            reasons.append(privacy.get("reason") or "Posible divulgación pendiente de atribución")
-        card = metadata.get("card_validation") or {}
-        if card.get("result") == "TARJETA INCORRECTA" or str(card.get("result") or "").startswith("REVISAR -"):
-            reasons.append(card.get("reason") or "Referencia de tarjeta pendiente de validación")
-        for penalty in penalties:
-            if not isinstance(penalty, dict):
-                continue
-            if penalty.get("id") in {"PEN_GROSERIA_SIN_ATRIBUCION", "PEN_QUEJA_MALTRATO", "PEN_ESPERA_PROLONGADA"}:
-                reasons.append(str(penalty.get("reason") or "Trato al cliente requiere revisión"))
-            if penalty.get("id") == "PEN_SIN_INTENTO_NEGOCIACION":
-                reasons.append("No se confirmó intento de negociación con el titular")
-        if status.get("excel_status") and status.get("matches") is None:
-            reasons.append("Estatus de Excel sin coincidencia confirmada; requiere revisión")
-        if status.get("valid") is False:
-            status_reasons = [str(r) for r in status.get("reasons", []) if r]
-            reasons.extend(status_reasons or ["Estatus pendiente de validación"])
-        if any(isinstance(p, dict) and p.get("id") in {"PEN_CONV_FRAUDE", "PEN_CONV_TRANSFER_REV"} for p in penalties):
-            reasons.append("Método o datos de pago requieren revisión de seguridad")
-        if checks.get("queja_maltrato_detectada"):
-            reasons.append("Queja de maltrato requiere revisión")
-        if negotiation.get("valid") is False or negotiation.get("review_required"):
-            reasons.extend(str(r) for r in negotiation.get("reasons", []) if r)
-            if not negotiation.get("reasons"):
-                reasons.append("Negociación pendiente de validación")
-        if checks.get("groseria_bloquea_aprobacion"):
-            reasons.append("Lenguaje ofensivo requiere revisión")
-        treatment = metadata.get("treatment_validation") or {}
-        if treatment.get("mistreatment_report_evidence"):
-            reasons.append("Queja de atención o maltrato requiere revisión, aunque supere el puntaje mínimo")
-        waiting = metadata.get("wait_validation") or {}
-        if waiting.get("review_required") or checks.get('espera_prolongada_detectada'):
-            reasons.append(waiting.get('reason') or 'Espera de 65 segundos o más sin retoma confirmada; revisar audio.')
-        if treatment.get("dismissive_review_required"):
-            reasons.append("Expresión despectiva o confrontativa; revisar emisor y contexto")
-        if treatment.get("confrontation_review_required"):
-            reasons.append("Confrontación sin hablante confirmado; requiere revisión")
-        if treatment.get("hostile_interlocutor_review_required"):
-            reasons.append("Hostilidad del interlocutor requiere validación")
-        if (metadata.get("call_end_validation") or {}).get("review_required"):
-            reasons.append(metadata["call_end_validation"].get("reason") or "Silencio o finalización sin responsable confirmado; revisar audio")
-        if duration_seconds is not None and float(duration_seconds) < 60:
-            reasons.append("Duración inferior a 60 segundos")
-        duration = metadata.get("duration_validation") or {}
-        if duration.get("valid") is False:
-            reasons.append(duration.get("reason") or "Duración fuera del rango permitido")
-        score_ok = float(score or 0) >= float(minimum_score)
-        exception = metadata.get("hostile_interlocutor_exception") or {}
-        exception_confirmed = all(exception.get(k) is True for k in
-            ("audio_verified", "interlocutor_hostile_or_lascivious", "prevented_script", "agent_professional"))
-        # La validación de hostilidad solo resuelve groserías del interlocutor.
-        # No perdona privacidad, maltrato previo, referencias ni faltas financieras.
-        non_hostility_reasons = [r for r in reasons if r not in {
-            "Lenguaje ofensivo requiere revisión", "Hostilidad del interlocutor requiere validación"}]
-        if exception_confirmed:
-            hostile_penalty_reasons = {str(p.get("reason") or "Trato al cliente requiere revisión")
-                for p in penalties if isinstance(p, dict) and p.get("id") == "PEN_GROSERIA_SIN_ATRIBUCION"}
-            non_hostility_reasons = [r for r in non_hostility_reasons if r not in hostile_penalty_reasons]
-        from app.services.approval_resolution import ordinary_score_rejection
-        base = base_classification or {}
-        if critical:
-            category = "FALLA_GRAVE"
-        elif exception_confirmed and score_ok and not non_hostility_reasons:
-            category = "APROBADO_CON_EXCEPCION"
-        elif not score_ok and ordinary_score_rejection(metadata,score,minimum_score,duration_seconds):
-            category = "NO_APROBADO_MENOR_80"
-            reasons.insert(0,"Puntaje inferior al mínimo por incumplimientos ordinarios; rechazo automático. Las observaciones pendientes se conservan.")
-        elif reasons:
-            category = "REVISAR"
-        elif not score_ok:
-            category = "NO_APROBADO_MENOR_80"
-        elif base.get("estatus_autorizado") is False:
-            category = "APROBADO_SIN_ETIQUETAR"
-        elif base.get("estatus_autorizado") is True and base.get("tiene_nombre_final") is False:
-            category = "REVISAR"
-            reasons.append("Falta nombre final para reetiquetar")
-        else:
-            category = "APROBADO"
-        return {"clasificacion": category, "aprobado": category == "APROBADO",
-                "score": round(float(score or 0), 2), "puntaje_minimo": minimum_score,
-                "cumple_puntaje": score_ok,
-                "rechazo_automatico_por_puntaje": category == "NO_APROBADO_MENOR_80",
-                "observaciones_conservadas": list(dict.fromkeys(reasons)),
-                "motivo": ("Excepción por hostilidad validada en audio; gestor profesional" if category == "APROBADO_CON_EXCEPCION" else " | ".join(dict.fromkeys(reasons))) if reasons or category == "APROBADO_CON_EXCEPCION" else
-                          ("Cumple reglas de aprobación" if score_ok else "Puntaje inferior al mínimo")}
+        """Puerta única para lotes, reanálisis, audio individual y reportes."""
+        from app.services.quality_decision import evaluate_quality
+        return evaluate_quality(metadata, score, minimum_score, duration_seconds, base_classification)
 
     # =========================================================
     # STOPWORDS
@@ -458,6 +323,10 @@ class AnalyticsService:
         # -----------------------------------------------------
 
         enriched_context = dict(operational_context or {})
+        from app.services.account_source_validation import apply_output_name_authority
+        naming_copy = {'relation':enriched_context}
+        apply_output_name_authority(naming_copy)
+        enriched_context = naming_copy['relation']
         enriched_context["_segments"] = list(getattr(transcription, "segments", []) or [])
         enriched_context["_duration_seconds"] = float(getattr(transcription, "duration_seconds", 0.0) or 0.0)
         enriched_context["_amount_recovery"] = (getattr(transcription, "metadata", {}) or {}).get("recuperacion_importes")
@@ -551,6 +420,8 @@ class AnalyticsService:
             ),
         }
 
+        analysis.metadata["output_name_normalization"] = naming_copy.get("output_name_normalization")
+        analysis.metadata["dialogue_evaluation"] = compliance.get("dialogue_evaluation", {})
         analysis.metadata["quality_contact_type"] = compliance.get(
             "contact_type", "CONTACTO NO DETERMINADO"
         )
@@ -609,7 +480,7 @@ class AnalyticsService:
         data.setdefault("segmentos", transcription.segments)
         data.setdefault('duracion_segundos',transcription.duration_seconds)
         analysis.metadata["amount_recovery_validation"] = amount_review_status(data, data.get("amount_audio_review"))
-        analysis.metadata["account_source_validation"] = validate_account_source(operational_context or {})
+        analysis.metadata["account_source_validation"] = validate_account_source(enriched_context)
         analysis.metadata["financial_review_validation"] = (compliance.get("negotiation_validation") or {}).get("financial_review", {})
         analysis.metadata['audio_block_evidence_validation']=validate_evidence(
             data.get('audio_block_evidence'),data,operational_context or {},
@@ -1233,6 +1104,8 @@ class AnalyticsService:
         # DETECCIÓN DE INTERLOCUTOR / ESTATUS
         # ---------------------------------------------------------
         segments = context.get("_segments") or []
+        from app.services.dialogue_evaluation import scan_dialogue, pending_status, full_payment_refusal
+        dialogue = scan_dialogue(text, segments)
         unknown_debtor = unknown_debtor_statement(text, segments)
         unknown_response = unknown_recipient_response(text, segments)
         unknown_debtor = unknown_debtor or unknown_response['confirmed']
@@ -1490,6 +1363,9 @@ class AnalyticsService:
             detected_status = {"TERCERO / FAMILIAR": "MENSAJE CON FAMILIAR",
                                "TERCERO / TRABAJO": "MENSAJE EN TRABAJO",
                                "TERCERO": "MENSAJE CON TERCERO"}.get(contact_type, detected_status)
+        own_finance_proof = titular and any(e['kind']=='OWN_FINANCES' for e in dialogue['events'])
+        recado_applies = bool((recado_expected and not unknown_debtor and not own_finance_proof)
+                             or (family and recado_real) or (not excel_status and family))
         if recado_applies:
             # La relación familiar explícita prevalece sobre "soy yo" (identidad del referente).
             if recado_family_evidence and not recado_unknown_explicit:
@@ -1684,7 +1560,7 @@ class AnalyticsService:
             and asks_ine_or_line_proof
             and gives_privacy_email
         )
-        arco_validation.update(applies=bool(unknown_debtor or canonical_excel_status=='NO CONOCEN A DEUDOR'),
+        arco_validation.update(applies=bool(unknown_debtor or (canonical_excel_status=='NO CONOCEN A DEUDOR' and contact_type=='CONTACTO NO DETERMINADO')),
                                valid=bool(no_conocen_valid),line_tenure_confirmed=line_tenure_confirmed,
                                line_tenure_reply=tenure_reply,unknown_recipient_confirmed=bool(unknown_debtor))
         if not unknown_debtor:arco_validation['reasons'].append('No se confirmó desconocimiento del titular.')
@@ -2373,7 +2249,14 @@ class AnalyticsService:
         # Regla operativa MRS/Bradescard. Solo se evalúa para estatus CONVENIO.
         # La detección de posible fraude exige contexto de instrucción de pago
         # atribuible al gestor; una mención aislada del titular no dispara alerta.
-        is_convenio = excel_status == "CONVENIO"
+        # Evaluar el acuerdo real aunque el Excel tenga una etiqueta distinta.
+        # No convertir por ello la propuesta rechazada en un convenio.
+        pending_decision = pending_status(dialogue, commitment_confirmation, payment_confirmation_case)
+        non_holder_scenario = contact_type not in {"TITULAR", "CONTACTO NO DETERMINADO"} or recado_real
+        explicit_decline = contact_type == "TITULAR" and commitment_confirmation.get('declined') and not payment_confirmation_case
+        is_convenio = bool(not non_holder_scenario and not pending_decision and not explicit_decline and (
+            excel_status == "CONVENIO" or (contact_type == "TITULAR" and confirms_commitment
+                                         and promise_date is not None and not payment_confirmation_case)))
         # Los lugares de pago también se revisan en llamadas de cobranza donde
         # el gestor instruye o solicita realizar un pago, aunque el estatus Excel
         # no sea literalmente CONVENIO (por ejemplo 1PV).
@@ -2830,8 +2713,9 @@ class AnalyticsService:
                 ["RN005", "RN006", "RM010", "FP007", "FP008", "FP009"],
             )
 
+        pending_decision = pending_status(dialogue, commitment_confirmation, payment_confirmation_case)
         requires_new_negotiation_validation = (
-            is_convenio and not payment_confirmation_case
+            is_convenio and not payment_confirmation_case and not pending_decision
         )
 
         # v3.5.8 · trabajo de cobranza: si se contacta al TITULAR debe existir
@@ -3017,9 +2901,7 @@ class AnalyticsService:
                 r"su\s+convenio\s+quedaria|quedamos\s+en\s+(?:tres|dos|3|2)\s+pagos|"
                 r"confirmo\s+(?:su\s+)?convenio)\b", normalized
             ))
-            refusal_evidence = recipient_statement(text, segments,
-                r"\b(?:no\s+voy\s+a\s+pagar|no\s+le\s+voy\s+a\s+pagar|"
-                r"no\s+pienso\s+pagar|me\s+niego\s+a\s+pagar)\b")
+            refusal_evidence = full_payment_refusal(commitment_confirmation)
             no_date_evidence = recipient_statement(text, segments,
                 r"\b(?:no\s+se\s+cuando\s+(?:pueda|voy\s+a)\s+pagar|"
                 r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
@@ -3036,9 +2918,15 @@ class AnalyticsService:
                                  if clarification_validation.get('cancellation_followup') else
                                  'Pérdida de tarjeta reportada, folio confirmado y seguimiento de resolución.')
                 status_evidence_method=clarification_validation['method']
+            elif pending_decision:
+                detected_status=pending_decision['detected_status']
+                status_detection_confidence=pending_decision['confidence']
+                status_evidence=pending_decision['evidence']
+                status_evidence_method=pending_decision['method']
             elif refusal_evidence and not confirms_commitment:
                 detected_status = "NEGATIVA DE PAGO"
                 status_detection_confidence = "ALTA"
+                status_evidence = commitment_confirmation["evidence"]
                 status_evidence_method = "NEGATIVA_EXPLICITA_DEL_INTERLOCUTOR"
             elif (no_date_evidence or commitment_confirmation["declined"] or commitment_confirmation.get("conditional")) and (not payment_confirmation_case or prior_payment_with_current_decline or prior_payment_with_current_condition) and not explicit_new_promise and not confirms_commitment:
                 detected_status = "NO DEFINE FECHA DE PAGO"
@@ -3052,11 +2940,18 @@ class AnalyticsService:
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
             if recado_real and detected_status.startswith('MENSAJE '):
+                status_detection_confidence = 'ALTA'
                 status_evidence=' / '.join(u['text'] for u in recado_assessment['acceptance'])
                 status_evidence_method='RECADO_ACEPTADO_CON_CONTACTO'
                 if confirmed_family.get('valid'):
                     status_evidence='Parentesco confirmado por usuario: '+confirmed_family['relationship']+'. '+status_evidence
                     status_evidence_method='RECADO_ACEPTADO_Y_PARENTESCO_CONFIRMADO_POR_USUARIO'
+            if unknown_debtor and detected_status=='NO CONOCEN A DEUDOR' and not unknown_response['confirmed']:
+                declarations=[u['text'] for u in sentence_evidence(text,segments) if unknown_debtor_statement(
+                    u['text'],[{'text':u['text'],'speaker_role':u['speaker_role']}])]
+                if declarations:
+                    status_evidence=' / '.join(declarations)
+                    status_evidence_method='DECLARACION_DESCONOCIMIENTO_TITULAR'
             if unknown_response['confirmed'] and detected_status=='NO CONOCEN A DEUDOR':
                 status_evidence=unknown_response['evidence']
                 status_evidence_method=unknown_response['method']
@@ -3088,7 +2983,7 @@ class AnalyticsService:
                     policy_source="ACLARACION_USUARIO_20261028",
                     payment_followup_case=True,
                     evidence=" / ".join(u['text'] for u in completed_payment_confirmation['evidence'][:2]))
-            elif excel_status == "NO CONOCEN A DEUDOR":
+            elif excel_status == "NO CONOCEN A DEUDOR" and arco_validation["applies"]:
                 status_validation["matches"] = detected_status == "NO CONOCEN A DEUDOR"
 
                 if not unknown_debtor:
@@ -3186,14 +3081,16 @@ class AnalyticsService:
                 if not recado_real:
                     status_validation["reasons"].append("No se confirmó transmisión efectiva del recado; verificar audio.")
             if recado_family_evidence and recado_real and not recado_unknown_explicit:
-                status_validation["matches"] = True
-                status_validation["valid"] = True
+                matching = not excel_status or canonical_excel_status == "MENSAJE CON FAMILIAR"
+                status_validation["matches"] = matching
+                status_validation["valid"] = matching
                 status_validation["review_required"] = False
-                status_validation["reasons"] = []
+                status_validation["reasons"] = [] if matching else [
+                    f"Estatus Excel ({excel_status}) distinto del detectado (MENSAJE CON FAMILIAR); evidencia alta."]
                 status_validation["detected_status"] = "MENSAJE CON FAMILIAR"
                 status_validation["contact_type"] = "TERCERO / FAMILIAR"
                 status_validation["relationship"] = relationship
-                status_validation["detection_confidence"] = "MEDIA"
+                status_validation["detection_confidence"] = "ALTA"
 
         # No interpretar falta de evidencia como coincidencia válida.
         # Con Excel y estatus no detectable: revisión, nunca mal dictaminado automático.
@@ -3637,22 +3534,13 @@ class AnalyticsService:
                 if val > 0 and (total_expected is None or val <= total_expected + 0.009):
                     multi_payment_amounts.append(val)
 
-            sequence_wording = bool(re.search(
-                r"\b(?:pago\s+inicial|primer\s+pago|segundo\s+pago|tercer\s+pago|"
-                r"(?:dos|tres|2|3)\s+pagos|pagos?\s+(?:semanales|quincenales)|"
-                r"hoy.{0,80}(?:mañana|manana|(?:el\s+)?dia\s+\d{1,2})|"
-                r"(?:dia|día)\s+\d{1,2}.{0,80}(?:dia|día)\s+\d{1,2})\b",
-                source_norm))
-            distinct = []
-            for v in multi_payment_amounts:
-                if not any(abs(v-u) < 0.01 for u in distinct):
-                    distinct.append(v)
-            if minimum_expected is not None and sequence_wording and len(distinct) == 2:
-                total_multi = sum(distinct)
-                if total_multi + 0.009 >= minimum_expected and (total_expected is None or total_multi <= total_expected + 0.009):
-                    multi_payment_detected = True
-                    multi_payment_amounts = distinct
-                    multi_payment_total = total_multi
+            from app.services.payment_sequence_evidence import bounded_two_payment_sequence
+            sequence_amounts = bounded_two_payment_sequence(source_norm, ordered_candidates)
+            if sequence_amounts:
+                # No se usa el rango del Excel para decidir qué cifras sumar.
+                multi_payment_detected = True
+                multi_payment_amounts = sequence_amounts
+                multi_payment_total = sum(sequence_amounts)
 
             # v3.6.18 · PAGO PREVIO + COMPLEMENTO FUTURO.
             # Caso: "ya pagué 1000 hoy" + "1216 mañana para regularizar".
@@ -3920,7 +3808,7 @@ class AnalyticsService:
             amount_reason = "Se ofrece un descuento, pero no se confirmó un importe atribuible a esa propuesta."
 
         schedule_dates = installment_dates(source_norm, lambda fragment:
-            cls._extract_payment_promise_date_details(fragment, call_date)) if plan["amounts"] and not payment_confirmation_case else []
+            cls._extract_payment_promise_date_details(fragment, call_date),expected_count=len(plan["amounts"])) if plan["amounts"] and not payment_confirmation_case else []
         if len(schedule_dates) >= 2:
             last_installment = max(schedule_dates, key=lambda item: item["date"])
             promise_date = date.fromisoformat(last_installment["date"])
@@ -3962,6 +3850,7 @@ class AnalyticsService:
             "date_rule": None,
             "date_effect": None,
             "is_negotiation": requires_new_negotiation_validation,
+            "pending_decision": pending_decision,
             "payment_already_made": payment_already_made,
             "completed_payment_evidence": completed_payment_confirmation,
             "prior_payment_evidence": prior_payment_evidence,
@@ -4188,7 +4077,7 @@ class AnalyticsService:
             negotiation_validation['review_required'] = True
             negotiation_validation['reasons'].append('Mes de pago interpretado en un año posterior sin año explícito y con salto mayor a 90 días; confirmar fecha y contexto en audio.')
 
-        if (not requires_new_negotiation_validation and not payment_confirmation_case
+        if (excel_status != "CONVENIO" and not payment_confirmation_case
                 and confirms_commitment and promise_date and parsed_due_date and promise_date > parsed_due_date):
             negotiation_validation['valid'] = False
             negotiation_validation['review_required'] = True
@@ -4206,7 +4095,7 @@ class AnalyticsService:
                 )
                 negotiation_validation["reasons"].append(reason)
 
-                if not confirms_commitment or plan["review_required"] or date_year_rollover_review:
+                if not confirms_commitment or detected_claim_amount is None or plan["review_required"] or date_year_rollover_review:
                     negotiation_validation["reasons"].append("Confirmar aceptación del plan y sus fechas antes de atribuir falta grave.")
                 else:
                     add_penalty(
@@ -4424,6 +4313,7 @@ class AnalyticsService:
             "blocks": blocks,
             "contact_type": contact_type,
             "contact_validation": contact_confirmation,
+            "dialogue_evaluation": {k:v for k,v in dialogue.items() if k!="units"},
             "associate_contact_validation": associate_confirmation,
             "intermediary_contact_validation": {
                 "confirmed": bool(intermediary_response),

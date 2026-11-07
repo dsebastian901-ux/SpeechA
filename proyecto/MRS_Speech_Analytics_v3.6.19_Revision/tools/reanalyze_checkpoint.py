@@ -15,6 +15,9 @@ def main():
     parser.add_argument('--fill-mora-from-excel',action='store_true',help='Seleccionar el Excel de cuentas y recuperar mora faltante.')
     parser.add_argument('--use-excel-card', action='store_true',
         help='Corregir en copia el identificador de nombre_final usando numero_de_tarjeta, según la política autorizada.')
+    parser.add_argument('--copy-corrected-labels',action='store_true',help='Copiar solo aprobadas con etiqueta corregida, sin mover originales.')
+    parser.add_argument('--audio-dir',type=Path,help='Carpeta de los audios originales para las copias corregidas.')
+    parser.add_argument('--labels-output-dir',type=Path,help='Carpeta nueva y vacía para las copias corregidas.')
     args = parser.parse_args()
     if args.use_excel_card and (args.fill_mora_from_excel or args.relation_excel):
         parser.error('Use por separado la corrección de nombres y la recuperación de mora; conserve cada salida.')
@@ -65,7 +68,28 @@ def main():
     else:
         print('Reporte adicional no generado:', companion['error'])
     print("Checkpoint nuevo:", result["checkpoint"])
-    print("Se conservaron los originales. No se ejecutó Whisper ni se copiaron audios.")
+    if args.copy_corrected_labels:
+        audio_dir=args.audio_dir
+        if audio_dir is None:
+            from tkinter import Tk,filedialog
+            root=Tk();root.withdraw()
+            selected=filedialog.askdirectory(title='Carpeta de los audios originales para las etiquetas corregidas')
+            root.destroy()
+            audio_dir=Path(selected) if selected else None
+        if audio_dir is None:
+            print('Reportes generados. Copia de etiquetas cancelada; originales conservados.')
+        else:
+            from app.services.corrected_label_export import export_corrected_labels
+            copied=export_corrected_labels(result['checkpoint'],audio_dir,args.labels_output_dir)
+            print('Copias con etiqueta corregida:',copied['copied'])
+            print('Carpeta separada:',copied['folder'])
+            print('Registro de copias:',copied['manifest'])
+            from app.services.retagging_report import record_label_export
+            record_label_export(result['report'],copied['manifest'])
+            print('Cuentas y copias registradas en la hoja CUENTAS_REETIQUETADAS del reporte final.')
+        print('Originales conservados. No se ejecutó Whisper.')
+    else:
+        print("Se conservaron los originales. No se ejecutó Whisper ni se copiaron audios.")
 
 
 if __name__ == "__main__":

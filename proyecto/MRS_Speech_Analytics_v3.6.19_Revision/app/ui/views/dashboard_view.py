@@ -1389,6 +1389,7 @@ class DashboardView(ctk.CTkFrame):
             operational_label_map = {
                 "APROBADO": "APROBADO",
                 "APROBADOS": "APROBADO",
+                "APROBADO_ETIQUETA_CORREGIDA": "APROBADO CON ETIQUETA CORREGIDA",
                 "APROBADO_SIN_ETIQUETAR": "APROBADO SIN ETIQUETAR",
                 "APROBADO_CON_EXCEPCION": "APROBADO CON EXCEPCIÓN",
                 "NO_APROBADO_MENOR_80": "MENOR A 80%",

@@ -87,10 +87,13 @@ def test_recovery_error_cannot_be_confirmed_as_a_success():
 def test_name_mismatch_is_not_an_audio_card_mismatch():
     raw=data();relation=dict(RELATION,nombre_final="000"+OTHER+"_C4_synthetic")
     a=analyze(raw,review(raw),relation)
-    assert a.metadata["account_source_validation"]["review_required"]
-    assert a.metadata["shared_classification"]["clasificacion"]=="REVISAR"
+    assert not a.metadata["account_source_validation"]["review_required"]
+    assert a.metadata["output_name_normalization"]["previous_name"]==relation["nombre_final"]
+    assert not a.metadata["output_name_normalization"]["human_verified"]
+    assert a.metadata["shared_classification"]["clasificacion"]=="APROBADO"
     assert "PEN003" not in {p["id"] for p in a.metadata["penalties"]}
-    assert "1234" in a.metadata["account_source_validation"]["reason"]
+    assert a.metadata["output_name_normalization"]["card_last4"]=="1234"
+    assert relation["nombre_final"]=="000"+OTHER+"_C4_synthetic"
     assert a.metadata["card_validation"]["expected_card_last4"]=="1234"
 
 
@@ -148,11 +151,17 @@ def test_checkpoint_confirmation_and_name_correction_persist_through_reanalysis(
     book.close()
 
 
-def test_amount_only_confirmation_leaves_the_name_block(tmp_path):
+def test_amount_confirmation_uses_card_authority_without_fabricating_a_name_review(tmp_path):
     p,raw,_=checkpoint(tmp_path)
     result=review_checkpoint(p,{"synthetic.wav":{"anchors":[raw["recuperacion_importes"]["entries"][0]["anchor_start"]],"audio_verified":True}},output_directory=tmp_path/"new")
-    assert result["outcomes"]=={"REVISAR":1}
+    assert result["outcomes"]=={"APROBADO":1}
 
+
+    saved=json.loads(Path(result["checkpoint"]).read_text())["items"][0]
+    assert saved["relation"]["nombre_final"]=="000"+CARD+"_C4_synthetic"
+    assert saved["output_name_normalization"]["source"]=="NUMERO_DE_TARJETA_AUTHORITY"
+    assert not saved["output_name_normalization"]["human_verified"]
+    assert not saved.get("output_name_review")
 
 def test_confirming_one_call_cannot_affect_another_checkpoint(tmp_path):
     p,_,_=checkpoint(tmp_path)

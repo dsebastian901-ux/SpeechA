@@ -1,0 +1,186 @@
+{
+  "revision": "3.6.19-r45",
+  "state": "INTEGRATED_RULES_AND_SEPARATE_CORRECTED_LABEL_EXPORT",
+  "tests": {
+    "passed": 2108,
+    "skipped": 7,
+    "failures": 0
+  },
+  "future_preparation_tests": {
+    "passed": 2128,
+    "skipped": 7,
+    "failures": 0
+  },
+  "regression": {
+    "nuevo100": {
+      "calls": 100,
+      "before": {
+        "APROBADO": 17,
+        "REVISAR": 65,
+        "NO_APROBADO_MENOR_80": 15,
+        "FALLA_GRAVE": 3
+      },
+      "outcomes": {
+        "APROBADO": 20,
+        "REVISAR": 59,
+        "NO_APROBADO_MENOR_80": 14,
+        "APROBADO_ETIQUETA_CORREGIDA": 4,
+        "FALLA_GRAVE": 3
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 100,
+      "excel_cells_verified": 10800,
+      "excel_differences": 0,
+      "motives_rows_verified": 100,
+      "rule_rows_verified": 1300,
+      "retagged_rows_verified": 4
+    },
+    "usuario100": {
+      "calls": 100,
+      "before": {
+        "REVISAR": 71,
+        "APROBADO": 15,
+        "NO_APROBADO_MENOR_80": 11,
+        "FALLA_GRAVE": 3
+      },
+      "outcomes": {
+        "APROBADO": 20,
+        "REVISAR": 59,
+        "NO_APROBADO_MENOR_80": 14,
+        "APROBADO_ETIQUETA_CORREGIDA": 4,
+        "FALLA_GRAVE": 3
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 100,
+      "excel_cells_verified": 10800,
+      "excel_differences": 0,
+      "motives_rows_verified": 100,
+      "rule_rows_verified": 1300,
+      "retagged_rows_verified": 4
+    },
+    "lote103": {
+      "calls": 103,
+      "before": {
+        "REVISAR": 72,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9,
+        "NO_APROBADO_MENOR_80": 1
+      },
+      "outcomes": {
+        "REVISAR": 71,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9,
+        "NO_APROBADO_MENOR_80": 2
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 103,
+      "excel_cells_verified": 11124,
+      "excel_differences": 0,
+      "motives_rows_verified": 103,
+      "rule_rows_verified": 1339,
+      "retagged_rows_verified": 0
+    },
+    "lote1007": {
+      "calls": 1007,
+      "before": {
+        "REVISAR": 935,
+        "NO_APROBADO_MENOR_80": 21,
+        "APROBADO": 40,
+        "FALLA_GRAVE": 11
+      },
+      "outcomes": {
+        "REVISAR": 864,
+        "NO_APROBADO_MENOR_80": 51,
+        "APROBADO_ETIQUETA_CORREGIDA": 11,
+        "APROBADO": 70,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 108756,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007,
+      "rule_rows_verified": 13091,
+      "retagged_rows_verified": 11
+    },
+    "lote1007-nombres": {
+      "calls": 1007,
+      "before": {
+        "REVISAR": 883,
+        "NO_APROBADO_MENOR_80": 44,
+        "APROBADO": 69,
+        "FALLA_GRAVE": 11
+      },
+      "outcomes": {
+        "REVISAR": 864,
+        "NO_APROBADO_MENOR_80": 51,
+        "APROBADO_ETIQUETA_CORREGIDA": 11,
+        "APROBADO": 70,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 108756,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007,
+      "rule_rows_verified": 13091,
+      "retagged_rows_verified": 11
+    }
+  },
+  "scope": {
+    "evaluations": 2317,
+    "unique_original_filenames": 1210,
+    "whisper_executed": false,
+    "human_listening": false,
+    "native_windows_verified": false
+  },
+  "actual_audio_copies_verified": 4,
+  "last_output_label_guard_validation": {
+    "all_extractor_hashes_unchanged": true,
+    "decisions_re_evaluated": 2317,
+    "affected_calls_fully_reanalyzed": 4
+  },
+  "source_account_authority": "numero_de_tarjeta; only numeric identifier of output-name work-copy is normalized",
+  "status_output": {
+    "component_index": 3,
+    "folder": "APROBADOS_ETIQUETA_CORREGIDA",
+    "original_excel_modified": false,
+    "original_audio_modified": false
+  },
+  "manager_sheets": [
+    "CUENTAS_REETIQUETADAS",
+    "RESUMEN_REETIQUETADO"
+  ],
+  "rule_sheets": [
+    "EVALUACION_13_REGLAS",
+    "RESUMEN_13_REGLAS"
+  ],
+  "payment_places_policy": {
+    "deduction": 20,
+    "minimum_score": 80,
+    "extra_review_block": false,
+    "other_filters_required": true
+  },
+  "early_mora_cancellation": "Keep prohibited in 1–3 PV, including full Excel balance without discount; confirmed by user.",
+  "raw_asr_replaced": false,
+  "whisper_model_change_required": false,
+  "human_listening_performed": false,
+  "native_windows_verified": false,
+  "future_installer_and_login_included": false,
+  "customer_data_or_model_weights_in_source_zip": false
+}

@@ -496,7 +496,7 @@ def completed_payment(text, segments=()):
                 continue  # «Recomiendo que lo pague» no acredita «lo pagué».
             if 'realice' in candidate.group() and not re.search(r"\brealicé\b", verbatim, re.I):
                 prefix=s[max(0,candidate.start()-65):candidate.start()]
-                if (re.search(r"\bque\s+(?:(?:el|ella|usted|yo|ya)\s+)*$",prefix)
+                if (re.search(r"\b(?:que|para que)\b[^.!?]{0,80}$",prefix)
                         or not re.search(r"\b(?:ya|hoy|ayer|pasado|pasada)\b",prefix+' '+candidate.group())):
                     continue
             if re.search(r"\b(?:no|aun no|todavia no)\s+(?:he |lo )?$", s[:candidate.start()]):

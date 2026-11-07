@@ -38,7 +38,14 @@ def test_recado_equivalence_requires_actual_message(phrase, status):
 ])
 def test_questions_negations_and_agent_words_do_not_confirm_family(phrase):
     r = compliance(phrase + " Dígale que se comunique. Lo anoto.", estatus_grabacion="RECADO REF1")
-    assert not r["status_validation"]["recado_evidence"]["confirmed_recado"]
+    # Desconocer al titular activa ARCO, aunque Excel diga RECADO; no impone
+    # el guion de familiar ni genera una aceptación de recado.
+    if phrase == "No lo conozco.":
+        assert r["status_validation"]["detected_status"] == "NO CONOCEN A DEUDOR"
+        assert r["arco_validation"]["applies"] is True
+    else:
+        assert "recado_evidence" in r["status_validation"]
+    assert not r["status_validation"].get("recado_evidence", {}).get("confirmed_recado", False)
     assert r["final_result"] != "APROBADA"
     assert not assess_recado(phrase)["family"]
 

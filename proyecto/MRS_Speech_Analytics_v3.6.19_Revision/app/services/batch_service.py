@@ -451,6 +451,7 @@ class BatchService:
         approved = bool(classification.get("aprobado"))
         category = str(classification.get("clasificacion") or "REVISAR").strip().upper()
         folder_map = {
+            "APROBADO_ETIQUETA_CORREGIDA": "APROBADOS_ETIQUETA_CORREGIDA",
             "APROBADO": "APROBADOS",
             "APROBADOS": "APROBADOS",
             "APROBADO_SIN_ETIQUETAR": "APROBADO_SIN_ETIQUETAR",
@@ -463,7 +464,13 @@ class BatchService:
         }
         destination_dir = classified_root / folder_map.get(category, "REVISAR")
 
-        if approved:
+        correction = classification.get('output_label_correction') or {}
+        if category == 'APROBADO_ETIQUETA_CORREGIDA':
+            if not approved or not correction.get('valid') or not correction.get('corrected_name'):
+                raise ValueError('La etiqueta corregida no cuenta con una aprobación válida.')
+            from app.services.status_output_label import audio_output_filename
+            filename = audio_output_filename(correction['corrected_name'],source.suffix)
+        elif approved:
             if self.has_relation_excel():
                 if record is None:
                     raise RuntimeError(
@@ -475,6 +482,12 @@ class BatchService:
         else:
             # Los no aprobados conservan el nombre original para auditoría.
             filename = source.name
+
+        if category == 'APROBADO_ETIQUETA_CORREGIDA' and (destination_dir/filename).exists():
+            import hashlib
+            destination_dir = destination_dir/('duplicado_'+hashlib.sha256(source.name.encode()).hexdigest()[:12])
+            if (destination_dir/filename).exists():
+                raise ValueError('Ya existe una copia de esta llamada con la etiqueta corregida.')
 
         destination = self._safe_copy_path(
             destination_dir,
@@ -609,6 +622,14 @@ class BatchService:
                     if self.has_relation_excel()
                     else None
                 )
+
+                if record is not None:
+                    from dataclasses import replace
+                    from app.services.account_source_validation import apply_output_name_authority
+                    name_copy = {'relation':record.to_dict()}
+                    if apply_output_name_authority(name_copy):
+                        record = replace(record,nombre_final=name_copy['relation']['nombre_final'])
+                        item['output_name_normalization'] = name_copy['output_name_normalization']
 
                 # Un audio relacionado con un estatus NO autorizado puede ser,
                 # por su propia naturaleza, un buzón/silencio/cuelgue y no

@@ -178,7 +178,11 @@ class RelationService:
         # v3.6.16: si el archivo no incluye hoja Catalogos, deriva los estatus
         # autorizados de las filas que ya traen nombre_final. Esto evita que un
         # Excel operativo válido convierta todos los >=80 en APROBADO_SIN_ETIQUETAR.
-        if not self.authorized_statuses:
+        explicit_catalog = False
+        if self.SHEET_CATALOGS in workbook.sheetnames:
+            first = next(workbook[self.SHEET_CATALOGS].iter_rows(values_only=True), ())
+            explicit_catalog = any(self._normalize_header(v) in {'estatus','estatus_grabacion','estatus_autorizado','estatus_autorizados'} for v in first)
+        if not self.authorized_statuses and not explicit_catalog:
             derived = []
             seen = set()
             for record in records:
@@ -186,7 +190,7 @@ class RelationService:
                 if not status or not str(record.nombre_final or '').strip():
                     continue
                 key = self._normalize_text(status)
-                if key and key not in seen:
+                if key and self._is_valid_operational_status(status) and key not in seen:
                     seen.add(key)
                     derived.append(status)
             self.authorized_statuses = derived
@@ -340,6 +344,7 @@ class RelationService:
 
         status_aliases = {
             "estatus_autorizado",
+            "estatus_grabacion",
             "estatus_autorizados",
             "estatus",
         }
@@ -408,7 +413,7 @@ class RelationService:
         for value in values:
             key = self._normalize_text(value)
 
-            if key in seen:
+            if key in seen or not self._is_valid_operational_status(value):
                 continue
 
             seen.add(key)
@@ -473,18 +478,31 @@ class RelationService:
     # ------------------------------------------------------------------
     # Clasificación por calidad y estatus
     # ------------------------------------------------------------------
+    @classmethod
+    def _status_key(cls,value):
+        return cls._normalize_text(str(value).replace('_',' ').replace('-',' '))
+
+    @classmethod
+    def _is_valid_operational_status(cls,status):
+        from app.services.status_output_label import STATUS_LABEL_POLICY
+        valid={cls._status_key(v) for v in STATUS_LABEL_POLICY['codes']}
+        # Lectura compatible de checkpoints previos, con las validaciones de
+        # familiar/recado todavía obligatorias en la puerta común.
+        valid.add(cls._status_key('RECADO REF2'))
+        return cls._status_key(status) in valid
+
     def is_status_authorized(self, status: str) -> bool:
         """Indica si el estatus del Excel está autorizado para grabación.
 
         Si no existe catálogo de estatus, no autoriza automáticamente; esto
         evita aprobar una llamada por accidente.
         """
-        if not self.authorized_statuses:
+        if not self.authorized_statuses or not self._is_valid_operational_status(status):
             return False
 
-        target = self._normalize_text(status)
+        target = self._status_key(status)
         return any(
-            self._normalize_text(item) == target
+            self._status_key(item) == target
             for item in self.authorized_statuses
         )
 

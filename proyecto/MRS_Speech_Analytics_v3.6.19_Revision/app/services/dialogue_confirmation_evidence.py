@@ -8,8 +8,11 @@ DATE=r'(?:hoy|manana|(?:el )?dia \d{1,2}|(?:el )?(?:lunes|martes|miercoles|jueve
 BAD=r'\b(?:si pudiera|si tuviera|si consigo|si me da tiempo|a lo mejor|yo creo|no puedo|no tengo|no sabria|supongamos|por ejemplo|diga que|usted dijo)\b'
 
 def future_confirmation_events(text,segments=()):
-    source=normalize(text);found=[]
-    patterns=[('RESPUESTA_IMPORTE_Y_FECHA_FUTURA',re.compile(
+    source=normalize(text);found=[];unbound_amounts=[]
+    patterns=[('IMPORTE_FINAL_CON_ACEPTACION',re.compile(
+        r'\bseria (?:por|de) (?P<amount>'+NUMBER+r')[.!?]\s*'
+        r'(?P<answer>(?:aja[, ]+)?esta bien|si[, ]+esta bien|de acuerdo)\b')),
+      ('RESPUESTA_IMPORTE_Y_FECHA_FUTURA',re.compile(
         r'\b(?:me )?(?:podria|puede|puedes) confirmar (?:nada mas )?(?:el )?monto '
         r'que va a (?:realizar|pagar|depositar)[^?!]{0,30}que dia\?\s*'
         r'(?P<answer>(?:si[, ]+)?(?P<amount>'+NUMBER+r')[^.!?]{0,20}'+DATE+r')[.!?]')),
@@ -38,15 +41,31 @@ def future_confirmation_events(text,segments=()):
                     or re.match(r'\s*\?',source[match.end():])):
                 continue
             answer=match['answer'];after=source[match.end():match.end()+75].split('.')[0]
+            if method == 'IMPORTE_FINAL_CON_ACEPTACION' and re.search(
+                    r'\b(?:whatsapp|telefono|numero de convenio|clave|clabe|folio|referencia|comprobante)\b',before[-100:]):
+                continue
             if (_role_at(text,segments,match.start('answer')) in {'GESTOR','TERCERO'}
                     or re.search(BAD,answer+' '+after)
                     or re.search(r'\b(?:dijo que|diga|por ejemplo|si pudiera|supongamos que)\b[^.!?]{0,55}$',before)
                     or re.search(r'\b(?:ayer|hizo|efectuado|realizado|recibido|reportado|comprobante|whatsapp|cita|consulta medica)\b',match.group())):
                 continue
-            if not re.search(r'\b(?:pago|pagar|deposito|convenio|cantidad|monto|pesos)\b',before+' '+match.group()):continue
+            financial_context=bool(re.search(r'\b(?:pago|pagar|deposito|convenio|cantidad|monto|pesos)\b',before+' '+match.group()))
+            if not financial_context and method!='IMPORTE_FINAL_CON_ACEPTACION':continue
             record={'position':match.start('answer'),'evidence':match.group(),'method':method}
             if 'amount' in match.re.groupindex:
                 record.update(amount=money_value(match['amount']),amount_position=match.start('amount'),
                               amount_end=match.end('amount'),amount_text=match['amount'])
-            found.append(record)
+            if financial_context:
+                found.append(record)
+            else:
+                unbound_amounts.append(record)
+    for record in unbound_amounts:
+        parents=[e for e in found if e['method'].startswith('CONFIRMACION_FECHA')
+                 and 0<record['position']-e['position']<=200]
+        if parents:
+            parent=max(parents,key=lambda e:e['position'])
+            between=source[parent['position']:record['position']]
+            if not re.search(r'\b(?:whatsapp|telefono|comprobante|cita|consulta|folio|referencia)\b',between):
+                record['context_event_position']=parent['position']
+                found.append(record)
     return found

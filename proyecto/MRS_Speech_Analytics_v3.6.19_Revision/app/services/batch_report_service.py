@@ -213,6 +213,9 @@ class BatchReportService:
         "Comprobante de línea solicitado",
         "Procedimiento ARCO completo",
     ]
+    LABEL_HEADERS=['Nombre antes de reetiquetar','Estatus de salida','Código de salida','Carpeta de etiqueta corregida']
+    HEADERS[2:2] = LABEL_HEADERS
+    MODE_B_HEADERS[1:1] = LABEL_HEADERS
     HEADERS += ARCO_HEADERS
     MODE_B_HEADERS += ARCO_HEADERS
 
@@ -622,6 +625,7 @@ class BatchReportService:
 
         # La clasificación física ya incorpora la prioridad operativa v3.6.1.
         final_operational_map = {
+            "APROBADO_ETIQUETA_CORREGIDA": "APROBADO CON ETIQUETA CORREGIDA",
             "APROBADO": "APROBADO",
             "APROBADOS": "APROBADO",
             "APROBADO_SIN_ETIQUETAR": "APROBADO SIN ETIQUETAR",
@@ -634,9 +638,19 @@ class BatchReportService:
         }
         final_operational = final_operational_map.get(physical, "REVISAR MANUALMENTE")
 
+        output_label = classification.get('output_label_correction') or {}
+        label_applied = physical == 'APROBADO_ETIQUETA_CORREGIDA' and output_label.get('valid')
+        output_name = output_label['corrected_name'] if label_applied else relation.get('nombre_final') or ''
+        if label_applied:
+            dictamen = 'CORREGIDO EN COPIA'
+            motivo_dictamen = output_label['original_status']+' → '+output_label['corrected_status']
         return {
+            "Nombre antes de reetiquetar": relation.get('nombre_final') or '',
+            "Estatus de salida": output_label.get('corrected_status') if label_applied else relation.get('estatus_grabacion') or '',
+            "Código de salida": output_label.get('corrected_code') if label_applied else '',
+            "Carpeta de etiqueta corregida": output_label.get('folder') if label_applied else '',
             "Archivo original": item.get("file_name") or Path(str(item.get("path") or "")).name,
-            "Nombre final": relation.get("nombre_final") or "",
+            "Nombre final": output_name,
             "Gestor": relation.get("gestor") or "",
             "Supervisor": relation.get("supervisor") or "",
             "Estatus Excel": relation.get("estatus_grabacion") or "",
@@ -947,10 +961,20 @@ class BatchReportService:
             ws.append([row.get(h, "") for h in headers])
         cls._style_sheet(ws)
 
+        from app.services.rule_audit_report import add_rule_audit_sheets
+        audit_sheets = add_rule_audit_sheets(wb, source_items)
+        for audit_sheet in audit_sheets:
+            cls._style_sheet(audit_sheet)
+
+        from app.services.retagging_report import add_retagging_sheets
+        for retagging_sheet in add_retagging_sheets(wb, source_items):
+            cls._style_sheet(retagging_sheet)
+
         # =====================================================
         # CLASIFICACIONES OPERATIVAS v3.6.1
         # =====================================================
         category_sheets = [
+            ("APROBADOS_ETIQUETA_CORREGIDA", "APROBADO_ETIQUETA_CORREGIDA"),
             ("APROBADO_SIN_ETIQUETAR", "APROBADO_SIN_ETIQUETAR"),
             ("APROBADO_CON_EXCEPCION", "APROBADO_CON_EXCEPCION"),
             ("NO_APROBADOS_MENOR_80", "NO_APROBADO_MENOR_80"),
@@ -1013,7 +1037,7 @@ class BatchReportService:
         total = len(rows)
         approved = sum(
             1 for r in rows
-            if r.get("Clasificación física") in {"APROBADO", "APROBADOS"}
+            if r.get("Clasificación física") in {"APROBADO", "APROBADOS", "APROBADO_ETIQUETA_CORREGIDA"}
         )
         review = sum(1 for r in rows if r.get("Clasificación física") == "REVISAR")
         approved_untagged = sum(1 for r in rows if r.get("Clasificación física") == "APROBADO_SIN_ETIQUETAR")
@@ -1052,6 +1076,7 @@ class BatchReportService:
         ])
         summary_ws.append(["Total audios", total])
         summary_ws.append(["Aprobados", approved])
+        summary_ws.append(["De ellos, etiqueta corregida", sum(r.get("Clasificación física")=="APROBADO_ETIQUETA_CORREGIDA" for r in rows)])
         summary_ws.append(["Aprobados sin etiquetar", approved_untagged])
         summary_ws.append(["No aprobados menor a 80%", under_80])
         summary_ws.append(["Clasificación calculada: MAL DICTAMINADO", bad_dictation])
@@ -1137,7 +1162,7 @@ class BatchReportService:
                 gtotal = len(group)
                 gapproved = sum(
                     1 for r in group
-                    if r.get("Clasificación física") in {"APROBADO", "APROBADOS"}
+                    if r.get("Clasificación física") in {"APROBADO", "APROBADOS", "APROBADO_ETIQUETA_CORREGIDA"}
                 )
                 greview = gtotal - gapproved
                 gincorrect = sum(

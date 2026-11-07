@@ -15,12 +15,13 @@ def mistreatment_reports(text, segments, phrases):
         r'\b(?:me|nos) (?:estuvo|estaban|estuvieron|estaba) (?:gritando|insultando|agrediendo|amenazando|ofendiendo)\b|'
         r'\b(?:me|nos) (?:grito|insulto|agredio|ofendio|humillo|humillaron|amenazaron)\b|'
         r'\b(?:se burlo|se burlaron) de mi\b')
-    prior_call = re.compile(r'\b(?:llamada (?:anterior|pasada)|vez pasada|ultima (?:vez|llamada)|'
+    prior_call = re.compile(r'\b(?:llamadas? (?:anterior(?:es)?|pasadas?)|vez pasada|ultima (?:vez|llamada)|'
                             r'(?:me (?:marco|llamo|hablo)|me (?:marcaron|llamaron|hablaron)) (?:antes|ayer)|'
                             r'(?:asesor|asesora|gestor|gestora|companero|companera) (?:anterior|de ayer))\b')
     service_actor = re.compile(r'\b(?:su (?:companero|companera|asesor|asesora|gestor|gestora)|'
                                r'(?:la persona|el asesor|la asesora|el gestor|la gestora) que me (?:llamo|marco|atendio|hablo))\b')
     bad_service = re.compile(r'\b(?:mala atencion|mal servicio|mal trato|agresion(?:es)?|'
+                             r'falta de comunicacion|no hay (?:una )?buena comunicacion|'
                              r'(?:atencion|actitud|trato) (?:muy )?(?:mal[oa]|pesim[oa]|agresiv[oa]|groser[oa]|prepotente)|'
                              r'(?:fue|era|estuvo|se porto|fueron|eran|estuvieron|se portaron) (?:muy )?(?:agresiv[oa]s?|groser[oa]s?|'
                              r'prepotentes?|despotas?|altaner[oa]s?)|me falto al respeto|'
@@ -43,7 +44,7 @@ def mistreatment_reports(text, segments, phrases):
             matches.extend(re.finditer(r'\b(?:a que se debe que|por que) me (?:sigan|siguen) llamando\b',value))
         matches.extend(re.finditer(
             r'\b(?:nunca me contest(?:a|an)|'
-            r'me (?:cortaban|cortaron) la llamada|me colg(?:aron|o)|'
+            r'me (?:cortaba|cortaban|cortaron) la llamada|me colg(?:aron|o)|'
             r'me (?:dice|dices|dijo) que me calle|'
             r'nadie me quiso resolver|'
             r'me hablo (?:bien|muy) enojad[oa]|'
@@ -56,6 +57,7 @@ def mistreatment_reports(text, segments, phrases):
             matches.extend(re.finditer(r'\bno me (?:contestaron|respondieron|respondia|respondio)\b',value))
         phone_context = bool(re.search(r'\b(?:llamadas?|llame|llamar|marcan|marcando|marcado|marcaron)\b', value+' '+previous))
         if phone_context:
+            matches.extend(re.finditer(r'\b(?:me tienen|estoy) inundad[oa] de llamadas\b',value))
             matches.extend(re.finditer(r'\b(?:no (?:me )?dejan(?: a uno)?[^.!?]{0,65}\b(?:tranquil[oa]|en paz)|'
                 r'me (?:estan|han estado|estuvieron) (?:hostigando|acosando)|'
                 r'no me (?:sigan|siguieran) (?:molestando|hostigando|acosando)|'
@@ -73,6 +75,7 @@ def mistreatment_reports(text, segments, phrases):
                                     r'me dejo en la linea y nadie me contesto)\b',value))
         if prior_call.search(value) or service_actor.search(value) or prior_call.search(previous) or service_actor.search(previous):
             matches.extend(bad_service.finditer(value))
+        matches.extend(re.finditer(r'\b(?:ayer|antes|la vez pasada)[^.!?]{0,65}me (?:hablaba|hablo|llamo|marco)[^.!?]{0,65}\b(?:groser[oa]|agresiv[oa]|prepotente)\b',value))
         for match in matches:
             before = value[max(0, match.start()-50):match.start()]
             if re.search(r'\b(?:no|nunca|jamas|nadie)\s*$', before):

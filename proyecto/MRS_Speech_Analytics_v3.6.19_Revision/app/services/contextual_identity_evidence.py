@@ -50,6 +50,10 @@ def contextual_holder_confirmation(text, segments, identification):
     if explicit and not BAD_IDENTITY.search(explicit['identity']) and _role_at(text,segments,explicit.start('answer')) not in {'GESTOR','TERCERO'}:
         return {'confirmed':True,'method':'IDENTIFICACION_NOMINAL_CON_RESPUESTA_DE_SERVICIO','evidence':explicit.group(),'speaker_role':'NO DETERMINADO','human_verified':False}
     requests=[
+        re.compile(r'\b(?:buenos dias|buenas dias|buenas tardes)[, .]*con\s+'
+                   r'(?P<identity>[a-z ]{3,85}?) por favor[, .?]\s*(?P<answer>)'),
+        re.compile(r'\bme (?:podre|podria|pudo|pude|he podido|voy a poder) (?:a )?(?:comunicar|comentar) (?:de favor )?con\s+'
+                   r'(?P<identity>[^.!?]{2,100}?)[.?]\s*(?P<answer>)'),
         re.compile(rf'\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)[.?]\s*'
                    r'(?P<answer>si|asi es|correcto|aja)\b'),
         re.compile(r'\bcon\s+(?P<identity>(?:el senor|la senora|la senorita)\s+[^.!?]{2,90}?)[.?]\s*'
@@ -76,11 +80,12 @@ def contextual_holder_confirmation(text, segments, identification):
             after=source[request.end():request.end()+75]
             if re.search(r'\b(?:espere|permita|se lo comunico|lo busco|la busco|le paso|no esta)\b',after):continue
             if re.match(r'\s+(?:me espera|me permite|quiere|puede|necesita|consigo|tuviera)\b',after):continue
-            if pattern is requests[1] and answer not in {'si','asi es','correcto','aja'}:
+            if pattern is requests[3] and answer not in {'si','asi es','correcto','aja'}:
                 return {'confirmed':True,'method':'RESPUESTA_EXPLICITA_TRAS_NOMBRE_CON_TRATAMIENTO',
                         'evidence':request.group(),'speaker_role':'NO DETERMINADO'}
             for start,end,unit,value in units:
                 if end<=request.end() or unit['speaker_role'] in {'GESTOR','TERCERO'}:continue
+                if re.search(r'\b(?:yo soy|soy|hablo) (?:de |del |de la )?(?:cobranza|despacho|corporativo|juridico)\b',value):continue
                 # Conservar solo declaraciones; una pregunta del gestor sobre
                 # «mi pago» no demuestra autorreferencia del interlocutor.
                 statement=re.sub(r'¿[^?]*\?', ' ',value).strip()
@@ -107,6 +112,15 @@ def contextual_holder_confirmation(text, segments, identification):
                         'speaker_role':unit['speaker_role'],
                         'policy_source':'CRITERIO_USUARIO_CONTEXTO_COMPLETO',
                         'human_verified':False}
+            from app.services.dialogue_evaluation import scan_dialogue
+            own_events = [e for e in scan_dialogue(text,segments)['events']
+                          if (e['kind']=='OWN_FINANCES' or (e['kind']=='PENDING_DECISION' and 'antes de pagarlo' in e['phrase'])) and e['position']>=request.end()]
+            if own_events:
+                event=own_events[-1]
+                return {'confirmed':True,'method':'CONTEXTO_NOMINAL_Y_HECHO_FINANCIERO_PROPIO',
+                        'evidence':request.group()+' / '+event['evidence'],
+                        'speaker_role':event['speaker_role'],'human_verified':False,
+                        'event_id':event['id'],'policy_source':'CRITERIO_USUARIO_CONTEXTO_COMPLETO'}
             from app.services.conversation_evidence import payment_commitment
             commitment=payment_commitment(text,segments)
             if (commitment['accepted'] and source.find(normalize(commitment['evidence'])) >= request.end()

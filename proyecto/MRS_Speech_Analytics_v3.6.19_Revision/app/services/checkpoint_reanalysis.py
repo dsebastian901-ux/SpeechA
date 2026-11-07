@@ -13,6 +13,29 @@ from app.services.checkpoint_output import create_checkpoint_output
 
 
 
+def transcription_with_saved_reviews(item, data=None):
+    """Preparar el mismo análisis en reanálisis y exportación de copias."""
+    data = (item.get('result') or {}) if data is None else data
+    transcription = TranscriptionModel.from_dict(data)
+    transcription.text = TranscriptionService._normalize_asr_money_display(transcription.text)
+    previous_review = (item.get("analytics_metadata") or {}).get("hostile_interlocutor_exception")
+    if isinstance(previous_review, dict):
+        transcription.metadata["hostile_interlocutor_exception"] = deepcopy(previous_review)
+    amount_review = (item.get("amount_audio_review") or
+                     ((item.get("analytics_metadata") or {}).get("amount_recovery_validation") or {}).get("human_review_record"))
+    if isinstance(amount_review, dict):
+        transcription.metadata["amount_audio_review"] = deepcopy(amount_review)
+    financial_review = (item.get("financial_audio_review") if "financial_audio_review" in item else
+        ((item.get("analytics_metadata") or {}).get("financial_review_validation") or {}).get("human_review_record"))
+    transcription.metadata["financial_audio_review"] = deepcopy(financial_review)
+    transcription.metadata['audio_block_evidence']=deepcopy(item.get('audio_block_evidence'))
+    transcription.metadata['family_contact_confirmation']=deepcopy(item.get('family_contact_confirmation'))
+    transcription.metadata['recado_acceptance_confirmation']=deepcopy(item.get('recado_acceptance_confirmation'))
+    transcription.metadata['privacy_disclosure_confirmation']=deepcopy(item.get('privacy_disclosure_confirmation'))
+    transcription.metadata['home_warning_confirmation']=deepcopy(item.get('home_warning_confirmation'))
+    return transcription
+
+
 def recover_saved_transcription(item, directory):
     """Recuperar únicamente el JSON del mismo audio; nunca buscar por fila."""
     name = item.get("file_name")
@@ -61,23 +84,9 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
                 item["transcription_recovery"] = recovery
             if not isinstance(data, dict) or not str(data.get("texto") or "").strip():
                 raise ValueError("La llamada no contiene transcripción recuperable.")
-            transcription = TranscriptionModel.from_dict(data)
-            transcription.text = TranscriptionService._normalize_asr_money_display(transcription.text)
-            previous_review = (item.get("analytics_metadata") or {}).get("hostile_interlocutor_exception")
-            if isinstance(previous_review, dict):
-                transcription.metadata["hostile_interlocutor_exception"] = deepcopy(previous_review)
-            amount_review = (item.get("amount_audio_review") or
-                             ((item.get("analytics_metadata") or {}).get("amount_recovery_validation") or {}).get("human_review_record"))
-            if isinstance(amount_review, dict):
-                transcription.metadata["amount_audio_review"] = deepcopy(amount_review)
-            financial_review = (item.get("financial_audio_review") if "financial_audio_review" in item else
-                ((item.get("analytics_metadata") or {}).get("financial_review_validation") or {}).get("human_review_record"))
-            transcription.metadata["financial_audio_review"] = deepcopy(financial_review)
-            transcription.metadata['audio_block_evidence']=deepcopy(item.get('audio_block_evidence'))
-            transcription.metadata['family_contact_confirmation']=deepcopy(item.get('family_contact_confirmation'))
-            transcription.metadata['recado_acceptance_confirmation']=deepcopy(item.get('recado_acceptance_confirmation'))
-            transcription.metadata['privacy_disclosure_confirmation']=deepcopy(item.get('privacy_disclosure_confirmation'))
-            transcription.metadata['home_warning_confirmation']=deepcopy(item.get('home_warning_confirmation'))
+            transcription = transcription_with_saved_reviews(item, data)
+            from app.services.account_source_validation import apply_output_name_authority
+            apply_output_name_authority(item)
             relation = item.get("relation") or {}
             analysis = AnalyticsService.analyze_transcription(transcription, relation)
             old = item.get("classification") or {}

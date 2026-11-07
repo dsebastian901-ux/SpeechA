@@ -32,6 +32,32 @@ def corrected_account_name(relation):
     return prefix+card+name[match.end():]
 
 
+def apply_output_name_authority(item):
+    """Aplicar la autoridad de numero_de_tarjeta a una COPIA de trabajo.
+
+    La usuaria indicó que la tarjeta del Excel manda sobre nombre_final. No
+    se altera el Excel, la tarjeta, la transcripción ni una validación humana.
+    Un identificador incompleto se conserva para revisión, sin completarlo.
+    """
+    relation = item.get('relation') or {}
+    validation = validate_account_source(relation)
+    if not validation.get('review_required'):
+        return False
+    try:
+        corrected = corrected_account_name(relation)
+    except ValueError:
+        return False
+    previous = str(relation.get('nombre_final') or '')
+    item['relation'] = dict(relation, nombre_final=corrected)
+    item['output_name_normalization'] = {
+        'schema':1,'source':'NUMERO_DE_TARJETA_AUTHORITY',
+        'previous_name':previous,'corrected_name':corrected,
+        'card_last4':str(relation['numero_de_tarjeta'])[-4:],
+        'human_verified':False,'original_excel_modified':False,
+    }
+    return True
+
+
 def write_corrected_relation_excel(source_excel, corrections, destination):
     """Solo filas confirmadas; no se cambia numero_de_tarjeta ni el original."""
     from pathlib import Path

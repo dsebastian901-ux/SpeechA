@@ -127,7 +127,12 @@ def test_final_plan_confirmation_keeps_other_blockers(problem):
     if problem == "treatment": i["result"]["texto"] += " Gestor: Mierda."
     a = analyze(i, make_review(i))
     assert a.metadata["financial_review_validation"]["human_verified"]
-    assert not a.metadata["shared_classification"]["aprobado"]
+    if problem=='name':
+        assert a.metadata['shared_classification']['aprobado']
+        assert not a.metadata['account_source_validation']['review_required']
+        assert not a.metadata['output_name_normalization']['human_verified']
+    else:
+        assert not a.metadata["shared_classification"]["aprobado"]
 
 
 def test_balance_confirmation_never_waives_confirmed_disclosure():
