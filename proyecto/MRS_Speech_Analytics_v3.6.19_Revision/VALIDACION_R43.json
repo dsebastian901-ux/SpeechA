@@ -1,0 +1,141 @@
+{
+  "revision": "3.6.19-r43",
+  "state": "PILOT_PARTIAL_IMPROVEMENT_WITH_REVIEW_PENDING",
+  "tests": {
+    "passed": 1856,
+    "skipped": 7,
+    "failures": 0,
+    "python": "3.10.22",
+    "platform": "Linux",
+    "native_windows_verified": false,
+    "audio_listened": false
+  },
+  "regression": {
+    "nuevo100": {
+      "calls": 100,
+      "before": {
+        "REVISAR": 74,
+        "APROBADO": 12,
+        "NO_APROBADO_MENOR_80": 11,
+        "FALLA_GRAVE": 3
+      },
+      "outcomes": {
+        "REVISAR": 71,
+        "APROBADO": 15,
+        "NO_APROBADO_MENOR_80": 11,
+        "FALLA_GRAVE": 3
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 100,
+      "excel_cells_verified": 10400,
+      "excel_differences": 0,
+      "motives_rows_verified": 100
+    },
+    "103": {
+      "calls": 103,
+      "before": {
+        "REVISAR": 72,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9,
+        "NO_APROBADO_MENOR_80": 1
+      },
+      "outcomes": {
+        "REVISAR": 72,
+        "APROBADO": 21,
+        "FALLA_GRAVE": 9,
+        "NO_APROBADO_MENOR_80": 1
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 103,
+      "excel_cells_verified": 10712,
+      "excel_differences": 0,
+      "motives_rows_verified": 103
+    },
+    "1007": {
+      "calls": 1007,
+      "before": {
+        "REVISAR": 939,
+        "NO_APROBADO_MENOR_80": 18,
+        "APROBADO": 39,
+        "FALLA_GRAVE": 11
+      },
+      "outcomes": {
+        "REVISAR": 939,
+        "NO_APROBADO_MENOR_80": 18,
+        "APROBADO": 39,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 104728,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007
+    },
+    "1007_nombres": {
+      "calls": 1007,
+      "before": {
+        "REVISAR": 889,
+        "NO_APROBADO_MENOR_80": 41,
+        "APROBADO": 66,
+        "FALLA_GRAVE": 11
+      },
+      "outcomes": {
+        "REVISAR": 889,
+        "NO_APROBADO_MENOR_80": 41,
+        "APROBADO": 66,
+        "FALLA_GRAVE": 11
+      },
+      "source_unchanged": true,
+      "transcriptions_preserved": true,
+      "other_account_data_preserved": true,
+      "safety_invariant_failures": 0,
+      "excel_rows_verified": 1007,
+      "excel_cells_verified": 104728,
+      "excel_differences": 0,
+      "motives_rows_verified": 1007
+    }
+  },
+  "review_scope": {
+    "calls_reviewed": 46,
+    "remaining_review": 43,
+    "scores_preserved": true,
+    "raw_asr_preserved": true,
+    "human_listening_performed": false,
+    "new_audio_windows": 4,
+    "new_audio_seconds": 100.0,
+    "repetitive_windows_discarded": 1,
+    "asr_alternative_applied_to_decisions": false,
+    "primary_groups": {
+      "Queja de atención previa": 12,
+      "Trato en llamada por verificar": 4,
+      "Visita/recuperación en 1–2 PV por verificar": 2,
+      "Lenguaje ofensivo": 4,
+      "Espera sin retoma": 1,
+      "Falso bloqueo corregido": 3,
+      "Identidad, finanzas, estatus o ASR pendientes": 20
+    }
+  },
+  "raw_asr_replaced": false,
+  "original_data_modified": false,
+  "requires_model_change": false,
+  "payment_places_policy": {
+    "deduction": 20,
+    "minimum_score": 80,
+    "extra_review_block": false,
+    "other_filters_required": true
+  },
+  "audio_scope": "Text and rule review for 46 calls; 4 extra initial audio windows of 25s, 1 repetitive hypothesis discarded. Not human listening or a controlled model benchmark.",
+  "business_policy_pending": "Full balance payment without discount to cancel in 1–3 PV; previous rule retained pending user clarification.",
+  "windows_native_verified": false,
+  "future_installer_and_login_included": false,
+  "customer_data_or_model_weights_in_source_zip": false
+}

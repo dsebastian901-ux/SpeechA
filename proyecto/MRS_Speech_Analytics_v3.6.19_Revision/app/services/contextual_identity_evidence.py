@@ -15,7 +15,7 @@ COUNTER = re.compile(
     r'es mi (?:espos[oa]|madre|padre|herman[oa]|hij[oa])|'
     r'no es mi (?:tarjeta|cuenta)|no (?:lo|la) conozco|no conocemos a|'
     r'no se encuentra(?: aqui| en casa| ahora)?(?=[.!?]|$)|no esta (?:aqui|en casa)|esta trabajando|'
-    r'(?:pago|pague|pagando|llamo|hablo) (?:por|a nombre de) (?:el|ella|mi |su )|'
+    r'(?:pago|pague|pagar(?:lo|la)?|pagando|llamo|hablo) (?:por|a nombre de) (?:el|ella|mi |su )|'
     r'(?:cuenta|tarjeta) de mi (?:espos[oa]|madre|padre|herman[oa]|hij[oa])|'
     r'(?:solicite|saque|tramite|contrate|adquiri) (?:la |una )?tarjeta (?:para|a nombre de) (?:ella|mi (?:espos[oa]|madre|padre|hij[oa]|herman[oa]))|'
     r'se lo comunico|le paso (?:al|con|a la)|lo busco|la busco)\b')
@@ -24,9 +24,11 @@ OWN_ACCOUNT = re.compile(
     r'yo (?:tengo|tenia|saque|solicite|tramite|contrate) (?:mi |la |una )?(?:tarjeta|cuenta)|'
     r'(?:ya |yo )?(?:lo pague|pague|hice (?:mi|el) pago|realice (?:mi|el) pago|he pagado|he depositado)|'
     r'(?:ya |yo )?(?:lo hice|lo realice)|'
+    r'(?:este|el) mes (?:yo )?(?:tengo|tenia) (?:un |el |mi )?pago minimo|'
+    r'(?:yo )?quiero pagar(?:lo|la)|no les voy a completar|me (?:atrase|he atrasado)|'
     r'no he (?:usado|utilizado) (?:mi |la |esa |esta )?tarjeta|'
     r'(?:yo )?(?:ya )?(?:voy a pagar|voy a depositar|voy a abonar)|'
-    r'no (?:he podido|puedo|pude) (?:pagar|depositar|abonar|realizar (?:mi|el) pago))\b')
+    r'no (?:he podido|puedo|pude) (?:ir a )?(?:pagar|depositar|abonar|realizar (?:mi|el) pago))\b')
 
 
 def contextual_holder_confirmation(text, segments, identification):
@@ -45,7 +47,7 @@ def contextual_holder_confirmation(text, segments, identification):
         re.compile(r'\bcon\s+(?P<identity>(?:el senor|la senora|la senorita)\s+[^.!?]{2,90}?)[.?]\s*'
                    r'(?P<answer>(?:si[, ]+)?(?:servidor|servidora|al habla|ella habla|el habla|digame|diganme|dime)|si|asi es|correcto|aja)\b'),
         re.compile(rf'\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)(?:[.?]|,\s*gracias\b)\s*(?P<answer>)'),
-        re.compile(r'\bcon\s+(?P<identity>(?:el senor|la senora|la senorita)\s+[^.!?]{2,90}?)[.?]\s*(?P<answer>)'),
+        re.compile(r'\bcon\s+(?P<identity>(?:el senor|la senora|la senorita)\s+[^.!?]{2,90}?)(?:[.?]|,\s*gracias\b)\s*(?P<answer>)'),
     ]
     units=[];cursor=0
     for unit in sentence_evidence(text,segments):
@@ -77,7 +79,7 @@ def contextual_holder_confirmation(text, segments, identification):
                 if not statement or '?' in statement:continue
                 if re.search(r'\b(?:si tuviera|si tuviese|si yo tuviera|supongamos que|'
                              r'diga|digale|repita|usted dice|usted dijo|el cliente dice)\b',statement):continue
-                if not re.search(r'\b(?:tarjeta|cuenta|pagos?|pagar|deposito|depositar|saldo)\b',
+                if not re.search(r'\b(?:tarjeta|cuenta|pagos?|pagar|deposito|depositar|saldo|cubierto|cubrir|cantidad|pesos)\b',
                                  source[max(request.end(),start-180):end]):continue
                 own=OWN_ACCOUNT.search(statement)
                 if not own:continue
@@ -86,7 +88,7 @@ def contextual_holder_confirmation(text, segments, identification):
                 conditional=re.search(r'\b(?:que|cuando|si|para que)(?:\s+(?:se|usted|yo|ya|lo|le|me)){0,3}\s*$',before)
                 verbatim=re.sub(r'\s+',' ',unicodedata.normalize('NFC',unit['text']).lower()).strip()
                 accented_past=re.search(r'\b(?:pagué|realicé)\b',verbatim[own.start():own.end()])
-                if conditional and not accented_past:continue
+                if conditional and not accented_past and not re.search(r'\bes que\s*$',before):continue
                 return {'confirmed':True,'method':('IDENTIFICACION_NOMINAL_Y_CONVERSACION_PROPIA' if answer else
                                                    'AUTORREFERENCIA_FINANCIERA_TRAS_PREGUNTA_NOMINAL'),
                         'evidence':request.group()+' / '+unit['text'],

@@ -57,7 +57,7 @@ class AnalyticsService:
     - Listar análisis del proyecto.
     """
 
-    ENGINE_REVISION = "3.6.19-r42"
+    ENGINE_REVISION = "3.6.19-r43"
 
     @staticmethod
     def shared_quality_decision(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
@@ -148,7 +148,7 @@ class AnalyticsService:
         if waiting.get("review_required") or checks.get('espera_prolongada_detectada'):
             reasons.append(waiting.get('reason') or 'Espera de 65 segundos o más sin retoma confirmada; revisar audio.')
         if treatment.get("dismissive_review_required"):
-            reasons.append("Expresión despectiva en gestión de recado; revisar emisor y contexto")
+            reasons.append("Expresión despectiva o confrontativa; revisar emisor y contexto")
         if treatment.get("confrontation_review_required"):
             reasons.append("Confrontación sin hablante confirmado; requiere revisión")
         if treatment.get("hostile_interlocutor_review_required"):
@@ -940,7 +940,7 @@ class AnalyticsService:
             incidental_date = bool(re.search(
                 r"\b(?:vence|vencimiento|fecha\s+limite|estado\s+de\s+cuenta|corte)\b",
                 near_context)) and not bool(re.search(
-                r"\b(?:pago|convenio|compromiso|queda|quedamos|confirm)\w*\b.{0,30}" + re.escape(match.group(0)),
+                r"\b(?:pago|pagar|depositar|convenio|compromiso|queda|quedamos|confirm)\w*\b.{0,30}" + re.escape(match.group(0)),
                 near_context))
             # v3.5.8: una fecha de visita/diligencia/recuperación NO es promesa de pago.
             visit_context = bool(re.search(
@@ -973,6 +973,8 @@ class AnalyticsService:
             add_candidate(m, base + timedelta(days=1))
 
         for m in re.finditer(r"\bhoy\b", normalized):
+            if re.match(r"\s+me confirmaron\b",normalized[m.end():]):
+                continue
             add_candidate(m, base)
 
         # 17 de agosto / 17 agosto / 17 de agosto de 2026
@@ -996,7 +998,7 @@ class AnalyticsService:
 
         # «Confirmo el pago el día 24» es una fecha; no se exige que el
         # interlocutor repita el nombre del mes en cada confirmación.
-        for m in re.finditer(r"\b(?:el dia|para el dia)\s+([0-3]?\d)\b(?!\s*[/:-])", normalized):
+        for m in re.finditer(r"\b(?:el dia|para el dia|antes del dia|al dia|antes del)\s+([0-3]?\d)\b(?!\s*[/:-])", normalized):
             if re.match(r"\s+de\s+(?:"+'|'.join(months)+r")\b", normalized[m.end():]):
                 continue  # La fecha completa ya se evaluó arriba.
             try:
@@ -3254,6 +3256,13 @@ class AnalyticsService:
 
                 before = source[max(0, start-90):start].lower()
                 after = source[end:min(len(source), end+90)].lower()
+                if (re.fullmatch(r'\d{1,2}',raw) and 1<=int(raw)<=31
+                        and re.search(r'\b(?:lo )?voy a (?:estar )?realizando en\s*$',before)):
+                    return True  # «Lo voy a estar realizando en 15» es fecha, no $15.
+
+                if (re.fullmatch(r'\d{1,2}',raw) and 1<=int(raw)<=31
+                        and re.search(r'\b(?:el dia|para el dia|antes del dia|dia|fecha para el)\s*$',before)):
+                    return True  # Un día explícito sigue siendo calendario aunque haya dinero cerca.
 
                 # v3.6.11 · BLOQUEO ESTRUCTURAL DE IDENTIFICADORES.
                 # No depende de que exista o no una palabra financiera cerca. Si la cifra

@@ -337,6 +337,7 @@ def payment_commitment(text, segments=()):
             positive = None  # «Lo» necesita un antecedente de pago, no otro trámite.
         negative = re.search(
             r"\b(?:no (?:voy a|puedo|pienso|quiero) (?:pagar|depositar|abonar|cubrir)|"
+            r"no les voy a completar|no voy a poder[.!]?$|"
             r"no puedo (?:comprometerme|confirmar|dar una fecha)|no me comprometo|"
             r"no tengo (?:esa|la) cantidad|no dispongo de (?:esa|la) cantidad|"
             r"no (?:tengo|cuento con) (?:(?:todo |una? |la |esa )?(?:cierta )?cantidad de )?dinero|"
@@ -347,7 +348,7 @@ def payment_commitment(text, segments=()):
         conditional = re.search(
             r"\b(?:si me da tiempo|si consigo (?:el )?dinero|si tengo dinero|si puedo juntar|"
             r"lo podria(?: hacer)?|(?:yo )?pagaria|"
-            r"hare lo posible|a lo mejor|yo creo|no se cuanto (?:voy a|vaya a|pueda) (?:pagar|depositar)|"
+            r"hare lo posible|a lo mejor|yo creo|no sabria decir(?:le|te)? (?:si|cuanto|cuando)|no se cuanto (?:voy a|vaya a|pueda) (?:pagar|depositar)|"
             r"no se cuando (?:pueda|voy a) pagar)\b", s)
         conditional = conditional or _payment_review_condition(s) or (not positive and _payment_review_deferral(s))
         payment_context = re.search(r"\b(?:pagos?|paguito|pagar|pagare|deposito|depositar|dinero|cantidad|convenio|pesos|descuento)\b",
@@ -369,8 +370,8 @@ def payment_commitment(text, segments=()):
             events.append((position, True, unit["text"]))
     question = re.compile(
         r"\b(?:podemos (?:contemplar|contar con|confirmar)|se compromete a|puedo confirmar|"
-        r"(?:se )?confirmaria|puede confirmar|seria posible|estarias? confirmando)\b"
-        r"[^?]{0,130}\b(?:pago|pagar|deposito|depositar)\b[^?]{0,90}\?\s*"
+        r"(?:se )?confirmaria|confirma(?:mos|s)?|puede confirmar|seria posible|estarias? confirmando)\b"
+        r"[^?¿]{0,130}\b(?:pago|pagar|deposito|depositar)\b[^?¿]{0,90}\?\s*"
         r"(?:(?:titular|cliente|interlocutor|gestor|tercero)\s*:\s*)?"
         r"(?P<answer>si|de acuerdo|esta bien|claro|correcto)\b")
     for match in question.finditer(source):
@@ -928,6 +929,8 @@ def assess_home_recovery_warning(text,segments=(),mora=''):
             s=normalize(unit['text'])
             match=re.search(r'\b(?:se estara|estaremos|se va a estar|vamos a estar) trabajando sobre '
                             r'(?:la )?recuperacion total en (?:el |su )?domicil(?:io)?\b',s)
+            match = match or re.search(
+                r'\b(?:visita (?:ocular )?[^.!?]{0,120}recuperacion|recuperacion sobre la visita)\b',s)
             if not match:continue
             prefix=s[:match.start()]
             if (re.search(r'\b(?:no|nunca)\s*$',prefix)

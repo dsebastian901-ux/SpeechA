@@ -1,6 +1,8 @@
 """Relaciona importes con parcialidades explícitas; conserva contradicciones."""
 import re
 
+from app.services.reported_payment_amounts import NUMBER, money_value
+
 
 def installment_dates(source, parse_date):
     """Última fecha propuesta para cada parcialidad, separada de recordatorios."""
@@ -28,6 +30,11 @@ def installment_plan(source, mentions):
     counts = []
     for match in re.finditer(r"\b(dos|tres|2|3) pagos (?:por|de)\s+", source):
         amount = next((m for m in mentions if match.end() <= m[0] <= match.end()+8), None)
+        if amount is None:
+            spoken = re.match(rf'(?P<amount>{NUMBER})(?!\w)',source[match.end():])
+            value = money_value(spoken['amount']) if spoken else None
+            if value and value > 0:
+                amount = (match.end(),match.end()+spoken.end(),value,spoken.group())
         if amount:
             count = {"dos": 2, "tres": 3, "2": 2, "3": 3}[match[1]]
             counts.append((match.start(), [float(amount[2])]*count, source[match.start():amount[1]]))
