@@ -1,0 +1,164 @@
+{
+  "revision": "3.6.19-r50",
+  "tests": {
+    "passed": 2451,
+    "skipped": 7,
+    "failures": 0
+  },
+  "fresh_project": {
+    "revision": "3.6.19-r50",
+    "calls": 77,
+    "selection": "all changed outcomes/scores plus deterministic safety and unchanged controls",
+    "asr_executed": false,
+    "asr_boundary": "controlled raw ASR from uploaded checkpoint",
+    "previous_checkpoint_imported_by_application": false,
+    "saved_human_confirmations_imported": false,
+    "transcriptions_recovered": 0,
+    "all_original_audio_copies_sha256_match": true,
+    "authoritative_card_in_approved_names": true,
+    "all_13_rule_groups_applied": true,
+    "normal_batch_and_reanalysis_outcomes_scores_match": true,
+    "excel_fixture_unchanged": true,
+    "original_checkpoint_unchanged": true,
+    "reports_generated": true,
+    "summary": {
+      "analizados": 77,
+      "aprobados": 32,
+      "revisar": 21,
+      "no_aprobados": 11,
+      "fallas_graves": 13,
+      "errores": 0,
+      "puntaje_minimo": 80
+    },
+    "outcomes": {
+      "APROBADO": 24,
+      "REVISAR": 21,
+      "NO_APROBADO": 11,
+      "FALLA_GRAVE": 13,
+      "APROBADO_ETIQUETA_CORREGIDA": 8
+    }
+  },
+  "same_362_comparison": {
+    "calls": 362,
+    "reviewed_r49": 290,
+    "before": {
+      "REVISAR": 290,
+      "APROBADO": 25,
+      "APROBADO_ETIQUETA_CORREGIDA": 27,
+      "FALLA_GRAVE": 15,
+      "NO_APROBADO": 5
+    },
+    "after": {
+      "REVISAR": 267,
+      "APROBADO": 38,
+      "NO_APROBADO": 11,
+      "FALLA_GRAVE": 21,
+      "APROBADO_ETIQUETA_CORREGIDA": 25
+    },
+    "audit_rows": 290,
+    "transcripts_and_accounts_preserved": true,
+    "all_13_groups": true,
+    "resolved_review_calls": 23,
+    "new_approvals": [
+      2,
+      25,
+      41,
+      77,
+      95,
+      134,
+      135,
+      218,
+      237,
+      261,
+      310
+    ],
+    "prior_approvals_removed": [],
+    "new_no_aprobado": [
+      16,
+      81,
+      89,
+      114,
+      119,
+      253
+    ],
+    "review_causes_before": {
+      "STATUS_INVALID": 268,
+      "ARCO_INCOMPLETE": 60,
+      "UNIDENTIFIED_CONTACT": 151,
+      "STATUS_NOT_CONFIRMED": 196,
+      "UNCERTAIN_DISCLOSURE": 113,
+      "CARD_REFERENCE": 4,
+      "CALLBACK_NOT_DELIVERED": 31,
+      "OFFENSIVE_LANGUAGE": 6,
+      "NEGOTIATION_INVALID_OR_UNCERTAIN": 5,
+      "MISTREATMENT_REPORT": 4,
+      "NO_COLLECTION_ATTEMPT": 3,
+      "SHORT_DURATION": 3,
+      "RECEIPT_UNCERTAIN": 1,
+      "WAIT_WITHOUT_RESUMPTION": 1
+    },
+    "review_causes_after": {
+      "STATUS_INVALID": 248,
+      "STATUS_NOT_CONFIRMED": 179,
+      "UNCERTAIN_DISCLOSURE": 107,
+      "CARD_REFERENCE": 3,
+      "CALLBACK_NOT_DELIVERED": 25,
+      "ARCO_INCOMPLETE": 54,
+      "OFFENSIVE_LANGUAGE": 6,
+      "UNIDENTIFIED_CONTACT": 112,
+      "MISTREATMENT_REPORT": 3,
+      "NEGOTIATION_INVALID_OR_UNCERTAIN": 3,
+      "SHORT_DURATION": 3,
+      "WAIT_WITHOUT_RESUMPTION": 1
+    }
+  },
+  "prior_regression": {
+    "evaluations": 1613,
+    "outcomes": {
+      "previous403": {
+        "REVISAR": 278,
+        "FALLA_GRAVE": 38,
+        "APROBADO": 51,
+        "NO_APROBADO": 11,
+        "APROBADO_ETIQUETA_CORREGIDA": 25
+      },
+      "previous100": {
+        "APROBADO": 21,
+        "REVISAR": 39,
+        "NO_APROBADO": 9,
+        "NO_APROBADO_MENOR_80": 25,
+        "APROBADO_ETIQUETA_CORREGIDA": 3,
+        "FALLA_GRAVE": 3
+      },
+      "previous103": {
+        "REVISAR": 70,
+        "FALLA_GRAVE": 8,
+        "APROBADO": 21,
+        "APROBADO_ETIQUETA_CORREGIDA": 3,
+        "NO_APROBADO_MENOR_80": 1
+      },
+      "previous1007": {
+        "REVISAR": 817,
+        "NO_APROBADO_MENOR_80": 62,
+        "NO_APROBADO": 18,
+        "APROBADO_ETIQUETA_CORREGIDA": 15,
+        "APROBADO": 80,
+        "FALLA_GRAVE": 15
+      }
+    },
+    "new_approvals": 16,
+    "prior_approvals_removed": 2,
+    "new_clear_nonapproval": 30,
+    "confirmed_privacy_preserved": true,
+    "source_unchanged": true,
+    "all_recomputed_with_final_code": true
+  },
+  "human_listening_declared": false,
+  "full_acoustic_retranscription_executed": false,
+  "native_windows_verified": false,
+  "offline_installer_with_users_delivered": false,
+  "remaining_review_count": 267,
+  "all_manual_review_resolved": false,
+  "original_290_review_calls_audited": true,
+  "future_preparation_source_synchronized": true
+}

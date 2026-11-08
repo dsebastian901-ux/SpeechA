@@ -35,7 +35,7 @@ RETAG = ('Habla MRS. Soy yo. Puede realizar un pago de 1000 pesos mañana. '
 
 CASES = [
     ('plan_aceptado', PLAN, BASE, 'APROBADO'),
-    ('queja_previa', PLAN+' Me habló una señorita y me habló bien grosera.', BASE, 'REVISAR'),
+    ('queja_previa', PLAN+' Me habló una señorita y me habló bien grosera.', BASE, 'NO_APROBADO'),
     ('groseria_al_final', PLAN+' Con una chingada.', BASE, 'REVISAR'),
     ('cuatro_digitos_repetidos', PLAN+' Le doy únicamente la terminación 3333, 3333.', BASE, 'APROBADO'),
     ('historial_transferencia', PAID+' Yo hice una transferencia ayer.', BASE, 'APROBADO'),

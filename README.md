@@ -1,17 +1,17 @@
-# MRS Speech Analytics — programa r49
+# MRS Speech Analytics — programa r50
 
-Programa completo para crear proyectos y procesar lotes desde la interfaz. Las correcciones se aplican desde el procesamiento inicial de todos los audios.
+Programa completo para crear proyectos y procesar lotes. Extraiga todo el ZIP en una carpeta nueva, abra **INICIAR_PROGRAMA.bat** y compruebe **3.6.19-r50**. Use el Python, las dependencias y el modelo local de Whisper de su instalación existente. Los pesos del modelo no se incluyen.
 
-Extraiga todo el ZIP en una carpeta nueva y abra **INICIAR_PROGRAMA.bat**. Compruebe **Versión 3.6.19-r49**. En **Procesamiento por lotes**, cargue audios y Excel. Utilice el Python, las dependencias y el modelo local de Whisper de su instalación existente. Los pesos del modelo no están incluidos.
+Las correcciones se aplican desde el procesamiento inicial. Se revisan las causas de REVISAR: identificación contextual, familiar/intermediario, recepción del recado, referencias de tarjeta, importes, ARCO, seguimiento de pagos y comprobantes, quejas, lenguaje ofensivo y espera. Se conserva la revisión cuando la evidencia sigue siendo insuficiente.
 
-Esta revisión distingue **NO_APROBADO** ante incumplimientos ordinarios comprobables y **REVISAR** ante incertidumbre. Las fallas graves conservan prioridad; una duda de seguridad no se cierra como incumplimiento ordinario. La duración mínima de 60 segundos ya existente se cierra como NO_APROBADO cuando está comprobada y no hay dudas de seguridad independientes. La regla de espera de 65 segundos se conserva.
+Se separan **NO_APROBADO** ante un incumplimiento ordinario claro, **FALLA_GRAVE** ante una falta crítica confirmada y **REVISAR** ante dudas. Una queja declarada puede cerrar NO_APROBADO; una pregunta o expresión incierta conserva revisión. Las dudas de seguridad independientes mantienen su prioridad.
 
-Se amplía el reconocimiento de aceptación de recados, parentesco y contactos de trabajo, dictado interrumpido y teléfono previamente anotado. Se corrigen falsas aceptaciones por frases del gestor y falsas identificaciones del titular. Los ecos de un fragmento de teléfono no acreditan un contacto completo. Se mejora la lectura del diálogo ARCO sin completar dominios dudosos ni omitir requisitos.
+Se corrigen teléfonos/terminaciones interpretados como tarjetas completas o importes, falsas identificaciones de titular y omisiones de parentesco. En ARCO se consideran correcciones posteriores del correo sin completar un dominio dudoso. Se distinguen envío anterior de comprobante y petición de uno nuevo. Los seguimientos por fallecimiento conservan el estatus original, según la instrucción de la usuaria.
 
-El contador final separa aprobados, NO_APROBADO, REVISAR, fallas graves y errores. Las copias NO_APROBADO van a **NO_APROBADOS**. Este es un resultado de evaluación, no un nuevo estatus de grabación. Se mantienen los nueve estatus operativos autorizados.
+El reporte por gestor cuenta solo las llamadas cuya clasificación sea REVISAR y separa no aprobados, fallas graves y errores técnicos. La nueva hoja **REVISION_PENDIENTE** detalla la causa, acción concreta, campo de evidencia y fragmentos/tiempos disponibles; los motivos de estatus dependientes no se presentan como llamadas adicionales.
 
-Al terminar se generan el reporte de calidad, las cuentas con estatus corregido y el reporte de motivos de no pago. Las copias con estatus corregido van a **APROBADOS_ETIQUETA_CORREGIDA**. Se conserva numero_de_tarjeta del Excel como fuente del identificador. El Excel y los audios originales se mantienen intactos.
+Al terminar se generan el reporte de calidad, las cuentas reetiquetadas y el reporte de motivos de no pago. Las copias con cambio de estatus siguen en **APROBADOS_ETIQUETA_CORREGIDA** y los NO_APROBADO en **NO_APROBADOS**. El Excel y los audios originales se conservan; numero_de_tarjeta del Excel sigue siendo la fuente del identificador.
 
-Consulte [REVISION_49_PROGRAMA.md](proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_49_PROGRAMA.md) y VALIDACION_R49.json para comprobaciones, cifras y límites. La comparación mantiene el mismo conjunto de llamadas y los textos recibidos; no se declara escucha humana ni nueva transcripción acústica de todo el lote. La revisión manual sigue siendo alta y no se garantiza una tasa de aprobación.
+Consulte REVISION_50_PROGRAMA.md y VALIDACION_R50.json. La validación distingue reglas sobre transcripciones recibidas, proyecto nuevo con ASR controlado y escucha humana. La atribución institucional nueva es textual y se limita a la misma cláusula; no se declara diarización o voz acústica identificada. No se garantiza eliminar toda revisión ni alcanzar una cuota de aprobaciones.
 
-Esta entrega usa el entorno Python ya instalado. El futuro instalador autónomo offline con usuarios y permisos se desarrolla por separado.
+Esta entrega utiliza el entorno Python existente. El futuro instalador autónomo offline con usuarios y permisos se prepara por separado.

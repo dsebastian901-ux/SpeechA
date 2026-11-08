@@ -37,3 +37,9 @@ El usuario acepta identificación mediante pregunta nominal, respuesta y convers
 - El usuario confirmó: NO_APROBADO ante incumplimiento claro y REVISAR ante dudas. El rechazo expreso de un recado puede cerrarse como NO_APROBADO cuando no haya dudas de seguridad independientes. Las fallas graves conservan prioridad.
 - NO_APROBADO es un resultado de evaluación, no un estatus nuevo de grabación. Separarlo de REVISAR en carpetas, contador, GUI y reportes. La duración mínima ya existente de 60 segundos puede cerrarse de esa forma cuando está comprobada; no confundirla con la espera de 65 segundos.
 - Un dato fonético o una repetición del teléfono no certifican sus dígitos. No completar un número parcial por ecos. La incapacidad del titular para anotar un WhatsApp no equivale al rechazo de un recado de un tercero.
+
+## Decisiones y correcciones de r50 (08/nov/2026)
+- La usuaria indicó conservar el estatus original en seguimientos por fallecimiento. La conservación requiere evidencia del seguimiento y no exime privacidad, trato ni otros controles.
+- Las quejas declaradas pueden cerrar NO_APROBADO cuando tienen evidencia completa y no subsisten dudas de seguridad independientes. Una pregunta/hipótesis o un registro incompleto no se convierte en queja confirmada para cerrar.
+- Separar ERROR técnico de REVISAR de calidad y contar únicamente REVISAR en el resumen por gestor. Mantener el detalle de las causas y evidencia en REVISION_PENDIENTE.
+- Las atribuciones institucionales nuevas son textuales, limitadas a la misma cláusula con autopresentación; no son diarización ni escucha humana y no se extienden a otros turnos.

@@ -12,7 +12,7 @@ def agent_continuation(source,start,end):
     before=source[max(0,start-55):start]
     after=source[end:end+100]
     return bool(re.search(r'\b(?:como|lo que|tal como|por eso)\s*$',before)
-        or re.match(r'[, :]*(?:hablo|hablamos|nos comunicamos|me comunico|estamos (?:hablando|llamando)|mi nombre es|soy (?:el|la) asesor)\b',after))
+        or re.match(r'[, :]*(?:hablo|hablamos|nos comunicamos|me comunico|estamos (?:hablando|llamando)|mi nombre es|aqui seria importante|aqui es importante|le reitero|soy (?:el|la) asesor)\b',after))
 
 
 def phone_present(text):
@@ -180,6 +180,14 @@ def existing_callback_confirmation(text,segments=()):
         if re.match(r'\s*\?',source[match.end():])or re.search(r'\b(?:no|diga que|dice que|dijo que)\s*$',source[max(0,match.start()-70):match.start()]):continue
         if _role_at(text,segments,match.start('answer'))in{'TERCERO','TITULAR','INTERLOCUTOR'}:continue
         found.append(_item(source,match,'RECONOCE_CONTACTO_PROPORCIONADO_EN_EL_DIALOGO',text,segments))
+    repeated=re.compile(r'\b(?P<answer>(?:si[, ]+)?(?:de hecho[, ]+)?es el mismo numero)\b')
+    for match in repeated.finditer(source):
+        before=source[max(0,match.start()-650):match.start()]
+        if not re.search(r'\b(?:repetir|repita|corroborar|corrobora|anotar|nota|dictar|dictado)\b',before):continue
+        if not MESSAGE.search(before)or not phone_present(before):continue
+        if re.match(r'\s*(?:\?|de (?:la |su )?(?:tarjeta|cuenta|titular))',source[match.end():]):continue
+        if _role_at(text,segments,match.start('answer'))in{'GESTOR','TITULAR'}or BAD_PREFIX.search(before[-70:]):continue
+        found.append(_item(source,match,'RECONOCE_CONTACTO_REPETIDO_TRAS_DICTADO',text,segments,'answer'))
     return found
 
 

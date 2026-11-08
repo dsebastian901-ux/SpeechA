@@ -123,8 +123,9 @@ def find_reference(text, expected=''):
         before=s[max(0,number_start-420):number_start]
         intentions=list(CALLBACK_INTENT.finditer(before))
         phone_length=len(digits)==10 or (len(digits)==20 and digits[:10]==digits[10:])
-        if (phone_length and intentions and not EXPLICIT_REFERENCE.search(before[intentions[-1].end():])):
-            callbacks.append(dict(record,method='TELEFONO_CON_SOLICITUD_DE_LLAMADA'))
+        echoed_short_phone = len(digits) in {8,9,11,12} and ctx.group()=='tarjeta'
+        if ((phone_length or echoed_short_phone) and intentions and not EXPLICIT_REFERENCE.search(before[intentions[-1].end():])):
+            callbacks.append(dict(record,method=('CONTACTO_DICTADO_CON_ECOS_SIN_VALIDAR_DIGITOS' if echoed_short_phone else 'TELEFONO_CON_SOLICITUD_DE_LLAMADA'),contact_digits_verified=False))
             continue
         if len(digits)==32 and digits[:16]==digits[16:]:
             record["digits"]=digits[:16]  # Repetición completa, no pares adivinados.

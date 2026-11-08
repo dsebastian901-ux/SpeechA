@@ -103,12 +103,42 @@ def message_contact_evidence(text,segments=()):
             if BAD_PREFIX.search(before[-65:]) or re.search(r'\b(?:diga|digale|repita|gracias por)\b[^.!?]{0,50}$',before):continue
             if pattern is written and not _outside_question(source,match.start(),match.end()):continue
             if pattern is written:
+                # «Le digo, aquí sería importante...» sigue siendo una frase del
+                # emisor; una promesa breve del receptor debe cerrar su cláusula.
+                phrase=match['answer']
+                if not phrase.startswith(('yo ','si ','ya ')) and not re.search(r'\ben cuanto\b',phrase):
+                    if not re.match(r'\s*(?:[.!]|$)',source[match.end():]):continue
                 from app.services.message_dialogue_evidence import agent_continuation
                 if agent_continuation(source,match.start(),match.end()):continue
             if pattern is dictate and not any(0<=match.start()-o.end()<=650 for o in offers):continue
             if pattern is dictate and re.match(r'\s*(?:usted )?(?:que|cuanto|de que|por que|cual)\b',source[match.end():]):continue
             if pattern is dictate and not (callback_numbers(nearby) or callback_dictation_fragments(nearby)):continue
             result['acceptance'].append(_item(source,match,method,text,segments,'answer'))
+    # Preparación expresa del receptor tras ofrecer el contacto, aunque haya
+    # una aclaración breve entre la pregunta y «listo, dígame».
+    ready_offers=offers+list(re.finditer(r'\b(?:le )?(?:podria|pudiera|puedo) dictar(?:le)? un numero(?: de llamada| telefonico)?\b',source))
+    ready=re.compile(r'\b(?P<answer>listo[, ]+diga(?:me|nme))\b')
+    for match in ready.finditer(source):
+        before=source[max(0,match.start()-650):match.start()]
+        nearby=before+source[match.start():match.end()+700]
+        if (not _recipient(text,segments,match.start('answer')) or not _outside_question(source,match.start(),match.end())
+                or BAD_PREFIX.search(before[-65:]) or not ready_offers
+                or not any(0<=match.start()-o.end()<=650 for o in ready_offers)):continue
+        if not MESSAGE.search(nearby) or not (callback_numbers(nearby) or callback_dictation_fragments(nearby)):continue
+        if re.search(r'\b(?:no puedo|no quiero|no le voy|solo si)\b',source[match.end():match.end()+65]):continue
+        result['acceptance'].append(_item(source,match,'RECEPTOR_LISTO_PARA_DICTADO_OFRECIDO',text,segments,'answer'))
+    # El receptor puede transmitir a Recursos Humanos en una línea laboral
+    # sin afirmar que conoce personalmente al titular. Exigir el aviso real.
+    relay=re.compile(r'\b(?P<answer>(?:(?:yo|y) )?(?:ahorita|ahora) lo paso(?:[, ]+le digo)? a recursos humanos)\b')
+    for match in relay.finditer(source):
+        if not _recipient(text,segments,match.start('answer')) or not _outside_question(source,match.start(),match.end()):continue
+        before=source[max(0,match.start()-1800):match.start()]
+        if BAD_PREFIX.search(before[-65:]) or re.search(r'\b(?:no|si|cuando|diga que|dice que|dijo que|repita que)[, ]*$',before[-60:]):continue
+        if not re.search(r'\b(?:telefono (?:es )?(?:de trabajo|laboral)|linea laboral|numero empresarial)\b',before):continue
+        if not MESSAGE.search(before) or not (callback_numbers(before) or callback_dictation_fragments(before)):continue
+        record=_item(source,match,'RECEPTOR_TRANSMITE_CONTACTO_A_RECURSOS_HUMANOS',text,segments,'answer')
+        result['acceptance'].append(record)
+        result['work_relationships'].append(dict(record,method='LINEA_LABORAL_Y_TRASLADO_A_RECURSOS_HUMANOS'))
     receive=re.compile(r'\b(?P<answer>(?:digame|paseme) (?:el |la |un |una )?(?:recado|mensaje|razon)(?: por favor)?)\b')
     for match in receive.finditer(source):
         before=source[max(0,match.start()-65):match.start()]
@@ -212,7 +242,7 @@ def callback_dictation_fragments(text):
         if re.search(r'\b(?:no (?:le )?(?:voy a|puedo|quiero) (?:dar|dictar|dejar)|diga que|dice que|por ejemplo)\b',before):continue
         tail=source[cue.end():cue.end()+420];tokens=list(callback_token.finditer(tail))
         if not tokens or tokens[0].start()>180:continue
-        if re.search(r'\b(?:tarjeta|terminacion|saldo|pesos|folio|referencia|fecha|mensualidades|pago)\b',tail[:tokens[0].start()]):continue
+        if re.search(r'\b(?:terminacion|saldo|pesos|folio|referencia|fecha|mensualidades|pago|(?:numero de |de la |de su )tarjeta)\b',tail[:tokens[0].start()]):continue
         groups=[[tokens[0]]]
         for token in tokens[1:]:
             if gap.fullmatch(tail[groups[-1][-1].end():token.start()]):groups[-1].append(token)
@@ -220,7 +250,7 @@ def callback_dictation_fragments(text):
         for group in groups:
             # Una corrección y un nuevo dictado pueden aparecer después del primero.
             prefix=tail[:group[0].start()]
-            if re.search(r'\b(?:tarjeta|terminacion|saldo|pesos|folio|referencia|fecha|mensualidades|pago)\b',prefix):continue
+            if re.search(r'\b(?:terminacion|saldo|pesos|folio|referencia|fecha|mensualidades|pago|(?:numero de |de la |de su )tarjeta)\b',prefix):continue
             values=[_digits(t.group()) for t in group]
             uncertain=[t.group()for t,v in zip(group,values)if v is None]
             units=sum(len(v)if v is not None else 2 for v in values)

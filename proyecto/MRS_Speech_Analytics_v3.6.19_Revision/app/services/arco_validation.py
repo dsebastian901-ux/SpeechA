@@ -21,7 +21,7 @@ def document_requests(text, segments=()):
         found={}
         for key,pattern in [('ine',ID_DOCUMENT),('line_proof',LINE_DOCUMENT)]:
             for match in re.finditer(r'\b'+pattern+r'\b',block):
-                prefix=block[max(0,match.start()-200):match.start()]
+                prefix=block[max(0,match.start()-500):match.start()]
                 if not re.search(REQUEST,prefix):continue
                 request_match=list(re.finditer(REQUEST,prefix))[-1]
                 request_prefix=prefix[max(0,request_match.start()-70):request_match.start()]

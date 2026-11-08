@@ -98,6 +98,15 @@ def receipt_request_evidence(text, segments=()):
             if re.search(r'\b(?:no|nunca|diga que|repita que)\s*$',value[:match.start()]):continue
             if re.search(r'\bhace (?:dos|tres|cuatro|cinco|\d+) anos\b',value):continue
             received.append(dict(unit,phrase=match.group(),method='ENVIO_REPORTADO_EN_CONVERSACION'))
+    # Consultar si ya lo envió y recibir una respuesta afirmativa es seguimiento,
+    # no una solicitud deformada. No certifica recepción bancaria del documento.
+    past_question=re.compile(r'\b(?:ya )?(?:mando|envio|mandaste|enviaste) (?:el |su )?'+RECEIPT+r'[^?!.]{0,90}\?\s*(?P<answer>si|ya lo mande|ya lo envie)\b')
+    for match in past_question.finditer(source):
+        from app.services.conversation_evidence import _role_at
+        if _role_at(text,segments,match.start('answer'))=='GESTOR':continue
+        if re.search(r'\b(?:no|dice que|dijo que|diga que)\s*$',source[max(0,match.start()-60):match.start()]):continue
+        if re.match(r'\s*\?',source[match.end():]):continue
+        received.append({'text':match.group(),'method':'ENVIO_REPORTADO_EN_RESPUESTA_DE_SEGUIMIENTO','human_verified':False})
     # El lector anterior reconocía un comprobante próximo a WhatsApp. Si ASR
     # conserva ambos pero perdió la petición, no convertir esa duda en omisión.
     # Tampoco certificar cumplimiento: queda pendiente de cotejo del audio.

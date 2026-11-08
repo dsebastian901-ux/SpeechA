@@ -19,7 +19,7 @@ def analyze(tail):
 def test_prior_mistreatment_blocks_paid_followup(complaint):
     a=analyze(complaint)
     assert a.metadata['quality_checks']['queja_maltrato_detectada']
-    assert a.metadata['shared_classification']['clasificacion']=='REVISAR'
+    assert a.metadata['shared_classification']['clasificacion']=='NO_APROBADO'
     assert 'PEN_QUEJA_MALTRATO' in {p['id'] for p in a.metadata['penalties']}
     assert not a.metadata['shared_classification']['aprobado']
 

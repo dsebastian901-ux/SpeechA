@@ -12,7 +12,8 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
     pattern=re.compile(r'\b(?:no (?:quiero|puedo|voy a) (?:recibir|tomar|pasar|dar|transmitir) (?:el |un |su )?(?:recado|mensaje)|'
                        r'no (?:le |se lo )?(?:voy a|puedo|quiero) (?:pasar|dar|transmitir) (?:el |un |su )?(?:recado|mensaje)|'
                        r'no soy (?:su )?mensajer[oa]|no me interesa recibir (?:el |su )?recado|'
-                       r'no tengo (?:donde|con que) (?:anotar|apuntar)|no puedo anotar)\b')
+                       r'no tengo (?:donde|con que) (?:anotar|apuntar)|no puedo (?:anotar|apuntar|anotarlo|apuntarlo)|'
+                       r'no traigo (?:aqui )?(?:en que|con que|como) (?:anotar|apuntar))\b')
     for unit in sentence_evidence(text,segments):
         value=normalize(unit['text']);at=source.find(value,cursor)
         if at>=0:cursor=at+len(value)
@@ -38,7 +39,25 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
             'speaker_role':_role_at(text,segments,match.start('answer')),'human_verified':False,
             'method':'NEGATIVA_DIRECTA_A_OFERTA_POSITIVA_DE_RECADO'})
     none={'confirmed':False,'evidence':[],'reason':''}
-    if not events:return none
+    if not events:
+        # Imposibilidad de anotar seguida de cierre para llamar después. Una
+        # alternativa propuesta sin entrega no equivale a recado recibido.
+        unable=re.search(r'\bno (?:puedo (?:anotar|apuntar|anotarlo|apuntarlo)|tengo[^.!?]{0,35}\b(?:anotar|apuntar))\b',source)
+        deferred=re.search(r'\b(?:me comunico|nos comunicamos|le marco|me comunicare|me voy a comunicar|nos comunicaremos) (?:nuevamente |entonces )?(?:mas tarde|en otro momento|nuevamente)\b',source[-220:])
+        if unable and deferred and not re.search(r'\b(?:problemas?|dificultades?|nada que|impedimentos?)\b',unable.group()):
+            before=source[max(0,unable.start()-600):unable.start()]
+            from app.services.message_dialogue_evidence import callback_available
+            if (not any(source.rfind(normalize(e.get('text','')))>unable.end() for e in acceptance if e.get('text')) and not callback_available(text,segments) and re.search(r'\b(?:recado|numero|telefono)\b',before)
+                    and _role_at(text,segments,unable.start())not in{'GESTOR','TITULAR'}
+                    and not re.search(r'\b(?:dice que|dijo que|diga que|por ejemplo|si)\s*$',before[-90:])):
+                return {'confirmed':True,'evidence':[{'text':source[unable.start():],'method':'NO_PUEDE_ANOTAR_Y_SE_CIERRA_PARA_LLAMAR_DESPUES','human_verified':False}],
+                    'reason':'El interlocutor no puede anotar y la llamada se cierra para llamar después, sin recado recibido.'}
+        final_contact = re.search(r'\b(?:ya no (?:tenemos|tengo) comunicacion|no (?:tengo|tenemos) (?:como|forma de) (?:contactarlo|contactarla|avisarle)|no se nada de (?:el|ella))\b',source)
+        ended = re.search(r'\b(?:hasta luego|gracias|me (?:voy a seguir comunicando|comunico (?:mas tarde|en otro momento)))\b',source[-180:])
+        if final_contact and ended and not acceptance and _role_at(text,segments,final_contact.start())not in{'GESTOR','TITULAR'}:
+            return {'confirmed':True,'evidence':[{'text':final_contact.group(),'method':'IMPOSIBILIDAD_EXPRESA_DE_TRANSMITIR_RECADO_CON_CIERRE','human_verified':False}],
+                    'reason':'El interlocutor declara que no tiene forma de contactar al titular y la llamada cierra sin aceptación del recado.'}
+        return none
     last=max(e['position']for e in events)
     for evidence in acceptance:
         value=normalize(evidence.get('text',''));at=source.rfind(value)
@@ -49,7 +68,20 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
 
 def definitive_rejection(metadata,findings,duration_seconds):
     blocking=[f for f in findings if f['severity']in{'REVIEW','CRITICAL'}]
-    if any(f['severity']=='CRITICAL'or f['code']not in ORDINARY_REVIEW_CODES for f in blocking):return None
+    treatment=metadata.get('treatment_validation')or{}
+    from app.services.message_contact_evidence import _outside_question
+    confirmed_complaint=False
+    for evidence in treatment.get('mistreatment_report_evidence')or[]:
+        value=normalize(evidence.get('text',''));phrase=normalize(evidence.get('phrase',''));at=value.find(phrase)if phrase else-1
+        if (at>=0 and 'speaker_role'in evidence and evidence['speaker_role']!='GESTOR'
+                and _outside_question(value,at,at+len(phrase))
+                and not re.search(r'\b(?:parece|quizas|tal vez|supongo|podria ser|no se si)\b',value[:at])):
+            confirmed_complaint=True;break
+    allowed=ORDINARY_REVIEW_CODES|({'MISTREATMENT_REPORT'}if confirmed_complaint else set())
+    if any(f['severity']=='CRITICAL'or f['code']not in allowed for f in blocking):return None
+    if confirmed_complaint:
+        return {'rule_group':11,'code':'CONFIRMED_SERVICE_COMPLAINT','severity':'CONFIRMED_NONCRITICAL',
+            'source_field':'treatment_validation','reasons':['Queja de atención previa expresada en la conversación; bloquea aprobación por criterio operativo.']}
     refused=metadata.get('explicit_message_refusal')or{}
     if refused.get('confirmed'):
         return {'rule_group':4,'code':'EXPLICIT_MESSAGE_REFUSAL','severity':'CONFIRMED_NONCRITICAL',

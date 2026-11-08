@@ -76,6 +76,10 @@ def mistreatment_reports(text, segments, phrases):
                 r'nunca me han (?:contestado|atendido))\b', value))
         complaint_context=bool(re.search(r'\b(?:aclaracion|reportar|reporte|investigar|investigacion|tarjeta|compras|companeros?|cobrar|cobranza|estado de cuenta|desglose|folio)\b',value+' '+previous))
         if complaint_context:
+            # Queja expresa de capacidad/solución del servicio; no inferir
+            # maltrato de una duda bancaria ni de una hipótesis del gestor.
+            matches.extend(re.finditer(r'\b(?:incompetencia de (?:tu|su|este|ese) equipo|'
+                r'no tienen (?:al |el )?personal capacitado para (?:resolver|atender))\b',value))
             matches.extend(re.finditer(r'\b(?:nunca|no) me (?:dijeron|dijo|avisaron|aviso|informaron|informo|explicaron|explico)\b[^.!?]{0,100}\b(?:costo|comision|anualidad)\b',value))
             matches.extend(re.finditer(r'\b(?:nunca me avisaron|no me (?:avisaron|dieron solucion)|'
                 r'no me (?:lo |la )?quisieron (?:dar|resolver)|'

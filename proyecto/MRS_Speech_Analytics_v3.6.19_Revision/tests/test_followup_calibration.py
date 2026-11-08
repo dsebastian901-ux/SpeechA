@@ -76,7 +76,7 @@ def test_user_policy_retains_original_status_in_verified_payment_followup(status
         estatus_grabacion=status,pago_minimo='700',saldo_total='3000')
     s=a.metadata['status_validation'];n=a.metadata['negotiation_validation']
     assert s['matches'] and s['policy_source']=='ACLARACION_USUARIO_20261028'
-    assert s['detected_status']=='PAGO REPORTADO / ACLARACION'
+    assert s['detected_status']=='ACLARACION'
     assert n['payment_followup_case'] and not n['commitment_confirmed']
     assert a.metadata['final_result']=='APROBADO'
     assert not any(p['id'] in {'PEN_CONV_LUGARES','PEN009'} for p in a.metadata['penalties'])
@@ -224,7 +224,7 @@ def test_receipt_followup_does_not_approve_new_complaint_variants(complaint):
     a=analyze('Habla MRS. Soy yo. Ya pagué 900 pesos. Envíe comprobante por WhatsApp. '+complaint,
               estatus_grabacion='CONVENIO',pago_minimo='700')
     assert a.metadata['quality_checks']['queja_maltrato_detectada']
-    assert a.metadata['final_result']=='REVISAR'
+    assert a.metadata['final_result']=='NO_APROBADO'
 
 
 def test_negated_mistreatment_complaint_is_not_an_actual_complaint():

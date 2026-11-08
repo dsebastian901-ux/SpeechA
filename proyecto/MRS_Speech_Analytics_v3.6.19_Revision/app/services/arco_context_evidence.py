@@ -11,7 +11,9 @@ def spoken_privacy_email(text,segments=()):
     none={'detected':False,'address':'','method':'SIN_DICTADO_CONFIRMABLE','evidence':''}
     pattern=re.compile(r'\bprivacidad(?:(?P<digit>1)(?=arroba|a roba|\b)|\b)(?P<local>[^@]{0,140}?)(?<![a-z])(?:arroba|a\s+roba)\s*'
         r'(?P<domain>.{0,350}?bradesco\b.{0,150}?(?:\bpunto[,. ]+com[,. ]+(?:(?:si|aja|ok)[,. ]+)*punto[,. ]+(?:mx|eme\s+equis)\b|\.com\.mx\b))')
-    for match in pattern.finditer(source):
+    for anchor in re.finditer(r'\bprivacidad',source):
+        match=pattern.match(source,anchor.start())
+        if not match:continue
         if _role_at(text,segments,match.start()) in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
         before=source[max(0,match.start()-70):match.start()]
         block=match.group()

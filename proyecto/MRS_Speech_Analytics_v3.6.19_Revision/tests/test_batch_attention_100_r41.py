@@ -72,15 +72,15 @@ def test_batch_of_100_routes_high_scores_and_generates_both_final_reports(tmp_pa
     assert len(batch.process_all(output_directory=str(output))) == 100
     assert len(companion_calls) == 1
     assert not batch.nonpayment_report_error
-    assert Counter(i['classification']['clasificacion'] for i in batch.items) == {'APROBADO': 25, 'REVISAR': 75}
+    assert Counter(i['classification']['clasificacion'] for i in batch.items) == {'APROBADO':25,'NO_APROBADO':25,'REVISAR':50}
     for index, item in enumerate(batch.items):
-        expected = 'APROBADO' if index % 4 == 0 else 'REVISAR'
+        expected = 'APROBADO' if index % 4 == 0 else 'NO_APROBADO' if index % 4 == 1 else 'REVISAR'
         assert item['status'] == 'completado', item.get('message')
         assert item['compliance_score'] >= 80
         assert item['result'] == payloads[item['file_name']], 'Conservar ASR original'
         assert item['classification']['clasificacion'] == expected
         copied = Path(item['classified_audio_path'])
-        assert copied.parent.name == ('APROBADOS' if expected == 'APROBADO' else 'REVISAR')
+        assert copied.parent.name == ('APROBADOS' if expected == 'APROBADO' else 'NO_APROBADOS' if expected=='NO_APROBADO' else 'REVISAR')
         assert copied.read_bytes() == sources[index].read_bytes()
     checkpoint = json.loads(Path(batch.checkpoint_path).read_text(encoding='utf-8'))
     assert checkpoint['completed'] and len(checkpoint['items']) == 100
@@ -90,7 +90,7 @@ def test_batch_of_100_routes_high_scores_and_generates_both_final_reports(tmp_pa
         assert len(rows) == 101
         headers = rows[0]
         classifications = Counter(row[headers.index('Clasificación física')] for row in rows[1:])
-        assert classifications == {'APROBADO': 25, 'REVISAR': 75}
+        assert classifications == {'APROBADO':25,'NO_APROBADO':25,'REVISAR':50}
         assert sum(row[headers.index('Queja de atención/maltrato')] == 'SI' for row in rows[1:]) == 25
         assert sum(str(row[headers.index('Validación espera 65 s')]).startswith('REVISAR') for row in rows[1:]) == 50
     finally:

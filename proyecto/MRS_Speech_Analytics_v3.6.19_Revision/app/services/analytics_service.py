@@ -426,6 +426,7 @@ class AnalyticsService:
         analysis.metadata["quality_contact_type"] = compliance.get(
             "contact_type", "CONTACTO NO DETERMINADO"
         )
+        analysis.metadata["death_followup_validation"] = compliance.get("death_followup_validation", {})
         analysis.metadata["explicit_message_refusal"] = compliance.get("explicit_message_refusal", {})
         analysis.metadata["message_delivery_validation"] = compliance.get("message_delivery_validation", {})
         analysis.metadata["contact_conflict_validation"] = compliance.get("contact_conflict_validation", {})
@@ -1122,6 +1123,8 @@ class AnalyticsService:
         # DETECCIÓN DE INTERLOCUTOR / ESTATUS
         # ---------------------------------------------------------
         segments = context.get("_segments") or []
+        from app.services.death_followup_evidence import death_followup
+        death_followup_validation=death_followup(text,segments)
         from app.services.dialogue_evaluation import scan_dialogue, pending_status, full_payment_refusal
         dialogue = scan_dialogue(text, segments)
         unknown_debtor = unknown_debtor_statement(text, segments)
@@ -1136,6 +1139,9 @@ class AnalyticsService:
         if not unknown_response['confirmed'] and not contradictory_contact_response:
             from app.services.arco_dialogue_evidence import listed_knowledge_denial
             unknown_response = listed_knowledge_denial(text,segments)
+        if not unknown_response['confirmed'] and not contradictory_contact_response:
+            from app.services.contact_dialogue_resolution import expanded_unknown_response
+            unknown_response = expanded_unknown_response(text,segments)
         unknown_debtor = unknown_debtor or unknown_response['confirmed']
 
         recado_assessment = assess_recado(text, context.get("_segments") or [])
@@ -1170,6 +1176,11 @@ class AnalyticsService:
             r"\b(?:soy yo|(?:si )?soy (?:el |la )?titular|habla (?:el |la )titular)\b")
         contact_confirmation = holder_confirmation(text, segments)
         titular = titular or contact_confirmation["confirmed"]
+        from app.services.contact_dialogue_resolution import declared_intermediary
+        declared_contact=declared_intermediary(text,segments)
+        if declared_contact['confirmed']:
+            titular=False;third_party=True
+            contact_confirmation={'confirmed':False,'method':'RESPUESTA_EXPLICITA_DE_INTERMEDIARIO','evidence':declared_contact['evidence']}
         associate_confirmation = associate_relationship(text, segments)
         third_party = third_party or (not titular and associate_confirmation['confirmed'])
         from app.services.arco_context_evidence import positive_knowledge_denial
@@ -1220,6 +1231,8 @@ class AnalyticsService:
             contact_type = "CONTACTO NO DETERMINADO"
             detected_status = ""
 
+        if death_followup_validation['valid'] and contact_type=='CONTACTO NO DETERMINADO':
+            contact_type='TERCERO';third_party=True
         relationship = ""
         if spouse:
             relationship = "ESPOSO/A"
@@ -1418,6 +1431,12 @@ class AnalyticsService:
         recado_callback = recado_callback or bool(recado_assessment.get('directed_messages'))
         from app.services.message_dialogue_evidence import callback_modal_instruction
         recado_callback = recado_callback or bool(callback_modal_instruction(text,segments))
+        from app.services.recado_receipt_resolution import expanded_return_instruction
+        expanded_return=expanded_return_instruction(text,segments)
+        recado_callback=recado_callback or bool(expanded_return)
+        if expanded_return and recado_recibido_explicito:
+            from app.services.message_dialogue_evidence import callback_available
+            recado_transmitted=recado_transmitted or callback_available(text,segments)
         recado_callback = recado_callback or bool(re.search(
             r'\bque (?:le )?(?:marque|llame) (?:a |al |a ese |ese |a este |este )?(?:numero|telefono)\b', normalized))
         recado_callback = recado_callback or bool(
@@ -2543,7 +2562,7 @@ class AnalyticsService:
             return not targets or targets[-1].group() in {"tarjeta", "plastico"}
         # Terminación explícita: aceptar exactamente 4 dígitos cercanos.
         for cm in re.finditer(
-            r"(?:terminacion|terminación|termina\s+en|ultimos?\s+(?:cuatro|4)\s+digitos?|"
+            r"(?:terminacion|terminación|termina(?:\s+en)?|termino\s+en|ultimos?\s+(?:cuatro|4)\s+digitos?|"
             r"últimos?\s+(?:cuatro|4)\s+dígitos?).{0,25}?(\d{4})\b", normalized, re.I):
             if refers_to_card(cm):
                 card_mentions.append({"digits": cm.group(1), "evidence": cm.group(0).strip()})
@@ -2567,11 +2586,17 @@ class AnalyticsService:
             for cm in re.finditer(r"\bterminacion\s+(\d{4})\b(?=\s*,\s*\d{1,3}\b)", normalized)
             if refers_to_card(cm)]
         for cm in re.finditer(
-            r"(?:terminacion|terminación|termina\s+en|ultimos?\s+(?:cuatro|4)\s+digitos?|últimos?\s+(?:cuatro|4)\s+dígitos?).{0,25}?(\d{5,12})\b",
+            r"(?:terminacion|terminación|termina(?:\s+en)?|termino\s+en|ultimos?\s+(?:cuatro|4)\s+digitos?|últimos?\s+(?:cuatro|4)\s+dígitos?).{0,25}?(\d{5,12})\b",
             normalized, re.I):
             if refers_to_card(cm):
                 ambiguous_card_mentions.append({"digits": cm.group(1), "evidence": cm.group(0).strip()})
 
+        # Una terminación escrita con puntos/espacios sigue siendo identificador,
+        # pero cinco o más dígitos no se recortan a cuatro ni se validan como dinero.
+        for cm in re.finditer(r"\b(?:terminacion|termina(?: en)?|termino en)\s*(?:es )?(\d(?:[\d .,\-]{0,24}\d)?)",normalized):
+            digits = re.sub(r"\D", "", cm.group(1))
+            if 5 <= len(digits) <= 12 and refers_to_card(cm):
+                ambiguous_card_mentions.append({"digits":digits,"evidence":cm.group(0)})
         card_validation = "NO SE PROPORCIONO TARJETA"
         card_validation_reason = "No se detectó un número/terminación de tarjeta proporcionado en la llamada."
         card_detected = ""
@@ -2747,7 +2772,7 @@ class AnalyticsService:
         # Excel identifies the expected workflow, not the actual person speaking.
         # In a recado, an unverified recipient remains protected; only positive
         # evidence that the speaker is the cardholder can override that assumption.
-        expected_third_party = excel_status in protected_third_statuses
+        expected_third_party = excel_status in protected_third_statuses and not titular
         observed_third_party = detected_status in protected_third_statuses
         is_third_party_contact = bool(observed_third_party or (expected_third_party and not titular))
 
@@ -2828,7 +2853,7 @@ class AnalyticsService:
                 r"\b(?:tendria que|tendriamos que|tiene que|puede|puedes|podria|podriamos|necesitaria) (?:realizar|aplicar|hacer) (?:un |el |su )?(?:pago|deposito)\b|"
                 r"\b(?:se le esta solicitando|se le esta pidiendo) (?:un |el |su )?(?:pago|\d+|dos mil|mil)\b|"
                 r"\b(?:cuando|que dia) (?:lo )?estaria (?:haciendo|pagando)|"
-                r"\bpodemos contar con (?:su |el )?pago\b")
+                r"\b(?:podemos contar con|contariamos con|contamos con) (?:su |el |algun )?pago\b")
             or agent_statement(text, segments,
                 r"\b(?:le requiere|le solicita|requeriria|el minimo que nos requiere|el banco le requiere)\b[^.!?]{0,95}"
                 r"\b(?:pago|pesos|mil|cantidad)\b")
@@ -2986,7 +3011,7 @@ class AnalyticsService:
         payment_followup_case = bool(payment_confirmation_case and (
             requests_payment_receipt or payment_registration or agent_statement(text, segments,
                 r"\b(?:tiene|cuenta con|mande|envie|comparta|enviar|mandar|enviarnos|haga llegar)\b[^.!?]{0,60}"
-                r"\b(?:comprobante|captura|ticket)\b") or receipt_followup_question))
+                r"\b(?:comprobante|captura|ticket)\b") or receipt_followup_question or (not negotiation_attempt and agent_statement(text,segments,r'\batencion al cliente\b') and re.search(r'\bsi el pago ya se ve reflejado\b',normalized))))
         new_payment_proposals = remaining_payment_proposals(text, segments)
         unaccepted_new_payment_instruction = bool(is_convenio and payment_confirmation_case
             and not confirms_commitment and (bool(new_payment_proposals) or agent_statement(text, segments,
@@ -3035,9 +3060,9 @@ class AnalyticsService:
                 status_evidence = commitment_confirmation["evidence"]
                 status_evidence_method = "SIN_COMPROMISO_FIRME_RESPUESTA_EXPLICITA"
             elif payment_confirmation_case and not confirms_commitment and not (negotiation_attempt and not payment_followup_case):
-                detected_status = "PAGO REPORTADO / ACLARACION"
-                status_detection_confidence = "MEDIA"
-                status_evidence_method = "PAGO_ANTERIOR_REPORTADO"
+                detected_status = "ACLARACION" if payment_followup_case else "PAGO REPORTADO / ACLARACION"
+                status_detection_confidence = "ALTA" if payment_followup_case else "MEDIA"
+                status_evidence_method = "SEGUIMIENTO_DE_PAGO_REPORTADO_SIN_ACREDITACION_BANCARIA" if payment_followup_case else "PAGO_ANTERIOR_REPORTADO"
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
             if recado_real and detected_status.startswith('MENSAJE '):
@@ -3200,6 +3225,15 @@ class AnalyticsService:
             status_validation["review_required"] = True
             status_validation["evidence_method"] = "TERCERO_SIN_RECADO_CONFIRMADO"
             status_validation["reasons"].append("Tercero identificado sin recado efectivamente confirmado; revisar conversación.")
+        if death_followup_validation['valid'] and excel_status:
+            status_validation.update(matches=True,valid=True,review_required=False,reasons=[],
+                detected_status=canonical_excel_status,conversation_event='SEGUIMIENTO_DE_DEFUNCION_REPORTADA',
+                detection_confidence='ALTA',evidence_method='SEGUIMIENTO_DEFUNCION_ESTATUS_ORIGINAL_CONSERVADO',
+                evidence=' / '.join(u['text']for u in death_followup_validation['evidence']),
+                policy_source=death_followup_validation['policy_source'],status_preserved_by_policy=True)
+            status_validation.pop('recado_evidence',None)
+            message_delivery_validation={'review_required':False,'reason':'Seguimiento documental por fallecimiento; no es nuevo recado.','evidence':[]}
+            message_refusal_validation={'confirmed':False,'evidence':[],'reason':'No aplica rechazo de recado en seguimiento documental.'}
         if excel_status and status_validation["matches"] is None:
             status_validation["valid"] = False
             status_validation["review_required"] = True
@@ -3295,7 +3329,7 @@ class AnalyticsService:
                 direct_before = before[-70:]
                 direct_after = after[:70]
                 if re.search(
-                    r"(?:terminacion|terminación|termina\s+en|ultimos?\s+(?:4|cuatro)\s+digitos?|"
+                    r"(?:terminacion|terminación|termina(?:\s+en)?|termino\s+en|ultimos?\s+(?:4|cuatro)\s+digitos?|"
                     r"(?:numero|número)\s+(?:de\s+)?(?:tarjeta|cuenta|telefono|teléfono|referencia|folio|convenio)|"
                     r"referencia|folio|clabe|telefono|teléfono|whatsapp)\s*(?:es|:|numero|número)?\s*$",
                     direct_before,
@@ -3453,7 +3487,7 @@ class AnalyticsService:
         # v3.6.11: identificadores nunca son montos negociados. Esta protección se aplica
         # también en la fase de atribución, no solo al extraer cifras.
         identifier_anchor_re = re.compile(
-            r"\b(?:terminacion|terminación|termina\s+en|ultimos?\s+(?:4|cuatro)\s+digitos?|"
+            r"\b(?:terminacion|terminación|termina(?:\s+en)?|termino\s+en|ultimos?\s+(?:4|cuatro)\s+digitos?|"
             r"digitos?\s+de\s+la\s+tarjeta|dígitos?\s+de\s+la\s+tarjeta|"
             r"numero\s+de\s+tarjeta|número\s+de\s+tarjeta|referencia|folio|"
             r"telefono|teléfono|whatsapp|clabe|cuenta)\b"
@@ -4433,6 +4467,7 @@ class AnalyticsService:
             "score": round(score, 2),
             "checks": checks,
             "blocks": blocks,
+            "death_followup_validation": death_followup_validation,
             "contact_type": contact_type,
             "explicit_message_refusal": (message_refusal_validation if contact_type != "TITULAR" else
                 {"confirmed":False,"evidence":[],"reason":"No corresponde rechazo de recado: conversación con titular."}),

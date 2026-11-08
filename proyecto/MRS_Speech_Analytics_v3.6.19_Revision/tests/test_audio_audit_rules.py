@@ -100,7 +100,7 @@ def test_positive_answer_to_past_payment_question_is_a_report_not_a_future_agree
     assert n["payment_confirmation_case"]
     assert n["prior_payment_total"] == 5000
     assert not n["commitment_confirmed"]
-    assert r["status_validation"]["detected_status"] == "PAGO REPORTADO / ACLARACION"
+    assert r["status_validation"]["detected_status"] == "ACLARACION"
     assert "PEN_SIN_INTENTO_NEGOCIACION" in {p["id"] for p in r["penalties"]}
 
 

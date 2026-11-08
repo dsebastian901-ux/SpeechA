@@ -22,13 +22,14 @@ COUNTER = re.compile(
 OWN_ACCOUNT = re.compile(
     r'\b(?:mi (?:tarjeta|cuenta|saldo|estado de cuenta|aplicacion|pago)|mis pagos|'
     r'yo (?:tengo|tenia|saque|solicite|tramite|contrate) (?:mi |la |una )?(?:tarjeta|cuenta)|'
-    r'(?:ya |yo )?(?:lo pague|pague|hice (?:mi|el) pago|realice (?:mi|el) pago|he pagado|he depositado)|'
+    r'(?:ya |yo )?(?:lo pague|pague|hice (?:mi |el )?pago|realice (?:mi |el )?pago|he pagado|he depositado)|'
     r'(?:ya |yo )?(?:lo hice|lo realice)|'
     r'(?:este|el) mes (?:yo )?(?:tengo|tenia) (?:un |el |mi )?pago minimo|'
-    r'(?:yo )?quiero pagar(?:lo|la)|'
+    r'no (?:(?:te|le|les|lo) )?(?:voy a|pienso|quiero) (?:pagar|depositar)|yo no debo nada|(?:yo )?quiero pagar(?:lo|la)|(?:la |mi tarjeta la )?quiero (?:cancelar|dar de baja)|yo lo deje de pagar|por eso lo deje de pagar|'
     r'he (?:querido|intentado) (?:hacer|realizar) (?:una |la |mi )?transferencia|'
     r'no he podido (?:realizarlo|ir(?: porque| hasta))|'
     r'ya les digo si puedo o no|'
+    r'ya tengo el (?:codigo|folio)(?=[^.!?]{0,80}cancelad)|'
     r'(?:yo )?(?:requeriria|necesito|quiero|requiero) que me (?:entreguen|den|envien) primero|'
     r'no les voy a completar|me (?:atrase|he atrasado)|'
     r'no he (?:usado|utilizado) (?:mi |la |esa |esta )?tarjeta|'
@@ -53,7 +54,7 @@ def valid_nominal_request(source, start, identity):
 
 def proxy_account_evidence(text, segments=()):
     """Cuenta de otra persona declarada por el interlocutor; no certifica parentesco."""
-    pattern=re.compile(r'\b(?:(?:estados? de cuenta|cuenta|tarjeta) de (?:ella|el|la titular|el titular)|'
+    pattern=re.compile(r'\b(?:(?:le )?habl[ao] su (?:espos[oa]|herman[oa]|hij[oa]|madre|padre)|no[, ]+es su (?:espos[oa]|herman[oa]|hij[oa]|madre|padre)|(?:estados? de cuenta|cuenta|tarjeta) de (?:ella|el|la titular|el titular)|'
                        r'no esta ya[, ]+(?:pero )?digame)\b')
     for unit in sentence_evidence(text,segments):
         if unit['speaker_role'] in {'GESTOR','TITULAR'}:continue

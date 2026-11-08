@@ -115,7 +115,7 @@ def holder_confirmation(text, segments=()):
         r"(?:me )?voy a comunicar con|puede comunicar con|"
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|se encuentra|estoy buscando a|hablo con|"
         r"me estoy comunicando al numero telefonico de|seria tan amable de comunicarme con|"
-        r"tengo(?: el)? gusto(?: de hablar)? con|me comunico con|(?<=¿)con)")
+        r"tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|(?<=¿)con)")
     explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+)?(?:digame|diganme|dime|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b"
     prompt = re.compile(
         rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)(?:[.?]|,)\s*" + explicit_answer)
@@ -124,7 +124,7 @@ def holder_confirmation(text, segments=()):
         r"(?:juridico[, ]+m[. ]*r[. ]*s[. ]*)?con\s+"
         r"(?P<identity>[^.!?]{2,100}?)(?:[.?]|,)\s*" + explicit_answer)
     named_identity = re.compile(
-        r"\b(?:tengo(?: el)? gusto(?: de hablar)? con|me comunico con|hablo con|"
+        r"\b(?:tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|hablo con|"
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|(?<=¿)con)\s+"
         r"(?P<identity>[^.!?]{2,100})[.?]\s*(?:ah[, ]+)?"
         r"(?P<answer>si(?:[, ]+(?:digame|diganme|servidor|servidora))?|asi es|correcto|ella habla|el habla|digame|diganme|servidor|servidora)\b")
@@ -342,7 +342,7 @@ def payment_commitment(text, segments=()):
                 r'\b(?:pagos?|pagar|deposito|depositar|abono)\b', source[max(0,position-220):cursor]):
             positive = None  # «Lo» necesita un antecedente de pago, no otro trámite.
         negative = re.search(
-            r"\b(?:no (?:voy a|puedo|pienso|quiero) (?:pagar|depositar|abonar|cubrir)|"
+            r"\b(?:no (?:(?:le|les|lo) )?(?:voy a|puedo|pienso|quiero) (?:pagar|depositar|abonar|cubrir)|"
             r"no he podido realizarlo|no he podido ir (?:porque|hasta)|no les voy a completar|no voy a poder[.!]?$|"
             r"no puedo (?:comprometerme|confirmar|dar una fecha)|no me comprometo|"
             r"no tengo (?:esa|la) cantidad|no dispongo de (?:esa|la) cantidad|"
@@ -478,7 +478,7 @@ def completed_payment(text, segments=()):
             r"ya (?:hice|realice) (?:mi |el |un )?deposito|"
             r"(?:yo )?hice (?:mi |el |una? )?transferencia|"
             r"ya (?:mande|envie) (?:el |mi )?comprobante|ya (?:le )?di (?:un )?abono|"
-            r"ya se pago|ya se (?:hizo|realizo) (?:el |un )?pago|(?:ayer |hoy |ya )pagamos|(?:el |mi )?pago ya esta (?:hecho|realizado)|"
+            r"ya esta saldada|ya (?:la )?liquide|ya se pago|ya se (?:hizo|realizo) (?:el |un )?pago|(?:ayer |hoy |ya )pagamos|(?:el |mi )?pago ya esta (?:hecho|realizado)|"
             r"fui a abonar|ya abone|tengo registrado (?:un )?reporte de pago)\b", s))
         candidates.extend(re.finditer(r"\bpagué\b", verbatim, re.I))
         candidates.extend(re.finditer(r"\bdeposité\b", verbatim, re.I))
@@ -749,7 +749,12 @@ def assess_recado(text, segments=()):
     dialogue['acceptance'].extend(existing_callback_confirmation(text,segments))
     from app.services.message_dialogue_evidence import asks_to_hear_callback
     dialogue['acceptance'].extend(asks_to_hear_callback(text,segments))
-    for key in ['family','acceptance','work_relationships','third_party_relationships']:extended[key].extend(dialogue[key])
+    from app.services.contact_dialogue_resolution import contact_dialogue_evidence
+    resolved=contact_dialogue_evidence(text,segments)
+    for key in ['family','acceptance','work_relationships','third_party_relationships']:
+        extended[key].extend(dialogue[key]);extended[key].extend(resolved[key])
+    from app.services.recado_receipt_resolution import callback_acknowledgements
+    extended['acceptance'].extend(callback_acknowledgements(text,segments))
     families.extend(extended['family'])
     acceptances.extend(extended['acceptance'])
     from app.services.message_contact_evidence import callback_permission_evidence
@@ -926,7 +931,7 @@ def payment_places(text, segments, catalog):
 
 SENSITIVE = re.compile(
     r"\b(?:saldo (?:pendiente|vencido|total|de\s+\d[\d.,]*|es\s+\d[\d.,]*)|"
-    r"(?:registra|presenta) (?:una )?falta de pago|por un atraso que presenta|"
+    r"(?:registra|presenta) (?:una )?falta de pago|por un atraso que presenta|por (?:el )?atraso (?:de|en|que presenta) (?:su|la) tarjeta|"
     r"(?:tiene|presenta|cuenta con) (?:un |una |dos |tres |cuatro |\d+ )?(?:deuda|adeudo|atraso|mens(?:u)?alidad(?:es)?)|"
     r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciseis|diecisiete|dieciocho|diecinueve|veinte) (?:mes(?:es)?|anos?|mens(?:u)?alidad(?:es)?)(?: de)? (?:atraso|vencid[ao]s?)|"
     r"mens(?:u)?alidades vencidas|(?:meses|anos) de atraso|"
@@ -1032,6 +1037,11 @@ def reported_card_clarification(text,segments=()):
         cancellation_confirmed=bool(cancellation and folio_digits and not is_phone and cancelled_followup
             and len(re.sub(r'\D','',folio_digits.group())) >= 4
             and not re.search(r'\bno (?:tengo|cuento con).*folio\b',tail))
+    explicit_cancel=recipient_statement(text,segments,r'\b(?:esa|esta|mi|la) tarjeta (?:ya esta|ya no se usa)|\bya tengo el (?:codigo|folio)\b[^.!?]{0,80}\bcancelada\b')
+    folio_reference=re.search(r'\b(?:folio|codigo)\b[^.!?]{0,130}\b(?:[a-z]{2,6}[- ]*)?\d{4,10}\b',source)
+    recorded=agent_statement(text,segments,r'\b(?:lo metemos|lo manejamos|manejamos|se registra|registramos|paso el reporte)\b[^.!?]{0,65}\baclaracion\b')
+    cancelled_followup=bool(explicit_cancel and folio_reference and recorded and re.search(r'\bcancelad[ao]\b',source))
+    cancellation_confirmed=bool(cancellation_confirmed or cancelled_followup)
     return {'confirmed':bool(loss and folio and followup) or cancellation_confirmed,
             'reported_cancellation':cancellation, 'cancellation_followup':cancellation_confirmed,
             'reported_loss':bool(loss),
@@ -1122,14 +1132,19 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
                                 or re.search(r"\b(?:no tiene|sin (?:deuda|adeudo|atraso)|si tuviera|en caso de)\b", s))
             protected = third_party_confirmed and last_recipient != "TITULAR"
             asr_uncertainty=bool(re.fullmatch(r"por la trazo de su tarjeta|deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas",match.group()))
-            confirmed = role == "GESTOR" and protected and not hypothetical and not asr_uncertainty
-            uncertain = (role == "NO DETERMINADO" or hypothetical or asr_uncertainty
+            scoped_role=None
+            if role=="NO DETERMINADO" and protected and not hypothetical and not asr_uncertainty:
+                from app.services.scoped_institutional_speech import institutional_clause_evidence
+                scoped_role=institutional_clause_evidence(unit['text'],match.group())
+            effective_role="GESTOR" if scoped_role else role
+            confirmed = effective_role == "GESTOR" and protected and not hypothetical and not asr_uncertainty
+            uncertain = (effective_role == "NO DETERMINADO" or hypothetical or asr_uncertainty
                          or (role == "GESTOR" and not titular and last_recipient != "TITULAR" and not protected))
             relevant = third_party_confirmed or expected_third_party or not titular
-            evidence.append(dict(unit, phrase=match.group(), confirmed=confirmed,
+            evidence.append(dict(unit, phrase=match.group(), confirmed=confirmed, role_evidence=scoped_role,
                                  review_required=bool(relevant and uncertain)))
     # Conserva los bloqueos previos que aún no tienen un extractor específico.
-    if legacy_financial and not evidence and (third_party_confirmed or expected_third_party or not titular):
+    if legacy_financial and not evidence and (third_party_confirmed or (expected_third_party and not titular) or not titular):
         evidence.append({"text": "Señal financiera contextual sin atribución de voz confirmada.",
                          "speaker_role": "NO DETERMINADO", "start": None, "end": None,
                          "phrase": "", "confirmed": False, "review_required": True})

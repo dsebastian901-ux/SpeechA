@@ -25,7 +25,7 @@ def test_another_ordinary_omission_still_fails_the_threshold():
 def test_sufficient_score_with_missing_places_does_not_waive_a_complaint():
     a=analyze('Habla MRS. '+TEXT+' Titular: Me trataron mal en la llamada anterior.')
     assert a.compliance_score==80
-    assert a.metadata['shared_classification']['clasificacion']=='REVISAR'
+    assert a.metadata['shared_classification']['clasificacion']=='NO_APROBADO'
 
 
 def test_accusation_of_prior_insult_in_question_blocks_otherwise_eighty():
@@ -49,7 +49,7 @@ def test_report_of_threatening_collection_blocks_otherwise_eighty():
     a=analyze('Habla MRS. '+TEXT+' Titular: Hasta parece que le están amenazando a uno. No me espantan, pero eso no es una forma de cobrar.')
     assert a.compliance_score==80
     assert a.metadata['quality_checks']['queja_maltrato_detectada']
-    assert a.metadata['shared_classification']['clasificacion']=='REVISAR'
+    assert a.metadata['shared_classification']['clasificacion']=='NO_APROBADO'
 
 
 def test_denial_of_threatening_service_is_not_a_report():

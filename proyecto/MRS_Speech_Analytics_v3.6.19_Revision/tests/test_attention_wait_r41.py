@@ -52,8 +52,8 @@ def test_bad_attention_complaint_blocks_approval_above_80(complaint):
     assert result.compliance_score >= 80
     assert m['quality_checks']['queja_maltrato_detectada']
     assert m['treatment_validation']['mistreatment_report_evidence']
-    assert m['final_result'] == 'REVISAR'
-    assert m['shared_classification']['clasificacion'] == 'REVISAR'
+    assert m['final_result'] == 'NO_APROBADO'
+    assert m['shared_classification']['clasificacion'] == 'NO_APROBADO'
     assert not m['shared_classification']['aprobado']
     assert not m['critical_failures'], 'Denuncia previa no prueba falta grave del gestor actual'
 

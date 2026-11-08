@@ -594,7 +594,7 @@ class BatchReportService:
 
         if item.get("status") == "error":
             result_ia = "ERROR"
-            physical = "REVISAR"
+            physical = "ERROR"
             motive = str(item.get("message") or "Error durante el procesamiento.")
 
         compliance_status = str(
@@ -636,6 +636,7 @@ class BatchReportService:
             "NEGOCIACION_INVALIDA": "NO APROBADO - NEGOCIACION INVALIDA",
             "FALLA_GRAVE": "NO APROBADO - FALLA GRAVE",
             "REVISAR": "REVISAR MANUALMENTE",
+            "ERROR": "ERROR DE PROCESAMIENTO",
         }
         final_operational = final_operational_map.get(physical, "REVISAR MANUALMENTE")
 
@@ -967,6 +968,9 @@ class BatchReportService:
         for audit_sheet in audit_sheets:
             cls._style_sheet(audit_sheet)
 
+        from app.services.pending_review_report import add_pending_review_sheet
+        cls._style_sheet(add_pending_review_sheet(wb,source_items))
+
         from app.services.retagging_report import add_retagging_sheets
         for retagging_sheet in add_retagging_sheets(wb, source_items):
             cls._style_sheet(retagging_sheet)
@@ -1156,6 +1160,7 @@ class BatchReportService:
                 "% aprobación",
                 "Principales penalizaciones",
                 "Principales áreas de oportunidad",
+                "No aprobados", "Fallas graves", "Errores de procesamiento", "Otros resultados",
             ])
 
             grouped = defaultdict(list)
@@ -1168,7 +1173,7 @@ class BatchReportService:
                     1 for r in group
                     if r.get("Clasificación física") in {"APROBADO", "APROBADOS", "APROBADO_ETIQUETA_CORREGIDA"}
                 )
-                greview = gtotal - gapproved
+                greview = sum(r.get("Clasificación física")=="REVISAR" for r in group)
                 gincorrect = sum(
                     1 for r in group
                     if r.get("Resultado IA") in {"INCORRECTA", "FALLA_GRAVE"}
@@ -1221,6 +1226,10 @@ class BatchReportService:
                     gpct,
                     common_codes,
                     common_areas,
+                    sum(str(r.get("Clasificación física")or"").startswith('NO_APROBADO')or r.get("Clasificación física")in{'MAL_DICTAMINADO','NEGOCIACION_INVALIDA'}for r in group),
+                    sum(r.get("Clasificación física")=="FALLA_GRAVE"for r in group),
+                    sum(r.get("Clasificación física")=="ERROR"for r in group),
+                    sum(r.get("Clasificación física")not in{'APROBADO','APROBADOS','APROBADO_ETIQUETA_CORREGIDA','REVISAR','NO_APROBADO','NO_APROBADO_MENOR_80','MAL_DICTAMINADO','NEGOCIACION_INVALIDA','FALLA_GRAVE','ERROR'}for r in group),
                 ])
 
             gestor_widths = {

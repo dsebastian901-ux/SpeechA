@@ -14,6 +14,7 @@ OWN = re.compile(
     r'\b(?:mi (?:tarjeta|cuenta|pago|saldo|aplicacion)|mis pagos|'
     r'yo (?:cobro|recibo|pague|pago|abonaba)|es el dia que me pagan|yo creo que (?:hasta )?manana|'
     r'(?:la tarjeta )?la (?:extr[aavie]+|di de baja)|'
+    r'ya tengo el (?:codigo|folio)(?=[^.!?]{0,80}cancelad)|la quiero (?:cancelar|dar de baja)|ya realice (?:mi |el )?pago|por eso lo deje de pagar|no (?:(?:les|le|lo|te) )?(?:voy a|pienso|quiero) pagar|yo no debo nada|'
     r'no (?:he llegado a ningun acuerdo|tengo (?:esa|la) cantidad|me niego a pagar)|'
     r'(?:me )?(?:hicieron|habian hecho) una propuesta|'
     r'(?:yo )?queria ver si podia hacer (?:algun |un )?acuerdo de pago|'
@@ -101,7 +102,7 @@ def full_payment_refusal(commitment):
     if not commitment.get('declined') or commitment.get('accepted'):
         return False
     reply=normalize(commitment.get('evidence') or '')
-    match=re.search(r'\bno (?:(?:lo|le|la) )?(?:voy a|pienso) pagar\b',reply)
+    match=re.search(r'\bno (?:(?:lo|le|la|les) )?(?:voy a|pienso) pagar\b',reply)
     if not match or QUOTED.search(reply) or '?' in reply:
         return False
     before=reply[:match.start()]
