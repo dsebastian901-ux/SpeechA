@@ -1441,6 +1441,17 @@ class AnalyticsService:
             r'\bque (?:le )?(?:marque|llame) (?:a |al |a ese |ese |a este |este )?(?:numero|telefono)\b', normalized))
         recado_callback = recado_callback or bool(
             confirmed_recado.get('valid') and confirmed_recado.get('callback_delivered'))
+        from app.services.status_message_evidence import return_purpose
+        from app.services.message_dialogue_evidence import callback_available
+        traced_return = return_purpose(text,segments)
+        directed_receipt=any(e.get('method') in {
+            'RESPUESTA_LOCAL_A_DICTADO_CON_RETORNO_Y_CONTACTO',
+            'RECEPTOR_CONFIRMA_RETRANSMISION_DEL_CONTACTO',
+            'CONFIRMA_DICTADO_TELEFONICO_EN_RESPUESTA_LOCAL'} for e in recado_assessment['acceptance'])
+        if traced_return and directed_receipt and callback_available(text,segments):
+            recado_callback = True
+            recado_transmitted = True
+            recado_assessment['return_purpose'] = traced_return
         recado_real = bool(recado_callback and (recado_transmitted or leaves_message)
                            and not (recado_declines or recado_refusal)
                            and recado_recibido_explicito and not message_delivery_validation['review_required'])
@@ -3063,6 +3074,7 @@ class AnalyticsService:
                 detected_status = "ACLARACION" if payment_followup_case else "PAGO REPORTADO / ACLARACION"
                 status_detection_confidence = "ALTA" if payment_followup_case else "MEDIA"
                 status_evidence_method = "SEGUIMIENTO_DE_PAGO_REPORTADO_SIN_ACREDITACION_BANCARIA" if payment_followup_case else "PAGO_ANTERIOR_REPORTADO"
+                status_evidence = " / ".join(u["text"] for u in completed_payment_confirmation["evidence"][:3])
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
             if recado_real and detected_status.startswith('MENSAJE '):

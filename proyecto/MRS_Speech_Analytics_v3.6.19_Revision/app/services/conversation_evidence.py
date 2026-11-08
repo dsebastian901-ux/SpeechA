@@ -755,6 +755,8 @@ def assess_recado(text, segments=()):
         extended[key].extend(dialogue[key]);extended[key].extend(resolved[key])
     from app.services.recado_receipt_resolution import callback_acknowledgements
     extended['acceptance'].extend(callback_acknowledgements(text,segments))
+    from app.services.status_message_evidence import extra_message_receipt
+    extended['acceptance'].extend(extra_message_receipt(text,segments))
     families.extend(extended['family'])
     acceptances.extend(extended['acceptance'])
     from app.services.message_contact_evidence import callback_permission_evidence

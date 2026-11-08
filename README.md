@@ -1,17 +1,13 @@
-# MRS Speech Analytics — programa r50
+# MRS Speech Analytics — programa r51
 
-Programa completo para crear proyectos y procesar lotes. Extraiga todo el ZIP en una carpeta nueva, abra **INICIAR_PROGRAMA.bat** y compruebe **3.6.19-r50**. Use el Python, las dependencias y el modelo local de Whisper de su instalación existente. Los pesos del modelo no se incluyen.
+Extraiga todo el ZIP en una carpeta nueva y abra INICIAR_PROGRAMA.bat. Debe mostrar 3.6.19-r51. Se usa el Python y modelo local de Whisper existentes; no es el instalador autónomo futuro.
 
-Las correcciones se aplican desde el procesamiento inicial. Se revisan las causas de REVISAR: identificación contextual, familiar/intermediario, recepción del recado, referencias de tarjeta, importes, ARCO, seguimiento de pagos y comprobantes, quejas, lenguaje ofensivo y espera. Se conserva la revisión cuando la evidencia sigue siendo insuficiente.
+El estatus de gestión del Excel (CONVENIO, NEGATIVA DE PAGO, MENSAJE, ACLARACION, etc.) es distinto del resultado de calidad. Si la llamada cumple 80 puntos y seguridad y se confirma un estatus diferente con evidencia suficiente, se guarda en APROBADOS_ETIQUETA_CORREGIDA. Solo cambia ese bloque del nombre; los originales se conservan. La tabla de cuentas reetiquetadas explica el cambio.
 
-Se separan **NO_APROBADO** ante un incumplimiento ordinario claro, **FALLA_GRAVE** ante una falta crítica confirmada y **REVISAR** ante dudas. Una queja declarada puede cerrar NO_APROBADO; una pregunta o expresión incierta conserva revisión. Las dudas de seguridad independientes mantienen su prioridad.
+Se corrige la pérdida del fragmento probatorio en seguimientos de pago detectados como ACLARACION. Se incorporan respuestas locales de aceptación de dictado y retorno con teléfono disponible, distinguiéndolas de una instrucción del gestor. Una afirmación «claro, sí, pero no lo voy a pagar» no se interpreta como hipótesis solo por contener sí. No hay excepciones por llamada.
 
-Se corrigen teléfonos/terminaciones interpretados como tarjetas completas o importes, falsas identificaciones de titular y omisiones de parentesco. En ARCO se consideran correcciones posteriores del correo sin completar un dominio dudoso. Se distinguen envío anterior de comprobante y petición de uno nuevo. Los seguimientos por fallecimiento conservan el estatus original, según la instrucción de la usuaria.
+La etiqueta corregible resuelve exclusivamente el bloqueo de estatus. No exime privacidad, quejas, groserías, referencia, negociación, espera ni puntaje. Cuando falta evidencia del nuevo estatus o hay otra alerta, sigue pendiente con su motivo; no se declara una falta del gestor solo porque el detector no la entienda.
 
-El reporte por gestor cuenta solo las llamadas cuya clasificación sea REVISAR y separa no aprobados, fallas graves y errores técnicos. La nueva hoja **REVISION_PENDIENTE** detalla la causa, acción concreta, campo de evidencia y fragmentos/tiempos disponibles; los motivos de estatus dependientes no se presentan como llamadas adicionales.
+Los reportes de calidad, motivos de no pago y reetiquetado siguen generándose al finalizar. REVISION_PENDIENTE muestra causas y evidencia disponible. No sumar códigos de estatus dependientes como llamadas adicionales ni contar carpetas vacías como resultados.
 
-Al terminar se generan el reporte de calidad, las cuentas reetiquetadas y el reporte de motivos de no pago. Las copias con cambio de estatus siguen en **APROBADOS_ETIQUETA_CORREGIDA** y los NO_APROBADO en **NO_APROBADOS**. El Excel y los audios originales se conservan; numero_de_tarjeta del Excel sigue siendo la fuente del identificador.
-
-Consulte REVISION_50_PROGRAMA.md y VALIDACION_R50.json. La validación distingue reglas sobre transcripciones recibidas, proyecto nuevo con ASR controlado y escucha humana. La atribución institucional nueva es textual y se limita a la misma cláusula; no se declara diarización o voz acústica identificada. No se garantiza eliminar toda revisión ni alcanzar una cuota de aprobaciones.
-
-Esta entrega utiliza el entorno Python existente. El futuro instalador autónomo offline con usuarios y permisos se prepara por separado.
+Consulte REVISION_51_PROGRAMA.md y VALIDACION_R51.json. Las validaciones distinguen reglas sobre ASR recibido, proyecto nuevo con ASR controlado, y escucha humana. No se declara nueva escucha humana, retranscripción completa ni prueba nativa Windows.

@@ -43,3 +43,7 @@ El usuario acepta identificación mediante pregunta nominal, respuesta y convers
 - Las quejas declaradas pueden cerrar NO_APROBADO cuando tienen evidencia completa y no subsisten dudas de seguridad independientes. Una pregunta/hipótesis o un registro incompleto no se convierte en queja confirmada para cerrar.
 - Separar ERROR técnico de REVISAR de calidad y contar únicamente REVISAR en el resumen por gestor. Mantener el detalle de las causas y evidencia en REVISION_PENDIENTE.
 - Las atribuciones institucionales nuevas son textuales, limitadas a la misma cláusula con autopresentación; no son diarización ni escucha humana y no se extienden a otros turnos.
+
+## Corrección ratificada por la usuaria para r51
+- Un estatus de gestión diferente con evidencia suficiente, calidad >=80 y seguridad debe resolverse con APROBADOS_ETIQUETA_CORREGIDA, no REVISAR solo por la discrepancia. Conservar los bloqueos independientes y el requisito de fragmento probatorio.
+- Distinguir resultado de calidad de estatus de gestión. No imputar al gestor una falta solo porque el motor no extrae evidencia.

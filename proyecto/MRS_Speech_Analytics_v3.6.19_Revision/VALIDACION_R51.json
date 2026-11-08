@@ -1,0 +1,376 @@
+{
+  "revision": "3.6.19-r51",
+  "tests": {
+    "passed": 2467,
+    "skipped": 7,
+    "failures": 0
+  },
+  "same362": {
+    "calls": 362,
+    "before": {
+      "REVISAR": 267,
+      "APROBADO": 38,
+      "NO_APROBADO": 11,
+      "FALLA_GRAVE": 21,
+      "APROBADO_ETIQUETA_CORREGIDA": 25
+    },
+    "after": {
+      "REVISAR": 258,
+      "APROBADO": 45,
+      "NO_APROBADO": 11,
+      "FALLA_GRAVE": 21,
+      "APROBADO_ETIQUETA_CORREGIDA": 27
+    },
+    "classification_changes": [
+      {
+        "call": 19,
+        "before": "REVISAR",
+        "after": "APROBADO"
+      },
+      {
+        "call": 47,
+        "before": "REVISAR",
+        "after": "APROBADO"
+      },
+      {
+        "call": 94,
+        "before": "REVISAR",
+        "after": "APROBADO"
+      },
+      {
+        "call": 101,
+        "before": "REVISAR",
+        "after": "APROBADO"
+      },
+      {
+        "call": 106,
+        "before": "REVISAR",
+        "after": "APROBADO_ETIQUETA_CORREGIDA"
+      },
+      {
+        "call": 126,
+        "before": "REVISAR",
+        "after": "APROBADO"
+      },
+      {
+        "call": 161,
+        "before": "REVISAR",
+        "after": "APROBADO_ETIQUETA_CORREGIDA"
+      },
+      {
+        "call": 275,
+        "before": "REVISAR",
+        "after": "APROBADO"
+      },
+      {
+        "call": 290,
+        "before": "REVISAR",
+        "after": "APROBADO"
+      }
+    ],
+    "previous_56_status_only": [
+      {
+        "call": 1,
+        "after": "REVISAR"
+      },
+      {
+        "call": 19,
+        "after": "APROBADO"
+      },
+      {
+        "call": 22,
+        "after": "REVISAR"
+      },
+      {
+        "call": 47,
+        "after": "APROBADO"
+      },
+      {
+        "call": 59,
+        "after": "REVISAR"
+      },
+      {
+        "call": 61,
+        "after": "REVISAR"
+      },
+      {
+        "call": 84,
+        "after": "REVISAR"
+      },
+      {
+        "call": 93,
+        "after": "REVISAR"
+      },
+      {
+        "call": 94,
+        "after": "APROBADO"
+      },
+      {
+        "call": 97,
+        "after": "REVISAR"
+      },
+      {
+        "call": 98,
+        "after": "REVISAR"
+      },
+      {
+        "call": 101,
+        "after": "APROBADO"
+      },
+      {
+        "call": 104,
+        "after": "REVISAR"
+      },
+      {
+        "call": 105,
+        "after": "REVISAR"
+      },
+      {
+        "call": 106,
+        "after": "APROBADO_ETIQUETA_CORREGIDA"
+      },
+      {
+        "call": 109,
+        "after": "REVISAR"
+      },
+      {
+        "call": 115,
+        "after": "REVISAR"
+      },
+      {
+        "call": 122,
+        "after": "REVISAR"
+      },
+      {
+        "call": 124,
+        "after": "REVISAR"
+      },
+      {
+        "call": 126,
+        "after": "APROBADO"
+      },
+      {
+        "call": 137,
+        "after": "REVISAR"
+      },
+      {
+        "call": 148,
+        "after": "REVISAR"
+      },
+      {
+        "call": 150,
+        "after": "REVISAR"
+      },
+      {
+        "call": 154,
+        "after": "REVISAR"
+      },
+      {
+        "call": 155,
+        "after": "REVISAR"
+      },
+      {
+        "call": 156,
+        "after": "REVISAR"
+      },
+      {
+        "call": 161,
+        "after": "APROBADO_ETIQUETA_CORREGIDA"
+      },
+      {
+        "call": 176,
+        "after": "REVISAR"
+      },
+      {
+        "call": 185,
+        "after": "REVISAR"
+      },
+      {
+        "call": 188,
+        "after": "REVISAR"
+      },
+      {
+        "call": 198,
+        "after": "REVISAR"
+      },
+      {
+        "call": 199,
+        "after": "REVISAR"
+      },
+      {
+        "call": 206,
+        "after": "REVISAR"
+      },
+      {
+        "call": 208,
+        "after": "REVISAR"
+      },
+      {
+        "call": 209,
+        "after": "REVISAR"
+      },
+      {
+        "call": 217,
+        "after": "REVISAR"
+      },
+      {
+        "call": 248,
+        "after": "REVISAR"
+      },
+      {
+        "call": 250,
+        "after": "REVISAR"
+      },
+      {
+        "call": 259,
+        "after": "REVISAR"
+      },
+      {
+        "call": 260,
+        "after": "REVISAR"
+      },
+      {
+        "call": 267,
+        "after": "REVISAR"
+      },
+      {
+        "call": 269,
+        "after": "REVISAR"
+      },
+      {
+        "call": 275,
+        "after": "APROBADO"
+      },
+      {
+        "call": 277,
+        "after": "REVISAR"
+      },
+      {
+        "call": 281,
+        "after": "REVISAR"
+      },
+      {
+        "call": 285,
+        "after": "REVISAR"
+      },
+      {
+        "call": 286,
+        "after": "REVISAR"
+      },
+      {
+        "call": 290,
+        "after": "APROBADO"
+      },
+      {
+        "call": 291,
+        "after": "REVISAR"
+      },
+      {
+        "call": 292,
+        "after": "REVISAR"
+      },
+      {
+        "call": 298,
+        "after": "REVISAR"
+      },
+      {
+        "call": 317,
+        "after": "REVISAR"
+      },
+      {
+        "call": 328,
+        "after": "REVISAR"
+      },
+      {
+        "call": 335,
+        "after": "REVISAR"
+      },
+      {
+        "call": 341,
+        "after": "REVISAR"
+      },
+      {
+        "call": 343,
+        "after": "REVISAR"
+      }
+    ],
+    "transcripts_and_accounts_unchanged": true,
+    "privacy_confirmed_preserved": true
+  },
+  "fresh_project": {
+    "revision": "3.6.19-r51",
+    "calls": 85,
+    "selection": "all changed outcomes/scores plus deterministic safety and unchanged controls",
+    "asr_executed": false,
+    "asr_boundary": "controlled raw ASR from uploaded checkpoint",
+    "previous_checkpoint_imported_by_application": false,
+    "saved_human_confirmations_imported": false,
+    "transcriptions_recovered": 0,
+    "all_original_audio_copies_sha256_match": true,
+    "authoritative_card_in_approved_names": true,
+    "all_13_rule_groups_applied": true,
+    "normal_batch_and_reanalysis_outcomes_scores_match": true,
+    "excel_fixture_unchanged": true,
+    "original_checkpoint_unchanged": true,
+    "reports_generated": true,
+    "summary": {
+      "analizados": 85,
+      "aprobados": 41,
+      "revisar": 20,
+      "no_aprobados": 11,
+      "fallas_graves": 13,
+      "errores": 0,
+      "puntaje_minimo": 80
+    },
+    "outcomes": {
+      "APROBADO": 31,
+      "REVISAR": 20,
+      "NO_APROBADO": 11,
+      "FALLA_GRAVE": 13,
+      "APROBADO_ETIQUETA_CORREGIDA": 10
+    }
+  },
+  "prior_controls": {
+    "evaluations": 1613,
+    "outcomes": {
+      "previous403": {
+        "REVISAR": 269,
+        "FALLA_GRAVE": 38,
+        "APROBADO": 58,
+        "NO_APROBADO": 11,
+        "APROBADO_ETIQUETA_CORREGIDA": 27
+      },
+      "previous100": {
+        "APROBADO": 21,
+        "REVISAR": 39,
+        "NO_APROBADO": 9,
+        "NO_APROBADO_MENOR_80": 25,
+        "APROBADO_ETIQUETA_CORREGIDA": 3,
+        "FALLA_GRAVE": 3
+      },
+      "previous103": {
+        "REVISAR": 70,
+        "FALLA_GRAVE": 8,
+        "APROBADO": 21,
+        "APROBADO_ETIQUETA_CORREGIDA": 3,
+        "NO_APROBADO_MENOR_80": 1
+      },
+      "previous1007": {
+        "REVISAR": 816,
+        "NO_APROBADO_MENOR_80": 62,
+        "NO_APROBADO": 19,
+        "APROBADO_ETIQUETA_CORREGIDA": 15,
+        "APROBADO": 80,
+        "FALLA_GRAVE": 15
+      }
+    },
+    "source_unchanged": true,
+    "confirmed_privacy_preserved": true,
+    "new_approvals": 9,
+    "prior_approvals_removed": 0
+  },
+  "human_listening_declared": false,
+  "full_acoustic_retranscription_executed": false,
+  "native_windows_verified": false,
+  "offline_autonomous_installer_delivered": false
+}

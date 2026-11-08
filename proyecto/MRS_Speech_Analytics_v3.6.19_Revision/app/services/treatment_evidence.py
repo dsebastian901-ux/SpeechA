@@ -46,6 +46,10 @@ def mistreatment_reports(text, segments, phrases):
         matches.extend(variants.finditer(value))
         if wrong_line_report:
             matches.extend(re.finditer(r'\b(?:ya )?me canso de decirles\b|\b(?:ya )?(?:estoy|soy|estamos) hart[oa]s?\b[^.!?]{0,100}\b(?:pregunta y pregunte|preguntando|marque y marque|llamando)\b',value))
+        if paid_report and re.search(r'\b(?:corporativo|juridico|gestor|asesor|despacho)\b',paid_source):
+            # Un pago reportado como no reconocido por el despacho previo es
+            # una queja del servicio; no se confunde con esperar actualización.
+            matches.extend(re.finditer(r'\bno (?:me |lo |me lo )?(?:hicieron|hizo|han hecho) valido\b',value))
         if paid_call_complaint:
             matches.extend(re.finditer(r'\b(?:a que se debe que|por que) me (?:sigan|siguen) llamando\b',value))
         matches.extend(re.finditer(

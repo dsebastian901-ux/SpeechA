@@ -108,7 +108,9 @@ def full_payment_refusal(commitment):
     before=reply[:match.start()]
     if re.search(r'\b(?:no es que|no digo que|no dije que)\s*$',before):
         return False
-    if re.search(r'\b(?:si|cuando)\b[^.!?]{0,140}$',before):
+    conditional=re.search(r'\b(?:si|cuando)\b[^.!?]{0,140}$',before)
+    affirmative_bridge=re.search(r'(?:^|[.!])\s*(?:claro[, ]+)?si[, ]+pero\s*$',before)
+    if conditional and not affirmative_bridge:
         return False
     scope=reply[match.end():].split('.')[0][:85]
     return not re.search(r'\b(?:eso|esos|esas|(?:esta|esa|la) cantidad|(?:este|ese) monto|intereses|cargos|compras|solo|solamente|menos|menor|sino)\b',scope)

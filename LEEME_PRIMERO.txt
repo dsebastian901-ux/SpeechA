@@ -1,26 +1,12 @@
-MRS SPEECH ANALYTICS - PROGRAMA r50
+MRS r51 — PROGRAMA COMPLETO
 
 1. Extraiga TODO el ZIP en una carpeta nueva.
-2. Abra INICIAR_PROGRAMA.bat de esa carpeta.
-3. Compruebe Version 3.6.19-r50.
-4. Cree su proyecto y cargue los audios y Excel en Procesamiento por lotes.
-5. Procese normalmente con el Python y Whisper local ya instalados.
+2. Abra INICIAR_PROGRAMA.bat. Compruebe 3.6.19-r51.
+3. Use Procesamiento por lotes con audios y Excel, Python y Whisper local existentes.
 
-Las correcciones pertenecen al programa y funcionan desde un proyecto nuevo.
+Un estatus de gestion distinto, si se conoce con certeza y cumple calidad y seguridad,
+se corrige en APROBADOS_ETIQUETA_CORREGIDA. No se deja REVISAR solo por la diferencia.
+Los bloqueos de seguridad independientes y la evidencia insuficiente se conservan.
+El Excel original no se modifica. Las cuentas reetiquetadas aparecen en el reporte.
 
-Resultados separados:
-- APROBADO / APROBADO_ETIQUETA_CORREGIDA.
-- NO_APROBADO: incumplimiento ordinario claro sin dudas de seguridad independientes.
-- FALLA_GRAVE: falta critica confirmada.
-- REVISAR: evidencia insuficiente.
-- ERROR: problema tecnico de procesamiento, separado de revision de calidad.
-
-En el Excel se corrige el contador Revisar del resumen por gestor. Consulte
-REVISION_PENDIENTE para ver las causas y evidencia de los pendientes reales.
-Los reportes de calidad, reetiquetado y motivos de no pago se generan al finalizar.
-Los originales se conservan. La tarjeta de Excel es la fuente del identificador.
-Los seguimientos por fallecimiento conservan el estatus original, segun su criterio.
-
-Consulte REVISION_50_PROGRAMA.md y VALIDACION_R50.json para comprobaciones y limites.
-Esta entrega usa su entorno Python existente; el instalador autonomo con usuarios
-se prepara por separado.
+Consulte README.md, REVISION_51_PROGRAMA.md y VALIDACION_R51.json.
