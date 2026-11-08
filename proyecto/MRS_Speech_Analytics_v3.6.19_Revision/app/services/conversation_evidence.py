@@ -104,6 +104,9 @@ def sentence_evidence(text, segments=()):
 def holder_confirmation(text, segments=()):
     """Confirmación conversacional del titular, independiente de la etiqueta Excel."""
     s = normalize(text)
+    from app.services.contextual_identity_evidence import valid_nominal_request, proxy_account_evidence
+    if proxy_account_evidence(text,segments):
+        return {"confirmed":False,"method":"CUENTA_DE_OTRA_PERSONA","evidence":""}
     # Una confirmación aparente seguida de ausencia/tercero no acredita titular.
     counter = re.compile(r"\b(?:no (?:se encuentra|esta aqui|esta en casa)|no soy|soy su (?:espos[oa]|madre|padre|herman[oa])|es nuestro proveedor)\b")
     identification = (
@@ -153,6 +156,7 @@ def holder_confirmation(text, segments=()):
         r"(?P<answer>(?:ah[, ]+)?(?:si[, ]+)?(?:digame|diganme|dime))\b")
     for pattern in (prompt, salutation_prompt, direct, contextual, named_identity, delayed_self_identity, split_honorific, greeted_identity, company_reply):
         for match in pattern.finditer(s):
+            if not valid_nominal_request(s,match.start(),match["identity"]):continue
             if pattern is not direct and re.search(
                     r"\b(?:familiar|espos[oa]|madre|padre|herman[oa]|referencia|quien|usted(?:es)?|"
                     r"banco|despacho|corporativo|cobranza|pago|deuda|cuenta|departamento|encargad[oa]|"
@@ -194,7 +198,7 @@ def holder_confirmation(text, segments=()):
         r"(?:yo )?(?:cancele|bloquee|rompi) (?:mi |la )?tarjeta)\b")
     requested_person=(re.sub(r'^(?:(?:el|la) )?(?:senorita|senora|senor|caballero)\s*','',request['identity']).strip(', ')
                       if request else '')
-    if request and re.search(r'[a-z]{2,}',requested_person) and not third_person and not re.search(
+    if request and valid_nominal_request(s,request.start(),request["identity"]) and re.search(r'[a-z]{2,}',requested_person) and not third_person and not re.search(
             r"\b(?:familiar|espos[oa]|madre|padre|herman[oa]|banco|despacho|corporativo|tarjeta|pago|deuda|cuenta|servicio)\b", request['identity']):
         for unit in sentence_evidence(text, segments):
             if unit["speaker_role"] in {"GESTOR", "TERCERO"}:
@@ -554,11 +558,11 @@ def completed_payment(text, segments=()):
     return {"confirmed": bool(evidence), "evidence": evidence}
 
 
-KIN = r"(?:espos[oa]|marido|mujer|pareja|herman[oa]|hij[oa]|mama|madre|papa|padre|sobrin[oa]|prim[oa]|ti[oa]|abuel[oa]|cunad[oa])"
+KIN = r"(?:espos[oa]|marido|mujer|pareja|herman[oa]|hij[oa]|mama|madre|papa|padre|sobrin[oa]|prim[oa]|ti[oa]|abuel[oa]|cunad[oa]|suegr[oa]|yerno|nuera|niet[oa]|padrastro|madrastra|hijastr[oa])"
 FAMILY = re.compile(rf"\b(?:(?:soy|era) (?:su |un |una )?familiar|soy su {KIN}|(?:es|era) mi {KIN}|(?:es|era) (?:espos[oa]|pareja) de mi {KIN})\b")
 ACCEPTANCE = re.compile(
-    r"\b(?:lo anoto|dejelo anoto|dejeme anotarlo|lo puedo anotar|puedo anotarlo|yo se lo (?:envio|mando)|"
-    r"yo le aviso|le (?:paso|doy|transmito) (?:el|su) recado|se lo comunico|"
+    r"\b(?:lo anoto|dejelo anoto|dejeme anotarlo|lo puedo anotar|puedo anotarlo|puedo (?:hasta )?tomar nota|ya estoy anotando|yo se lo (?:envio|mando)|"
+    r"yo le aviso|le (?:tomamos|tomo|recibimos|recibo) (?:el|su) recado|le (?:paso|doy|transmito) (?:el|su) recado|se lo comunico|"
     r"se lo hago saber|le hago llegar el mensaje|le paso el dato|"
     r"yo (?:le )?aviso(?: igual)?|le voy a (?:pasar|dar) el (?:recado|mensaje))\b")
 DECLINES = re.compile(
@@ -646,8 +650,8 @@ def assess_recado(text, segments=()):
                              'speaker_role':_role_at(text,segments,match.start('answer')),'start':None,'end':None})
     request = re.compile(
         r"\b(?:puedo|puede|puedes|podre|podra|podria|pudiera|podemos|podriamos) (?:dejar(?:le)?|dar(?:le)?) "
-        r"(?:un |el |algun |algun tipo de )?(?:recado|mensaje|mensajito)[^?!.]{0,55}[?.]\s*"
-        r"(?P<answer>si(?:[, ]+claro)?|(?:bien[, ]+)?claro|de acuerdo|a ver[, ]+digame)\b")
+        r"(?:un |el |algun |algun tipo de )?(?:recado|mensaje|mensajito)[^?!.]{0,120}[?.]\s*"
+        r"(?P<answer>si(?:[, ]+claro)?|(?:bien[, ]+)?claro|de acuerdo|ok(?:[, ]+si)?|esta bien|con gusto|a ver[, ]+digame)\b")
     for match in request.finditer(source):
         if (_role_at(text,segments,match.start('answer')) not in {'GESTOR','TITULAR'}
                 and not re.search(r'\b(?:no|diga que|dice que|dijo que)(?: usted)?(?: le)?\s*$',source[max(0,match.start()-45):match.start()])
@@ -731,8 +735,17 @@ def assess_recado(text, segments=()):
                     'method':'SOLICITA_DICTADO_TRAS_ESPERA_CON_CONTACTO_COMPLETO','speaker_role':role,
                     'start':None,'end':None,'callback_evidence':phone})
                 break
+    from app.services.message_contact_evidence import message_contact_evidence, directed_relay_message
+    extended = message_contact_evidence(text, segments)
+    families.extend(extended['family'])
+    acceptances.extend(extended['acceptance'])
+    from app.services.message_contact_evidence import callback_permission_evidence
+    acceptances.extend(callback_permission_evidence(text, segments))
     return {"family": families, "acceptance": acceptances,
-            "refusal": refusals, "unknown_recipient": unknown}
+            "refusal": refusals, "unknown_recipient": unknown,
+            'directed_messages': directed_relay_message(text, segments),
+            'third_party_relationships': extended['third_party_relationships'],
+            'work_relationships': extended['work_relationships']}
 
 
 def directed_callback_message(text, segments=()):
@@ -901,12 +914,17 @@ def payment_places(text, segments, catalog):
 SENSITIVE = re.compile(
     r"\b(?:saldo (?:pendiente|vencido|total|de\s+\d[\d.,]*|es\s+\d[\d.,]*)|"
     r"(?:tiene|presenta|cuenta con) (?:un |una |dos |tres |cuatro |\d+ )?(?:deuda|adeudo|atraso|mens(?:u)?alidad(?:es)?)|"
-    r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis) (?:mes(?:es)?|mens(?:u)?alidad(?:es)?)(?: de)? (?:atraso|vencid[ao]s?)|"
+    r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciseis|diecisiete|dieciocho|diecinueve|veinte) (?:mes(?:es)?|anos?|mens(?:u)?alidad(?:es)?)(?: de)? (?:atraso|vencid[ao]s?)|"
+    r"mens(?:u)?alidades vencidas|(?:meses|anos) de atraso|"
+    r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|veinte) (?:meses?|anos?) (?:que no (?:se )?(?:ha )?(?:efectuado|realizado|aplicado|presentado|registrado|recibido|presenta|efectua|realiza|registra|recibe)|sin (?:realizar|efectuar|registrar)) (?:un |el |su |ningun )?(?:pago|abono)|"
     r"(?:deuda|adeudo|pago minimo|monto) (?:de |es |por )?\d[\d.,]*|"
     r"(?:adeuda|debe)\s+(?:\d[\d.,]*|mil|cien|doscientos|trescientos|quinientos)|"
     r"(?:su|una|la) deuda|(?:su|un|el) adeudo|cubrir (?:el |su )?atraso|respecto a su atraso|por (?:el |su )?atraso|"
     r"negativa de pago|recuperacion (?:del|de su|en el) saldo|"
-    r"pagos? vencidos?|incumplimiento (?:al|del|de) contrato|"
+    r"detener (?:la|su) demanda (?:de tipo )?mercantil|por la trazo de su tarjeta|"
+    r"demanda (?:de|por) (?:pago|incumplimiento)|pagos? vencidos?|incumplimiento (?:al|del|de) (?:contrato|pago)|"
+    r"(?:sobre|respecto a) (?:el|su) atraso (?:que presenta|de su (?:tarjeta|cuenta))|"
+    r"(?:cuenta|tarjeta)(?:[^.!?]{0,45}?) (?:se (?:canalizo|turno|envio)|fue (?:canalizada|turnada|enviada)) (?:al |a (?:el |un )?)?(?:area de |departamento )?juridico|"
     r"(?:tiene|maneja|cuenta con) (?:una |la |su )?tarjeta)\b")
 CARD = re.compile(r"\b(?:tarjeta|referencia|plastico|numero de cuenta)\s*(?:(?:numero|de pago|es|de)\s*)?(?:\d[ -]?){15}\d\b")
 
@@ -1014,7 +1032,7 @@ def sensitive_financial_matches(text):
     source = normalize(text)
     matches = []
     for match in SENSITIVE.finditer(source):
-        if match.group() == 'saldo pendiente':
+        if match.group() in {'saldo pendiente','saldo vencido'}:
             tail = source[match.end():match.end()+200]
             immediate = re.match(
                 rf'[\s,.:]*(?:(?:es|de|por|son|asciende a|la cantidad de|un total de|con un monto de)\s+){{0,4}}'
@@ -1029,6 +1047,15 @@ def sensitive_financial_matches(text):
             if not immediate and not explicit_money:
                 continue
         matches.append(match)
+    # Importes anunciados como términos actuales, no un pago histórico que
+    # el familiar informa. Conservar palabras de enlace como «por la cantidad».
+    amount_phrases=[
+        rf'\b(?:saldo (?:tal|total)|pago minimo)\b[^.!?]{{0,45}}?\b(?:cantidad|monto) (?:de |por )?\$?\s*{NUMBER}\b',
+        rf'\bpara (?:liquidar|regularizar|ponerse al corriente)\b[, ]*(?:es|seria|sera) (?:por |de )?(?:(?:la )?(?:cantidad|monto) (?:de |por )?)?\$?\s*{NUMBER}\b',
+        rf'\bpago que se (?:esta )?requiriendo\b[^.!?]{{0,70}}?\b(?:cantidad|monto) (?:de |por )?\$?\s*{NUMBER}\b',
+        rf'\bno (?:se )?(?:ha |han )?(?:realizado|efectuado|registrado|hecho|generado) (?:ningun |un |el |su )?pago (?:en|desde hace) (?:{NUMBER}) (?:meses?|anos?)\b',
+    ]
+    for pattern in amount_phrases:matches.extend(re.finditer(pattern,source))
     # «Se le está dictaminando su negativa» declara un estado financiero
     # aun cuando ASR omite «de pago». Exigir el contexto de cobro y excluir
     # una negativa a recibir un recado o proporcionar datos.
@@ -1056,28 +1083,29 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
         # Un punto o un corte ASR no debe ocultar «Saldo pendiente. Son $500».
         # El rol decisivo es el de quien proporciona el importe, nunca el de
         # un familiar que informa su propio pago en el turno siguiente.
-        if (not matches and re.search(r'\bsaldo pendiente\s*[.,:]?$', s)
+        if (not matches and re.search(r'\bsaldo (?:pendiente|vencido)\s*[.,:]?$', s)
                 and unit_index+1 < len(privacy_units)):
             following = privacy_units[unit_index+1]
             combined = s+' '+normalize(following['text'])
             joined_matches = [m for m in sensitive_financial_matches(combined)
-                              if m.group() == 'saldo pendiente' and m.start() < len(s)]
+                              if m.group() in {'saldo pendiente','saldo vencido'} and m.start() < len(s)]
             if joined_matches and following['speaker_role'] not in {'TITULAR', 'TERCERO', 'INTERLOCUTOR'}:
                 role = following['speaker_role']
                 unit = dict(unit, text=unit['text']+' '+following['text'], speaker_role=role, end=following['end'])
                 s = combined
                 matches = joined_matches
         sensitive_spans = {(m.start(), m.end()) for m in matches}
-        if any(m.group() == 'saldo pendiente' and (m.start(), m.end()) not in sensitive_spans
+        if any(m.group() in {'saldo pendiente','saldo vencido'} and (m.start(), m.end()) not in sensitive_spans
                for m in SENSITIVE.finditer(s)):
-            allowed_mentions.append(dict(unit, policy='SALDO_PENDIENTE_SIN_IMPORTE_PERMITIDO'))
+            allowed_mentions.append(dict(unit, policy=('SALDO_VENCIDO_SIN_IMPORTE_PERMITIDO' if 'saldo vencido' in s else 'SALDO_PENDIENTE_SIN_IMPORTE_PERMITIDO')))
         for match in matches:
             prefix = s[max(0, match.start()-30):match.start()]
             hypothetical = bool("?" in s or "¿" in s or re.search(r"\b(?:si|no|nunca)\s*$", prefix)
-                                or re.search(r"\b(?:no tiene|sin|si tuviera|en caso de)\b", s))
+                                or re.search(r"\b(?:no tiene|sin (?:deuda|adeudo|atraso)|si tuviera|en caso de)\b", s))
             protected = third_party_confirmed and last_recipient != "TITULAR"
-            confirmed = role == "GESTOR" and protected and not hypothetical
-            uncertain = (role == "NO DETERMINADO" or hypothetical
+            asr_uncertainty=match.group()=="por la trazo de su tarjeta"
+            confirmed = role == "GESTOR" and protected and not hypothetical and not asr_uncertainty
+            uncertain = (role == "NO DETERMINADO" or hypothetical or asr_uncertainty
                          or (role == "GESTOR" and not titular and last_recipient != "TITULAR" and not protected))
             relevant = third_party_confirmed or expected_third_party or not titular
             evidence.append(dict(unit, phrase=match.group(), confirmed=confirmed,
@@ -1126,4 +1154,5 @@ def dictated_privacy_email(text,segments=()):
         one=match['one'] or re.search(r'\b(?:numero )?(?:1|uno)\b',match['bridge'])
         return {'detected':True,'address':'privacidad'+('1' if one else '')+'@bradesco.com.mx',
                 'method':'DICTADO_CON_DOMINIO_LITERAL','evidence':match.group()}
-    return {'detected':False,'address':'','method':'SIN_DICTADO_CONFIRMABLE','evidence':''}
+    from app.services.arco_context_evidence import spoken_privacy_email
+    return spoken_privacy_email(text,segments)

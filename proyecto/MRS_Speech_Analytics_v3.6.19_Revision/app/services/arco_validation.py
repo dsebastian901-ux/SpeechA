@@ -5,7 +5,7 @@ from app.services.conversation_evidence import agent_statement, normalize, sente
 
 ID_DOCUMENT = r'(?:ine|identificacion oficial)'
 LINE_DOCUMENT = r'(?:(?:comprobante|recibo) (?:de (?:la |su )?)?(?:linea(?: telefonica)?|telefono|titularidad de (?:la |su )?linea|propiedad de (?:la |su )?linea))'
-REQUEST = r'\b(?:envie|enviar|enviarnos|mande|mandar|adjunte|adjuntar|adjuntando|proporcione|proporcionar|presente|presentar|solicito|solicitamos|solicitare|pido|requiere|requerimos|necesito|necesitamos)\b'
+REQUEST = r'\b(?:envie|enviar|enviarnos|mande|mandar|adjunte|adjuntar|adjuntando|juntar|juntando|anexar|anexando|ingresar|ingresarlo|ingresando|agregar|compartir|comparta|compartiendo|proporcione|proporcionar|presente|presentar|solicito|solicitamos|solicitare|pido|requiere|requerimos|necesito|necesitamos)\b'
 
 
 def document_requests(text, segments=()):
@@ -23,7 +23,10 @@ def document_requests(text, segments=()):
             for match in re.finditer(r'\b'+pattern+r'\b',block):
                 prefix=block[max(0,match.start()-200):match.start()]
                 if not re.search(REQUEST,prefix):continue
-                negative=bool(re.search(r'\b(?:no|nunca|jamas|tampoco|evite|evitar|prohibido)\b[^.!?]{0,180}$',prefix))
+                request_match=list(re.finditer(REQUEST,prefix))[-1]
+                request_prefix=prefix[max(0,request_match.start()-70):request_match.start()]
+                negative=bool(re.search(r'\b(?:no|nunca|jamas|tampoco|evite|evitar|prohibido)\s*$',request_prefix)
+                    or re.search(r'\b(?:no es necesario|no se requiere|no hace falta|no (?:le )?(?:pido|pedimos|solicito|solicitamos))\b[^.!?]{0,40}$',request_prefix))
                 requested[key]=not negative;found[key]=not negative
                 evidence.append({'document':key,'requested':not negative,'text':unit['text'],
                                  'speaker_role':unit['speaker_role'],'start':unit['start'],'end':unit['end']})
@@ -59,6 +62,9 @@ def assess_arco(text,segments=(),*,email_given=False):
         r'\b(?:puede ejercer|para ejercer|solicitar|tramitar|ejercer|procedimiento|proceso|tramite|hacer efectivos?)\b'
         r'.{0,85}\bderechos? (?:a )?arco\b|'
         r'\bderechos? (?:a )?arco\b.{0,85}\b(?:puede ejercer|puede solicitar|se tramitan|debe solicitar)\b')
+    from app.services.arco_context_evidence import removal_process_explanation, dictated_rights_mention
+    rights=bool(rights or dictated_rights_mention(text,segments))
+    process=bool(process or removal_process_explanation(text,segments))
     documents=document_requests(text,segments)
     removal=agent_statement(text,segments,
         r'\b(?:solicitar|tramitar|pedir)\b.{0,35}\bbaja\b.{0,45}\b(?:numero|linea)\b.{0,55}\bbase de datos\b')
@@ -66,6 +72,8 @@ def assess_arco(text,segments=(),*,email_given=False):
         r'\bno (?:puede|podra|voy a|vamos a|le voy a|se puede) (?:ejercer|tramitar|explicar|solicitar)\b.{0,65}\barco\b|'
         r'\bno (?:existen|aplican)\b.{0,45}\bderechos? (?:a )?arco\b',normalize(u['text']))
         for u in sentence_evidence(text,segments))
+    from app.services.arco_context_evidence import explicit_arco_denial
+    denied=bool(denied or explicit_arco_denial(text,segments))
     complete=bool(rights and process and email_given and documents['both_documents_requested'] and not denied)
     # Un indicio de orientación no satisface el guion. Evita certificar una
     # omisión acústica cuando ASR conserva pasos relacionados pero no el término.

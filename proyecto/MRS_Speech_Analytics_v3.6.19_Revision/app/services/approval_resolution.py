@@ -48,7 +48,7 @@ def ordinary_score_rejection(metadata, score, minimum_score, duration_seconds):
     if any(treatment.get(k) for k in ['mistreatment_report_evidence','dismissive_review_required',
                                     'confrontation_review_required','hostile_interlocutor_review_required']):return False
     for key in ['audio_block_evidence_validation','family_contact_validation','recado_acceptance_validation',
-                'privacy_disclosure_validation','home_warning_validation','home_recovery_warning',
+                'message_delivery_validation','contact_conflict_validation','privacy_disclosure_validation','home_warning_validation','home_recovery_warning',
                 'account_source_validation','financial_review_validation','amount_recovery_validation',
                 'call_end_validation','wait_validation']:
         value=metadata.get(key) or {}

@@ -42,6 +42,27 @@ OWN_ACCOUNT = re.compile(
     r'no (?:he podido|puedo|pude) (?:ir a )?(?:pagar|depositar|abonar|realizar (?:mi|el) pago))\b')
 
 
+def valid_nominal_request(source, start, identity):
+    """Una ausencia/ubicación no puede interpretarse como nombre solicitado."""
+    if re.search(r'\b(?:aqui|ahi|alla|ahorita|actualmente|domicilio|casa|hospital|hospitalizado|internado|trabajando)\b',identity):
+        return False
+    prefix=source[max(0,start-80):start]
+    return not re.search(r'\b(?:no|no se|ya no|dice que|dijo que|diga que|repita que)\s*$',prefix)
+
+
+def proxy_account_evidence(text, segments=()):
+    """Cuenta de otra persona declarada por el interlocutor; no certifica parentesco."""
+    pattern=re.compile(r'\b(?:(?:estados? de cuenta|cuenta|tarjeta) de (?:ella|el|la titular|el titular)|'
+                       r'no esta ya[, ]+(?:pero )?digame)\b')
+    for unit in sentence_evidence(text,segments):
+        if unit['speaker_role'] in {'GESTOR','TITULAR'}:continue
+        value=normalize(unit['text'])
+        for match in pattern.finditer(value):
+            if '?' in value or re.search(r'\b(?:no|dijo que|dice que|diga que|si fuera)\s*$',value[:match.start()]):continue
+            return True
+    return False
+
+
 def contextual_holder_confirmation(text, segments, identification):
     """No basta un sí, un agradecimiento, el Excel o la falta de parentesco.
 
@@ -51,9 +72,9 @@ def contextual_holder_confirmation(text, segments, identification):
     """
     source=normalize(text)
     none={'confirmed':False,'method':'SIN_CONTEXTO_NOMINAL_COMPLETO','evidence':''}
-    if COUNTER.search(source):return none
+    if COUNTER.search(source) or proxy_account_evidence(text,segments):return none
     explicit = re.search(r'\bcon (?:el senor|la senora|la senorita) (?P<identity>[a-z ]{3,85}?)\s*[,?.]?\s+(?P<answer>a sus ordenes|para servirle|su servidor|su servidora)\b',source)
-    if explicit and not BAD_IDENTITY.search(explicit['identity']) and _role_at(text,segments,explicit.start('answer')) not in {'GESTOR','TERCERO'}:
+    if explicit and valid_nominal_request(source,explicit.start(),explicit['identity']) and not BAD_IDENTITY.search(explicit['identity']) and _role_at(text,segments,explicit.start('answer')) not in {'GESTOR','TERCERO'}:
         return {'confirmed':True,'method':'IDENTIFICACION_NOMINAL_CON_RESPUESTA_DE_SERVICIO','evidence':explicit.group(),'speaker_role':'NO DETERMINADO','human_verified':False}
     requests=[
         re.compile(r'\b(?:buenos dias|buenas dias|buenas tardes)[, .]*con\s+'
@@ -75,6 +96,7 @@ def contextual_holder_confirmation(text, segments, identification):
     for pattern in requests:
         for request in pattern.finditer(source):
             identity=request['identity']
+            if not valid_nominal_request(source,request.start(),identity):continue
             if BAD_IDENTITY.search(identity) or re.search(r'\d',identity):continue
             person=re.sub(r'^(?:(?:el|la) )?(?:senorita|senora|senor|caballero)\s*','',identity).strip(', ')
             if not re.search(r'[a-z]{2,}',person):continue

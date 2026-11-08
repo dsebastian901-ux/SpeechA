@@ -32,6 +32,7 @@ def mistreatment_reports(text, segments, phrases):
         r'(?:insulto|agredio|ofendio|amenazo|grito)\b')
     paid_source=normalize(text)
     paid_report=bool(re.search(r'\bya (?:lo |les )?pague\b',paid_source))
+    cancelled_report=bool(re.search(r'\b(?:tarjeta (?:ya )?esta cancelada|ya (?:la |lo )?cancele|dio de baja la tarjeta)\b',paid_source))
     paid_call_complaint = bool(re.search(r'\b(?:mi cuenta ya esta liquidada|ceros? mi cuenta)\b',paid_source)
         and re.search(r'\b(?:respecto (?:a )?esta molestia|me molesta|estoy molest[oa]|no he tenido buenos comentarios anteriores)\b',paid_source))
     units = sentence_evidence(text, segments)
@@ -57,6 +58,10 @@ def mistreatment_reports(text, segments, phrases):
         if re.search(r'\b(?:les (?:marque|mande|envie)|hable y mande|mande muchos mensajes|llamadas por whatsapp)\b',value+' '+previous):
             matches.extend(re.finditer(r'\bno me (?:contestaron|respondieron|respondia|respondio)\b',value))
         phone_context = bool(re.search(r'\b(?:llamadas?|llame|llamar|marcan|marcando|marcado|marcaron)\b', value+' '+previous))
+        if cancelled_report:
+            matches.extend(re.finditer(r'\b(?:es molesto que esten (?:marque y marque|llamando)|'
+                r'(?:me |nos )?(?:sigan|siguen|estan) (?:molestando|hostigando)|'
+                r'me (?:marcan|llaman) a cada rato)\b',value))
         if phone_context:
             matches.extend(re.finditer(r'\b(?:me tienen|estoy) inundad[oa] de llamadas\b',value))
             if paid_report:
@@ -67,6 +72,7 @@ def mistreatment_reports(text, segments, phrases):
                 r'nunca me han (?:contestado|atendido))\b', value))
         complaint_context=bool(re.search(r'\b(?:aclaracion|reportar|reporte|investigar|investigacion|tarjeta|compras|companeros?|cobrar|cobranza|estado de cuenta|desglose|folio)\b',value+' '+previous))
         if complaint_context:
+            matches.extend(re.finditer(r'\b(?:nunca|no) me (?:dijeron|dijo|avisaron|aviso|informaron|informo|explicaron|explico)\b[^.!?]{0,100}\b(?:costo|comision|anualidad)\b',value))
             matches.extend(re.finditer(r'\b(?:nunca me avisaron|no me (?:avisaron|dieron solucion)|'
                 r'no me (?:lo |la )?quisieron (?:dar|resolver)|'
                 r'(?:me (?:enganaron|engano)|no se vale que enganen)|'
@@ -97,6 +103,7 @@ def mistreatment_reports(text, segments, phrases):
             if re.search(r'\b(?:no es cierto que|no es verdad que|no dije que|no he dicho que|'
                          r'no hubo|nunca hubo|sin|no fue|no recib[ií]|si (?:alguien|alguna vez))\s*$', before):
                 continue
+            if re.search(r'\b(?:no es cierto que|no es verdad que|no dije que|no he dicho que)\b[^.!?]{0,45}$',before):continue
             conditional = re.search(r'\b(?:si|en caso de que)\b[^,;.!?]{0,45}$', before)
             affirmative = bool(re.search(r'\bsí\b', unit['text'], re.I))
             if conditional and not affirmative and (conditional.group().startswith('en caso de que') or
@@ -133,4 +140,4 @@ def offensive_asr_variants(text):
     """Variantes acotadas; no tomar «tarjetaunching» como insulto confirmado."""
     return [m.group() for m in re.finditer(
         r'\bching(?:uy|ui|ue)\s*(?:y\s*)?ching(?:uy|ui|ue)\b|'
-        r'\b(?:ah|a)[, ]+chingas\b|\b(?:una|la|su)chingada\b|\bmaldit[ao]s?[.!?¡¿ ]*$', normalize(text))]
+        r'\bcagando\b|\b(?:ah|a)[, ]+chingas\b|\b(?:una|la|su)chingada\b|\bmaldit[ao]s?[.!?¡¿ ]*$', normalize(text))]

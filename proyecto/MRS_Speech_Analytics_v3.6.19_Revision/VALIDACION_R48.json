@@ -1,0 +1,107 @@
+{
+  "revision": "3.6.19-r48",
+  "tests": {
+    "passed": 2346,
+    "skipped": 7,
+    "failures": 0
+  },
+  "future_preparation_tests": {
+    "passed": 2366,
+    "skipped": 7,
+    "failures": 0
+  },
+  "synthetic_new_batch_scenarios_r48": 17,
+  "fresh_project": {
+    "revision": "3.6.19-r48",
+    "calls": 78,
+    "asr_executed": false,
+    "human_audio_listening": false,
+    "original_audio_available": true,
+    "audio_input": "78 original uploaded recordings; binary input/output checked",
+    "asr_boundary": "controlled original raw ASR outputs from user checkpoint",
+    "previous_checkpoint_imported_by_application": false,
+    "saved_human_confirmations_imported": false,
+    "transcriptions_recovered": 0,
+    "asr_boundary_calls": 78,
+    "outcomes": {
+      "REVISAR": 67,
+      "APROBADO_ETIQUETA_CORREGIDA": 8,
+      "APROBADO": 1,
+      "FALLA_GRAVE": 2
+    },
+    "all_13_rule_groups_applied": true,
+    "classification_and_score_match_full403_evaluation": true,
+    "source_unchanged": true,
+    "original_audio_copies_byte_identical": true,
+    "source_excel_fixture_unchanged": true
+  },
+  "full403_rule_comparison": {
+    "calls": 403,
+    "before": {
+      "REVISAR": 362,
+      "FALLA_GRAVE": 22,
+      "APROBADO": 17,
+      "APROBADO_ETIQUETA_CORREGIDA": 2
+    },
+    "after": {
+      "REVISAR": 329,
+      "FALLA_GRAVE": 25,
+      "APROBADO": 27,
+      "APROBADO_ETIQUETA_CORREGIDA": 22
+    },
+    "original_unchanged": true,
+    "original_audios": 362,
+    "contrast_windows": 21,
+    "contrast_calls": 18,
+    "human_listening": false
+  },
+  "prior_dataset_regression": {
+    "evaluations": 1210,
+    "original_transcripts_and_accounts_preserved": true,
+    "confirmed_privacy_preserved": true,
+    "outcomes": {
+      "sealed-usuario100": {
+        "APROBADO": 21,
+        "REVISAR": 48,
+        "NO_APROBADO_MENOR_80": 25,
+        "APROBADO_ETIQUETA_CORREGIDA": 3,
+        "FALLA_GRAVE": 3
+      },
+      "sealed-lote103": {
+        "REVISAR": 73,
+        "FALLA_GRAVE": 9,
+        "APROBADO": 17,
+        "APROBADO_ETIQUETA_CORREGIDA": 2,
+        "NO_APROBADO_MENOR_80": 2
+      },
+      "sealed-lote1007-nombres": {
+        "REVISAR": 836,
+        "NO_APROBADO_MENOR_80": 66,
+        "APROBADO_ETIQUETA_CORREGIDA": 15,
+        "APROBADO": 78,
+        "FALLA_GRAVE": 12
+      }
+    },
+    "updated_financial_extractor_compared_on": 1613,
+    "cases_with_financial_evidence_changes": 55,
+    "uncertainty_guard_equivalence_evaluations": 1613,
+    "new_approvals": 14,
+    "prior_approvals_removed": 7
+  },
+  "acoustic_contrast": {
+    "received_originals": 362,
+    "covers_all_previous_REVISAR": true,
+    "additional_asr_windows": 21,
+    "distinct_calls": 18,
+    "model": "Whisper medium / sherpa-onnx int8",
+    "human_listening": false,
+    "speaker_roles_certified": false,
+    "supplementary_readings_used_for_automatic_approval": false,
+    "original_transcripts_rewritten": false
+  },
+  "native_windows_verified": false,
+  "whole_batch_acoustic_retranscription_executed": false,
+  "remaining_review_count": 329,
+  "all_manual_review_resolved": false,
+  "offline_installer_with_users_delivered": false
+}

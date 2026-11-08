@@ -7,6 +7,7 @@ from app.services.conversation_evidence import assess_privacy, sensitive_financi
 
 @pytest.mark.parametrize('text', [
     'Es referente al saldo pendiente.',
+    'Tiene un saldo vencido.',
     'Tiene un saldo pendiente en su tarjeta departamental, terminación 6016.',
     'Le informo del saldo pendiente. Llame al 5551234567.',
     'Tiene un saldo pendiente; anote el teléfono 5551234567.',
@@ -25,7 +26,7 @@ def test_generic_balance_is_allowed_even_for_confirmed_gestor_and_third_party(te
     'Su saldo pendiente es de mil quinientos pesos.', 'Saldo pendiente: tres mil quinientos noventa pesos.',
     'Su saldo pendiente asciende a 3500.', 'Saldo pendiente de mil 500 pesos.',
     'Tiene una deuda de 500 pesos.', 'Tiene tres meses de atraso.',
-    'Presenta dos mensualidades vencidas.', 'Tiene un saldo vencido.',
+    'Presenta dos mensualidades vencidas.',
     'Su tarjeta es 1234567890123456.',
     'Saldo pendiente de un peso.',
 ])

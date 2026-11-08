@@ -44,6 +44,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     for domain, field, code, message in [
         (2,'family_contact_validation','FAMILY_CONFIRMATION','Confirmación de parentesco pendiente de revisión.'),
         (4,'recado_acceptance_validation','RECADO_CONFIRMATION','Confirmación de aceptación del recado pendiente.'),
+        (4,'contact_conflict_validation','CONTACT_CONTRADICTION','Respuestas contradictorias sobre el interlocutor.'),
+        (4,'message_delivery_validation','CALLBACK_NOT_DELIVERED','Contacto ofrecido sin entrega detectada.'),
         (3,'privacy_disclosure_validation','DISCLOSURE_CONFIRMATION','Confirmación de divulgación pendiente de revisión.'),
         (8,'home_warning_validation','WARNING_CONFIRMATION','Confirmación de advertencia pendiente.'),
         (5,'account_source_validation','ACCOUNT_SOURCE','Datos de cuenta inconsistentes; revisar nombre de salida'),

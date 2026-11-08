@@ -151,7 +151,7 @@ def test_confirmed_privacy_is_not_waived_by_hostility_exception():
     assert A.analyze_transcription(t, relation).metadata['final_result'] == 'FALLA_GRAVE'
 
 
-@pytest.mark.parametrize('phrase', ['Tiene un saldo vencido.', 'Tiene una deuda.'])
+@pytest.mark.parametrize('phrase', ['Tiene una deuda.'])
 def test_other_financial_disclosure_without_amount_still_requires_confirmed_roles(phrase):
     data, relation, _ = fixture()
     data['texto'] = BASE+' '+phrase
@@ -164,7 +164,7 @@ def test_other_financial_disclosure_without_amount_still_requires_confirmed_role
     assert after.metadata['final_result'] == 'FALLA_GRAVE'
 
 
-@pytest.mark.parametrize('phrase', ['Tiene un saldo pendiente.', 'Es referente al saldo pendiente de su tarjeta.'])
+@pytest.mark.parametrize('phrase', ['Tiene un saldo pendiente.', 'Tiene un saldo vencido.', 'Es referente al saldo pendiente de su tarjeta.'])
 def test_user_policy_allows_generic_pending_balance_without_amount(phrase):
     data, relation, _ = fixture()
     data['texto'] = BASE+' '+phrase

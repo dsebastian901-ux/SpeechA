@@ -1,8 +1,8 @@
-MRS SPEECH ANALYTICS - PROGRAMA r47
+MRS SPEECH ANALYTICS - PROGRAMA r48
 
 1. Extraiga TODO el ZIP en una carpeta nueva.
 2. Abra INICIAR_PROGRAMA.bat en esa carpeta.
-3. La barra inferior debe mostrar Version 3.6.19-r47.
+3. La barra inferior debe mostrar Version 3.6.19-r48.
 4. Cree un proyecto nuevo, entre a Procesamiento por lotes y cargue audios y Excel.
 5. Procese normalmente. Las reglas corregidas se aplican desde este proceso.
 
@@ -16,3 +16,8 @@ El Excel y los audios originales permanecen sin cambios.
 
 La revision del programa y el origen del procesamiento aparecen en la hoja
 CONTROL_PROCESAMIENTO del reporte de calidad.
+
+Revision r48: reglas generales de recados, parentesco, identidad, ARCO y privacidad.
+Se permiten saldo pendiente y saldo vencido sin importe, segun su criterio.
+El programa conserva los bloqueos ante montos/mora protegidos, quejas, groserias y espera.
+Consulte REVISION_48_PROGRAMA.md para el alcance de validacion.
