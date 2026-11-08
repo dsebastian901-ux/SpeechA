@@ -426,6 +426,7 @@ class AnalyticsService:
         analysis.metadata["quality_contact_type"] = compliance.get(
             "contact_type", "CONTACTO NO DETERMINADO"
         )
+        analysis.metadata["explicit_message_refusal"] = compliance.get("explicit_message_refusal", {})
         analysis.metadata["message_delivery_validation"] = compliance.get("message_delivery_validation", {})
         analysis.metadata["contact_conflict_validation"] = compliance.get("contact_conflict_validation", {})
         analysis.metadata["contact_validation"] = compliance.get("contact_validation", {})
@@ -1132,6 +1133,9 @@ class AnalyticsService:
         if not unknown_response['confirmed'] and not contradictory_contact_response:
             from app.services.arco_context_evidence import positive_knowledge_denial
             unknown_response = positive_knowledge_denial(text,segments)
+        if not unknown_response['confirmed'] and not contradictory_contact_response:
+            from app.services.arco_dialogue_evidence import listed_knowledge_denial
+            unknown_response = listed_knowledge_denial(text,segments)
         unknown_debtor = unknown_debtor or unknown_response['confirmed']
 
         recado_assessment = assess_recado(text, context.get("_segments") or [])
@@ -1152,6 +1156,8 @@ class AnalyticsService:
             recado_assessment['family'].append({'text':'Parentesco confirmado explícitamente por el usuario.',
                 'phrase':'familiar confirmado por usuario: '+confirmed_family['relationship'].lower(),
                 'source':'EXPLICIT_USER_FAMILY_CONFIRMATION','speaker_role':'NO DETERMINADO','start':None,'end':None})
+        from app.services.definitive_rejection import explicit_message_refusal
+        message_refusal_validation = explicit_message_refusal(text,segments,recado_assessment['acceptance'])
         family = bool(recado_assessment["family"])
         spouse = any(re.search(r"\b(?:espos[oa]|marido|mujer)\b", e["phrase"])
                      for e in recado_assessment["family"])
@@ -1180,8 +1186,16 @@ class AnalyticsService:
             r"(?:no se encuentra(?: aqui| en casa| en este momento)?|"
             r"no esta(?: aqui| en casa| ahorita| por el momento)?|no (?:llega|ha llegado)|esta trabajando)[.!]?$"))
         message_for_named_person = bool(not titular and recado_assessment['acceptance'] and agent_statement(
-            text,segments,r'\b(?:el senor|al senor|la senora|la senorita|el titular|la titular)\b[^.!?]{0,85}'
-            r'\b(?:se pueda comunicar|se comunique|se comuniquen|pueda comunicarse|se contacte|se ponga en contacto|contactarse)\b'))
+            text,segments,r'\b(?:el senor|al senor|la senora|la senorita|el titular|la titular|el caballero)\b[^.!?]{0,85}'
+            r'\b(?:se pueda comunicar|se comunique|se comuniquen|se tiene que comunicar|se debe(?: de)? comunicar|pueda comunicarse|se contacte|se ponga en contacto|se pueda poner en contacto|se puede poner en contacto|contactarse)\b'))
+        from app.services.message_dialogue_evidence import accepted_callback_request
+        accepted_return_request = accepted_callback_request(text,segments,recado_assessment['acceptance'])
+        message_for_named_person = message_for_named_person or bool(accepted_return_request)
+        from app.services.message_dialogue_evidence import recipient_relay_with_callback
+        message_for_named_person = message_for_named_person or bool(not titular and recipient_relay_with_callback(text,segments,recado_assessment['acceptance']))
+        from app.services.message_dialogue_evidence import delivered_intermediary_message
+        received_intermediary_message = delivered_intermediary_message(text,segments,recado_assessment['acceptance'])
+        message_for_named_person = message_for_named_person or bool(not titular and received_intermediary_message)
         intermediary_response = intermediary_response or message_for_named_person or bool(
             not titular and recado_assessment['acceptance'] and (recado_assessment.get('directed_messages')
                 or any(e.get('relay_purpose_confirmed') for e in recado_assessment['acceptance'])))
@@ -1324,6 +1338,7 @@ class AnalyticsService:
             "que se comunique",
             "se contacte",
             "se ponga en contacto",
+            "se pueda poner en contacto",
             "se pueda comunicar",
             "pueda comunicarse",
             "comunicarse con",
@@ -1380,12 +1395,14 @@ class AnalyticsService:
             if callback_message:
                 recado_assessment['message'] = callback_message
                 recado_transmitted = True
+        if contact_type=='NO CONOCEN A DEUDOR':
+            message_refusal_validation = {'confirmed':False,'evidence':[],'reason':'El recado no aplica a quien desconoce al titular.'}
         # Un rechazo explícito bloquea la aprobación aunque el gestor haya dictado un número.
         # "Le puedo dejar" es una solicitud del gestor, NO prueba aceptación del interlocutor.
         # Si el texto carece de confirmación, se conserva REVISAR (no se fabrica una aprobación).
         from app.services.message_contact_evidence import unfinished_callback_offer
         message_delivery_validation = (unfinished_callback_offer(text, segments)
-            if contact_type!='TITULAR' and (leaves_message or recado_expected or recado_assessment['acceptance'])
+            if contact_type not in {'TITULAR','NO CONOCEN A DEUDOR'} and (leaves_message or recado_expected or recado_assessment['acceptance'])
             else {'review_required':False,'reason':'','evidence':[]})
         if confirmed_recado.get('valid') and confirmed_recado.get('callback_delivered'):
             message_delivery_validation = {'review_required':False,'reason':'Contacto confirmado por usuario.','evidence':[]}
@@ -1393,12 +1410,14 @@ class AnalyticsService:
         recado_refusal = bool(recado_refusal or recado_assessment["refusal"])
         # La pregunta de si puede anotar no demuestra que se dictó un mensaje.
         recado_callback = bool(re.search(
-            r"\b(?:se contacte|se ponga en contacto|contactarse|que (?:se comuniquen?|(?:nos |me )?(?:llame|marque))|"
+            r"\b(?:se contacte|se ponga en contacto|se pueda poner en contacto|se puede poner en contacto|contactarse|que (?:se comuniquen?|(?:nos |me )?(?:llame|marque))|"
             r"(?:se|pueda) comunicar con nosotros|se comunique (?:inmediatamente |a la brevedad )?(?:al|con nosotros)|puede comunicarse|"
             r"(?:me|nos) (?:pued[ae]|podria|podia|pudiera) (?:regalar|regresar) (?:una? |la )?llamada|"
             r"numero (?:telefonico|de telefonico|de telefono|de contacto|de atencion))\b",
             normalized))
         recado_callback = recado_callback or bool(recado_assessment.get('directed_messages'))
+        from app.services.message_dialogue_evidence import callback_modal_instruction
+        recado_callback = recado_callback or bool(callback_modal_instruction(text,segments))
         recado_callback = recado_callback or bool(re.search(
             r'\bque (?:le )?(?:marque|llame) (?:a |al |a ese |ese |a este |este )?(?:numero|telefono)\b', normalized))
         recado_callback = recado_callback or bool(
@@ -1595,6 +1614,9 @@ class AnalyticsService:
         if not tenure_reply['confirmed']:
             from app.services.arco_context_evidence import line_tenure_reply
             tenure_reply = line_tenure_reply(text,segments)
+        if not tenure_reply['confirmed']:
+            from app.services.arco_dialogue_evidence import clarified_line_tenure
+            tenure_reply = clarified_line_tenure(text,segments)
         line_tenure_confirmed = bool(confirms_line_tenure or tenure_answer or qualitative_tenure or tenure_reply['confirmed'])
         gives_privacy_email = agent_statement(text, segments,
             r"(?<![\w.+-])privacidad1?@bradesco\.com\.mx(?![\w-]|\.[\w.-])")
@@ -4412,6 +4434,8 @@ class AnalyticsService:
             "checks": checks,
             "blocks": blocks,
             "contact_type": contact_type,
+            "explicit_message_refusal": (message_refusal_validation if contact_type != "TITULAR" else
+                {"confirmed":False,"evidence":[],"reason":"No corresponde rechazo de recado: conversación con titular."}),
             "message_delivery_validation": message_delivery_validation,
             "contact_conflict_validation": contact_conflict_validation,
             "contact_validation": contact_confirmation,

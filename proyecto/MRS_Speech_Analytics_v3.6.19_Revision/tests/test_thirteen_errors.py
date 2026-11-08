@@ -183,7 +183,7 @@ def test_e01_e13_operational_categories_are_independent_of_score(base, expected)
 def test_e13_short_duration_blocks_even_untagged_approval():
     decision = A.shared_quality_decision({}, 100, duration_seconds=30,
                                         base_classification={"estatus_autorizado": False})
-    assert decision["clasificacion"] == "REVISAR"
+    assert decision["clasificacion"] == "NO_APROBADO"
 
 
 @pytest.mark.parametrize("word", ["Tontas", "Pendejos", "Puta", "Chinga tu madre"])

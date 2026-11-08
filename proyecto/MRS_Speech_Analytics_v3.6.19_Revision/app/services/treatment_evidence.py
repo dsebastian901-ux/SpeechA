@@ -35,6 +35,8 @@ def mistreatment_reports(text, segments, phrases):
     cancelled_report=bool(re.search(r'\b(?:tarjeta (?:ya )?esta cancelada|ya (?:la |lo )?cancele|dio de baja la tarjeta)\b',paid_source))
     paid_call_complaint = bool(re.search(r'\b(?:mi cuenta ya esta liquidada|ceros? mi cuenta)\b',paid_source)
         and re.search(r'\b(?:respecto (?:a )?esta molestia|me molesta|estoy molest[oa]|no he tenido buenos comentarios anteriores)\b',paid_source))
+    from app.services.context_rules import unknown_debtor_statement
+    wrong_line_report = unknown_debtor_statement(text,segments)
     units = sentence_evidence(text, segments)
     for index, unit in enumerate(units):
         if unit['speaker_role'] == 'GESTOR':
@@ -42,6 +44,8 @@ def mistreatment_reports(text, segments, phrases):
         value = normalize(unit['text'])
         matches = [m for phrase in phrases for m in re.finditer(re.escape(normalize(phrase)), value)]
         matches.extend(variants.finditer(value))
+        if wrong_line_report:
+            matches.extend(re.finditer(r'\b(?:ya )?me canso de decirles\b|\b(?:ya )?(?:estoy|soy|estamos) hart[oa]s?\b[^.!?]{0,100}\b(?:pregunta y pregunte|preguntando|marque y marque|llamando)\b',value))
         if paid_call_complaint:
             matches.extend(re.finditer(r'\b(?:a que se debe que|por que) me (?:sigan|siguen) llamando\b',value))
         matches.extend(re.finditer(

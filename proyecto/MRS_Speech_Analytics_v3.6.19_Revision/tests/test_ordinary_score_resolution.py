@@ -52,9 +52,9 @@ def test_critical_failure_still_has_priority_over_ordinary_rejection():
     assert A.shared_quality_decision(m,0,duration_seconds=100)['clasificacion']=='FALLA_GRAVE'
 
 
-def test_an_unexplained_low_score_or_short_call_is_not_automatically_closed():
+def test_unexplained_low_score_keeps_review_and_verified_short_duration_is_rejected():
     m=ordinary();m['penalties']=[]
     assert A.shared_quality_decision(m,60,duration_seconds=100)['clasificacion']=='REVISAR'
     m=ordinary();m['penalties']=[{'id':'PEN001','points':20}]
     assert A.shared_quality_decision(m,60,duration_seconds=100)['clasificacion']=='REVISAR'
-    assert A.shared_quality_decision(ordinary(),60,duration_seconds=40)['clasificacion']=='REVISAR'
+    assert A.shared_quality_decision(ordinary(),60,duration_seconds=40)['clasificacion']=='NO_APROBADO'

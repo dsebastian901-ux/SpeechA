@@ -8,7 +8,7 @@ from app.services.conversation_evidence import normalize, sentence_evidence, _ro
 BAD_PREFIX = re.compile(r'\b(?:no|no es|no soy|no era|no se si|creo que|tal vez|quizas|'
                         r'diga que|dijo que|dice que|repita que|gracias por|si fuera|si fuese)\s*$')
 MESSAGE = re.compile(r'\b(?:recado|mensaje|mensajito|que (?:se comunique|(?:le |nos |me )?(?:marque|llame))|'
-                     r'(?:se|pueda) comunicar|se comunique|se contacte|se ponga en contacto|contactarse|comunicarse|para que (?:el|ella))\b')
+                     r'(?:se|pueda) comunicar|se comunique|se tiene que comunicar|se debe(?: de)? comunicar|se contacte|se ponga en contacto|se pueda poner en contacto|se puede poner en contacto|contactarse|comunicarse|para que (?:el|ella))\b')
 
 
 def _recipient(text, segments, position):
@@ -50,7 +50,7 @@ def message_contact_evidence(text,segments=()):
         if (_recipient(text,segments,match.start('answer')) and not re.match(r'\s*\?',source[match.end():])
                 and not BAD_PREFIX.search(source[max(0,match.start()-65):match.start()])):
             result['family'].append(_item(source,match,'RESPUESTA_PARENTESCO_A_PREGUNTA_FAMILIAR',text,segments,'answer'))
-    confirmed_kin=re.compile(r'\bes (?:usted )?su (?P<kin>'+KIN+r')(?:[, ]+no)?\?\s*(?P<answer>si|asi es|correcto)\b')
+    confirmed_kin=re.compile(r'\bes (?:usted )?su (?P<kin>'+KIN+r')(?:[, ]+no)?[?.]\s*(?P<answer>si|asi es|correcto)\b')
     for match in confirmed_kin.finditer(source):
         if (_recipient(text,segments,match.start('answer')) and not re.match(r'\s*\?',source[match.end():])
                 and not re.search(r'\b(?:creo|tal vez|quizas|puede ser|no se|supongo|pero no)\b',source[match.end():match.end()+45].split('.')[0])
@@ -102,8 +102,11 @@ def message_contact_evidence(text,segments=()):
             if not MESSAGE.search(nearby) or not _recipient(text,segments,match.start('answer')):continue
             if BAD_PREFIX.search(before[-65:]) or re.search(r'\b(?:diga|digale|repita|gracias por)\b[^.!?]{0,50}$',before):continue
             if pattern is written and not _outside_question(source,match.start(),match.end()):continue
+            if pattern is written:
+                from app.services.message_dialogue_evidence import agent_continuation
+                if agent_continuation(source,match.start(),match.end()):continue
             if pattern is dictate and not any(0<=match.start()-o.end()<=650 for o in offers):continue
-            if pattern is dictate and not re.match(r'\s*(?:[.!?,]|$|(?:por favor|el numero)\b)',source[match.end():]):continue
+            if pattern is dictate and re.match(r'\s*(?:usted )?(?:que|cuanto|de que|por que|cual)\b',source[match.end():]):continue
             if pattern is dictate and not (callback_numbers(nearby) or callback_dictation_fragments(nearby)):continue
             result['acceptance'].append(_item(source,match,method,text,segments,'answer'))
     receive=re.compile(r'\b(?P<answer>(?:digame|paseme) (?:el |la |un |una )?(?:recado|mensaje|razon)(?: por favor)?)\b')
@@ -135,7 +138,7 @@ def directed_relay_message(text,segments=()):
     pattern=re.compile(r'\b(?:digale|diganle|indique(?:le|nle)?|mencione(?:le)?|'
                        r'le puede mencionar|le puede indicar|le dice)\b'
                        r'[^.!?]{0,150}\b(?:se comunique|pueda comunicarse|se pueda comunicar|'
-                       r'se contacte|se ponga en contacto|contactarse|(?:nos |me |le )?(?:llame|marque))\b')
+                       r'se contacte|se ponga en contacto|se pueda poner en contacto|se puede poner en contacto|contactarse|(?:nos |me |le )?(?:llame|marque))\b')
     for unit in sentence_evidence(text,segments):
         if unit['speaker_role'] in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
         value=normalize(unit['text'])
@@ -155,21 +158,39 @@ def unfinished_callback_offer(text,segments=()):
     """Prometer dictar el contacto no demuestra que se haya proporcionado."""
     from app.services.payment_reference_validation import callback_numbers
     source=normalize(text)
+    from app.services.message_dialogue_evidence import negated_return_only
+    if negated_return_only(text):
+        return {'review_required':True,'reason':'El retorno aparece negado sin una instrucción positiva alternativa; revisar el mensaje.','evidence':[]}
     offers=[]
     negative=re.search(r'\bno (?:se )?(?:comunique|contacte|ponga en contacto|llame|marque)\b',source)
-    positive=re.search(r'(?<!no )\b(?:se comunique|se contacte|se ponga en contacto|(?:que |para que )(?:ella |el )?(?:nos |me )?(?:llame|marque))\b',source)
+    positive=re.search(r'(?<!no )\b(?:se comunique|se tiene que comunicar|se debe(?: de)? comunicar|se contacte|se ponga en contacto|(?:que |para que )(?:ella |el )?(?:nos |me )?(?:llame|marque))\b',source)
     if negative and not positive:
         return {'review_required':True,'reason':'La instrucción de retorno está negada en la transcripción; no se certifica un recado positivo.','evidence':[{'text':negative.group(),'method':'RETORNO_NEGADO_EN_TRANSCRIPCION'}]}
-    pattern=re.compile(r'\b(?:le (?:voy a|puedo|podria|pudiera|quiero) (?:dejar|dictar|proporcionar)|'
+    pattern=re.compile(r'\b(?:le (?:voy a|puedo|podria|pudiera|quiero) (?:dejar|dictar|proporcionar|compartir|dar|otorgar)|'
                        r'le (?:dejare|dejo|dictaria|dejaria|daria|proporcionare|proporciono|estaria dejando)|seria (?:dejarle|dictarle))\b[^.!?]{0,60}\b(?:numero|telefono)\b')
     for match in pattern.finditer(source):
         if _role_at(text,segments,match.start()) in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
         if BAD_PREFIX.search(source[max(0,match.start()-65):match.start()]):continue
         offers.append(match)
+    for match in re.finditer(r'\b(?:al|el) siguiente numero(?: telefonico| de telefono)?\b',source):
+        if _role_at(text,segments,match.start())not in {'TITULAR','TERCERO','INTERLOCUTOR'}:
+            if not BAD_PREFIX.search(source[max(0,match.start()-65):match.start()]):offers.append(match)
+    directed_phone = (r'\b(?:tiene|tendra|tenga) (?:usted )?(?:donde|con que) (?:anotar|a notar|notar|apuntar)'
+                      r'[^.!?]{0,65}\bnumero\b')
+    for match in re.finditer(directed_phone,source):
+        if _role_at(text,segments,match.start())not in {'TITULAR','TERCERO','INTERLOCUTOR'}:
+            if not BAD_PREFIX.search(source[max(0,match.start()-65):match.start()]):offers.append(match)
     for match in re.finditer(r'\bse lo voy dictando\b',source):
         if re.search(r'\b(?:numero|telefono)\b',source[max(0,match.start()-850):match.start()]):offers.append(match)
     none={'review_required':False,'reason':'','evidence':[]}
+    # Si la llamada acaba durante un dictado interrogativo, los ecos del
+    # mismo fragmento no convierten el contacto parcial en entrega completa.
+    partial_note=re.search(r'\b(?:tiene|tendra|tenga) (?:usted )?(?:donde|con que) (?:anotar|notar|apuntar|tomar nota)\s*[?.]',source)
+    if partial_note and re.search(r'\d',source[partial_note.end():]) and source.rstrip().endswith('?'):
+        if not callback_numbers(source) and not callback_dictation_fragments(source):offers.append(partial_note)
     if not offers:return none
+    from app.services.message_dialogue_evidence import existing_callback_confirmation
+    if existing_callback_confirmation(text,segments):return none
     if callback_numbers(source) or callback_dictation_fragments(source):return none
     if re.search(r'\b(?:aqui lo tengo|ya lo tengo anotado|tengo (?:aqui |anotado )el numero)\b',source) and not re.search(r'\b(?:no lo tengo|lo tengo en (?:la |mi )?casa)\b',source):return none
     return {'review_required':True,'reason':'Se ofreció dictar un contacto, pero no se detectó que se proporcionara ni que ya estuviera disponible.',
@@ -184,22 +205,34 @@ def callback_dictation_fragments(text):
     """
     from app.services.payment_reference_validation import TOKEN, _digits
     source=normalize(text);found=[]
-    gap=re.compile(r'[\s,.?¿!¡:;-]*(?:(?:aja|aha|ah|si|es|el|y|correcto|perdon|ok|no)[\s,.?¿!¡:;-]*)*')
+    callback_token=re.compile(TOKEN.pattern+r'|(?<!\w)(?:veinticiete|veintitos|cincoenta(?: y (?:uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve))?|secenta)(?!\w)')
+    gap=re.compile(r'[\s,.?¿!¡:;-]*(?:(?:aja|aha|ah|si|es|el|y|correcto|perdon|ok|no|como|a ver|se lo repito|nuevamente|lo repito|corroboro)[\s,.?¿!¡:;-]*)*')
     for cue in re.finditer(r'\b(?:numero(?: de (?:telefono|contacto)| telefonico)?|telefono)\b',source):
         before=source[max(0,cue.start()-80):cue.start()]
         if re.search(r'\b(?:no (?:le )?(?:voy a|puedo|quiero) (?:dar|dictar|dejar)|diga que|dice que|por ejemplo)\b',before):continue
-        tail=source[cue.end():cue.end()+420];tokens=list(TOKEN.finditer(tail))
+        tail=source[cue.end():cue.end()+420];tokens=list(callback_token.finditer(tail))
         if not tokens or tokens[0].start()>180:continue
         if re.search(r'\b(?:tarjeta|terminacion|saldo|pesos|folio|referencia|fecha|mensualidades|pago)\b',tail[:tokens[0].start()]):continue
-        group=[tokens[0]]
+        groups=[[tokens[0]]]
         for token in tokens[1:]:
-            if not gap.fullmatch(tail[group[-1].end():token.start()]):break
-            group.append(token)
-        values=[_digits(t.group()) for t in group]
-        if any(v is None for v in values) or len(group)<3 or sum(len(v) for v in values)<10:continue
-        found.append({'text':tail[group[0].start():group[-1].end()],
-                      'method':'DICTADO_TELEFONICO_CON_ECOS_SIN_RECONSTRUCCION',
-                      'contact_digits_verified':False,'distinct_digits_count_known':False})
+            if gap.fullmatch(tail[groups[-1][-1].end():token.start()]):groups[-1].append(token)
+            else:groups.append([token])
+        for group in groups:
+            # Una corrección y un nuevo dictado pueden aparecer después del primero.
+            prefix=tail[:group[0].start()]
+            if re.search(r'\b(?:tarjeta|terminacion|saldo|pesos|folio|referencia|fecha|mensualidades|pago)\b',prefix):continue
+            values=[_digits(t.group()) for t in group]
+            uncertain=[t.group()for t,v in zip(group,values)if v is None]
+            units=sum(len(v)if v is not None else 2 for v in values)
+            collapsed=[]
+            for token in group:
+                value=token.group()
+                if not collapsed or collapsed[-1]!=value:collapsed.append(value)
+            without_adjacent_echoes=sum(len(_digits(v))if _digits(v)is not None else 2 for v in collapsed)
+            if len(group)<3 or units<10 or without_adjacent_echoes<10:continue
+            found.append({'text':tail[group[0].start():group[-1].end()],
+                          'method':'DICTADO_TELEFONICO_CON_ECOS_SIN_RECONSTRUCCION',
+                          'contact_digits_verified':False,'distinct_digits_count_known':False,'uncertain_number_words':uncertain})
     return found
 
 
@@ -218,7 +251,7 @@ def callback_permission_evidence(text,segments=()):
     )
     pattern=re.compile(r'\b(?P<prompt>'+prompts+r')[?.]\s*'
                        r'(?:(?:me indica|me dice)[, ]*(?:por favor)?[,.? ]+)?'
-                       r'(?P<answer>(?:eh[, ]+)?(?:(?:si[, ]+)?(?:claro(?: que si)?|de acuerdo|esta bien|ok)|si(?:[, ]+si)?|aja|listo|a ver[, ]+(?:digame|dime)))\b')
+                       r'(?P<answer>(?:(?:eh|ah)[, ]+)?(?:(?:si[, ]+)?(?:claro(?: que si)?|de acuerdo|esta bien|ok)|si(?:[, ]+si)?|aja|listo|a ver[, ]+(?:digame|dime)))\b')
     for match in pattern.finditer(source):
         if not _recipient(text,segments,match.start('answer')):continue
         before=source[max(0,match.start()-65):match.start()]

@@ -1,0 +1,138 @@
+{
+  "revision": "3.6.19-r49",
+  "tests": {
+    "passed": 2409,
+    "skipped": 7,
+    "failures": 0
+  },
+  "synthetic_normal_batch_cases": 5,
+  "fresh_project": {
+    "revision": "3.6.19-r49",
+    "calls": 52,
+    "selection": "all changed outcomes/scores plus deterministic safety and unchanged controls",
+    "asr_executed": false,
+    "asr_boundary": "controlled raw ASR from uploaded checkpoint",
+    "previous_checkpoint_imported_by_application": false,
+    "saved_human_confirmations_imported": false,
+    "transcriptions_recovered": 0,
+    "all_original_audio_copies_sha256_match": true,
+    "authoritative_card_in_approved_names": true,
+    "all_13_rule_groups_applied": true,
+    "normal_batch_and_reanalysis_outcomes_scores_match": true,
+    "excel_fixture_unchanged": true,
+    "original_checkpoint_unchanged": true,
+    "reports_generated": true,
+    "summary": {
+      "analizados": 52,
+      "aprobados": 19,
+      "revisar": 21,
+      "no_aprobados": 5,
+      "fallas_graves": 7,
+      "errores": 0,
+      "puntaje_minimo": 80
+    },
+    "outcomes": {
+      "REVISAR": 21,
+      "FALLA_GRAVE": 7,
+      "APROBADO": 11,
+      "APROBADO_ETIQUETA_CORREGIDA": 8,
+      "NO_APROBADO": 5
+    }
+  },
+  "same_362_comparison": {
+    "calls": 362,
+    "before": {
+      "REVISAR": 317,
+      "APROBADO": 14,
+      "APROBADO_ETIQUETA_CORREGIDA": 23,
+      "FALLA_GRAVE": 8
+    },
+    "after": {
+      "REVISAR": 290,
+      "APROBADO": 25,
+      "APROBADO_ETIQUETA_CORREGIDA": 27,
+      "FALLA_GRAVE": 15,
+      "NO_APROBADO": 5
+    },
+    "rows_changed": 34,
+    "pending_review_findings": {
+      "ARCO_INCOMPLETE": 60,
+      "UNIDENTIFIED_CONTACT": 151,
+      "STATUS_INVALID": 268,
+      "STATUS_NOT_CONFIRMED": 196,
+      "UNCERTAIN_DISCLOSURE": 113,
+      "CALLBACK_NOT_DELIVERED": 31,
+      "CARD_REFERENCE": 4,
+      "OFFENSIVE_LANGUAGE": 6,
+      "NEGOTIATION_INVALID_OR_UNCERTAIN": 5,
+      "MISTREATMENT_REPORT": 4,
+      "NO_COLLECTION_ATTEMPT": 3,
+      "SHORT_DURATION": 3,
+      "RECEIPT_UNCERTAIN": 1,
+      "WAIT_WITHOUT_RESUMPTION": 1
+    },
+    "no_aprobados": 5,
+    "source_unchanged": true,
+    "original_transcripts_preserved": true,
+    "authoritative_cards_preserved": true
+  },
+  "exact_r48_reproduction": {
+    "calls": 362,
+    "classification_or_score_differences": 0
+  },
+  "prior_regression": {
+    "evaluations": 1613,
+    "outcomes": {
+      "previous403": {
+        "REVISAR": 300,
+        "FALLA_GRAVE": 32,
+        "APROBADO": 39,
+        "APROBADO_ETIQUETA_CORREGIDA": 27,
+        "NO_APROBADO": 5
+      },
+      "previous100": {
+        "APROBADO": 21,
+        "REVISAR": 47,
+        "NO_APROBADO_MENOR_80": 25,
+        "APROBADO_ETIQUETA_CORREGIDA": 3,
+        "FALLA_GRAVE": 3,
+        "NO_APROBADO": 1
+      },
+      "previous103": {
+        "REVISAR": 70,
+        "FALLA_GRAVE": 9,
+        "APROBADO": 21,
+        "APROBADO_ETIQUETA_CORREGIDA": 1,
+        "NO_APROBADO_MENOR_80": 2
+      },
+      "previous1007": {
+        "REVISAR": 836,
+        "NO_APROBADO_MENOR_80": 64,
+        "APROBADO_ETIQUETA_CORREGIDA": 15,
+        "APROBADO": 78,
+        "FALLA_GRAVE": 12,
+        "NO_APROBADO": 2
+      }
+    },
+    "new_approvals": 26,
+    "prior_approvals_removed": 6,
+    "confirmed_privacy_preserved": true,
+    "source_unchanged": true,
+    "final_callback_delta_scanned_evaluations": 1975,
+    "final_privacy_delta_scanned_evaluations": 1975,
+    "final_privacy_delta_matches": 1,
+    "new362_not_affected_by_final_privacy_delta": true
+  },
+  "human_listening_declared": false,
+  "full_acoustic_retranscription_executed": false,
+  "native_windows_verified": false,
+  "offline_installer_with_users_delivered": false,
+  "remaining_review_count": 290,
+  "all_manual_review_resolved": false,
+  "no_aprobado_in_current362": {
+    "calls": 5,
+    "reason": "existing verified duration minimum, under 60 seconds",
+    "explicit_message_refusal_rule_tested_with_synthetic_dialogues": true
+  },
+  "future_preparation_source_synchronized": true
+}

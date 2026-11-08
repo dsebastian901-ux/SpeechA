@@ -630,6 +630,7 @@ class BatchReportService:
             "APROBADOS": "APROBADO",
             "APROBADO_SIN_ETIQUETAR": "APROBADO SIN ETIQUETAR",
             "APROBADO_CON_EXCEPCION": "APROBADO CON EXCEPCIÓN",
+            "NO_APROBADO": "NO APROBADO - INCUMPLIMIENTO CONFIRMADO",
             "NO_APROBADO_MENOR_80": "NO APROBADO - MENOR A 80%",
             "MAL_DICTAMINADO": "NO APROBADO - MAL DICTAMINADO",
             "NEGOCIACION_INVALIDA": "NO APROBADO - NEGOCIACION INVALIDA",
@@ -977,6 +978,7 @@ class BatchReportService:
             ("APROBADOS_ETIQUETA_CORREGIDA", "APROBADO_ETIQUETA_CORREGIDA"),
             ("APROBADO_SIN_ETIQUETAR", "APROBADO_SIN_ETIQUETAR"),
             ("APROBADO_CON_EXCEPCION", "APROBADO_CON_EXCEPCION"),
+            ("NO_APROBADOS", "NO_APROBADO"),
             ("NO_APROBADOS_MENOR_80", "NO_APROBADO_MENOR_80"),
             ("MAL_DICTAMINADO", "MAL_DICTAMINADO"),
             ("NEGOCIACION_INVALIDA", "NEGOCIACION_INVALIDA"),
@@ -1041,6 +1043,7 @@ class BatchReportService:
         )
         review = sum(1 for r in rows if r.get("Clasificación física") == "REVISAR")
         approved_untagged = sum(1 for r in rows if r.get("Clasificación física") == "APROBADO_SIN_ETIQUETAR")
+        confirmed_rejection = sum(1 for r in rows if r.get("Clasificación física") == "NO_APROBADO")
         under_80 = sum(1 for r in rows if r.get("Clasificación física") == "NO_APROBADO_MENOR_80")
         bad_dictation = sum(1 for r in rows if r.get("Clasificación física") == "MAL_DICTAMINADO")
         invalid_negotiation = sum(1 for r in rows if r.get("Clasificación física") == "NEGOCIACION_INVALIDA")
@@ -1078,6 +1081,7 @@ class BatchReportService:
         summary_ws.append(["Aprobados", approved])
         summary_ws.append(["De ellos, etiqueta corregida", sum(r.get("Clasificación física")=="APROBADO_ETIQUETA_CORREGIDA" for r in rows)])
         summary_ws.append(["Aprobados sin etiquetar", approved_untagged])
+        summary_ws.append(["No aprobados por incumplimiento confirmado", confirmed_rejection])
         summary_ws.append(["No aprobados menor a 80%", under_80])
         summary_ws.append(["Clasificación calculada: MAL DICTAMINADO", bad_dictation])
         summary_ws.append(["Clasificación calculada: NEGOCIACION_INVALIDA", invalid_negotiation])

@@ -28,7 +28,7 @@ CONTEXT=re.compile(r"(?:referencia(?: de pago)?|numeros? de (?:la |su )?tarjeta|
 STOP=re.compile(r"\b(?:whatsapp|comprobante|saldo|pesos|bancos|establecimientos|telefon[oa]|celular|fecha|monto|importe)\b")
 SEPARATOR=re.compile(r"^(?:[\W_]|\b(?:aja|si|correcto|ok|bien)\b)*$")
 CALLBACK_INTENT=re.compile(r'\b(?:regalar(?:me)?|regresar(?:me)?) (?:una? |la )?llamada\b|'
-    r'\b(?:que|para que)\b[^.!?]{0,85}\b(?:se comuniquen?|se pueda comunicar|se contacte|se ponga en contacto|me llame|nos llame|comunicarse|contactarse)\b|'
+    r'\b(?:que|para que)\b[^.!?]{0,85}\b(?:se comuniquen?|se pueda comunicar|se contacte|se ponga en contacto|se pueda poner en contacto|se puede poner en contacto|me llame|nos llame|comunicarse|contactarse)\b|'
     r'\bnumero (?:de contacto|telefonico|de telefono)\b|'
     r'\b(?:comuniquese|comunicarse|llame|llamar|marque|marcar) al numero\b|'
     r'\bnumero que viene (?:al|el|en el) reverso\b')
@@ -47,9 +47,9 @@ def callback_numbers(text):
     """Teléfonos completos en un dictado de contacto; no corrige sus dígitos."""
     source=normalize(text)
     found=[]
-    for context in re.finditer(r'\b(?:numero(?: telefonico| de contacto| de telefono)?|telefono|(?:(?:ok|bien)[, ]+)?es el(?= \d))\b',source):
+    for context in re.finditer(r'\b(?:numero(?: telefonico| de contacto| de telefono)?|telefono|(?:(?:ok|bien)[, ]+)?(?:es el|seria el)(?= \d))\b',source):
         lead=source[max(0,context.start()-90):context.start()]
-        if 'es el' in context.group() and (not re.search(r'\b(?:numero|telefono)\b',source[max(0,context.start()-400):context.start()]) or re.search(r'\b(?:saldo|pesos|importe|monto|deuda|adeudo|tarjeta|folio|fecha)\b',lead[-80:])):continue
+        if ('es el' in context.group()or 'seria el' in context.group()) and (not re.search(r'\b(?:numero|telefono)\b',source[max(0,context.start()-400):context.start()]) or re.search(r'\b(?:saldo|pesos|importe|monto|deuda|adeudo|tarjeta|folio|fecha)\b',lead[-80:])):continue
         if re.search(r'\b(?:no (?:le )?(?:voy a|puedo|quiero|podria) (?:dar|dejar|dictar)(?:le)? (?:un |el )?|'
                      r'no (?:le )?(?:dejare|dare|dictare) (?:un |el )?|'
                      r'(?:dice|dijo|diga) que[^.!?]{0,70}|por ejemplo[^.!?]{0,50})$',lead):

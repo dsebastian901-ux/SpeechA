@@ -1053,6 +1053,8 @@ class BatchView(ctk.CTkFrame):
                 f"Errores: {errors}\n"
                 f"Aprobados: {approved}\n"
                 f"Revisar: {review}\n"
+                f"No aprobados: {classification_summary.get('no_aprobados', 0)}\n"
+                f"Fallas graves: {classification_summary.get('fallas_graves', 0)}\n"
                 f"Umbral: {minimum_score}%"
                 f"{report_message}"
             ),

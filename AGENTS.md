@@ -32,3 +32,8 @@ El usuario acepta identificación mediante pregunta nominal, respuesta y convers
 1. Código fuente completo corregido, instalable en Windows, sin perder funciones.
 2. Suite de regresión reproducible con resultados por llamada y diferencias antes/después.
 3. Registro conciso de errores solucionados y los que requieran audio/validación humana.
+
+## Decisiones confirmadas para r49 (08/nov/2026)
+- El usuario confirmó: NO_APROBADO ante incumplimiento claro y REVISAR ante dudas. El rechazo expreso de un recado puede cerrarse como NO_APROBADO cuando no haya dudas de seguridad independientes. Las fallas graves conservan prioridad.
+- NO_APROBADO es un resultado de evaluación, no un estatus nuevo de grabación. Separarlo de REVISAR en carpetas, contador, GUI y reportes. La duración mínima ya existente de 60 segundos puede cerrarse de esa forma cuando está comprobada; no confundirla con la espera de 65 segundos.
+- Un dato fonético o una repetición del teléfono no certifican sus dígitos. No completar un número parcial por ecos. La incapacidad del titular para anotar un WhatsApp no equivale al rechazo de un recado de un tercero.

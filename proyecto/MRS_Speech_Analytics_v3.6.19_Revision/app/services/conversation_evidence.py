@@ -598,9 +598,11 @@ def assess_recado(text, segments=()):
                     or re.match(r"\s*[,;]?\s*¿?\s*(?:verdad|correcto|cierto)\b", suffix)):
                 continue
             families.append(dict(unit, phrase=match.group()))
-        if ACCEPTANCE.search(s) and not DECLINES.search(s) and "?" not in s and "¿" not in s:
+        if ACCEPTANCE.search(s) and not DECLINES.search(s):
+            from app.services.message_contact_evidence import _outside_question
             # Una cita o una instrucción del gestor no confirma recepción.
             for accepted in ACCEPTANCE.finditer(s):
+                if not _outside_question(s,accepted.start(),accepted.end()):continue
                 prefix=s[max(0,accepted.start()-60):accepted.start()]
                 if (not re.search(r"\b(?:diga|digale|dijera|dijera que|diga que|gracias por)\b.{0,25}$",prefix)
                         and not re.search(r"\bno\s*$",prefix)):
@@ -737,6 +739,17 @@ def assess_recado(text, segments=()):
                 break
     from app.services.message_contact_evidence import message_contact_evidence, directed_relay_message
     extended = message_contact_evidence(text, segments)
+    from app.services.message_dialogue_evidence import dialogue_message_evidence
+    dialogue = dialogue_message_evidence(text,segments)
+    from app.services.message_dialogue_evidence import ready_after_note_wait
+    dialogue['acceptance'].extend(ready_after_note_wait(text,segments))
+    from app.services.message_dialogue_evidence import information_relay_acceptance
+    dialogue['acceptance'].extend(information_relay_acceptance(text,segments))
+    from app.services.message_dialogue_evidence import existing_callback_confirmation
+    dialogue['acceptance'].extend(existing_callback_confirmation(text,segments))
+    from app.services.message_dialogue_evidence import asks_to_hear_callback
+    dialogue['acceptance'].extend(asks_to_hear_callback(text,segments))
+    for key in ['family','acceptance','work_relationships','third_party_relationships']:extended[key].extend(dialogue[key])
     families.extend(extended['family'])
     acceptances.extend(extended['acceptance'])
     from app.services.message_contact_evidence import callback_permission_evidence
@@ -913,6 +926,7 @@ def payment_places(text, segments, catalog):
 
 SENSITIVE = re.compile(
     r"\b(?:saldo (?:pendiente|vencido|total|de\s+\d[\d.,]*|es\s+\d[\d.,]*)|"
+    r"(?:registra|presenta) (?:una )?falta de pago|por un atraso que presenta|"
     r"(?:tiene|presenta|cuenta con) (?:un |una |dos |tres |cuatro |\d+ )?(?:deuda|adeudo|atraso|mens(?:u)?alidad(?:es)?)|"
     r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciseis|diecisiete|dieciocho|diecinueve|veinte) (?:mes(?:es)?|anos?|mens(?:u)?alidad(?:es)?)(?: de)? (?:atraso|vencid[ao]s?)|"
     r"mens(?:u)?alidades vencidas|(?:meses|anos) de atraso|"
@@ -921,6 +935,10 @@ SENSITIVE = re.compile(
     r"(?:adeuda|debe)\s+(?:\d[\d.,]*|mil|cien|doscientos|trescientos|quinientos)|"
     r"(?:su|una|la) deuda|(?:su|un|el) adeudo|cubrir (?:el |su )?atraso|respecto a su atraso|por (?:el |su )?atraso|"
     r"negativa de pago|recuperacion (?:del|de su|en el) saldo|"
+    r"deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas|"
+    r"(?:tiene|presenta) (?:lo que es )?(?:una|su|la) cuenta extrajudicial|"
+    r"(?:su |la )?cuenta(?: se encuentra| esta)? en extrajudicial|se encuentra en extrajudicial (?:su |la )?tarjeta|"
+    r"(?:su|la|esa) cuenta[^.!?]{0,65}\b(?:se encuentra|esta|asignada|canalizada) (?:en |a |al )?(?:el |la )?area de cobranza|"
     r"detener (?:la|su) demanda (?:de tipo )?mercantil|por la trazo de su tarjeta|"
     r"demanda (?:de|por) (?:pago|incumplimiento)|pagos? vencidos?|incumplimiento (?:al|del|de) (?:contrato|pago)|"
     r"(?:sobre|respecto a) (?:el|su) atraso (?:que presenta|de su (?:tarjeta|cuenta))|"
@@ -1103,7 +1121,7 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
             hypothetical = bool("?" in s or "¿" in s or re.search(r"\b(?:si|no|nunca)\s*$", prefix)
                                 or re.search(r"\b(?:no tiene|sin (?:deuda|adeudo|atraso)|si tuviera|en caso de)\b", s))
             protected = third_party_confirmed and last_recipient != "TITULAR"
-            asr_uncertainty=match.group()=="por la trazo de su tarjeta"
+            asr_uncertainty=bool(re.fullmatch(r"por la trazo de su tarjeta|deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas",match.group()))
             confirmed = role == "GESTOR" and protected and not hypothetical and not asr_uncertainty
             uncertain = (role == "NO DETERMINADO" or hypothetical or asr_uncertainty
                          or (role == "GESTOR" and not titular and last_recipient != "TITULAR" and not protected))

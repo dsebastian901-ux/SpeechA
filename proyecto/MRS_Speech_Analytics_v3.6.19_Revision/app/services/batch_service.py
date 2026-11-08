@@ -457,6 +457,7 @@ class BatchService:
             "APROBADOS": "APROBADOS",
             "APROBADO_SIN_ETIQUETAR": "APROBADO_SIN_ETIQUETAR",
             "APROBADO_CON_EXCEPCION": "APROBADO_CON_EXCEPCION",
+            "NO_APROBADO": "NO_APROBADOS",
             "NO_APROBADO_MENOR_80": "NO_APROBADOS_MENOR_80",
             "MAL_DICTAMINADO": "MAL_DICTAMINADO",
             "NEGOCIACION_INVALIDA": "NEGOCIACION_INVALIDA",
@@ -1155,29 +1156,13 @@ class BatchService:
     # =========================================================
 
     def get_classification_summary(self):
-        approved = 0
-        review = 0
-        analyzed = 0
-
-        for item in self.items:
-            classification = item.get("classification")
-
-            if not classification:
-                continue
-
-            analyzed += 1
-
-            if classification.get("aprobado"):
-                approved += 1
-            else:
-                review += 1
-
-        return {
-            "analizados": analyzed,
-            "aprobados": approved,
-            "revisar": review,
-            "puntaje_minimo": self.relation_service.get_minimum_score(),
-        }
+        from collections import Counter
+        records=[i['classification'] for i in self.items if i.get('classification')]
+        counts=Counter(str(c.get('clasificacion') or 'REVISAR').upper() for c in records)
+        return {'analizados':len(records),'aprobados':sum(bool(c.get('aprobado')) for c in records),
+            'revisar':counts['REVISAR'],'no_aprobados':sum(n for c,n in counts.items() if c.startswith('NO_APROBADO')),
+            'fallas_graves':counts['FALLA_GRAVE'],'errores':counts['ERROR'],
+            'puntaje_minimo':self.relation_service.get_minimum_score()}
 
     # =========================================================
     # RESUMEN

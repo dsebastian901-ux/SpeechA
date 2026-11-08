@@ -2,7 +2,7 @@
 import re
 import unicodedata
 
-from app.services.conversation_evidence import normalize, sentence_evidence, _role_at
+from app.services.conversation_evidence import normalize, sentence_evidence, _role_at, KIN
 
 
 BAD_IDENTITY = re.compile(
@@ -44,6 +44,7 @@ OWN_ACCOUNT = re.compile(
 
 def valid_nominal_request(source, start, identity):
     """Una ausencia/ubicación no puede interpretarse como nombre solicitado."""
+    if re.search(r'\b'+KIN+r'\b',identity):return False
     if re.search(r'\b(?:aqui|ahi|alla|ahorita|actualmente|domicilio|casa|hospital|hospitalizado|internado|trabajando)\b',identity):
         return False
     prefix=source[max(0,start-80):start]

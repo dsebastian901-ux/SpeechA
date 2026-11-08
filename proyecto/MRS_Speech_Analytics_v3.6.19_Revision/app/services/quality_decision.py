@@ -139,8 +139,16 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     critical = any(f['severity']=='CRITICAL' for f in blocking)
     score_ok = score >= float(minimum_score)
     base = base_classification or {}
+    from app.services.definitive_rejection import definitive_rejection
+    rejection = definitive_rejection(m,findings,duration_seconds)
+    if rejection and not critical:
+        for finding in blocking:finding['severity']='OBSERVATION'
+        findings.append(rejection)
+        blocking=[rejection]
     if critical:
         category = 'FALLA_GRAVE'
+    elif rejection:
+        category = 'NO_APROBADO'
     elif verified_exception and score_ok and not blocking:
         category = 'APROBADO_ETIQUETA_CORREGIDA' if output_label['valid'] else 'APROBADO_CON_EXCEPCION'
     elif not score_ok and ordinary_score_rejection(m,score,minimum_score,duration_seconds):
@@ -160,6 +168,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     else:
         category = 'APROBADO'
     reasons = list(dict.fromkeys(r for f in blocking for r in f['reasons']))
+    if category == 'NO_APROBADO':
+        reasons.extend(r for f in findings if f['severity']=='OBSERVATION'for r in f['reasons']if r not in reasons)
     if category == 'NO_APROBADO_MENOR_80' and reasons:
         reasons.insert(0,'Puntaje inferior al mínimo por incumplimientos ordinarios; rechazo automático. Las observaciones pendientes se conservan.')
     # Los descuentos se conservan como evidencia, sin convertirlos de nuevo
@@ -176,6 +186,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         relevant = [f for f in findings if f['rule_group']==number]
         state = ('INCUMPLIMIENTO_CRITICO' if any(f['severity']=='CRITICAL' for f in relevant) else
                  'REQUIERE_REVISION' if any(f['severity']=='REVIEW' for f in relevant) else
+                 'INCUMPLIMIENTO_CONFIRMADO' if any(f['severity']=='CONFIRMED_NONCRITICAL' for f in relevant) else
+                 'OBSERVACION_CONSERVADA' if any(f['severity']=='OBSERVATION' for f in relevant) else
                  'EXCEPCION_VALIDADA' if any(f['severity']=='VALIDATED_EXCEPTION' for f in relevant) else
                  'ETIQUETA_CORREGIDA' if any(f['severity']=='CORRECTED_STATUS' for f in relevant) else
                  'DESCUENTO_APLICADO' if relevant else
@@ -185,6 +197,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA'},
             'calidad_aprobada':category.startswith('APROBADO'), 'score':score,'puntaje_minimo':minimum_score,
             'cumple_puntaje':score_ok,'rechazo_automatico_por_puntaje':category=='NO_APROBADO_MENOR_80',
+            'rechazo_automatico_por_reglas':category=='NO_APROBADO',
             'observaciones_conservadas':reasons,
             'motivo':('Excepción por hostilidad validada en audio; gestor profesional' if category=='APROBADO_CON_EXCEPCION' else
                       ' | '.join(reasons) if reasons else 'Cumple calidad y seguridad; etiqueta corregida en copia separada' if category=='APROBADO_ETIQUETA_CORREGIDA' else 'Cumple reglas de aprobación' if score_ok else 'Puntaje inferior al mínimo'),

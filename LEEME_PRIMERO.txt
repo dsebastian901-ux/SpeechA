@@ -1,23 +1,24 @@
-MRS SPEECH ANALYTICS - PROGRAMA r48
+MRS SPEECH ANALYTICS - PROGRAMA r49
 
 1. Extraiga TODO el ZIP en una carpeta nueva.
-2. Abra INICIAR_PROGRAMA.bat en esa carpeta.
-3. La barra inferior debe mostrar Version 3.6.19-r48.
-4. Cree un proyecto nuevo, entre a Procesamiento por lotes y cargue audios y Excel.
+2. Abra INICIAR_PROGRAMA.bat dentro de esa carpeta.
+3. Compruebe Version 3.6.19-r49 en la barra inferior.
+4. Cree un proyecto, entre a Procesamiento por lotes y cargue audios y Excel.
 5. Procese normalmente. Las reglas corregidas se aplican desde este proceso.
 
-No necesita cargar un checkpoint ni ejecutar reanalisis para activar las correcciones.
-Use la configuracion y el modelo de Whisper que tiene instalado.
+No necesita cargar un checkpoint para activar los cambios del programa.
+Use el Python, las dependencias y el modelo local de Whisper que ya tiene instalado.
 
-Al finalizar se conservan el reporte de calidad, las cuentas reetiquetadas
-para correccion del gestor y el reporte adicional de motivos de no pago.
-Las copias aprobadas con cambio de estatus van a APROBADOS_ETIQUETA_CORREGIDA.
-El Excel y los audios originales permanecen sin cambios.
+NO_APROBADO: incumplimiento ordinario comprobable sin dudas de seguridad pendientes.
+REVISAR: evidencia insuficiente o incertidumbre que requiere aclaracion.
+FALLA_GRAVE: conserva prioridad. No se aprueban llamadas para alcanzar una cuota.
+Las copias NO_APROBADO van a NO_APROBADOS. El contador separa esos resultados.
 
-La revision del programa y el origen del procesamiento aparecen en la hoja
-CONTROL_PROCESAMIENTO del reporte de calidad.
+Al finalizar se generan el reporte de calidad, las cuentas reetiquetadas y el
+reporte adicional de motivos de no pago. Los originales no se modifican.
+Las copias con cambio de estatus van a APROBADOS_ETIQUETA_CORREGIDA.
+La tarjeta de Excel es la fuente del identificador de salida.
 
-Revision r48: reglas generales de recados, parentesco, identidad, ARCO y privacidad.
-Se permiten saldo pendiente y saldo vencido sin importe, segun su criterio.
-El programa conserva los bloqueos ante montos/mora protegidos, quejas, groserias y espera.
-Consulte REVISION_48_PROGRAMA.md para el alcance de validacion.
+Esta entrega es el programa para su entorno Python existente; no es todavia
+el instalador autonomo con usuarios y permisos. Consulte REVISION_49_PROGRAMA.md
+y VALIDACION_R49.json para conocer comprobaciones y limitaciones.

@@ -9,8 +9,8 @@ from app.services.conversation_evidence import normalize, _role_at, sentence_evi
 def spoken_privacy_email(text,segments=()):
     source=normalize(text)
     none={'detected':False,'address':'','method':'SIN_DICTADO_CONFIRMABLE','evidence':''}
-    pattern=re.compile(r'\bprivacidad(?P<digit>1)?\b(?P<local>[^@]{0,140}?)\barroba\b'
-        r'(?P<domain>.{0,350}?\bbradesco\b.{0,150}?(?:\bpunto[,. ]+com[,. ]+(?:(?:si|aja|ok)[,. ]+)*punto[,. ]+(?:mx|eme\s+equis)\b|\.com\.mx\b))')
+    pattern=re.compile(r'\bprivacidad(?:(?P<digit>1)(?=arroba|a roba|\b)|\b)(?P<local>[^@]{0,140}?)(?<![a-z])(?:arroba|a\s+roba)\s*'
+        r'(?P<domain>.{0,350}?bradesco\b.{0,150}?(?:\bpunto[,. ]+com[,. ]+(?:(?:si|aja|ok)[,. ]+)*punto[,. ]+(?:mx|eme\s+equis)\b|\.com\.mx\b))')
     for match in pattern.finditer(source):
         if _role_at(text,segments,match.start()) in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
         before=source[max(0,match.start()-70):match.start()]
