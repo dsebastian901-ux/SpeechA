@@ -1035,6 +1035,7 @@ class AnalyticsView(ctk.CTkFrame):
     # =========================================================
 
     def validate_amount(self):
+        self.master.auth.require("manual_review")
         transcription=self.selected_transcription
         if transcription is None or not transcription.json_path:
             messagebox.showinfo("Validar importe","Seleccione una transcripción JSON.")
@@ -1062,6 +1063,7 @@ class AnalyticsView(ctk.CTkFrame):
         ctk.CTkButton(dialog,text="Guardar y volver a analizar",command=save).pack(pady=16)
 
     def validate_treatment(self):
+        self.master.auth.require("manual_review")
         transcription = self.selected_transcription
         if transcription is None or not transcription.json_path:
             messagebox.showinfo("Validación de trato", "Seleccione una transcripción JSON de la llamada.")
