@@ -11,9 +11,9 @@ from pathlib import Path
 
 ROLES = ("administrador", "calidad", "supervisor", "consulta")
 PERMISSIONS = {
- "administrador": frozenset(("home","projects","audio","transcriptions","analytics","dashboard","batch","reports","history","settings","users")),
- "calidad": frozenset(("home","projects","audio","transcriptions","analytics","dashboard","batch","reports","history")),
- "supervisor": frozenset(("home","projects","audio","transcriptions","analytics","dashboard","batch","reports","history")),
+ "administrador": frozenset(("home","projects","audio","transcriptions","analytics","dashboard","batch","reports","history","settings","users","manual_review")),
+ "calidad": frozenset(("home","projects","audio","transcriptions","analytics","dashboard","batch","reports","history","manual_review")),
+ "supervisor": frozenset(("home","projects","audio","transcriptions","analytics","dashboard","reports","history","manual_review")),
  "consulta": frozenset(("home","dashboard")),
 }
 ITERATIONS = 600000
