@@ -8,6 +8,7 @@ Ventana principal
 from __future__ import annotations
 
 import customtkinter as ctk
+import time
 
 from app.config.settings import (
     WINDOW_WIDTH,
@@ -37,6 +38,7 @@ class MainWindow(ctk.CTk):
         super().__init__()
         self.auth = auth
         self.logout_requested = False
+        self.last_activity = time.monotonic()
 
         self.configure_window()
         self.configure_layout()
@@ -44,6 +46,9 @@ class MainWindow(ctk.CTk):
         self._menu_hide_job = None
         self.create_components()
         self.after(2200, self.collapse_menu)
+        self.bind_all('<KeyPress>', self._active_session, add='+')
+        self.bind_all('<Button>', self._active_session, add='+')
+        self.after(60000, self._idle_check)
 
     # ========================================================
     # CONFIGURACIÓN DE VENTANA
@@ -320,3 +325,14 @@ class MainWindow(ctk.CTk):
     def logout(self):
         self.logout_requested = True
         self.destroy()
+
+    def _active_session(self, event=None):
+        self.last_activity = time.monotonic()
+
+    def _idle_check(self):
+        if not self.winfo_exists():
+            return
+        if time.monotonic() - self.last_activity >= 1800 or not self.auth.allowed("home"):
+            self.logout()
+            return
+        self.after(60000, self._idle_check)
