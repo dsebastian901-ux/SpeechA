@@ -33,8 +33,10 @@ class MainWindow(ctk.CTk):
     - Barra de estado
     """
 
-    def __init__(self):
+    def __init__(self, auth):
         super().__init__()
+        self.auth = auth
+        self.logout_requested = False
 
         self.configure_window()
         self.configure_layout()
@@ -135,6 +137,8 @@ class MainWindow(ctk.CTk):
         self.top_bar = TopBar(
             self
         )
+        ctk.CTkButton(self.top_bar,text='Cerrar sesión',width=110,height=27,
+                      command=self.logout).grid(row=0,column=2,padx=12,pady=7)
 
         self.top_bar.grid(
             row=0,
@@ -156,6 +160,7 @@ class MainWindow(ctk.CTk):
         self.work_area = WorkArea(
             self
         )
+        self.work_area.auth = self.auth
 
         self.work_area.grid(
             row=1,
@@ -260,6 +265,8 @@ class MainWindow(ctk.CTk):
             on_history=(
                 self.work_area.show_history
             ),
+            on_users=self.work_area.show_users,
+            permissions=self.auth.current_user['role'],
             on_collapse=self.collapse_menu,
         )
 
@@ -310,3 +317,6 @@ class MainWindow(ctk.CTk):
             columnspan=2,
             sticky="ew",
         )
+    def logout(self):
+        self.logout_requested = True
+        self.destroy()
