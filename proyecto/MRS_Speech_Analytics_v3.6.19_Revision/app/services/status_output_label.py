@@ -56,6 +56,10 @@ def corrected_status_label(metadata, policy=None):
     before=parts[index];target=codes[new_status]
     if before not in {codes[old_key],target} or not re.fullmatch(r'[A-Z0-9]+',target):
         return dict(none,reason='El componente de estatus no coincide con el catálogo; requiere revisión.')
+    # Los estatus equivalentes (REF1/REF2/familiar/tercero) ya usan 3EROS.
+    # No contar como reetiquetado ni generar otra copia si el codigo no cambia.
+    if before == target:
+        return dict(none,reason='Estatus equivalente: mismo codigo de salida; no requiere reetiquetado.')
     parts[index]=target
     return {'eligible':True,'valid':True,'original_status':old_status,'corrected_status':new_status,
             'original_name':name,'corrected_name':'_'.join(parts),'component_index':index,
