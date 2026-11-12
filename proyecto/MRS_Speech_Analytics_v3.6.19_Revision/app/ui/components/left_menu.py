@@ -5,7 +5,7 @@ from app.ui.themes import Theme
 class LeftMenu(ctk.CTkFrame):
     def __init__(self,parent,on_home=None,on_new_project=None,on_open_project=None,on_audio=None,
                  on_transcriptions=None,on_analytics=None,on_dashboard=None,on_batch=None,
-                 on_reports=None,on_settings=None,on_history=None,on_collapse=None):
+                 on_reports=None,on_settings=None,on_history=None,on_collapse=None,on_users=None,permissions=None):
         super().__init__(parent,width=238,corner_radius=0,fg_color=Theme.colors.SIDEBAR_BACKGROUND)
         self.grid_propagate(False); self.grid_columnconfigure(0,weight=1)
         self.on_collapse=on_collapse
@@ -25,7 +25,15 @@ class LeftMenu(ctk.CTkFrame):
                ('♫   Gestión de Audios',self.on_audio),('▤   Transcripciones',self.on_transcriptions),('▥   Analytics de Llamadas',self.on_analytics),
                ('◕   Dashboard',self.on_dashboard),('▶   Procesamiento por lotes',self.on_batch),('▧   Reportes',self.on_reports),
                ('⚙   Configuración',self.on_settings),('◷   Historial',self.on_history)]
-        for i,(text,cmd) in enumerate(items,3): self.create_menu_button(i,text,cmd,selected=(i==3))
+        items.append(('♙   Usuarios',on_users))
+        from app.services.auth_service import PERMISSIONS
+        keys=['home','projects','projects','audio','transcriptions','analytics','dashboard','batch','reports','settings','history','users']
+        allowed=PERMISSIONS.get(permissions,frozenset())
+        row=3
+        for (text,cmd),key in zip(items,keys):
+            if key in allowed:
+                self.create_menu_button(row,text,cmd,selected=(row==3))
+                row += 1
         self.grid_rowconfigure(14,weight=1)
         ctk.CTkLabel(self,text='⌁⌁⌁⌁⌁⌁⌁⌁⌁',text_color='#B77DD7',font=ctk.CTkFont('Segoe UI',18)).grid(row=15,column=0,pady=(4,2))
         ctk.CTkLabel(self,text='MRS CONSULTORES',text_color='#FFFFFF',font=ctk.CTkFont('Segoe UI',11,'bold')).grid(row=16,column=0)
