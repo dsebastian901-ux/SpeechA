@@ -932,6 +932,7 @@ class BatchService:
                         + str(account_conflict.get("reason") or "Verificar audio y Excel.")
                     )
                     classification.update(decision)
+                    decision.pop("output_label_correction", None)
                     classification.pop("output_label_correction", None)
                     analytics_metadata["output_label_correction"] = None
                     analytics_metadata["account_identity_conflict"] = account_conflict
