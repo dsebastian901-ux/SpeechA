@@ -14,7 +14,7 @@ PERMISSIONS = {
  "administrador": frozenset(("home","projects","audio","transcriptions","analytics","dashboard","batch","reports","history","settings","users")),
  "calidad": frozenset(("home","projects","audio","transcriptions","analytics","dashboard","batch","reports","history")),
  "supervisor": frozenset(("home","projects","audio","transcriptions","analytics","dashboard","batch","reports","history")),
- "consulta": frozenset(("home","analytics","dashboard","reports","history")),
+ "consulta": frozenset(("home","dashboard")),
 }
 ITERATIONS = 600000
 MAX_FAILURES = 5
@@ -111,7 +111,15 @@ class AuthService:
         self.current_user = None
 
     def allowed(self, permission):
-        return bool(self.current_user and permission in PERMISSIONS.get(self.current_user["role"],()))
+        if not self.current_user:
+            return False
+        with self._connect() as conn:
+            row=conn.execute("SELECT role,active,must_change FROM users WHERE username=?",
+                             (self.current_user["username"],)).fetchone()
+        if not row or not row[1] or row[2]:
+            return False
+        self.current_user["role"]=row[0]
+        return permission in PERMISSIONS.get(row[0],())
 
     def require(self, permission):
         if not self.allowed(permission):
