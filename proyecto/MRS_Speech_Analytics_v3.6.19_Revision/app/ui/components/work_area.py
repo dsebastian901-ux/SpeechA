@@ -22,6 +22,7 @@ from app.ui.views.batch_view import BatchView
 from app.ui.views.reports_view import ReportsView
 from app.ui.views.history_view import HistoryView
 from app.ui.views.settings_view import SettingsView
+from app.ui.views.users_view import UsersView
 
 
 class WorkArea(ctk.CTkFrame):
@@ -40,6 +41,7 @@ class WorkArea(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
+        self.auth = parent.auth
         self.current_view = None
 
         self.show_home()
@@ -88,6 +90,7 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_home(self):
+        self.auth.require('home')
         self.clear()
         root = ctk.CTkFrame(self, fg_color="#F6F3FA", corner_radius=0)
         root.grid(row=0, column=0, sticky="nsew")
@@ -271,6 +274,7 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_new_project(self):
+        self.auth.require('projects')
         self.mount_view(
             NewProjectView,
             on_project_created=self.on_project_created,
@@ -284,6 +288,7 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_open_project(self):
+        self.auth.require('projects')
         self.mount_view(
             OpenProjectView,
             on_project_opened=self.on_project_opened,
@@ -297,11 +302,13 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_audio_view(self):
+        self.auth.require('audio')
         self.mount_view(
             AudioView
         )
 
     def show_audio(self):
+        self.auth.require('audio')
         self.show_audio_view()
 
     # =========================================================
@@ -309,11 +316,13 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_transcriptions(self):
+        self.auth.require('transcriptions')
         self.mount_view(
             TranscriptionView
         )
 
     def show_transcription_view(self):
+        self.auth.require('transcriptions')
         self.show_transcriptions()
 
     # =========================================================
@@ -321,11 +330,13 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_analytics(self):
+        self.auth.require('analytics')
         self.mount_view(
             AnalyticsView
         )
 
     def show_analytics_view(self):
+        self.auth.require('analytics')
         self.show_analytics()
 
     # =========================================================
@@ -333,14 +344,17 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_dashboard(self):
+        self.auth.require('dashboard')
         self.mount_view(
             DashboardView
         )
 
     def show_dashboard_view(self):
+        self.auth.require('dashboard')
         self.show_dashboard()
 
     def show_audio_player(self, records=None, title="Audios filtrados"):
+        self.auth.require('audio')
         self.mount_view(AudioPlayerView, records=records or [], title=title)
 
     # =========================================================
@@ -348,6 +362,7 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_batch(self):
+        self.auth.require('batch')
         self.mount_view(
             BatchView
         )
@@ -357,6 +372,7 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_reports(self):
+        self.auth.require('reports')
         self.mount_view(
             ReportsView
         )
@@ -366,6 +382,7 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_history(self):
+        self.auth.require('history')
         self.mount_view(
             HistoryView
         )
@@ -375,6 +392,7 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_settings(self):
+        self.auth.require('settings')
         self.mount_view(
             SettingsView
         )
@@ -384,13 +402,8 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def show_users(self):
-        self.show_placeholder(
-            title="Usuarios",
-            subtitle=(
-                "El módulo de usuarios "
-                "se encuentra en preparación."
-            ),
-        )
+        self.auth.require('users')
+        self.mount_view(UsersView, auth=self.auth)
 
     # =========================================================
     # PLACEHOLDER
