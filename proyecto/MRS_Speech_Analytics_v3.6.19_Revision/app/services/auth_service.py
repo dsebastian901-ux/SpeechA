@@ -89,7 +89,15 @@ class AuthService:
                 self._audit(conn, None, "login_failed", None)
                 raise PermissionError("Credenciales inválidas o cuenta bloqueada.")
             name, salt, digest, role, active, failed, locked, must_change = row
-            if not active or (locked and datetime.fromisoformat(locked) > datetime.now(timezone.utc)):
+            # El vencimiento del bloqueo debe limpiar tambien el contador.
+            # Sin esto, un nuevo intento incorrecto vuelve a bloquear
+            # inmediatamente durante otros 15 minutos.
+            now = datetime.now(timezone.utc)
+            if locked and datetime.fromisoformat(locked) <= now:
+                conn.execute("UPDATE users SET failed=0, locked_until=NULL WHERE username=?", (name,))
+                failed, locked = 0, None
+                self._audit(conn, name, "login_lock_expired", name)
+            if not active or (locked and datetime.fromisoformat(locked) > now):
                 self._audit(conn, name, "login_rejected", name)
                 raise PermissionError("Credenciales inválidas o cuenta bloqueada.")
             _, candidate = _hash(password, bytes.fromhex(salt))
