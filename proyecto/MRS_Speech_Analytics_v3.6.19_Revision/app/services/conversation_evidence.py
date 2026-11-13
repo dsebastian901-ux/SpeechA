@@ -483,6 +483,12 @@ def completed_payment(text, segments=()):
         candidates.extend(re.finditer(r"\bpagué\b", verbatim, re.I))
         candidates.extend(re.finditer(r"\bdeposité\b", verbatim, re.I))
         candidates.extend(re.finditer(r"\brealicé (?:mi|el|un) pago\b", verbatim, re.I))
+        # ASR puede transcribir «depositamos» como «repositamos».
+        # Exigir un marcador de pasado para no confundir con pago futuro.
+        candidates.extend(re.finditer(
+            r"\b(?:ayer|anoche|el dia de ayer)\b.{0,80}\brepositamos\b|"
+            r"\brepositamos\b.{0,50}\b(?:ayer|anoche)\b", s))
+
         # Sin tilde, «realice» puede ser subjuntivo: una instrucción para un
         # pago futuro no acredita un depósito anterior, aunque mencione recibo.
         future_instructions = list(re.finditer(
