@@ -7,6 +7,7 @@ Componente: Work Area
 
 import customtkinter as ctk
 from pathlib import Path
+from tkinter import messagebox
 from PIL import Image
 
 from app.ui.themes import Theme
@@ -50,6 +51,17 @@ class WorkArea(ctk.CTkFrame):
     # LIMPIAR
     # =========================================================
 
+    def _block_navigation_during_batch(self):
+        if getattr(self.current_view, "is_processing", False):
+            messagebox.showwarning(
+                "Lote en procesamiento",
+                "No cambie de pantalla mientras procesa un lote. "
+                "El procesamiento sigue activo; conserve esta vista abierta.",
+                parent=self,
+            )
+            return True
+        return False
+
     def clear(self):
         if self.current_view is not None:
             try:
@@ -70,6 +82,8 @@ class WorkArea(ctk.CTkFrame):
     # =========================================================
 
     def mount_view(self, view_class, **kwargs):
+        if self._block_navigation_during_batch():
+            return self.current_view
         self.clear()
 
         self.current_view = view_class(
@@ -91,6 +105,8 @@ class WorkArea(ctk.CTkFrame):
 
     def show_home(self):
         self.auth.require('home')
+        if self._block_navigation_during_batch():
+            return
         self.clear()
         root = ctk.CTkFrame(self, fg_color="#F6F3FA", corner_radius=0)
         root.grid(row=0, column=0, sticky="nsew")
