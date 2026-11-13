@@ -8,6 +8,9 @@ Vista: Procesamiento por Lotes
 from pathlib import Path
 import os
 from threading import Thread
+from queue import Queue, Empty
+import traceback
+import logging
 from typing import Optional
 
 import customtkinter as ctk
@@ -38,6 +41,8 @@ class BatchView(ctk.CTkFrame):
         )
 
         self.batch_service = BatchService()
+        # Los workers NO deben llamar Tkinter (ni siquiera self.after).
+        self._ui_events = Queue()
         self.is_processing = False
         self.relation_excel_path = None
         self.last_report_path = None
@@ -51,6 +56,7 @@ class BatchView(ctk.CTkFrame):
         self._build_content()
         self.after(100, self._load_latest_existing_report)
         self.after(350, self._watch_project_checkpoint)
+        self.after(100, self._drain_ui_events)
 
     # =========================================================
     # HEADER
@@ -860,47 +866,48 @@ class BatchView(ctk.CTkFrame):
     # WORKER
     # =========================================================
 
-    def _process_worker(
-        self,
-        output_directory,
-    ):
+    def _drain_ui_events(self):
+        """Only the Tk main thread is allowed to update widgets."""
+        if not self.winfo_exists():
+            return
+        try:
+            for _ in range(100):
+                try:
+                    kind, payload = self._ui_events.get_nowait()
+                except Empty:
+                    break
+                if kind == "progress":
+                    self._update_progress_ui(*payload)
+                elif kind == "finished":
+                    self._processing_finished()
+                elif kind == "failed":
+                    self._processing_failed(payload)
+        except Exception:
+            logging.exception("Error al actualizar interfaz del lote")
+        finally:
+            if self.winfo_exists():
+                self.after(100, self._drain_ui_events)
+
+    def _process_worker(self, output_directory):
         try:
             self.batch_service.process_all(
                 output_directory=output_directory,
                 progress_callback=self._progress_callback,
             )
-
-            self.after(
-                0,
-                self._processing_finished,
-            )
-
         except Exception as error:
-            self.after(
-                0,
-                lambda: self._processing_failed(
-                    error
-                ),
-            )
+            logging.exception("Error en procesamiento del lote")
+            traceback.print_exc()
+            self._ui_events.put(("failed", str(error)))
+        else:
+            self._ui_events.put(("finished", None))
 
     # =========================================================
     # CALLBACK DE PROGRESO
     # =========================================================
 
-    def _progress_callback(
-        self,
-        index,
-        total,
-        item,
-    ):
-        self.after(
-            0,
-            lambda: self._update_progress_ui(
-                index,
-                total,
-                item,
-            ),
-        )
+    def _progress_callback(self, index, total, item):
+        # Se ejecuta en worker; prohibido invocar self.after aqui.
+        self._ui_events.put(("progress", (index, total, dict(item))))
 
     # =========================================================
     # ACTUALIZAR PROGRESO
