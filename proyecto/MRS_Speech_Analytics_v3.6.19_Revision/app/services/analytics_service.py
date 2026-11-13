@@ -3179,15 +3179,31 @@ class AnalyticsService:
                 status_validation["valid"] = bool(no_conocen_valid)
 
             elif detected_status:
-                status_validation["matches"] = canonical_excel_status == detected_status
-                # RECADO REF1/REF2 exige familiar identificado Y recado real.
-                # La sola relación familiar no prueba que se dejó el mensaje.
+                # REF1/REF2 son códigos operativos 3EROS: familiar, amigo,
+                # conocido o tercero de trabajo. La relación específica debe
+                # salir del AUDIO y no del nombre literal del estatus.
+                third_party_message = {
+                    "MENSAJE CON FAMILIAR", "MENSAJE CON TERCERO",
+                    "MENSAJE EN TRABAJO",
+                }
+                equivalent_recado = bool(
+                    canonical_excel_status == "MENSAJE CON FAMILIAR"
+                    and detected_status in third_party_message and recado_real
+                    and contact_type in {"TERCERO", "TERCERO / FAMILIAR", "TERCERO / TRABAJO"}
+                )
+                status_validation["matches"] = (canonical_excel_status == detected_status or equivalent_recado)
+                if equivalent_recado:
+                    status_validation["equivalent_status"] = True
+                    status_validation["equivalence_code"] = "3EROS"
+                # No dar por válido un recado si falta entrega/aceptación.
+                # Si el interlocutor realmente es familiar, además exigir
+                # evidencia de parentesco; a otros terceros no se les exige.
                 if canonical_excel_status == "MENSAJE CON FAMILIAR" and status_validation["matches"]:
-                    if not (recado_family_evidence and recado_real):
+                    if not recado_real or (contact_type == "TERCERO / FAMILIAR" and not recado_family_evidence):
                         status_validation["valid"] = False
                         status_validation["review_required"] = True
                         status_validation["reasons"].append(
-                            "Falta evidencia conjunta de familiar y recado efectivamente transmitido."
+                            "No se acreditó recado aceptado o parentesco declarado en el audio."
                         )
                 if not status_validation["matches"]:
                     # No declarar MAL_DICTAMINADO con evidencia media/ambigua.
