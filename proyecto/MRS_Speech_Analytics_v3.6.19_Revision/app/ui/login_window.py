@@ -32,6 +32,10 @@ class LoginWindow(ctk.CTk):
         self.message=ctk.CTkLabel(card,text="Mínimo 12 caracteres" if setup else "",text_color="#9A3456")
         self.message.pack(pady=6)
         ctk.CTkButton(card,text="Crear administrador" if setup else "Entrar",fg_color="#4B276B",width=310,command=self._submit).pack(pady=(6,16))
+        if not setup:
+            ctk.CTkButton(card,text="¿Olvidaste tu contraseña?",fg_color="transparent",
+                text_color="#4B276B",hover_color="#EDE4F4",width=310,
+                command=self._recovery_screen).pack(pady=(0,10))
         self.password.bind("<Return>",lambda _event:self._submit())
 
     def _submit(self):
@@ -41,7 +45,11 @@ class LoginWindow(ctk.CTk):
             if self.auth.needs_setup():
                 if password != self.confirm.get():
                     raise ValueError("Las contraseñas no coinciden.")
-                self.auth.initial_admin(name,password)
+                recovery_code = self.auth.initial_admin(name,password)
+                messagebox.showinfo("Código de recuperación (guardar en lugar seguro)",
+                    "Guarde este código en un lugar seguro; se muestra una sola vez. "
+                    "Sirve para recuperar la contraseña sin borrar su cuenta.\n\n"
+                    + recovery_code + "\n\nNo comparta este código.",parent=self)
             self.auth.login(name,password)
             if self.auth.current_user["must_change"]:
                 self._change_required(password)
@@ -50,6 +58,44 @@ class LoginWindow(ctk.CTk):
             self.destroy()
         except (ValueError,PermissionError,Exception) as exc:
             self.message.configure(text=str(exc) if isinstance(exc,(ValueError,PermissionError)) else "No se pudo abrir la base local.")
+
+    def _recovery_screen(self):
+        for child in self.winfo_children():
+            child.destroy()
+        frame=ctk.CTkFrame(self,fg_color="white",corner_radius=18)
+        frame.pack(padx=28,pady=20,fill="both",expand=True)
+        ctk.CTkLabel(frame,text="Restablecer contraseña",
+            font=ctk.CTkFont("Segoe UI",20,"bold"),text_color="#321755").pack(pady=(20,8))
+        ctk.CTkLabel(frame,text="Se requiere un código de recuperación emitido previamente.",
+            wraplength=365,text_color="#674A80").pack(pady=(0,10))
+        name=ctk.CTkEntry(frame,placeholder_text="Usuario",width=315)
+        name.pack(pady=5)
+        code=ctk.CTkEntry(frame,placeholder_text="Código de recuperación",width=315)
+        code.pack(pady=5)
+        new=ctk.CTkEntry(frame,placeholder_text="Nueva contraseña (mín. 12 caracteres)",
+                          show="*",width=315)
+        new.pack(pady=5)
+        confirm=ctk.CTkEntry(frame,placeholder_text="Confirmar nueva contraseña",
+                              show="*",width=315)
+        confirm.pack(pady=5)
+        message=ctk.CTkLabel(frame,text="",wraplength=365,text_color="#9A3456")
+        message.pack(pady=5)
+        def reset():
+            try:
+                if new.get()!=confirm.get():
+                    raise ValueError("Las contraseñas no coinciden.")
+                self.auth.recover_password(name.get(),code.get(),new.get())
+                messagebox.showinfo("Contraseña restablecida",
+                    "Ya puede iniciar sesión con su nueva contraseña.",parent=self)
+                self._screen()
+            except (ValueError,PermissionError) as exc:
+                message.configure(text=str(exc))
+            except Exception:
+                message.configure(text="No fue posible completar la recuperación.")
+        ctk.CTkButton(frame,text="Restablecer contraseña",width=315,
+            fg_color="#4B276B",command=reset).pack(pady=6)
+        ctk.CTkButton(frame,text="Volver al inicio de sesión",width=315,
+            fg_color="transparent",text_color="#4B276B",command=self._screen).pack(pady=4)
 
     def _change_required(self,old):
         for child in self.winfo_children():
