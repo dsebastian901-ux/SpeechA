@@ -27,6 +27,8 @@ class UsersView(ctk.CTkFrame):
         ctk.CTkButton(actions,text="Activar",command=lambda:self._active(True),width=75).pack(side="left",padx=5)
         ctk.CTkButton(actions,text="Desactivar",command=lambda:self._active(False),width=90).pack(side="left",padx=5)
         ctk.CTkButton(actions,text="Restablecer clave",command=self._reset,width=130).pack(side="left",padx=5)
+        ctk.CTkButton(actions,text="Emitir código de recuperación",
+            command=self._issue_recovery,width=192).pack(side="left",padx=5)
         self.list=ctk.CTkTextbox(self,font=ctk.CTkFont(family="Consolas",size=12))
         self.list.grid(row=3,column=0,padx=22,pady=10,sticky="nsew")
         self.grid_rowconfigure(3,weight=1)
@@ -49,6 +51,21 @@ class UsersView(ctk.CTkFrame):
             messagebox.showinfo("Usuarios","Escriba la nueva contraseña temporal en el campo superior.",parent=self)
             return
         self._execute(lambda:self.auth.reset_password(self.target.get().strip(),self.password.get()))
+    def _issue_recovery(self):
+        username=self.target.get().strip() or self.auth.current_user["username"]
+        if not messagebox.askyesno("Código de recuperación",
+                f"¿Emitir un código de recuperación para {username}?\n"
+                "El código anterior dejará de funcionar.",parent=self):
+            return
+        try:
+            code=self.auth.issue_recovery_code(username)
+            messagebox.showinfo("Código de recuperación (una sola vez)",
+                f"Usuario: {username}\n\nCódigo: {code}\n\n"
+                "Guárdelo en un lugar seguro. Se muestra una sola vez.",
+                parent=self)
+        except Exception as exc:
+            messagebox.showerror("Código de recuperación",str(exc),parent=self)
+
     def refresh(self):
         self.list.configure(state="normal")
         self.list.delete("1.0","end")
