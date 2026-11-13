@@ -225,6 +225,10 @@ class AuthService:
                     if expires > now:
                         self._audit(conn, row[0], "recovery_rejected", row[0])
                         raise PermissionError("Código inválido o recuperación temporalmente bloqueada.")
+                    # Despues de vencer el bloqueo, limpiar contador de recuperacion.
+                    conn.execute("UPDATE recovery SET failed=0,locked_until=NULL WHERE username=?", (row[0],))
+                    row = (row[0], row[1], row[2], 0, None)
+                    self._audit(conn, row[0], "recovery_lock_expired", row[0])
                 except ValueError:
                     pass
             if not row or not row[1] or not row[2] or not hmac.compare_digest(candidate, row[2]):
