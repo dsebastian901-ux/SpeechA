@@ -35,7 +35,10 @@ class LoginWindow(ctk.CTk):
         if not setup:
             ctk.CTkButton(card,text="¿Olvidaste tu contraseña?",fg_color="transparent",
                 text_color="#4B276B",hover_color="#EDE4F4",width=310,
-                command=self._recovery_screen).pack(pady=(0,10))
+                command=self._recovery_screen).pack(pady=(0,1))
+            ctk.CTkButton(card,text="¿Tu cuenta está bloqueada?",fg_color="transparent",
+                text_color="#674A80",hover_color="#EDE4F4",width=310,
+                command=self._locked_help).pack(pady=(0,8))
         self.password.bind("<Return>",lambda _event:self._submit())
 
     def _submit(self):
@@ -58,6 +61,21 @@ class LoginWindow(ctk.CTk):
             self.destroy()
         except (ValueError,PermissionError,Exception) as exc:
             self.message.configure(text=str(exc) if isinstance(exc,(ValueError,PermissionError)) else "No se pudo abrir la base local.")
+
+    def _locked_help(self):
+        use_code = messagebox.askyesno(
+            "Cuenta bloqueada",
+            "Por seguridad, cinco intentos incorrectos bloquean la cuenta durante 15 minutos.\n\n"
+            "Si recuerda la contraseña, espere el plazo y escribala exactamente.\n"
+            "Si tiene un codigo de recuperacion emitido previamente, puede "
+            "restablecerla desde esta pantalla.\n\n"
+            "Los usuarios de Calidad, Supervisor y Consulta pueden solicitar "
+            "al Administrador un restablecimiento.\n\n"
+            "¿Desea recuperar su acceso con un codigo?",
+            parent=self,
+        )
+        if use_code:
+            self._recovery_screen()
 
     def _recovery_screen(self):
         for child in self.winfo_children():
