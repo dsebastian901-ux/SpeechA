@@ -114,3 +114,38 @@ def test_recovery_requires_valid_code_and_respects_inactive_users(tmp_path):
     service.logout()
     with pytest.raises(PermissionError):
         service.recover_password("viewer01", code, "Different-password-123!")
+
+def test_recovery_lock_expiry_resets_bad_attempt_counter(tmp_path):
+    import sqlite3
+    from datetime import datetime, timedelta, timezone
+
+    service = AuthService(tmp_path/"recovery_lock.sqlite3")
+    code = service.initial_admin("DANIELA", "Initial-admin-password-123!")
+    expired = (datetime.now(timezone.utc)-timedelta(minutes=1)).isoformat()
+    with sqlite3.connect(service.path) as conn:
+        conn.execute("UPDATE recovery SET failed=5,locked_until=? WHERE username=?",
+                     (expired,"DANIELA"))
+    with pytest.raises(PermissionError):
+        service.recover_password("DANIELA", "wrong-code", "New-password-123456!")
+    with sqlite3.connect(service.path) as conn:
+        failed,locked = conn.execute("SELECT failed,locked_until FROM recovery WHERE username=?",
+                                     ("DANIELA",)).fetchone()
+    assert failed == 1
+    assert locked is None
+    service.recover_password("DANIELA", code, "New-password-123456!")
+    assert service.login("DANIELA", "New-password-123456!")["role"] == "administrador"
+
+
+def test_existing_admin_must_issue_code_before_recovery(tmp_path):
+    import sqlite3
+
+    service = AuthService(tmp_path/"older_accounts.sqlite3")
+    service.initial_admin("DANIELA", "Initial-admin-password-123!")
+    with sqlite3.connect(service.path) as conn:
+        conn.execute("DELETE FROM recovery WHERE username=?", ("DANIELA",))
+    with pytest.raises(PermissionError):
+        service.recover_password("DANIELA", "not-issued", "New-password-123456!")
+    service.login("DANIELA", "Initial-admin-password-123!")
+    code = service.issue_recovery_code("DANIELA")
+    service.logout()
+    service.recover_password("DANIELA", code, "New-password-123456!")
