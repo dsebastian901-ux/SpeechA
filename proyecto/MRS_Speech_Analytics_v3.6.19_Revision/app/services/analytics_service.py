@@ -1180,13 +1180,45 @@ class AnalyticsService:
             titular=False;third_party=True
             contact_confirmation={'confirmed':False,'method':'RESPUESTA_EXPLICITA_DE_INTERMEDIARIO','evidence':declared_contact['evidence']}
         associate_confirmation = associate_relationship(text, segments)
+        # Una aparente respuesta al nombre no valida al titular cuando en la
+        # misma conversación otra persona ACEPTA un recado dirigido al titular.
+        # No asumimos parentesco ni una divulgación crítica: bloqueamos la
+        # identificación automática y exigimos revisión de la grabación.
+        self_holder_declared = recipient_statement(
+            text, segments,
+            r"\b(?:soy yo|soy (?:el|la) titular|habla (?:el|la) titular)\b",
+        )
+        contradictory_relay = bool(
+            titular and not self_holder_declared
+            and recado_assessment.get('acceptance')
+            and recado_assessment.get('directed_messages')
+        )
+        if contradictory_relay:
+            titular = False
+            contact_confirmation = {
+                'confirmed': False,
+                'method': 'IDENTIDAD_CONTRADICHA_POR_RECADO_ACEPTADO',
+                'evidence': 'Respuesta nominal seguida de recado aceptado para el titular',
+            }
+            third_party = True
         third_party = third_party or (not titular and associate_confirmation['confirmed'])
         from app.services.arco_context_evidence import positive_knowledge_denial
         contact_denial = unknown_debtor_statement(text,segments) or positive_knowledge_denial(text,segments,ignore_relationships=True)['confirmed']
-        contact_conflict = bool(contact_denial and (family or work_contact or third_party or titular))
-        contact_conflict_validation = {'review_required':contact_conflict,
-            'reason':'Hay respuestas contradictorias sobre conocer al titular; no se confirma una omisión ARCO ni la identidad.' if contact_conflict else '',
-            'method':'CONOCIMIENTO_Y_DESCONOCIMIENTO_EN_CONVERSACION' if contact_conflict else 'SIN_CONTRADICCION_DETECTADA'}
+        contact_conflict = bool(contradictory_relay or (contact_denial and (family or work_contact or third_party or titular)))
+        contact_conflict_validation = {
+            'review_required': contact_conflict,
+            'reason': (
+                'La respuesta nominal inicial contradice un recado aceptado para el titular; verificar interlocutor en audio.'
+                if contradictory_relay else
+                'Hay respuestas contradictorias sobre conocer al titular; no se confirma una omisión ARCO ni la identidad.'
+                if contact_conflict else ''
+            ),
+            'method': (
+                'IDENTIDAD_CONTRADICHA_POR_RECADO_ACEPTADO' if contradictory_relay else
+                'CONOCIMIENTO_Y_DESCONOCIMIENTO_EN_CONVERSACION' if contact_conflict else
+                'SIN_CONTRADICCION_DETECTADA'
+            ),
+        }
         if contact_conflict:unknown_debtor=False
         # La ausencia declarada confirma un tercero, no su parentesco. Una
         # entrega posterior al titular prevalece sobre esa respuesta inicial.
