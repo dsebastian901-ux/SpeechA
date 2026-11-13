@@ -48,6 +48,7 @@ class MainWindow(ctk.CTk):
         self.after(2200, self.collapse_menu)
         self.bind_all('<KeyPress>', self._active_session, add='+')
         self.bind_all('<Button>', self._active_session, add='+')
+        self.protocol("WM_DELETE_WINDOW", self._safe_window_close)
         self.after(60000, self._idle_check)
 
     # ========================================================
@@ -324,6 +325,19 @@ class MainWindow(ctk.CTk):
         )
     def _active_session(self, event=None):
         self.last_activity = time.monotonic()
+
+    def _safe_window_close(self):
+        """Prevent accidental window closure while processing."""
+        if self._batch_is_processing():
+            from tkinter import messagebox
+            messagebox.showwarning(
+                "Lote en procesamiento",
+                "El lote sigue activo. No cierre esta ventana porque "
+                "interrumpiría el procesamiento. El checkpoint se conserva.",
+                parent=self,
+            )
+            return
+        self.destroy()
 
     def _batch_is_processing(self):
         """Do not close the application while a background batch is running."""
