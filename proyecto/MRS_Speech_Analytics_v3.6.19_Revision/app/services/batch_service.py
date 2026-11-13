@@ -632,13 +632,9 @@ class BatchService:
                     else None
                 )
 
-                if record is not None:
-                    from dataclasses import replace
-                    from app.services.account_source_validation import validate_account_source
-                    # Nunca sustituir automaticamente la cuenta del nombre de salida.
-                    account_conflict = validate_account_source(record.to_dict())
-                    if account_conflict.get("review_required"):
-                        item["account_identity_conflict"] = account_conflict
+                # nombre_final se conserva exactamente como lo proporciona Excel.
+                # La tarjeta solo es referencia para validar el contenido de la llamada.
+                item.pop("account_identity_conflict", None)
 
                 # Un audio relacionado con un estatus NO autorizado puede ser,
                 # por su propia naturaleza, un buzón/silencio/cuelgue y no
@@ -922,20 +918,6 @@ class BatchService:
                 decision = AnalyticsService.shared_quality_decision(
                     analytics_metadata, score, minimum_score, duration_seconds, classification)
                 classification.update(decision)
-                # Los conflictos de identidad tienen prioridad sobre toda aprobacion.
-                account_conflict = item.get("account_identity_conflict") or {}
-                if account_conflict.get("review_required"):
-                    decision["clasificacion"] = "REVISAR"
-                    decision["aprobado"] = False
-                    decision["motivo"] = (
-                        "CONFLICTO DE IDENTIDAD DE CUENTA: "
-                        + str(account_conflict.get("reason") or "Verificar audio y Excel.")
-                    )
-                    classification.update(decision)
-                    decision.pop("output_label_correction", None)
-                    classification.pop("output_label_correction", None)
-                    analytics_metadata["output_label_correction"] = None
-                    analytics_metadata["account_identity_conflict"] = account_conflict
                 operational_class = decision["clasificacion"]
                 if decision.get("motivo"):
                     manual_reasons.append(decision["motivo"])
