@@ -75,3 +75,42 @@ def test_supervisor_may_review_but_must_not_process_batches(tmp_path):
     assert not service.allowed("batch")
     with pytest.raises(PermissionError):
         service.require("batch")
+
+def test_recovery_code_resets_locked_admin_and_is_single_use(tmp_path):
+    service = AuthService(tmp_path/"users.sqlite3")
+    code = service.initial_admin("DANIELA", "Original-admin-123!")
+    assert isinstance(code, str) and len(code) >= 20
+    for _ in range(5):
+        with pytest.raises(PermissionError):
+            service.login("DANIELA", "wrong")
+    service.recover_password("DANIELA", code, "New-admin-password-123!")
+    assert service.login("DANIELA", "New-admin-password-123!")["role"] == "administrador"
+    service.logout()
+    with pytest.raises(PermissionError):
+        service.recover_password("DANIELA", code, "Different-password-123!")
+
+
+def test_admin_can_reissue_recovery_code_for_existing_account(tmp_path):
+    service = AuthService(tmp_path/"users.sqlite3")
+    first = service.initial_admin("DANIELA", "Original-admin-123!")
+    service.login("DANIELA", "Original-admin-123!")
+    replacement = service.issue_recovery_code("DANIELA")
+    assert replacement != first
+    service.logout()
+    with pytest.raises(PermissionError):
+        service.recover_password("DANIELA", first, "Another-password-123!")
+    service.recover_password("DANIELA", replacement, "Another-password-123!")
+
+
+def test_recovery_requires_valid_code_and_respects_inactive_users(tmp_path):
+    service = AuthService(tmp_path/"users.sqlite3")
+    service.initial_admin("admin01", "Original-admin-123!")
+    service.login("admin01", "Original-admin-123!")
+    service.create_user("viewer01", "Temp-password-456!", "consulta")
+    code = service.issue_recovery_code("viewer01")
+    with pytest.raises(PermissionError):
+        service.recover_password("viewer01", "invalid-code", "Different-password-123!")
+    service.set_active("viewer01", False)
+    service.logout()
+    with pytest.raises(PermissionError):
+        service.recover_password("viewer01", code, "Different-password-123!")
