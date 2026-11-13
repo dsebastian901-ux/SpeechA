@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import os
 import re
+import secrets
 import sqlite3
 import sys
 from datetime import datetime, timedelta, timezone
@@ -56,6 +57,13 @@ class AuthService:
             conn.execute("""CREATE TABLE IF NOT EXISTS audit (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 created_at TEXT NOT NULL, actor TEXT, event TEXT NOT NULL, target TEXT)""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS recovery (
+                username TEXT PRIMARY KEY COLLATE NOCASE,
+                code_hash TEXT NOT NULL,
+                failed INTEGER NOT NULL DEFAULT 0,
+                locked_until TEXT,
+                issued_at TEXT NOT NULL,
+                FOREIGN KEY(username) REFERENCES users(username))""")
 
     def _connect(self):
         conn = sqlite3.connect(self.path, timeout=10)
@@ -79,6 +87,12 @@ class AuthService:
             conn.execute("INSERT INTO users(username,salt,hash,role,created_at) VALUES(?,?,?,?,?)",
                          (username, salt, digest, "administrador", _now()))
             self._audit(conn, username, "initial_admin", username)
+            # Se entrega una unica vez al crear el primer administrador.
+            code = secrets.token_urlsafe(24)
+            conn.execute("INSERT INTO recovery(username,code_hash,issued_at) VALUES(?,?,?)",
+                         (username, hashlib.sha256(code.encode("utf-8")).hexdigest(), _now()))
+            self._audit(conn, username, "recovery_code_issued", username)
+            return code
 
     def login(self, username, password):
         self.current_user = None
@@ -175,6 +189,57 @@ class AuthService:
             if not cursor.rowcount:
                 raise ValueError("Usuario no encontrado.")
             self._audit(conn,self.current_user["username"],"password_reset",username)
+
+    def issue_recovery_code(self, username):
+        """Codigo de un solo uso; solo un administrador autenticado puede emitirlo."""
+        self._admin()
+        code = secrets.token_urlsafe(24)
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("SELECT username,active FROM users WHERE username=?", (username.strip(),)).fetchone()
+            if not row or not row[1]:
+                raise ValueError("El usuario no existe o está desactivado.")
+            name = row[0]
+            conn.execute("""INSERT INTO recovery(username,code_hash,failed,locked_until,issued_at)
+                VALUES(?,?,0,NULL,?)
+                ON CONFLICT(username) DO UPDATE SET code_hash=excluded.code_hash,
+                    failed=0,locked_until=NULL,issued_at=excluded.issued_at""",
+                (name, hashlib.sha256(code.encode("utf-8")).hexdigest(), _now()))
+            self._audit(conn, self.current_user["username"], "recovery_code_issued", name)
+        return code
+
+    def recover_password(self, username, recovery_code, new_password):
+        """Restablecimiento offline con codigo preemitido, nunca solo con el usuario."""
+        name = username.strip()
+        _validate(name, new_password)
+        candidate = hashlib.sha256(recovery_code.strip().encode("utf-8")).hexdigest()
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("""SELECT u.username,u.active,r.code_hash,r.failed,r.locked_until
+                FROM users u LEFT JOIN recovery r ON u.username=r.username
+                WHERE u.username=?""", (name,)).fetchone()
+            now = datetime.now(timezone.utc)
+            if row and row[4]:
+                try:
+                    expires = datetime.fromisoformat(row[4])
+                    if expires > now:
+                        self._audit(conn, row[0], "recovery_rejected", row[0])
+                        raise PermissionError("Código inválido o recuperación temporalmente bloqueada.")
+                except ValueError:
+                    pass
+            if not row or not row[1] or not row[2] or not hmac.compare_digest(candidate, row[2]):
+                if row and row[2] and row[1]:
+                    failed = (row[3] or 0) + 1
+                    lock = (now + timedelta(minutes=LOCK_MINUTES)).isoformat() if failed >= MAX_FAILURES else None
+                    conn.execute("UPDATE recovery SET failed=?,locked_until=? WHERE username=?", (failed,lock,row[0]))
+                self._audit(conn, None, "recovery_failed", None)
+                raise PermissionError("Código inválido o recuperación temporalmente bloqueada.")
+            salt, digest = _hash(new_password)
+            conn.execute("""UPDATE users SET salt=?,hash=?,must_change=0,failed=0,locked_until=NULL
+                WHERE username=?""", (salt,digest,row[0]))
+            conn.execute("DELETE FROM recovery WHERE username=?", (row[0],))
+            self._audit(conn, row[0], "password_recovered", row[0])
+        self.current_user = None
 
     def set_role(self, username, role):
         self._admin()
