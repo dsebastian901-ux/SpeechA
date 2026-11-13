@@ -324,10 +324,8 @@ class AnalyticsService:
         # -----------------------------------------------------
 
         enriched_context = dict(operational_context or {})
-        from app.services.account_source_validation import apply_output_name_authority
-        naming_copy = {'relation':enriched_context}
-        apply_output_name_authority(naming_copy)
-        enriched_context = naming_copy['relation']
+        # El nombre de archivo es independiente de la tarjeta del cliente.
+        # numero_de_tarjeta se usa exclusivamente para validar lo dicho en audio.
         enriched_context["_segments"] = list(getattr(transcription, "segments", []) or [])
         enriched_context["_duration_seconds"] = float(getattr(transcription, "duration_seconds", 0.0) or 0.0)
         enriched_context["_amount_recovery"] = (getattr(transcription, "metadata", {}) or {}).get("recuperacion_importes")
@@ -421,7 +419,7 @@ class AnalyticsService:
             ),
         }
 
-        analysis.metadata["output_name_normalization"] = naming_copy.get("output_name_normalization")
+        analysis.metadata["output_name_normalization"] = None
         analysis.metadata["dialogue_evaluation"] = compliance.get("dialogue_evaluation", {})
         analysis.metadata["quality_contact_type"] = compliance.get(
             "contact_type", "CONTACTO NO DETERMINADO"
