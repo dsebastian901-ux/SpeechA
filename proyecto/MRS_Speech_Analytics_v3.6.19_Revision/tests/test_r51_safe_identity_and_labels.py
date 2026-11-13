@@ -39,11 +39,20 @@ def test_true_status_change_still_allowed():
     assert "_TH_" in result["corrected_name"]
 
 
-def test_conflicting_account_requires_review():
+def test_nombre_final_is_independent_of_card_number():
     relation = {
         "nombre_final": "4812820090495012_CANAL_GESTOR_NP_FECHA_SUPERVISOR_OTRO",
         "numero_de_tarjeta": "4812820090495013",
     }
+    original = dict(relation)
     result = validate_account_source(relation)
-    assert result["review_required"]
-    assert relation["nombre_final"].startswith("4812820090495012_")
+    assert not result["review_required"]
+    assert relation == original
+
+
+def test_true_relabel_does_not_require_card_to_match_filename():
+    data = _metadata("NEGATIVA DE PAGO", "NO DEFINE FECHA DE PAGO", "NP")
+    data["operational_context"]["numero_de_tarjeta"] = "4812820090495013"
+    result = corrected_status_label(data)
+    assert result["valid"] and result["changed"]
+    assert result["corrected_name"].startswith("4812820090495012_")
