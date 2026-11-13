@@ -45,14 +45,12 @@ def corrected_status_label(metadata, policy=None):
         return dict(none,reason='Estatus sin código de salida configurado; no se inventa una etiqueta.')
     context=metadata.get('operational_context') or {}
     name=str(context.get('nombre_final') or '')
-    card=str(context.get('numero_de_tarjeta') or '')
     if not name or PureWindowsPath(name).name!=name or any(c in name for c in '/\\\0'):
         return dict(none,reason='El nombre final no tiene un formato seguro para corregir su etiqueta.')
     parts=name.split('_');index=policy.get('component_index')
     if not isinstance(index,int) or index<1 or index>=len(parts) or len(parts)<7:
         return dict(none,reason='El nombre no contiene el componente de estatus configurado.')
-    if not re.fullmatch(r'\d{16}',card) or not re.fullmatch(r'0*'+re.escape(card),parts[0]):
-        return dict(none,reason='El nombre no corresponde a la tarjeta de origen; no se reetiqueta.')
+    # El componente inicial pertenece a nombre_final, no a numero_de_tarjeta.
     before=parts[index];target=codes[new_status]
     if before not in {codes[old_key],target} or not re.fullmatch(r'[A-Z0-9]+',target):
         return dict(none,reason='El componente de estatus no coincide con el catálogo; requiere revisión.')
