@@ -116,7 +116,8 @@ def holder_confirmation(text, segments=()):
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|se encuentra|estoy buscando a|hablo con|"
         r"me estoy comunicando al numero telefonico de|seria tan amable de comunicarme con|"
         r"tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|(?<=¿)con)")
-    explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+)?(?:digame|diganme|dime|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b"
+    # Tolerancia ASR solo tras solicitud nominal, con exclusión de terceros.
+    explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:(?:si|ya)[, ]+)?(?:digame|diganme|dime|diga|digamos|ya hablo|ya habla|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b"
     prompt = re.compile(
         rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)(?:[.?]|,)\s*" + explicit_answer)
     salutation_prompt = re.compile(
