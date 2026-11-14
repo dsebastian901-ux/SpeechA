@@ -1116,6 +1116,17 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
             last_recipient = role
         s = normalize(unit["text"])
         matches = sensitive_financial_matches(s)
+        # «tres nacionalidades vencidas» es una posible deformación ASR de
+        # «tres mensualidades vencidas». Si se dice sobre una tarjeta/cuenta
+        # delante de un tercero, no aprobar en silencio: pedir cotejo del audio.
+        # NO supone divulgación confirmada ni atribuye voz al gestor.
+        if (third_party_confirmed or expected_third_party) and re.search(
+            r"\b(?:tarjeta|cuenta|visa|pago)\b", s
+        ):
+            matches.extend(re.finditer(
+                r"\b(?:\d+|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+"
+                r"nacionalidades\s+vencidas\b", s
+            ))
         # Un punto o un corte ASR no debe ocultar «Saldo pendiente. Son $500».
         # El rol decisivo es el de quien proporciona el importe, nunca el de
         # un familiar que informa su propio pago en el turno siguiente.
@@ -1139,7 +1150,14 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
             hypothetical = bool("?" in s or "¿" in s or re.search(r"\b(?:si|no|nunca)\s*$", prefix)
                                 or re.search(r"\b(?:no tiene|sin (?:deuda|adeudo|atraso)|si tuviera|en caso de)\b", s))
             protected = third_party_confirmed and last_recipient != "TITULAR"
-            asr_uncertainty=bool(re.fullmatch(r"por la trazo de su tarjeta|deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas",match.group()))
+            asr_uncertainty=bool(
+                re.fullmatch(
+                    r"por la trazo de su tarjeta|deudo con su tarjeta|la deudo que presenta|"
+                    r"el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas|"
+                    r"(?:\d+|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez) nacionalidades vencidas",
+                    match.group()
+                )
+            )
             scoped_role=None
             if role=="NO DETERMINADO" and protected and not hypothetical and not asr_uncertainty:
                 from app.services.scoped_institutional_speech import institutional_clause_evidence
