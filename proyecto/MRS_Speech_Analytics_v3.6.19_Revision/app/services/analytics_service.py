@@ -1174,6 +1174,20 @@ class AnalyticsService:
             r"\b(?:soy yo|(?:si )?soy (?:el |la )?titular|habla (?:el |la )titular)\b")
         contact_confirmation = holder_confirmation(text, segments)
         titular = titular or contact_confirmation["confirmed"]
+        # Una confirmación con nombre distinto al primer deudor buscado no
+        # demuestra titularidad: el interlocutor puede estar tomando recado.
+        from app.services.conversation_evidence import nominee_conflict_with_confirmed_name
+        nominal_conflict = nominee_conflict_with_confirmed_name(text, contact_confirmation)
+        if nominal_conflict["conflict"]:
+            titular = False
+            contact_confirmation = {
+                "confirmed": False,
+                "method": "DOS_IDENTIDADES_NOMINALES_DISTINTAS",
+                "evidence": (
+                    nominal_conflict["requested_name"] + " / " +
+                    nominal_conflict["confirmed_name"]
+                ),
+            }
         from app.services.contact_dialogue_resolution import declared_intermediary
         declared_contact=declared_intermediary(text,segments)
         if declared_contact['confirmed']:
@@ -1204,17 +1218,26 @@ class AnalyticsService:
         third_party = third_party or (not titular and associate_confirmation['confirmed'])
         from app.services.arco_context_evidence import positive_knowledge_denial
         contact_denial = unknown_debtor_statement(text,segments) or positive_knowledge_denial(text,segments,ignore_relationships=True)['confirmed']
-        contact_conflict = bool(contradictory_relay or (contact_denial and (family or work_contact or third_party or titular)))
+        contact_conflict = bool(
+            nominal_conflict["conflict"] or contradictory_relay
+            or (contact_denial and (family or work_contact or third_party or titular))
+        )
         contact_conflict_validation = {
             'review_required': contact_conflict,
             'reason': (
                 'La respuesta nominal inicial contradice un recado aceptado para el titular; verificar interlocutor en audio.'
                 if contradictory_relay else
+                ('El nombre confirmado es distinto al deudor solicitado: ' +
+                 nominal_conflict["requested_name"] + ' / ' +
+                 nominal_conflict["confirmed_name"] +
+                 '. Verificar interlocutor y privacidad en el audio.')
+                if nominal_conflict["conflict"] else
                 'Hay respuestas contradictorias sobre conocer al titular; no se confirma una omisión ARCO ni la identidad.'
                 if contact_conflict else ''
             ),
             'method': (
                 'IDENTIDAD_CONTRADICHA_POR_RECADO_ACEPTADO' if contradictory_relay else
+                'DOS_IDENTIDADES_NOMINALES_DISTINTAS' if nominal_conflict["conflict"] else
                 'CONOCIMIENTO_Y_DESCONOCIMIENTO_EN_CONVERSACION' if contact_conflict else
                 'SIN_CONTRADICCION_DETECTADA'
             ),
