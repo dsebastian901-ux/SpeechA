@@ -603,7 +603,14 @@ class BatchReportService:
             or ("CUMPLE" if classification.get("cumple_puntaje") else "NO CUMPLE")
         ).strip().upper()
 
-        if status and status.get("valid") is False and status.get("review_required"):
+        if physical == "SIN_RELACION_EXCEL":
+            # No presentar «CUMPLE» como validación de una cuenta sin fuente.
+            compliance_status = "NO VALIDABLE - FALTA RELACION"
+            dictamen = "SIN RELACION EXCEL"
+            motivo_dictamen = classification.get("source_data_reason") or (
+                "No existe correspondencia de archivo o ID en el Excel."
+            )
+        elif status and status.get("valid") is False and status.get("review_required"):
             dictamen = "REVISAR"
             motivo_dictamen = cls._join_reasons(status.get("reasons") or [])
         elif status and status.get("valid") is False:
