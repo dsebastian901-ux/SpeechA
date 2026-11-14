@@ -977,6 +977,11 @@ SENSITIVE = re.compile(
     r"(?:tiene|presenta|cuenta con) (?:un |una |dos |tres |cuatro |\d+ )?(?:deuda|adeudo|atraso|mens(?:u)?alidad(?:es)?)|"
     r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciseis|diecisiete|dieciocho|diecinueve|veinte) (?:mes(?:es)?|anos?|mens(?:u)?alidad(?:es)?)(?: de)? (?:atraso|vencid[ao]s?)|"
     r"mens(?:u)?alidades vencidas|(?:meses|anos) de atraso|"
+    # Divulgación cuantificada en orden inverso: «atraso de más de siete
+    # meses». Antes escapaba aun cuando se decía explícitamente a un familiar.
+    r"(?:atraso|mora)(?: de| por| de mas de| de mas| de alrededor de)?\s*"
+    r"(?:mas de\s+)?(?:\d+|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|"
+    r"nueve|diez|once|doce|trece|catorce|quince|veinte)\s+mes(?:es)?|"
     r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|veinte) (?:meses?|anos?) (?:que no (?:se )?(?:ha )?(?:efectuado|realizado|aplicado|presentado|registrado|recibido|presenta|efectua|realiza|registra|recibe)|sin (?:realizar|efectuar|registrar)) (?:un |el |su |ningun )?(?:pago|abono)|"
     r"(?:deuda|adeudo|pago minimo|monto) (?:de |es |por )?\d[\d.,]*|"
     r"(?:adeuda|debe)\s+(?:\d[\d.,]*|mil|cien|doscientos|trescientos|quinientos)|"
