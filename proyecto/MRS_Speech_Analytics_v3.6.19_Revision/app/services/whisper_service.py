@@ -523,6 +523,16 @@ class WhisperService:
             or 0.0
         )
 
+        # Eliminar solo alucinaciones terminales demostrables. La evidencia
+        # original se conserva y NO se reinterpreta voz, importes ni estatus.
+        from app.services.asr_postprocess import sanitize_asr_segments
+        normalized_segments, asr_diagnostic = sanitize_asr_segments(
+            normalized_segments, duration
+        )
+        raw_whisper_text = complete_text if asr_diagnostic["changed"] else ""
+        if asr_diagnostic["changed"]:
+            complete_text = self._join_text(normalized_segments)
+
         # -----------------------------------------------------
         # IDIOMA DETECTADO
         # -----------------------------------------------------
@@ -629,6 +639,7 @@ class WhisperService:
             "texto": (
                 complete_text
             ),
+            "asr_postprocess": asr_diagnostic,
 
             "segmentos": (
                 normalized_segments
@@ -640,6 +651,11 @@ class WhisperService:
                 )
             ),
         }
+
+        # Si hubo depuración se conserva la transcripción original para
+        # reproducir decisiones y facilitar cotejo del audio.
+        if raw_whisper_text:
+            data["texto_whisper_original"] = raw_whisper_text
 
         # -----------------------------------------------------
         # GUARDAR TXT + JSON
