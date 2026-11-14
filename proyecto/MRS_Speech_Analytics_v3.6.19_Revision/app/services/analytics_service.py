@@ -324,10 +324,8 @@ class AnalyticsService:
         # -----------------------------------------------------
 
         enriched_context = dict(operational_context or {})
-        from app.services.account_source_validation import apply_output_name_authority
-        naming_copy = {'relation':enriched_context}
-        apply_output_name_authority(naming_copy)
-        enriched_context = naming_copy['relation']
+        # El nombre de archivo es independiente de la tarjeta del cliente.
+        # numero_de_tarjeta se usa exclusivamente para validar lo dicho en audio.
         enriched_context["_segments"] = list(getattr(transcription, "segments", []) or [])
         enriched_context["_duration_seconds"] = float(getattr(transcription, "duration_seconds", 0.0) or 0.0)
         enriched_context["_amount_recovery"] = (getattr(transcription, "metadata", {}) or {}).get("recuperacion_importes")
@@ -421,7 +419,7 @@ class AnalyticsService:
             ),
         }
 
-        analysis.metadata["output_name_normalization"] = naming_copy.get("output_name_normalization")
+        analysis.metadata["output_name_normalization"] = None
         analysis.metadata["dialogue_evaluation"] = compliance.get("dialogue_evaluation", {})
         analysis.metadata["quality_contact_type"] = compliance.get(
             "contact_type", "CONTACTO NO DETERMINADO"
@@ -1182,13 +1180,45 @@ class AnalyticsService:
             titular=False;third_party=True
             contact_confirmation={'confirmed':False,'method':'RESPUESTA_EXPLICITA_DE_INTERMEDIARIO','evidence':declared_contact['evidence']}
         associate_confirmation = associate_relationship(text, segments)
+        # Una aparente respuesta al nombre no valida al titular cuando en la
+        # misma conversación otra persona ACEPTA un recado dirigido al titular.
+        # No asumimos parentesco ni una divulgación crítica: bloqueamos la
+        # identificación automática y exigimos revisión de la grabación.
+        self_holder_declared = recipient_statement(
+            text, segments,
+            r"\b(?:soy yo|soy (?:el|la) titular|habla (?:el|la) titular)\b",
+        )
+        contradictory_relay = bool(
+            titular and not self_holder_declared
+            and recado_assessment.get('acceptance')
+            and recado_assessment.get('directed_messages')
+        )
+        if contradictory_relay:
+            titular = False
+            contact_confirmation = {
+                'confirmed': False,
+                'method': 'IDENTIDAD_CONTRADICHA_POR_RECADO_ACEPTADO',
+                'evidence': 'Respuesta nominal seguida de recado aceptado para el titular',
+            }
+            third_party = True
         third_party = third_party or (not titular and associate_confirmation['confirmed'])
         from app.services.arco_context_evidence import positive_knowledge_denial
         contact_denial = unknown_debtor_statement(text,segments) or positive_knowledge_denial(text,segments,ignore_relationships=True)['confirmed']
-        contact_conflict = bool(contact_denial and (family or work_contact or third_party or titular))
-        contact_conflict_validation = {'review_required':contact_conflict,
-            'reason':'Hay respuestas contradictorias sobre conocer al titular; no se confirma una omisión ARCO ni la identidad.' if contact_conflict else '',
-            'method':'CONOCIMIENTO_Y_DESCONOCIMIENTO_EN_CONVERSACION' if contact_conflict else 'SIN_CONTRADICCION_DETECTADA'}
+        contact_conflict = bool(contradictory_relay or (contact_denial and (family or work_contact or third_party or titular)))
+        contact_conflict_validation = {
+            'review_required': contact_conflict,
+            'reason': (
+                'La respuesta nominal inicial contradice un recado aceptado para el titular; verificar interlocutor en audio.'
+                if contradictory_relay else
+                'Hay respuestas contradictorias sobre conocer al titular; no se confirma una omisión ARCO ni la identidad.'
+                if contact_conflict else ''
+            ),
+            'method': (
+                'IDENTIDAD_CONTRADICHA_POR_RECADO_ACEPTADO' if contradictory_relay else
+                'CONOCIMIENTO_Y_DESCONOCIMIENTO_EN_CONVERSACION' if contact_conflict else
+                'SIN_CONTRADICCION_DETECTADA'
+            ),
+        }
         if contact_conflict:unknown_debtor=False
         # La ausencia declarada confirma un tercero, no su parentesco. Una
         # entrega posterior al titular prevalece sobre esa respuesta inicial.
@@ -3181,15 +3211,31 @@ class AnalyticsService:
                 status_validation["valid"] = bool(no_conocen_valid)
 
             elif detected_status:
-                status_validation["matches"] = canonical_excel_status == detected_status
-                # RECADO REF1/REF2 exige familiar identificado Y recado real.
-                # La sola relación familiar no prueba que se dejó el mensaje.
+                # REF1/REF2 son códigos operativos 3EROS: familiar, amigo,
+                # conocido o tercero de trabajo. La relación específica debe
+                # salir del AUDIO y no del nombre literal del estatus.
+                third_party_message = {
+                    "MENSAJE CON FAMILIAR", "MENSAJE CON TERCERO",
+                    "MENSAJE EN TRABAJO",
+                }
+                equivalent_recado = bool(
+                    canonical_excel_status == "MENSAJE CON FAMILIAR"
+                    and detected_status in third_party_message and recado_real
+                    and contact_type in {"TERCERO", "TERCERO / FAMILIAR", "TERCERO / TRABAJO"}
+                )
+                status_validation["matches"] = (canonical_excel_status == detected_status or equivalent_recado)
+                if equivalent_recado:
+                    status_validation["equivalent_status"] = True
+                    status_validation["equivalence_code"] = "3EROS"
+                # No dar por válido un recado si falta entrega/aceptación.
+                # Si el interlocutor realmente es familiar, además exigir
+                # evidencia de parentesco; a otros terceros no se les exige.
                 if canonical_excel_status == "MENSAJE CON FAMILIAR" and status_validation["matches"]:
-                    if not (recado_family_evidence and recado_real):
+                    if not recado_real or (contact_type == "TERCERO / FAMILIAR" and not recado_family_evidence):
                         status_validation["valid"] = False
                         status_validation["review_required"] = True
                         status_validation["reasons"].append(
-                            "Falta evidencia conjunta de familiar y recado efectivamente transmitido."
+                            "No se acreditó recado aceptado o parentesco declarado en el audio."
                         )
                 if not status_validation["matches"]:
                     # No declarar MAL_DICTAMINADO con evidencia media/ambigua.
@@ -3893,6 +3939,18 @@ class AnalyticsService:
             amount_validation = "REVISAR - REFERENCIA FINANCIERA INCOMPLETA"
             amount_reason = "Para cotejar la liquidación por mora se requieren pago_minimo y saldo_total de origen."
             amount_review = True
+        elif (payment_confirmation_case and not explicit_new_promise
+                and not new_payment_proposals and not unaccepted_new_payment_instruction
+                and detected_claim_amount is not None and minimum_expected is not None
+                and detected_claim_amount + 0.009 < minimum_expected):
+            # Un pago ya reportado no es una oferta nueva de convenio.
+            # No comparar su importe con el minimo como si fuera una promesa.
+            # Si surge una nueva propuesta independiente, aplica la regla normal.
+            amount_validation = "INFORMATIVO - PAGO PREVIO REPORTADO"
+            amount_reason = (
+                f"Importe {detected_claim_amount:g} informado durante seguimiento de pago anterior; "
+                "no existe nueva promesa que pueda calificarse como convenio insuficiente."
+            )
         elif detected_claim_amount is not None and minimum_expected is not None and detected_claim_amount + 0.009 < minimum_expected:
             if explicit_partial_exception and not positive_effect_for_partial:
                 amount_validation = "VALIDA - PAGO PARCIAL EXPLICITO"

@@ -632,13 +632,9 @@ class BatchService:
                     else None
                 )
 
-                if record is not None:
-                    from dataclasses import replace
-                    from app.services.account_source_validation import apply_output_name_authority
-                    name_copy = {'relation':record.to_dict()}
-                    if apply_output_name_authority(name_copy):
-                        record = replace(record,nombre_final=name_copy['relation']['nombre_final'])
-                        item['output_name_normalization'] = name_copy['output_name_normalization']
+                # nombre_final se conserva exactamente como lo proporciona Excel.
+                # La tarjeta solo es referencia para validar el contenido de la llamada.
+                item.pop("account_identity_conflict", None)
 
                 # Un audio relacionado con un estatus NO autorizado puede ser,
                 # por su propia naturaleza, un buzón/silencio/cuelgue y no

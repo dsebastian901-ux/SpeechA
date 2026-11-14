@@ -8,6 +8,7 @@ Ventana principal
 from __future__ import annotations
 
 import customtkinter as ctk
+import time
 
 from app.config.settings import (
     WINDOW_WIDTH,
@@ -33,8 +34,11 @@ class MainWindow(ctk.CTk):
     - Barra de estado
     """
 
-    def __init__(self):
+    def __init__(self, auth):
         super().__init__()
+        self.auth = auth
+        self.logout_requested = False
+        self.last_activity = time.monotonic()
 
         self.configure_window()
         self.configure_layout()
@@ -42,6 +46,10 @@ class MainWindow(ctk.CTk):
         self._menu_hide_job = None
         self.create_components()
         self.after(2200, self.collapse_menu)
+        self.bind_all('<KeyPress>', self._active_session, add='+')
+        self.bind_all('<Button>', self._active_session, add='+')
+        self.protocol("WM_DELETE_WINDOW", self._safe_window_close)
+        self.after(60000, self._idle_check)
 
     # ========================================================
     # CONFIGURACIÓN DE VENTANA
@@ -135,6 +143,8 @@ class MainWindow(ctk.CTk):
         self.top_bar = TopBar(
             self
         )
+        ctk.CTkButton(self.top_bar,text='Cerrar sesión',width=110,height=27,
+                      command=self.logout).grid(row=0,column=2,padx=12,pady=7)
 
         self.top_bar.grid(
             row=0,
@@ -156,6 +166,7 @@ class MainWindow(ctk.CTk):
         self.work_area = WorkArea(
             self
         )
+        self.work_area.auth = self.auth
 
         self.work_area.grid(
             row=1,
@@ -260,6 +271,8 @@ class MainWindow(ctk.CTk):
             on_history=(
                 self.work_area.show_history
             ),
+            on_users=self.work_area.show_users,
+            permissions=self.auth.current_user['role'],
             on_collapse=self.collapse_menu,
         )
 
@@ -310,3 +323,52 @@ class MainWindow(ctk.CTk):
             columnspan=2,
             sticky="ew",
         )
+    def _active_session(self, event=None):
+        self.last_activity = time.monotonic()
+
+    def _safe_window_close(self):
+        """Prevent accidental window closure while processing."""
+        if self._batch_is_processing():
+            from tkinter import messagebox
+            messagebox.showwarning(
+                "Lote en procesamiento",
+                "El lote sigue activo. No cierre esta ventana porque "
+                "interrumpiría el procesamiento. El checkpoint se conserva.",
+                parent=self,
+            )
+            return
+        self.destroy()
+
+    def _batch_is_processing(self):
+        """Do not close the application while a background batch is running."""
+        work_area = getattr(self, "work_area", None)
+        view = getattr(work_area, "current_view", None)
+        return bool(getattr(view, "is_processing", False))
+
+    def logout(self):
+        # Daemon worker threads stop when the Tk mainloop is destroyed.
+        # A running batch must not be interrupted by a logout.
+        if self._batch_is_processing():
+            from tkinter import messagebox
+            messagebox.showwarning(
+                "Lote en procesamiento",
+                "No es posible cerrar sesión mientras se procesa un lote. "
+                "Conserve el programa abierto hasta que termine.",
+                parent=self,
+            )
+            return
+        self.logout_requested = True
+        self.destroy()
+
+    def _idle_check(self):
+        if not self.winfo_exists():
+            return
+        if self._batch_is_processing():
+            # Processing is active work, even without user keyboard/mouse events.
+            self.last_activity = time.monotonic()
+            self.after(60000, self._idle_check)
+            return
+        if time.monotonic() - self.last_activity >= 1800 or not self.auth.allowed("home"):
+            self.logout()
+            return
+        self.after(60000, self._idle_check)

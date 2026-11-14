@@ -169,6 +169,32 @@ class TranscriptionService:
                 f"{path.name}"
             )
 
+        # Aplicar la misma depuración a JSON ya transcritos, sin volver a
+        # ejecutar Whisper, sobrescribir el archivo o cambiar texto editado.
+        # El texto histórico debe coincidir exactamente con sus segmentos.
+        if isinstance(data.get("segmentos"), list) and data.get("segmentos"):
+            from app.services.asr_postprocess import sanitize_asr_segments
+            old_segments = data["segmentos"]
+            cleaned, diag = sanitize_asr_segments(
+                old_segments, data.get("duracion_segundos")
+            )
+            original_join = " ".join(
+                str(seg.get("texto") or "").strip()
+                for seg in old_segments if str(seg.get("texto") or "").strip()
+            ).strip()
+            if diag["changed"] and str(data.get("texto") or "").strip() == original_join:
+                data = dict(data)
+                data["texto_whisper_original"] = data["texto"]
+                data["texto"] = " ".join(
+                    str(seg.get("texto") or "").strip()
+                    for seg in cleaned if str(seg.get("texto") or "").strip()
+                )
+                data["segmentos"] = cleaned
+                data["asr_postprocess"] = diag
+            elif diag["timestamp_warning"]:
+                data = dict(data)
+                data["asr_postprocess"] = diag
+
         txt_path = path.with_suffix(
             cls.TXT_EXTENSION
         )
