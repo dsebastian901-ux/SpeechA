@@ -150,7 +150,10 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     elif rejection:
         category = 'NO_APROBADO'
     elif verified_exception and score_ok and not blocking:
-        category = 'APROBADO_ETIQUETA_CORREGIDA' if output_label['valid'] else 'APROBADO_CON_EXCEPCION'
+        # La excepción hostil/lasciva confirmada SIEMPRE tiene su propia carpeta.
+        # Una corrección de etiqueta se conserva en metadata, pero no debe
+        # trasladar el audio a APROBADO_ETIQUETA_CORREGIDA.
+        category = 'APROBADO_CON_EXCEPCION'
     elif not score_ok and ordinary_score_rejection(m,score,minimum_score,duration_seconds):
         category = 'NO_APROBADO_MENOR_80'
     elif blocking:
