@@ -3939,6 +3939,18 @@ class AnalyticsService:
             amount_validation = "REVISAR - REFERENCIA FINANCIERA INCOMPLETA"
             amount_reason = "Para cotejar la liquidación por mora se requieren pago_minimo y saldo_total de origen."
             amount_review = True
+        elif (payment_confirmation_case and not explicit_new_promise
+                and not new_payment_proposals and not unaccepted_new_payment_instruction
+                and detected_claim_amount is not None and minimum_expected is not None
+                and detected_claim_amount + 0.009 < minimum_expected):
+            # Un pago ya reportado no es una oferta nueva de convenio.
+            # No comparar su importe con el minimo como si fuera una promesa.
+            # Si surge una nueva propuesta independiente, aplica la regla normal.
+            amount_validation = "INFORMATIVO - PAGO PREVIO REPORTADO"
+            amount_reason = (
+                f"Importe {detected_claim_amount:g} informado durante seguimiento de pago anterior; "
+                "no existe nueva promesa que pueda calificarse como convenio insuficiente."
+            )
         elif detected_claim_amount is not None and minimum_expected is not None and detected_claim_amount + 0.009 < minimum_expected:
             if explicit_partial_exception and not positive_effect_for_partial:
                 amount_validation = "VALIDA - PAGO PARCIAL EXPLICITO"
