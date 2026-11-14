@@ -22,7 +22,13 @@ SOURCE_MISSING_REASON = (
 def enforce_excel_source(classification, relation, *, excel_required):
     """Devolver nueva decisión sin alterar el dictamen de calidad original."""
     decision = deepcopy(classification if isinstance(classification, dict) else {})
-    if not excel_required or isinstance(relation, dict) and bool(relation):
+    # El lote nuevo usa RelationRecord (dataclass); el reanálisis usa dict.
+    # No confundir un registro válido con una relación ausente.
+    if isinstance(relation, dict):
+        has_relation = bool(relation.get("archivo_original"))
+    else:
+        has_relation = bool(getattr(relation, "archivo_original", None))
+    if not excel_required or has_relation:
         return decision
     preliminary = str(decision.get("clasificacion") or "REVISAR").upper()
     decision["preliminary_classification"] = preliminary
