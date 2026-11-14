@@ -145,10 +145,29 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         for finding in blocking:finding['severity']='OBSERVATION'
         findings.append(rejection)
         blocking=[rejection]
+    # El estatus distinto con evidencia ALTA no debe quedar eternamente en
+    # REVISAR cuando la única objeción es la propia dictaminación.
+    # Nunca resuelve dudas independientes de privacidad, referencia o trato;
+    # tampoco confirma un dictamen sin fuente Excel.
+    status_misdictaminado_confirmado = bool(
+        score_ok
+        and status.get('excel_status')
+        and status.get('detected_status')
+        and status.get('matches') is False
+        and status.get('detection_confidence') == 'ALTA'
+        and status.get('evidence')
+        and not status.get('review_required')
+        and not output_label.get('valid')
+        and blocking
+        and all(f['code'] in {'STATUS_INVALID', 'STATUS_NOT_CONFIRMED'} for f in blocking)
+        and not critical
+    )
     if critical:
         category = 'FALLA_GRAVE'
     elif rejection:
         category = 'NO_APROBADO'
+    elif status_misdictaminado_confirmado:
+        category = 'MAL_DICTAMINADO'
     elif verified_exception and score_ok and not blocking:
         # La excepción hostil/lasciva confirmada SIEMPRE tiene su propia carpeta.
         # Una corrección de etiqueta se conserva en metadata, pero no debe
