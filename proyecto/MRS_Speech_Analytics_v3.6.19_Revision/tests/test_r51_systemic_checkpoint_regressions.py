@@ -88,3 +88,22 @@ def test_specific_future_payment_offer_is_an_attempt():
 ])
 def test_reverse_overdue_months_are_sensitive(phrase):
     assert sensitive_financial_matches(phrase)
+
+
+def test_single_missing_status_is_one_blocker_not_two():
+    from app.services.quality_decision import evaluate_quality
+    m = {
+        "quality_contact_type": "TITULAR",
+        "negotiation_validation": {"valid": True},
+        "status_validation": {
+            "excel_status": "CONVENIO", "detected_status": "",
+            "matches": None, "valid": False,
+            "review_required": True,
+            "reasons": ["No se determinó estatus a partir del diálogo"],
+        },
+    }
+    d = evaluate_quality(m, 90, 80, duration_seconds=95)
+    codes = [f["code"] for f in d["decision_findings"]]
+    assert d["clasificacion"] == "REVISAR"
+    assert codes.count("STATUS_INVALID") == 1
+    assert "STATUS_NOT_CONFIRMED" not in codes
