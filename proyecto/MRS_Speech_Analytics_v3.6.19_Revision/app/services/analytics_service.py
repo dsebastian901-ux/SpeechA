@@ -1538,7 +1538,7 @@ class AnalyticsService:
 
         contract_default_disclosed = bool(
             re.search(
-                r"\bincumplimiento\s+(?:al|del|de)\s+(?:el\s+)?contrato\b",
+                r"\bincumplimiento\s+(?:a|al|del|de)\s+(?:el\s+)?contrato\b",
                 normalized,
             )
         )
