@@ -116,6 +116,39 @@ def holder_confirmation(text, segments=()):
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|se encuentra|estoy buscando a|hablo con|"
         r"me estoy comunicando al numero telefonico de|seria tan amable de comunicarme con|"
         r"tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|(?<=¿)con)")
+    # Segundo paso de identidad en llamadas reales: «Busco a Nombre Apellido.
+    # ¿Usted es Nombre? Sí.» No basta «sí» aislado: el nombre debe haber sido
+    # solicitado explícitamente antes, sin contradicción de tercero.
+    followup_identity = re.compile(
+        r"\busted es\s+(?P<identity>[a-z][a-z ]{2,64}?)\s*\?\s*"
+        r"(?P<answer>si|asi es|correcto)\b"
+    )
+    for match in followup_identity.finditer(s):
+        identity = match["identity"].strip()
+        if (not valid_nominal_request(s, match.start(), identity)
+                or re.search(r"\b(?:familiar|espos[oa]|madre|padre|herman[oa]|"
+                             r"referencia|banco|despacho|cobranza|titular|"
+                             r"tarjeta|pago|cuenta|telefono|servicio|quien)\b", identity)
+                or re.search(r"\d", identity)
+                or _role_at(text, segments, match.start("answer")) in {"GESTOR", "TERCERO"}):
+            continue
+        context = s[max(0, match.start()-320):match.start()]
+        request = list(re.finditer(
+            r"\b(?:busco(?: a)?|me (?:comunico|comunica|comunicaria|"
+            r"puede comunicar|podria comunicar) con|"
+            r"me puede comunicar(?: con)?|con (?:el senor|la senorita)|"
+            r"esta con)\b", context
+        ))
+        if not request or not re.search(r"\b"+re.escape(identity)+r"\b", context[request[-1].start():]):
+            continue
+        after = s[match.end():match.end()+170]
+        if (counter.search(after) or
+                re.search(r"\b(?:no esta|se lo comunico|le paso|"
+                          r"no soy|lo busco|la busco)\b", after)):
+            continue
+        return {"confirmed": True, "method": "CONFIRMACION_NOMINAL_SEGUNDO_PASO",
+                "evidence": match.group(), "speaker_role": "NO DETERMINADO"}
+
     # Tolerancia ASR solo tras solicitud nominal, con exclusión de terceros.
     explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+(?:digamos|diga|ya hablo|ya habla)|ya habla|(?:si[, ]+)?(?:digame|diganme|dime|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella)))\b"
     prompt = re.compile(
