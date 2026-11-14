@@ -463,6 +463,7 @@ class BatchService:
             "NEGOCIACION_INVALIDA": "NEGOCIACION_INVALIDA",
             "FALLA_GRAVE": "FALLA_GRAVE",
             "REVISAR": "REVISAR",
+            "SIN_RELACION_EXCEL": "SIN_RELACION_EXCEL",
         }
         destination_dir = classified_root / folder_map.get(category, "REVISAR")
 
@@ -917,6 +918,11 @@ class BatchService:
                 # Una sola puerta de decisión para individual, lote con Excel y solo audios.
                 decision = AnalyticsService.shared_quality_decision(
                     analytics_metadata, score, minimum_score, duration_seconds, classification)
+                from app.services.source_validation_gate import enforce_excel_source
+                decision = enforce_excel_source(
+                    decision, record,
+                    excel_required=bool(self.has_relation_excel()),
+                )
                 classification.update(decision)
                 operational_class = decision["clasificacion"]
                 if decision.get("motivo"):
@@ -955,8 +961,8 @@ class BatchService:
 
                 if self.has_relation_excel() and record is None:
                     item["message"] = (
-                        f"Analytics {score:.1f}% · REVISAR · "
-                        "audio sin relacion en Excel"
+                        f"Analytics {score:.1f}% · {classification['clasificacion']} · "
+                        "audio sin relación en Excel; dictamen de calidad provisional"
                     )
                 else:
                     item["message"] = (
