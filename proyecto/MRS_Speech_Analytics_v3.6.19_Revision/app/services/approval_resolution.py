@@ -35,11 +35,41 @@ def ordinary_score_rejection(metadata, score, minimum_score, duration_seconds):
             'Faltan fecha de llamada o promesa interpretable para validar el plazo por mora.',
         })
         and any(p.get('id')=='PEN007' for p in penalties))
-    # La ausencia de fecha ya descontada no exige una revisión adicional si
-    # el rechazo por puntaje es definitivo. No exime términos financieros
-    # contradictorios, importes, plazos reales ni evidencia incierta de audio.
-    if ((negotiation.get('valid') is False and not missing_contract_only)
-            or negotiation.get('review_required') or negotiation.get('date_year_rollover_review')):return False
+    # Cuando el titular NO aceptó compromiso ni fecha, una cantidad aislada
+    # inferior al mínimo no constituye un convenio inválido. Si el score ya
+    # está por debajo de 80 por descuentos ordinarios demostrados, clasificar
+    # NO_APROBADO_MENOR_80 conservando el importe incierto como observación.
+    # No se omiten alertas de privacidad, referencia, fraude ni trato.
+    neutral_amount_reasons = {
+        'No se pudo confirmar la fecha de pago.',
+        'Faltan fecha de llamada o promesa interpretable para validar el plazo por mora.',
+        'Se detectaron importes en la llamada, pero no fue posible atribuir ninguno a una propuesta/compromiso de pago. Mencionar el saldo total no confirma el monto negociado.',
+        'No se pudo confirmar un monto negociado atribuible a la propuesta/compromiso de pago.',
+    }
+    reasons = negotiation.get('reasons') or []
+    nonbinding_amount_only = bool(
+        metadata.get('quality_contact_type') == 'TITULAR'
+        and not (negotiation.get('commitment_evidence') or {}).get('accepted')
+        and not negotiation.get('promise_date')
+        and not negotiation.get('hard_invalid')
+        and not negotiation.get('date_year_rollover_review')
+        and negotiation.get('validacion_monto') in {
+            'REVISAR - MONTO MENOR AL MINIMO SIN COMPROMISO CONFIRMADO',
+            'REVISAR - MONTO NEGOCIADO NO CONFIRMADO',
+        }
+        and reasons
+        and all(
+            reason in neutral_amount_reasons or
+            (reason.startswith('Se detectó ') and 'menor al mínimo' in reason
+             and 'no hay fecha y compromiso suficientemente confirmados' in reason)
+            for reason in reasons
+        )
+    )
+    # La duda sobre un importe no aceptado no hace indeterminado el rechazo
+    # que ya se fundamenta por otras faltas ordinarias medibles.
+    if ((negotiation.get('valid') is False and not (missing_contract_only or nonbinding_amount_only))
+            or (negotiation.get('review_required') and not nonbinding_amount_only)
+            or negotiation.get('date_year_rollover_review')):return False
     arco=metadata.get('arco_validation') or {}
     if arco.get('applies') and not arco.get('valid'):return False
     checks=metadata.get('quality_checks') or {}
