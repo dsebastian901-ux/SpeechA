@@ -954,7 +954,7 @@ SENSITIVE = re.compile(
     r"(?:su |la )?cuenta(?: se encuentra| esta)? en extrajudicial|se encuentra en extrajudicial (?:su |la )?tarjeta|"
     r"(?:su|la|esa) cuenta[^.!?]{0,65}\b(?:se encuentra|esta|asignada|canalizada) (?:en |a |al )?(?:el |la )?area de cobranza|"
     r"detener (?:la|su) demanda (?:de tipo )?mercantil|por la trazo de su tarjeta|"
-    r"demanda (?:de|por) (?:pago|incumplimiento)|pagos? vencidos?|incumplimiento (?:al|del|de) (?:contrato|pago)|"
+    r"demanda (?:de|por) (?:pago|incumplimiento)|pagos? vencidos?|incumplimiento (?:a|al|del|de) (?:el )?(?:contrato|pago)|"
     r"(?:sobre|respecto a) (?:el|su) atraso (?:que presenta|de su (?:tarjeta|cuenta))|"
     r"(?:cuenta|tarjeta)(?:[^.!?]{0,45}?) (?:se (?:canalizo|turno|envio)|fue (?:canalizada|turnada|enviada)) (?:al |a (?:el |un )?)?(?:area de |departamento )?juridico|"
     r"(?:tiene|maneja|cuenta con) (?:una |la |su )?tarjeta)\b")
