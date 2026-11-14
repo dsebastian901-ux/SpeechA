@@ -1031,6 +1031,13 @@ SENSITIVE = re.compile(
     r"(?:adeuda|debe)\s+(?:\d[\d.,]*|mil|cien|doscientos|trescientos|quinientos)|"
     r"(?:su|una|la) deuda|(?:su|un|el) adeudo|cubrir (?:el |su )?atraso|respecto a su atraso|por (?:el |su )?atraso|"
     r"negativa de pago|recuperacion (?:del|de su|en el) saldo|"
+    # Un recado genérico puede mencionar al banco, pero hablar de un
+    # «acuerdo de pago sobre su tarjeta» revela la situación financiera.
+    # Solo bloquear aprobación cuando el receptor es tercero o desconocido;
+    # no inferir un hablante a partir de las ventanas acústicas de Whisper.
+    r"(?:acuerdo|convenio) de pago (?:sobre|de|por|para) (?:su|la|una) (?:tarjeta|cuenta)|"
+    r"(?:generar|formalizar|negociar) (?:un|el|su) acuerdo de pago[^.!?]{0,65}"
+    r"(?:tarjeta|cuenta)|"
     r"deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas|"
     r"(?:tiene|presenta) (?:lo que es )?(?:una|su|la) cuenta extrajudicial|"
     r"(?:su |la )?cuenta(?: se encuentra| esta)? en extrajudicial|se encuentra en extrajudicial (?:su |la )?tarjeta|"
