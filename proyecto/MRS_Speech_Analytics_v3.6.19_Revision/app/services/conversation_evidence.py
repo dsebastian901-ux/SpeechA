@@ -101,6 +101,50 @@ def sentence_evidence(text, segments=()):
     return result
 
 
+def nominee_conflict_with_confirmed_name(text, contact_confirmation):
+    """Evitar convertir al receptor de recado en TITULAR por un «sí».
+
+    Solo se activa si el motor confirmó explícitamente un segundo nombre que
+    no comparte apellidos/nombre significativos con el primer deudor buscado.
+    No atribuye una voz ni determina que el receptor es un tercero: exige
+    contrastar el audio y conserva la alerta de privacidad.
+    """
+    none = {"conflict": False, "requested_name": "", "confirmed_name": ""}
+    if (not isinstance(contact_confirmation, dict)
+            or not contact_confirmation.get("confirmed")
+            or contact_confirmation.get("method") != "RESPUESTA_A_IDENTIFICACION"):
+        return none
+    source = normalize(text)
+    evidence = normalize(contact_confirmation.get("evidence") or "")
+    first_request = re.search(
+        r"\b(?:me (?:puede|podria|podre|puedes|podrias) comunicar"
+        r"(?:me)?(?:\s*,?\s*(?:por|de) favor\s*,?)?\s*(?:con|a)|"
+        r"busco a|me comunico con)\s+"
+        r"(?P<identity>[a-z ,]{4,90}?)(?:\?|\.|\s+por favor\b)", source
+    )
+    confirmed_request = re.search(
+        r"\b(?:tengo(?: el)? gusto con|me comunico con|hablo con)\s+"
+        r"(?P<identity>[a-z ,]{4,90}?)\s*,?\s*[¿? ]*"
+        r"(?:correcto|es correcto)\s*\?\s*si\b", evidence
+    )
+    if not first_request or not confirmed_request:
+        return none
+    def tokens(value):
+        ignored = {"el", "la", "los", "de", "del", "senor", "senora",
+                   "senorita", "caballero", "por", "favor"}
+        return {word for word in re.findall(r"[a-z]{3,}", value)
+                if word not in ignored}
+    requested = tokens(first_request["identity"])
+    confirmed = tokens(confirmed_request["identity"])
+    # Diferencia nominal demostrable; errores parciales de Whisper no bastan.
+    if len(requested) < 2 or len(confirmed) < 2 or requested & confirmed:
+        return none
+    return {"conflict": True,
+            "requested_name": first_request["identity"].strip(),
+            "confirmed_name": confirmed_request["identity"].strip(),
+            "method": "DOS_IDENTIDADES_NOMINALES_DISTINTAS"}
+
+
 def holder_confirmation(text, segments=()):
     """Confirmación conversacional del titular, independiente de la etiqueta Excel."""
     s = normalize(text)
