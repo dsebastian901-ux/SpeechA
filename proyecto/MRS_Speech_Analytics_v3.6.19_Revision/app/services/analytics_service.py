@@ -2886,6 +2886,19 @@ class AnalyticsService:
         negotiation_attempt = bool(
             explicit_settlement_offer
             or (promise_date_evidence and not payment_confirmation_case)
+            # Un requerimiento/propuesta explícita prueba intento aun si ASR
+            # no puede atribuir el hablante. No prueba convenio aceptado.
+            # Ej.: «se le está requiriendo el pago» / «¿usted podría
+            # realizar su pago de 800 pesos para el día de hoy?».
+            or re.search(
+                r"\b(?:se le esta requiriendo (?:el |su )?pago|"
+                r"(?:usted )?podria realizar su pago(?: de)?\s+(?:\d+|"
+                r"un|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|"
+                r"diez|cien|quinientos|ochocientos|mil)\b|"
+                r"podria confirmar su pago(?: para (?:el dia de )?hoy)?\b|"
+                r"se confirma su pago para (?:el dia de )?hoy\b)",
+                normalized,
+            )
             or re.search(r"\b(?:cuanto\s+puede\s+pagar|que\s+cantidad\s+puede|"
                          r"que\s+dia\s+puede\s+pagar|cuando\s+puede\s+pagar|"
                          r"propuesta\s+de\s+pago|opcion\s+de\s+pago|convenio|"
