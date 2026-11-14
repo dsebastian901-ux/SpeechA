@@ -636,6 +636,7 @@ class BatchReportService:
             "NEGOCIACION_INVALIDA": "NO APROBADO - NEGOCIACION INVALIDA",
             "FALLA_GRAVE": "NO APROBADO - FALLA GRAVE",
             "REVISAR": "REVISAR MANUALMENTE",
+            "SIN_RELACION_EXCEL": "SIN RELACIÓN EN EXCEL - FALTA DATO DE ORIGEN",
             "ERROR": "ERROR DE PROCESAMIENTO",
         }
         final_operational = final_operational_map.get(physical, "REVISAR MANUALMENTE")
@@ -988,6 +989,7 @@ class BatchReportService:
             ("NEGOCIACION_INVALIDA", "NEGOCIACION_INVALIDA"),
             ("FALLA_GRAVE", "FALLA_GRAVE"),
             ("REVISAR", "REVISAR"),
+            ("SIN_RELACION_EXCEL", "SIN_RELACION_EXCEL"),
         ]
         for sheet_name, category in category_sheets:
             cws = wb.create_sheet(sheet_name[:31])
@@ -1046,6 +1048,7 @@ class BatchReportService:
             if r.get("Clasificación física") in {"APROBADO", "APROBADOS", "APROBADO_ETIQUETA_CORREGIDA"}
         )
         review = sum(1 for r in rows if r.get("Clasificación física") == "REVISAR")
+        missing_source = sum(1 for r in rows if r.get("Clasificación física") == "SIN_RELACION_EXCEL")
         approved_untagged = sum(1 for r in rows if r.get("Clasificación física") == "APROBADO_SIN_ETIQUETAR")
         confirmed_rejection = sum(1 for r in rows if r.get("Clasificación física") == "NO_APROBADO")
         under_80 = sum(1 for r in rows if r.get("Clasificación física") == "NO_APROBADO_MENOR_80")
@@ -1091,6 +1094,7 @@ class BatchReportService:
         summary_ws.append(["Clasificación calculada: NEGOCIACION_INVALIDA", invalid_negotiation])
         summary_ws.append(["Fallas graves", severe_failure])
         summary_ws.append(["Revisión manual", review])
+        summary_ws.append(["Sin relación Excel (datos por completar)", missing_source])
         summary_ws.append(["Incorrectos IA", incorrect])
         summary_ws.append(["Errores", errors])
         summary_ws.append(["Atención crítica", critical])
@@ -1229,7 +1233,7 @@ class BatchReportService:
                     sum(str(r.get("Clasificación física")or"").startswith('NO_APROBADO')or r.get("Clasificación física")in{'MAL_DICTAMINADO','NEGOCIACION_INVALIDA'}for r in group),
                     sum(r.get("Clasificación física")=="FALLA_GRAVE"for r in group),
                     sum(r.get("Clasificación física")=="ERROR"for r in group),
-                    sum(r.get("Clasificación física")not in{'APROBADO','APROBADOS','APROBADO_ETIQUETA_CORREGIDA','REVISAR','NO_APROBADO','NO_APROBADO_MENOR_80','MAL_DICTAMINADO','NEGOCIACION_INVALIDA','FALLA_GRAVE','ERROR'}for r in group),
+                    sum(r.get("Clasificación física")not in{'APROBADO','APROBADOS','APROBADO_ETIQUETA_CORREGIDA','REVISAR','SIN_RELACION_EXCEL','NO_APROBADO','NO_APROBADO_MENOR_80','MAL_DICTAMINADO','NEGOCIACION_INVALIDA','FALLA_GRAVE','ERROR'}for r in group),
                 ])
 
             gestor_widths = {
