@@ -2926,6 +2926,17 @@ class AnalyticsService:
                 r"se confirma su pago para (?:el dia de )?hoy\b)",
                 normalized,
             )
+            # Solicitudes FUTURAS concretas: un «¿ya tendrá el pago para
+            # hoy?» sí es intento de cobranza. No confundir con «¿ya pagó?»,
+            # una pregunta retrospectiva que solo verifica un pago anterior.
+            or re.search(
+                r"\b(?:ya tendra (?:usted )?(?:su |el )?pago (?:para )?(?:hoy|manana)|"
+                r"(?:podemos|podriamos) contar con (?:su |el )?pago|"
+                r"se le esta solicitando (?:el |su )?pago para (?:el dia de )?(?:hoy|manana)|"
+                r"va a realizar algun (?:segundo |otro )?pago|"
+                r"(?:usted )?tendra (?:el |su )?pago para (?:el dia de )?(?:hoy|manana))\b",
+                normalized,
+            )
             or re.search(r"\b(?:cuanto\s+puede\s+pagar|que\s+cantidad\s+puede|"
                          r"que\s+dia\s+puede\s+pagar|cuando\s+puede\s+pagar|"
                          r"propuesta\s+de\s+pago|opcion\s+de\s+pago|convenio|"
