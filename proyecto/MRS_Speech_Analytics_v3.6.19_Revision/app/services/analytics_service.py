@@ -2211,6 +2211,10 @@ class AnalyticsService:
             "pendeja", "pendejo", "chingando", "chingada", "chingado",
             "pinche vieja", "pinche viejo", "pinche", "cabron", "cabrona",
             "mierda", "hijo de puta", "hija de puta", "vete a la chingada",
+            # Groserías mexicanas omitidas previamente; especialmente al cierre.
+            # La transcripción no demuestra qué persona las pronunció.
+            "verga", "a la verga", "vayase a la verga", "culera", "culero",
+            "hija culera", "hijo culero",
             "puta", "puto", "chingar", "chinga tu madre", "jodete", "vete al carajo",
             "que poca madre",
             "quiero acostarme contigo", "quiero tener sexo contigo", "quiero cogerte",
