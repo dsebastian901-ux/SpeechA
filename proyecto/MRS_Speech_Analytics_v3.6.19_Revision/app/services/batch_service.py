@@ -928,6 +928,11 @@ class BatchService:
                 if decision.get("motivo"):
                     manual_reasons.append(decision["motivo"])
                 # Un mismo dictamen en checkpoint, reporte y metadatos.
+                analytics_metadata["source_data_validation"] = {
+                    "status": decision.get("source_data_status", "CON_RELACION"),
+                    "blocked": bool(decision.get("source_data_blocked")),
+                    "preliminary_classification": decision.get("preliminary_classification"),
+                }
                 analytics_metadata["final_result"] = operational_class
                 analytics_metadata["shared_classification"] = decision
                 if isinstance(analytics_data, dict):
