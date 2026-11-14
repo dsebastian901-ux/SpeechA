@@ -156,6 +156,13 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         and status.get('matches') is False
         and status.get('detection_confidence') == 'ALTA'
         and status.get('evidence')
+        # En esta fase solo clasificar como MAL_DICTAMINADO la discrepancia
+        # de tipo de recado cuando su entrega está documentada.
+        # El resto (incluidas frases hipotéticas de pago) conserva REVISAR.
+        and status.get('evidence_method') in {
+            'RECADO_ACEPTADO_CON_CONTACTO',
+            'RECADO_ACEPTADO_Y_PARENTESCO_CONFIRMADO_POR_USUARIO',
+        }
         and not status.get('review_required')
         and not output_label.get('valid')
         and blocking
