@@ -614,7 +614,11 @@ class BatchReportService:
             or ("CUMPLE" if classification.get("cumple_puntaje") else "NO CUMPLE")
         ).strip().upper()
 
-        if status and status.get("valid") is False and status.get("review_required"):
+        if physical == "SIN_RELACION_EXCEL":
+            compliance_status = "NO VALIDABLE - FALTA RELACION EXCEL"
+            dictamen = "SIN RELACION EXCEL"
+            motivo_dictamen = "Falta registro en Excel; no existe validación de cuenta y estatus de origen."
+        elif status and status.get("valid") is False and status.get("review_required"):
             dictamen = "REVISAR"
             motivo_dictamen = cls._join_reasons(status.get("reasons") or [])
         elif status and status.get("valid") is False:
