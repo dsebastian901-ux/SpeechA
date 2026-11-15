@@ -5,6 +5,27 @@ from app.services.conversation_evidence import normalize,_role_at
 from app.services.reported_payment_amounts import NUMBER,money_value
 
 
+def unresolved_remainder_dates(text,segments=()):
+    """Fechas alternativas declaradas para el remanente, no un plazo elegido.
+
+    No se completa el monto restante ni se elige el día desde el Excel.
+    Una posibilidad anterior a una recapitulación no activa esta alerta.
+    """
+    source=normalize(text)
+    pattern=re.compile(r'\b(?:no[, ]+pues[, ]+)?los? \d+(?: pesos)? y (?:ya )?'
+        r'(?:los? )?(?:otros?|restantes?)\s*[, ]+el (?:dia )?\d{1,2} o (?:el )?(?:dia )?\d{1,2}\b')
+    result=[]
+    for m in pattern.finditer(source):
+        if m.start()<len(source)-650:continue
+        if _role_at(text,segments,m.start())in{'GESTOR','TERCERO'}:continue
+        before=source[max(0,m.start()-80):m.start()]
+        if re.search(r'\b(?:dice que|dijo que|diga que|por ejemplo|supongamos que)\b[^.!?]{0,65}$',before):continue
+        if re.match(r'\s*\?',source[m.end():]):continue
+        result.append({'text':m.group(),'start':None,'end':None,'speaker_role':_role_at(text,segments,m.start()),
+                       'method':'REMANENTE_CON_DOS_FECHAS_ALTERNATIVAS','human_verified':False})
+    return result
+
+
 def accepted_two_part_schedule(text,segments,call_date):
     none={'confirmed':False,'amounts':[],'dates':[],'evidence':'','human_verified':False}
     if not isinstance(call_date,date):return none

@@ -2,13 +2,20 @@
 
 import re
 import unicodedata
+from app.services.conversation_cache import current_cache
 
 
 def normalize(text):
-    return re.sub(r"\s+", " ", "".join(
-        c for c in unicodedata.normalize("NFD", str(text or "").lower())
+    raw=str(text or '')
+    cache=current_cache()
+    values=cache['normalization'] if cache is not None else None
+    if values is not None and raw in values:return values[raw]
+    result=re.sub(r"\s+", " ", "".join(
+        c for c in unicodedata.normalize("NFD", raw.lower())
         if unicodedata.category(c) != "Mn"
     )).strip()
+    if values is not None and len(values)<2048:values[raw]=result
+    return result
 
 
 def role_of(value):
@@ -69,6 +76,19 @@ def evidence_units(text, segments=()):
 
 
 def sentence_evidence(text, segments=()):
+    cache=current_cache()
+    key=(str(text or ''),id(segments))
+    if cache is not None:
+        saved=cache['sentences'].get(key)
+        if saved is not None and saved[0] is segments:
+            return [dict(unit) for unit in saved[1]]
+    result=_sentence_evidence(text,segments)
+    if cache is not None and len(cache['sentences'])<40:
+        cache['sentences'][key]=(segments,[dict(unit) for unit in result])
+    return result
+
+
+def _sentence_evidence(text, segments=()):
     """Las ventanas de Whisper son acústicas; no delimitan frases ni turnos.
 
     Reunir oraciones del texto completo y conservar roles/timing solo cuando
@@ -110,12 +130,12 @@ def holder_confirmation(text, segments=()):
     # Una confirmación aparente seguida de ausencia/tercero no acredita titular.
     counter = re.compile(r"\b(?:no (?:se encuentra|esta aqui|esta en casa)|no soy|soy su (?:espos[oa]|madre|padre|herman[oa])|es nuestro proveedor)\b")
     identification = (
-        r"(?:me (?:puede|puedes|pueden|puedo|pude|podria|podrias|podrian|podre|podeis) comunicar[, ]*(?:(?:por|de) favor[, ]*)?(?:con|a)|"
+        r"(?:me (?:puede|puedes|pueden|puedo|pude|podria|podrias|podrian|podre|podeis) comunicar[, ]*(?:(?:por|de|el) favor[, ]*)?(?:con|a)|"
         r"me comunican?[, ]*(?:(?:por|de) favor[, ]*)?con|me comunique con|me puede conectar con|"
         r"(?:me )?voy a comunicar con|puede comunicar con|"
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|se encuentra|estoy buscando a|hablo con|"
         r"me estoy comunicando al numero telefonico de|seria tan amable de comunicarme con|"
-        r"tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|(?<=¿)con)")
+        r"tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|me comunica con|comunico con|(?<=¿)con)")
     explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+)?(?:digame|diganme|dime|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b"
     prompt = re.compile(
         rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)(?:[.?]|,)\s*" + explicit_answer)
@@ -217,6 +237,22 @@ def holder_confirmation(text, segments=()):
 
 
 def _role_at(text, segments, position):
+    cache=current_cache()
+    key=(str(text or ''),id(segments))
+    if cache is not None:
+        saved=cache['roles'].get(key)
+        if saved is None or saved[0] is not segments:
+            source=normalize(text);cursor=0;spans=[]
+            for unit in sentence_evidence(text,segments):
+                folded=normalize(unit['text']);start=source.find(folded,cursor)
+                if start>=0:
+                    cursor=start+len(folded)
+                    spans.append((start,cursor,unit['speaker_role']))
+            saved=(segments,spans)
+            if len(cache['roles'])<40:cache['roles'][key]=saved
+        for start,end,role in saved[1]:
+            if start<=position<end:return role
+        return 'NO DETERMINADO'
     source, cursor = normalize(text), 0
     for unit in sentence_evidence(text, segments):
         folded = normalize(unit["text"])
@@ -318,7 +354,8 @@ def payment_commitment(text, segments=()):
     """Una propuesta, pregunta o mención de convenio no equivale a aceptación."""
     source = normalize(text)
     events, cursor = [], 0
-    for unit in sentence_evidence(text, segments):
+    from app.services.declarative_evidence import declarative_units
+    for unit in declarative_units(text, segments):
         s = normalize(unit["text"])
         position = source.find(s, cursor)
         if position >= 0:
@@ -344,19 +381,31 @@ def payment_commitment(text, segments=()):
         negative = re.search(
             r"\b(?:no (?:(?:le|les|lo) )?(?:voy a|puedo|pienso|quiero) (?:pagar|depositar|abonar|cubrir)|"
             r"no he podido realizarlo|no he podido ir (?:porque|hasta)|no les voy a completar|no voy a poder[.!]?$|"
+            r"no he podido pagar|no me alcanza(?: para pagar)?|"
             r"no puedo (?:comprometerme|confirmar|dar una fecha)|no me comprometo|"
             r"no tengo (?:esa|la) cantidad|no dispongo de (?:esa|la) cantidad|"
             r"no (?:tengo|cuento con) (?:(?:todo |una? |la |esa )?(?:cierta )?cantidad de )?dinero|"
             r"no tengo todo el dinero|no (?:tengo|cuento con) (?:la cantidad|esa cantidad)|"
             r"no tengo (?:ni )?(?:para |pal )?(?:abonar|pagar)|"
             r"no (?:lo )?(?:puedo|voy a poder) (?:pagar|hacer)|no lo confirmo|"
-            r"(?:manana|hoy) no (?:podria|puedo)|no (?:tendria|tendre)\s+(?:\d+|dos|mil))\b", s)
+            r"(?:manana|hoy) no (?:podria|puedo)|no (?:tendria|tendre)\s+(?:\d+|dos|mil)|"
+            r"(?:ahorita|por el momento) (?:todavia )?no puedo|no puedo (?:ahorita|hacer (?:ese |el |un )?pago))\b", s)
         conditional = re.search(
             r"\b(?:si me da tiempo|si consigo (?:el )?dinero|si tengo dinero|si puedo juntar|"
             r"lo podria(?: hacer)?|(?:yo )?pagaria|"
             r"hare lo posible|a lo mejor|yo creo|no sabria decir(?:le|te)? (?:si|cuanto|cuando)|no se cuanto (?:voy a|vaya a|pueda) (?:pagar|depositar)|"
             r"no se cuando (?:pueda|voy a) pagar)\b", s)
         conditional = conditional or _payment_review_condition(s) or (not positive and _payment_review_deferral(s))
+        # Una instrucción o cita del propio gestor no acredita una decisión
+        # del receptor, aunque Whisper no haya separado ambos turnos.
+        for kind,match in [('positive',positive),('negative',negative),('conditional',conditional)]:
+            if not hasattr(match,'start'):
+                continue
+            before=s[max(0,match.start()-100):match.start()]
+            if re.search(r'\b(?:usted dice|usted dijo|tu dices|usted menciona|usted comento|diga que|repita que|por ejemplo|supongamos que)\b[^.!?;]{0,65}$',before):
+                if kind=='positive':positive=None
+                elif kind=='negative':negative=None
+                else:conditional=None
         payment_context = re.search(r"\b(?:pagos?|paguito|pagar|pagare|deposito|depositar|dinero|cantidad|convenio|pesos|descuento)\b",
                                     source[max(0, position-220):cursor])
         if conditional and not payment_context:
@@ -387,6 +436,21 @@ def payment_commitment(text, segments=()):
             if not (re.search(r"\b(?:si me da tiempo|si consigo|si puedo juntar|yo creo|a lo mejor|no puedo|no tengo)\b", reply)
                     or _payment_review_condition(reply) or _payment_review_deferral(reply)):
                 events.append((match.start("answer"), True, match.group()))
+    # Una negativa local a una oferta futura acredita que esa propuesta no
+    # quedó acordada. No significa «negativa absoluta de pago» ni rechaza un
+    # compromiso firme posterior: los eventos conservan su orden temporal.
+    rejected_offer=re.compile(
+        r'\b(?:podemos (?:contar con|disponer de|confirmar)|puede (?:realizar|hacer|aplicar)|'
+        r'puedes (?:realizar|hacer|aplicar)|podria (?:realizar|hacer|aplicar)|ya tendra(?:s)? (?:usted )?(?:el |su )?)'
+        r'[^?!]{0,95}\bpago\b[^?!]{0,95}\?\s*(?P<answer>no(?:[, ]+(?:senorita|senor|gracias))?)(?=[,.!?]|$)')
+    for match in rejected_offer.finditer(source):
+        offer=source[match.start():match.start('answer')]
+        before=source[max(0,match.start()-65):match.start()]
+        if (not re.search(r'\b(?:ayer|hizo|realizado|efectuado|recibido|reportado|comprobante|whatsapp)\b',offer)
+                and not re.search(r'\b(?:no|dice que|dijo que|diga que|repita|por ejemplo|supongamos)\b[^.!?]{0,35}$',before)
+                and _role_at(text,segments,match.start('answer'))not in {'GESTOR','TERCERO'}
+                and not re.match(r'\s*\?',source[match.end():])):
+            events.append((match.start('answer'),False,match.group()))
     agreement_question=re.compile(
         r'\bpodemos (?:poner|generar|formalizar) (?:su |el |un )?convenio\b'
         r'[^.!?]{0,80}\b(?:hoy|manana|el dia \d{1,2}|el (?:lunes|martes|miercoles|jueves|viernes|sabado|domingo))\b'
@@ -808,12 +872,11 @@ def directed_callback_message(text, segments=()):
 
 def recipient_statement(text, segments, pattern):
     """No usar preguntas, negaciones ni palabras del gestor como identidad."""
-    for unit in sentence_evidence(text, segments):
+    from app.services.declarative_evidence import declarative_units
+    for unit in declarative_units(text, segments):
         if unit["speaker_role"] == "GESTOR":
             continue
         s = normalize(unit["text"])
-        if "?" in s or "¿" in s:
-            continue
         for match in re.finditer(pattern, s):
             prefix = s[max(0, match.start()-25):match.start()]
             if not re.search(r"\b(?:no|si fuera|creo que)\s*$", prefix):
@@ -942,7 +1005,7 @@ SENSITIVE = re.compile(
     r"(?:adeuda|debe)\s+(?:\d[\d.,]*|mil|cien|doscientos|trescientos|quinientos)|"
     r"(?:su|una|la) deuda|(?:su|un|el) adeudo|cubrir (?:el |su )?atraso|respecto a su atraso|por (?:el |su )?atraso|"
     r"negativa de pago|recuperacion (?:del|de su|en el) saldo|"
-    r"deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas|"
+    r"deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas|nacionalidades vencidas|"
     r"(?:tiene|presenta) (?:lo que es )?(?:una|su|la) cuenta extrajudicial|"
     r"(?:su |la )?cuenta(?: se encuentra| esta)? en extrajudicial|se encuentra en extrajudicial (?:su |la )?tarjeta|"
     r"(?:su|la|esa) cuenta[^.!?]{0,65}\b(?:se encuentra|esta|asignada|canalizada) (?:en |a |al )?(?:el |la )?area de cobranza|"
@@ -1080,6 +1143,7 @@ def sensitive_financial_matches(text):
     # Importes anunciados como términos actuales, no un pago histórico que
     # el familiar informa. Conservar palabras de enlace como «por la cantidad».
     amount_phrases=[
+        rf'\bsaldo\s+(?:es\s+)?(?:de|por|son|asciende a)\s+\$?\s*{NUMBER}\b(?!\s+(?:tarjetas?|cuentas?|meses?|anos?|mensualidades?))',
         rf'\b(?:saldo (?:tal|total)|pago minimo)\b[^.!?]{{0,45}}?\b(?:cantidad|monto) (?:de |por )?\$?\s*{NUMBER}\b',
         rf'\bpara (?:liquidar|regularizar|ponerse al corriente)\b[, ]*(?:es|seria|sera) (?:por |de )?(?:(?:la )?(?:cantidad|monto) (?:de |por )?)?\$?\s*{NUMBER}\b',
         rf'\bpago que se (?:esta )?requiriendo\b[^.!?]{{0,70}}?\b(?:cantidad|monto) (?:de |por )?\$?\s*{NUMBER}\b',
@@ -1130,10 +1194,11 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
             allowed_mentions.append(dict(unit, policy=('SALDO_VENCIDO_SIN_IMPORTE_PERMITIDO' if 'saldo vencido' in s else 'SALDO_PENDIENTE_SIN_IMPORTE_PERMITIDO')))
         for match in matches:
             prefix = s[max(0, match.start()-30):match.start()]
-            hypothetical = bool("?" in s or "¿" in s or re.search(r"\b(?:si|no|nunca)\s*$", prefix)
+            from app.services.declarative_evidence import is_statement
+            hypothetical = bool(not is_statement(s,match.start(),match.end()) or re.search(r"\b(?:si|no|nunca)\s*$", prefix)
                                 or re.search(r"\b(?:no tiene|sin (?:deuda|adeudo|atraso)|si tuviera|en caso de)\b", s))
             protected = third_party_confirmed and last_recipient != "TITULAR"
-            asr_uncertainty=bool(re.fullmatch(r"por la trazo de su tarjeta|deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas",match.group()))
+            asr_uncertainty=bool(re.fullmatch(r"por la trazo de su tarjeta|deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas|nacionalidades vencidas",match.group()))
             scoped_role=None
             if role=="NO DETERMINADO" and protected and not hypothetical and not asr_uncertainty:
                 from app.services.scoped_institutional_speech import institutional_clause_evidence

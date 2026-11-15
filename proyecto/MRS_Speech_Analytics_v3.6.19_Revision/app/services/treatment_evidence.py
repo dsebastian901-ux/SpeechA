@@ -14,8 +14,8 @@ def mistreatment_reports(text, segments, phrases):
         r'de mala (?:manera|forma)|de (?:forma|manera) (?:grosera|agresiva)|con malos (?:modos|tratos))\b|'
         r'\b(?:me|nos) (?:estuvo|estaban|estuvieron|estaba) (?:gritando|insultando|agrediendo|amenazando|ofendiendo)\b|'
         r'\b(?:me|nos) (?:grito|insulto|agredio|ofendio|humillo|humillaron|amenazaron)\b|'
-        r'\b(?:se burlo|se burlaron) de mi\b')
-    prior_call = re.compile(r'\b(?:llamadas? (?:anterior(?:es)?|pasadas?)|vez pasada|ultima (?:vez|llamada)|'
+        r'\b(?:se burlo|se burlaron|se esta burlando|se estan burlando) de mi\b')
+    prior_call = re.compile(r'\b(?:llamadas? (?:anterior(?:es)?|pasadas?)|vez pasada|la otra vez|ultima (?:vez|llamada)|'
                             r'(?:me (?:marco|llamo|hablo)|me (?:marcaron|llamaron|hablaron)) (?:antes|ayer)|'
                             r'(?:asesor|asesora|gestor|gestora|companero|companera) (?:anterior|de ayer))\b')
     service_actor = re.compile(r'\b(?:su (?:companero|companera|asesor|asesora|gestor|gestora)|'
@@ -28,8 +28,8 @@ def mistreatment_reports(text, segments, phrases):
                              r'(?:la|lo|le) (?:atendieron|atendio|trataron|trato|hablaron|hablo) (?:muy )?'
                              r'(?:mal|pesimo|de mala manera))\b')
     accusatory_question = re.compile(
-        r'\b(?:usted|tu) (?:fue|fuiste|es|eres) (?:la|el) (?:que|quien) me '
-        r'(?:insulto|agredio|ofendio|amenazo|grito)\b')
+        r'\b(?:(?:usted|tu) (?:fue|fuiste|es|eres) (?:la|el) (?:que|quien) me '
+        r'(?:insulto|agredio|ofendio|amenazo|grito)|se esta burlando de mi)\b')
     paid_source=normalize(text)
     paid_report=bool(re.search(r'\bya (?:lo |les )?pague\b',paid_source))
     cancelled_report=bool(re.search(r'\b(?:tarjeta (?:ya )?esta cancelada|ya (?:la |lo )?cancele|dio de baja la tarjeta)\b',paid_source))
@@ -37,6 +37,7 @@ def mistreatment_reports(text, segments, phrases):
         and re.search(r'\b(?:respecto (?:a )?esta molestia|me molesta|estoy molest[oa]|no he tenido buenos comentarios anteriores)\b',paid_source))
     from app.services.context_rules import unknown_debtor_statement
     wrong_line_report = unknown_debtor_statement(text,segments)
+    prior_contact=bool(re.search(r'\b(?:me acaban de hablar|me (?:marcaron|llamaron|hablaron)|llamada anterior|vez pasada)\b',paid_source))
     units = sentence_evidence(text, segments)
     for index, unit in enumerate(units):
         if unit['speaker_role'] == 'GESTOR':
@@ -44,6 +45,8 @@ def mistreatment_reports(text, segments, phrases):
         value = normalize(unit['text'])
         matches = [m for phrase in phrases for m in re.finditer(re.escape(normalize(phrase)), value)]
         matches.extend(variants.finditer(value))
+        if prior_contact:
+            matches.extend(re.finditer(r'\buna persona me dice una cosa y (?:otra persona|otra|otro) (?:me dice )?otra cosa\b',value))
         if wrong_line_report:
             matches.extend(re.finditer(r'\b(?:ya )?me canso de decirles\b|\b(?:ya )?(?:estoy|soy|estamos) hart[oa]s?\b[^.!?]{0,100}\b(?:pregunta y pregunte|preguntando|marque y marque|llamando)\b',value))
         if paid_report and re.search(r'\b(?:corporativo|juridico|gestor|asesor|despacho)\b',paid_source):
@@ -105,6 +108,8 @@ def mistreatment_reports(text, segments, phrases):
                                     r'me dejo en la linea y nadie me contesto)\b',value))
         if prior_call.search(value) or service_actor.search(value) or prior_call.search(previous) or service_actor.search(previous):
             matches.extend(bad_service.finditer(value))
+            matches.extend(re.finditer(r'\b(?:una? (?:senor[ai]ta|senora|persona|asesor[ao]?|gestor[ao]?)|su companer[oa])'
+                r'[^.!?]{0,45}\b(?:(?:bien|muy|bastante) )?(?:groser[oa]|prepotente|agresiv[oa])\b',value))
         matches.extend(re.finditer(r'\b(?:ayer|antes|la vez pasada)[^.!?]{0,65}me (?:hablaba|hablo|llamo|marco)[^.!?]{0,65}\b(?:groser[oa]|agresiv[oa]|prepotente)\b',value))
         for match in matches:
             before = value[max(0, match.start()-50):match.start()]

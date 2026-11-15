@@ -40,6 +40,7 @@ from app.services.call_wait_evidence import assess_call_wait
 from app.services.financial_review_service import apply_financial_review
 from app.services.balance_context_evidence import balance_corrections, balance_scope, fragmented_balance_amounts
 from app.services.reported_payment_amounts import reported_amounts, NUMBER, money_value, mixed_digit_thousands
+from app.services.conversation_cache import evaluation_cache
 
 
 class AnalyticsService:
@@ -214,6 +215,7 @@ class AnalyticsService:
     # =========================================================
 
     @classmethod
+    @evaluation_cache
     def analyze_transcription(
         cls,
         transcription: TranscriptionModel,
@@ -1444,10 +1446,10 @@ class AnalyticsService:
         from app.services.status_message_evidence import return_purpose
         from app.services.message_dialogue_evidence import callback_available
         traced_return = return_purpose(text,segments)
-        directed_receipt=any(e.get('method') in {
-            'RESPUESTA_LOCAL_A_DICTADO_CON_RETORNO_Y_CONTACTO',
-            'RECEPTOR_CONFIRMA_RETRANSMISION_DEL_CONTACTO',
-            'CONFIRMA_DICTADO_TELEFONICO_EN_RESPUESTA_LOCAL'} for e in recado_assessment['acceptance'])
+        # Combinar los hechos ya validados, no una lista parcial de nombres
+        # de extractores: recepción + propósito de retorno + contacto dado.
+        # Se conservan rechazo, entrega inconclusa y todos los bloqueos aparte.
+        directed_receipt=bool(recado_assessment['acceptance'])
         if traced_return and directed_receipt and callback_available(text,segments):
             recado_callback = True
             recado_transmitted = True
@@ -1900,6 +1902,14 @@ class AnalyticsService:
                 promise_date=date.fromisoformat(last['date'])
                 promise_date_text=last['text'];promise_date_evidence=last['evidence']
         if commitment_confirmation['accepted']:
+            # La promesa vigente pertenece a la respuesta aceptada. Un viernes
+            # histórico no puede desplazar «hoy me comprometo a pagarlo».
+            accepted_detail = cls._extract_payment_promise_date_details(
+                commitment_confirmation.get('evidence') or '', call_date)
+            if accepted_detail['date'] is not None and not accepted_schedule['confirmed']:
+                promise_date=accepted_detail['date']
+                promise_date_text=accepted_detail['text']
+                promise_date_evidence=commitment_confirmation['evidence']
             for event in sorted(commitment_confirmation.get('contextual_confirmation_events',[]),key=lambda v:v['position'],reverse=True):
                 detail=cls._extract_payment_promise_date_details('Confirmacion de pago: '+event['evidence'],call_date)
                 if detail['date'] is not None:
@@ -2178,7 +2188,7 @@ class AnalyticsService:
         # atribuir el hablante, pero nunca deben pasar silenciosamente como APROBADA.
         insult_patterns = [
             "tonta", "tonto", "idiota", "estupida", "estupido",
-            "pendeja", "pendejo", "chingando", "chingada", "chingado",
+            "pendeja", "pendejo", "chingando", "chingada", "chingado", "chingarazo", "chingadazo",
             "pinche vieja", "pinche viejo", "pinche", "cabron", "cabrona",
             "mierda", "hijo de puta", "hija de puta", "vete a la chingada",
             "puta", "puto", "chingar", "chinga tu madre", "jodete", "vete al carajo",
@@ -3065,7 +3075,7 @@ class AnalyticsService:
                 status_detection_confidence = "ALTA"
                 status_evidence = commitment_confirmation["evidence"]
                 status_evidence_method = "NEGATIVA_EXPLICITA_DEL_INTERLOCUTOR"
-            elif (no_date_evidence or commitment_confirmation["declined"] or commitment_confirmation.get("conditional")) and (not payment_confirmation_case or prior_payment_with_current_decline or prior_payment_with_current_condition) and not explicit_new_promise and not confirms_commitment:
+            elif (no_date_evidence or commitment_confirmation["declined"] or commitment_confirmation.get("conditional")) and (not payment_confirmation_case or prior_payment_with_current_decline or prior_payment_with_current_condition) and not confirms_commitment:
                 detected_status = "NO DEFINE FECHA DE PAGO"
                 status_detection_confidence = "ALTA"
                 status_evidence = commitment_confirmation["evidence"]
@@ -4129,6 +4139,13 @@ class AnalyticsService:
             negotiation_validation['review_required']=True
             negotiation_validation['reasons'].append(
                 'Se reporta pago previo y además se instruye un pago nuevo sin aceptación confirmada; revisar negociación vigente.')
+        from app.services.accepted_schedule_evidence import unresolved_remainder_dates
+        remainder_dates=unresolved_remainder_dates(text,segments)
+        if requires_new_negotiation_validation and confirms_commitment and not accepted_schedule['confirmed'] and remainder_dates:
+            negotiation_validation['valid']=False
+            negotiation_validation['review_required']=True
+            negotiation_validation['remainder_date_evidence']=remainder_dates
+            negotiation_validation['reasons'].append('El remanente tiene dos fechas alternativas sin un plan final confirmado: '+remainder_dates[-1]['text'])
 
         if liquidation_forbidden:
             negotiation_validation["valid"] = False

@@ -36,6 +36,8 @@ def _evidence(value):
    text=x.get('text')or x.get('phrase')
    if text:
     result.append({'text':str(text),'start':x.get('start'),'end':x.get('end'),'speaker_role':x.get('speaker_role'),'method':x.get('method')})
+   if isinstance(x.get('evidence'),str) and x['evidence']:
+    result.append({'text':x['evidence'],'start':x.get('start'),'end':x.get('end'),'speaker_role':x.get('speaker_role'),'method':x.get('method')})
    for k,v in x.items():
     if k not in{'text','phrase','shared_classification'}and isinstance(v,(list,dict)):walk(v)
   elif isinstance(x,list):
@@ -49,14 +51,32 @@ def review_steps(item):
  if classification.get('clasificacion')!='REVISAR':return []
  findings=[f for f in classification.get('decision_findings',[])if f['severity']=='REVIEW']
  non_status=[f for f in findings if f['code']not in{'STATUS_INVALID','STATUS_NOT_CONFIRMED'}]
+ if not non_status:
+  # Ambos códigos describen el mismo estatus: mostrar primero el motivo
+  # específico y conservar el genérico como dependencia, no otra revisión.
+  findings.sort(key=lambda f:f['code']=='STATUS_NOT_CONFIRMED')
  result=[];seen=set()
  for f in findings:
   code=f['code']
   if code in{'STATUS_INVALID','STATUS_NOT_CONFIRMED'}and(non_status or 'STATUS_INVALID'in seen):continue
   seen.add(code);domain,action=ACTIONS.get(code,('EVIDENCIA','Verificar el motivo y el campo de evidencia señalado.'))
   field=FIELDS.get(code,f.get('source_field')or'');data=metadata.get(field,{})
+  evidence=_evidence(data)
+  if not evidence and code in {'UNIDENTIFIED_CONTACT','STATUS_INVALID','STATUS_NOT_CONFIRMED'}:
+   raw=item.get('result')or{}
+   segments=raw.get('segmentos')or[]
+   selected=segments[:4] if code=='UNIDENTIFIED_CONTACT' else segments[-4:]
+   for segment in selected:
+    if not isinstance(segment,dict):continue
+    fragment=segment.get('text')or segment.get('texto')
+    if fragment:evidence.append({'text':fragment,'start':segment.get('start',segment.get('inicio')),
+     'end':segment.get('end',segment.get('fin')),'speaker_role':segment.get('speaker_role')or'NO DETERMINADO',
+     'method':'CONTEXTO_ASR_PARA_COTEJO_NO_CONFIRMACION_DE_VOZ'})
+   if not evidence and raw.get('texto'):
+    evidence=[{'text':raw['texto'][:1000] if code=='UNIDENTIFIED_CONTACT' else raw['texto'][-1000:],
+               'start':None,'end':None,'speaker_role':'NO DETERMINADO','method':'CONTEXTO_ASR_SIN_TIEMPOS'}]
   result.append({'code':code,'domain':domain,'reason':' | '.join(f.get('reasons')or[]),'action':action,
-    'source_field':field,'evidence':_evidence(data),'dependent_status_codes':[v['code']for v in findings if v['code']in{'STATUS_INVALID','STATUS_NOT_CONFIRMED'}]})
+    'source_field':field,'evidence':evidence,'dependent_status_codes':[v['code']for v in findings if v['code']in{'STATUS_INVALID','STATUS_NOT_CONFIRMED'}]})
  return result
 
 

@@ -1,397 +1,161 @@
 {
-  "revision": "3.6.19-r51",
-  "distribution": "complete application source for existing local Python and Whisper",
-  "baseline_sha256": "787566104cca0697c6b6be2a6a880f26c6ff1b382542fd02a0688973dd11eb87",
+  "revision": "3.6.19-r52",
+  "distribution": "complete source application for existing local Python and Whisper",
+  "baseline_sha256": "006452caf25e29ee98f37b0f273c16853d388a2b537da3e0ba2024c8dac9ca36",
   "validation": {
-    "revision": "3.6.19-r51",
+    "revision": "3.6.19-r52",
     "tests": {
-      "passed": 2467,
+      "passed": 2499,
       "skipped": 7,
-      "failures": 0
+      "failed": 0
     },
-    "same362": {
-      "calls": 362,
+    "rule_evaluations": 2327,
+    "latest_batch": {
+      "items": 1321,
+      "evaluated": 352,
+      "pending_preserved": 969,
       "before": {
-        "REVISAR": 267,
-        "APROBADO": 38,
-        "NO_APROBADO": 11,
-        "FALLA_GRAVE": 21,
-        "APROBADO_ETIQUETA_CORREGIDA": 25
+        "SIN_RELACION_EXCEL": 116,
+        "NO_APROBADO_MENOR_80": 25,
+        "REVISAR": 175,
+        "APROBADO": 15,
+        "FALLA_GRAVE": 11,
+        "NO_APROBADO": 6,
+        "APROBADO_ETIQUETA_CORREGIDA": 3,
+        "MAL_DICTAMINADO": 1
       },
       "after": {
-        "REVISAR": 258,
-        "APROBADO": 45,
-        "NO_APROBADO": 11,
-        "FALLA_GRAVE": 21,
-        "APROBADO_ETIQUETA_CORREGIDA": 27
+        "SIN_RELACION_EXCEL": 116,
+        "NO_APROBADO_MENOR_80": 25,
+        "REVISAR": 168,
+        "APROBADO": 16,
+        "FALLA_GRAVE": 11,
+        "NO_APROBADO": 7,
+        "APROBADO_ETIQUETA_CORREGIDA": 9
       },
-      "classification_changes": [
-        {
-          "call": 19,
-          "before": "REVISAR",
-          "after": "APROBADO"
-        },
-        {
-          "call": 47,
-          "before": "REVISAR",
-          "after": "APROBADO"
-        },
-        {
-          "call": 94,
-          "before": "REVISAR",
-          "after": "APROBADO"
-        },
-        {
-          "call": 101,
-          "before": "REVISAR",
-          "after": "APROBADO"
-        },
-        {
-          "call": 106,
-          "before": "REVISAR",
-          "after": "APROBADO_ETIQUETA_CORREGIDA"
-        },
-        {
-          "call": 126,
-          "before": "REVISAR",
-          "after": "APROBADO"
-        },
-        {
-          "call": 161,
-          "before": "REVISAR",
-          "after": "APROBADO_ETIQUETA_CORREGIDA"
-        },
-        {
-          "call": 275,
-          "before": "REVISAR",
-          "after": "APROBADO"
-        },
-        {
-          "call": 290,
-          "before": "REVISAR",
-          "after": "APROBADO"
-        }
-      ],
-      "previous_56_status_only": [
-        {
-          "call": 1,
-          "after": "REVISAR"
-        },
-        {
-          "call": 19,
-          "after": "APROBADO"
-        },
-        {
-          "call": 22,
-          "after": "REVISAR"
-        },
-        {
-          "call": 47,
-          "after": "APROBADO"
-        },
-        {
-          "call": 59,
-          "after": "REVISAR"
-        },
-        {
-          "call": 61,
-          "after": "REVISAR"
-        },
-        {
-          "call": 84,
-          "after": "REVISAR"
-        },
-        {
-          "call": 93,
-          "after": "REVISAR"
-        },
-        {
-          "call": 94,
-          "after": "APROBADO"
-        },
-        {
-          "call": 97,
-          "after": "REVISAR"
-        },
-        {
-          "call": 98,
-          "after": "REVISAR"
-        },
-        {
-          "call": 101,
-          "after": "APROBADO"
-        },
-        {
-          "call": 104,
-          "after": "REVISAR"
-        },
-        {
-          "call": 105,
-          "after": "REVISAR"
-        },
-        {
-          "call": 106,
-          "after": "APROBADO_ETIQUETA_CORREGIDA"
-        },
-        {
-          "call": 109,
-          "after": "REVISAR"
-        },
-        {
-          "call": 115,
-          "after": "REVISAR"
-        },
-        {
-          "call": 122,
-          "after": "REVISAR"
-        },
-        {
-          "call": 124,
-          "after": "REVISAR"
-        },
-        {
-          "call": 126,
-          "after": "APROBADO"
-        },
-        {
-          "call": 137,
-          "after": "REVISAR"
-        },
-        {
-          "call": 148,
-          "after": "REVISAR"
-        },
-        {
-          "call": 150,
-          "after": "REVISAR"
-        },
-        {
-          "call": 154,
-          "after": "REVISAR"
-        },
-        {
-          "call": 155,
-          "after": "REVISAR"
-        },
-        {
-          "call": 156,
-          "after": "REVISAR"
-        },
-        {
-          "call": 161,
-          "after": "APROBADO_ETIQUETA_CORREGIDA"
-        },
-        {
-          "call": 176,
-          "after": "REVISAR"
-        },
-        {
-          "call": 185,
-          "after": "REVISAR"
-        },
-        {
-          "call": 188,
-          "after": "REVISAR"
-        },
-        {
-          "call": 198,
-          "after": "REVISAR"
-        },
-        {
-          "call": 199,
-          "after": "REVISAR"
-        },
-        {
-          "call": 206,
-          "after": "REVISAR"
-        },
-        {
-          "call": 208,
-          "after": "REVISAR"
-        },
-        {
-          "call": 209,
-          "after": "REVISAR"
-        },
-        {
-          "call": 217,
-          "after": "REVISAR"
-        },
-        {
-          "call": 248,
-          "after": "REVISAR"
-        },
-        {
-          "call": 250,
-          "after": "REVISAR"
-        },
-        {
-          "call": 259,
-          "after": "REVISAR"
-        },
-        {
-          "call": 260,
-          "after": "REVISAR"
-        },
-        {
-          "call": 267,
-          "after": "REVISAR"
-        },
-        {
-          "call": 269,
-          "after": "REVISAR"
-        },
-        {
-          "call": 275,
-          "after": "APROBADO"
-        },
-        {
-          "call": 277,
-          "after": "REVISAR"
-        },
-        {
-          "call": 281,
-          "after": "REVISAR"
-        },
-        {
-          "call": 285,
-          "after": "REVISAR"
-        },
-        {
-          "call": 286,
-          "after": "REVISAR"
-        },
-        {
-          "call": 290,
-          "after": "APROBADO"
-        },
-        {
-          "call": 291,
-          "after": "REVISAR"
-        },
-        {
-          "call": 292,
-          "after": "REVISAR"
-        },
-        {
-          "call": 298,
-          "after": "REVISAR"
-        },
-        {
-          "call": 317,
-          "after": "REVISAR"
-        },
-        {
-          "call": 328,
-          "after": "REVISAR"
-        },
-        {
-          "call": 335,
-          "after": "REVISAR"
-        },
-        {
-          "call": 341,
-          "after": "REVISAR"
-        },
-        {
-          "call": 343,
-          "after": "REVISAR"
-        }
-      ],
-      "transcripts_and_accounts_unchanged": true,
-      "privacy_confirmed_preserved": true
+      "missing_excel_relations": 399,
+      "processed_missing_excel": 116,
+      "originals_and_asr_preserved": true,
+      "excessive_review_resolved": false
     },
-    "fresh_project": {
-      "revision": "3.6.19-r51",
-      "calls": 85,
-      "selection": "all changed outcomes/scores plus deterministic safety and unchanged controls",
-      "asr_executed": false,
-      "asr_boundary": "controlled raw ASR from uploaded checkpoint",
-      "previous_checkpoint_imported_by_application": false,
-      "saved_human_confirmations_imported": false,
-      "transcriptions_recovered": 0,
-      "all_original_audio_copies_sha256_match": true,
-      "authoritative_card_in_approved_names": true,
-      "all_13_rule_groups_applied": true,
-      "normal_batch_and_reanalysis_outcomes_scores_match": true,
-      "excel_fixture_unchanged": true,
-      "original_checkpoint_unchanged": true,
-      "reports_generated": true,
-      "summary": {
-        "analizados": 85,
-        "aprobados": 41,
-        "revisar": 20,
-        "no_aprobados": 11,
-        "fallas_graves": 13,
-        "errores": 0,
-        "puntaje_minimo": 80
-      },
-      "outcomes": {
-        "APROBADO": 31,
-        "REVISAR": 20,
-        "NO_APROBADO": 11,
-        "FALLA_GRAVE": 13,
-        "APROBADO_ETIQUETA_CORREGIDA": 10
-      }
-    },
-    "prior_controls": {
-      "evaluations": 1613,
-      "outcomes": {
-        "previous403": {
-          "REVISAR": 269,
-          "FALLA_GRAVE": 38,
-          "APROBADO": 58,
+    "previous_controls": {
+      "previous403": {
+        "calls": 403,
+        "outcomes": {
+          "REVISAR": 266,
+          "FALLA_GRAVE": 39,
+          "APROBADO": 60,
           "NO_APROBADO": 11,
           "APROBADO_ETIQUETA_CORREGIDA": 27
-        },
-        "previous100": {
+        }
+      },
+      "previous100": {
+        "calls": 100,
+        "outcomes": {
           "APROBADO": 21,
           "REVISAR": 39,
           "NO_APROBADO": 9,
           "NO_APROBADO_MENOR_80": 25,
           "APROBADO_ETIQUETA_CORREGIDA": 3,
           "FALLA_GRAVE": 3
-        },
-        "previous103": {
+        }
+      },
+      "previous103": {
+        "calls": 103,
+        "outcomes": {
           "REVISAR": 70,
           "FALLA_GRAVE": 8,
           "APROBADO": 21,
           "APROBADO_ETIQUETA_CORREGIDA": 3,
           "NO_APROBADO_MENOR_80": 1
-        },
-        "previous1007": {
-          "REVISAR": 816,
-          "NO_APROBADO_MENOR_80": 62,
-          "NO_APROBADO": 19,
-          "APROBADO_ETIQUETA_CORREGIDA": 15,
-          "APROBADO": 80,
-          "FALLA_GRAVE": 15
         }
       },
-      "source_unchanged": true,
-      "confirmed_privacy_preserved": true,
-      "new_approvals": 9,
-      "prior_approvals_removed": 0
+      "previous1007": {
+        "calls": 1007,
+        "outcomes": {
+          "REVISAR": 800,
+          "NO_APROBADO_MENOR_80": 66,
+          "NO_APROBADO": 20,
+          "APROBADO_ETIQUETA_CORREGIDA": 17,
+          "APROBADO": 88,
+          "FALLA_GRAVE": 16
+        }
+      },
+      "old362": {
+        "calls": 362,
+        "outcomes": {
+          "REVISAR": 255,
+          "APROBADO": 47,
+          "NO_APROBADO": 11,
+          "FALLA_GRAVE": 22,
+          "APROBADO_ETIQUETA_CORREGIDA": 27
+        }
+      }
     },
+    "confirmed_privacy_preserved": true,
+    "fresh_program": {
+      "revision": "3.6.19-r52",
+      "calls": 22,
+      "selection": "all changed previous-362 outcomes/scores plus deterministic safety and unchanged controls, without saved human confirmations",
+      "asr_executed": false,
+      "asr_boundary": "controlled saved original ASR",
+      "previous_checkpoint_imported_by_application": false,
+      "original_audio_copies_sha256_match": true,
+      "normal_batch_and_reanalysis_match": true,
+      "source_unchanged": true,
+      "reports_and_nonpayment_generated": true,
+      "outcomes": {
+        "APROBADO": 4,
+        "REVISAR": 16,
+        "FALLA_GRAVE": 1,
+        "APROBADO_ETIQUETA_CORREGIDA": 1
+      },
+      "seconds": 8.283946752548218
+    },
+    "new_whisper_run": false,
     "human_listening_declared": false,
-    "full_acoustic_retranscription_executed": false,
-    "native_windows_verified": false,
-    "offline_autonomous_installer_delivered": false
+    "native_windows_run": false,
+    "offline_autonomous_installer_delivered": false,
+    "users_usb_delivered": false,
+    "report_format_validation": {
+      "rows": 1600,
+      "columns": 11,
+      "same_values_and_formatting": true,
+      "baseline_seconds": 1.5561151489996519,
+      "r52_seconds": 0.23459455400006846,
+      "speedup": 6.63,
+      "scope": "synthetic styling benchmark; not Whisper or complete batch timing"
+    }
   },
-  "changed_or_added_files_against_r50": [
-    "AGENTS.md",
+  "changed_or_added_files": [
     "LEEME_PRIMERO.txt",
-    "README.md",
     "RELEASE_MANIFEST.json",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_51_PROGRAMA.md",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDACION_R51.json",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_52_PROGRAMA.md",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDACION_R52.json",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/config/release.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/accepted_schedule_evidence.py",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/analytics_service.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/batch_data_diagnostics.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/batch_report_service.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/batch_service.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_reanalysis.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_rules.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/contextual_identity_evidence.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/conversation_cache.py",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/conversation_evidence.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/declarative_evidence.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/definitive_rejection.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/dialogue_confirmation_evidence.py",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/dialogue_evaluation.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/nonpayment_report_service.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/pending_review_report.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/quality_decision.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/recado_receipt_resolution.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/rule_audit_report.py",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/scoped_institutional_speech.py",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/status_message_evidence.py",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/treatment_evidence.py",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_status_resolution_r51.py"
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_complete_decision_r52.py"
   ],
   "files_sha256": {
     ".gitignore": "ae8a986bc7c8dadbde136d513a6e4862d5c33d3866b755240202140fba1912d8",
@@ -405,7 +169,7 @@
     "INCORPORAR_LECTURAS_BLOQUE.bat": "f70e3deb93dc3f3ee1fb34716356f42bd3d7bb983b8ff4388ec91dafbc48a188",
     "INCORPORAR_Y_CONFIRMAR_PARENTESCO.bat": "7ecce3c3ab8419015abe5dcca5b88193a381bd13990fe47011b947f134ccbe62",
     "INICIAR_PROGRAMA.bat": "a012a903c072877c0629753f46f8b8770314a58711e0a3bdb83c79f0ebe5bd35",
-    "LEEME_PRIMERO.txt": "0ea7b1d113f32496c110e4b5e00e8e7dc521637c8767380f11c7e9a3ccbb3db7",
+    "LEEME_PRIMERO.txt": "726a7464316c1dce7f61d231ffc138c73efb57b272c6f058e8897075f4e3ecc8",
     "README.md": "8c19a2cf406b9a257ed7f2ddb45728864c46249c14c79f2573314e8ece75f119",
     "REANALIZAR_CHECKPOINT.bat": "2903ea8a884c22809d5a7aef9b966c6493e2245b697e8bf2f0ff2e06b09afb16",
     "REANALIZAR_CON_TARJETA_EXCEL.bat": "9525b6151de6e92af8d44dc929531005c36236932de72a2a1440f0649adea7f7",
@@ -489,6 +253,7 @@
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_49_PROGRAMA.md": "6693814c6afb852778a91665fb990b32b9ce2aa44e8a40ac52b605ee689e04fa",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_50_PROGRAMA.md": "aa54eef90418bbb92b60a6311a6d88dc20ee7658d7aedd9e5845d0d537011852",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_51_PROGRAMA.md": "d34084d63a48a2ff34558e862d376e999d6296b253f4b1df9f02bd10ad813400",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/REVISION_52_PROGRAMA.md": "b9ed1d33a96871254fbca588ca7947817eada13a442d75ceb5864136851f8f70",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDACION_4_PRUEBAS.txt": "f83abcc5dfc9aaa74a10b65ffc1b7f26b22a4853318b5f1dfec1c016d8a7ee25",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDACION_R37.json": "8d99d0b97cd66225ddded82514d48913b4d3a9910d6da05b01eeef659251fb31",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDACION_R38.json": "b65e64a4816428b7253624c45dc6b908668ecc29d92efe097ef9c3d7749775ef",
@@ -505,6 +270,7 @@
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDACION_R49.json": "81253700b317b7d0cf37882fc22611b221afb7baacb9d7cab5e38af4a1214756",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDACION_R50.json": "734993fa1f6eb5a42db22526837e2ca06a77e5b1b0ecd2d7d66f5bd4902f1c05",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDACION_R51.json": "2160f0786604989d49ddd80872b51519c4508091ae68e1b0694c0ff823360b5d",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDACION_R52.json": "213343f83f0b3902eba7d802ebdbbb3cd2a5eecca947441407dd950b42ba14e2",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDACION_SOLUCION.txt": "24b385281f63b602ac6bbe811e3386c6201d51e35f7d5808b15952280d516484",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDACION_VERSION_06.txt": "b2cd9fcf9866907ed5ba35c6c59d271452083b9606ce5613f9bd51b65c0d1596",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/VALIDAR_IMPORTES.bat": "6909af43c414577b90a4f7f47fe5255f592cd6ba19840a16e3c0a46b7d8d89c9",
@@ -519,7 +285,7 @@
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/config/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/config/app_info.py": "bd16c743a08eece50fd01d335fb38ae7dfb5fd577084e7ef03ce4051d6267cac",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/config/approval_rules.py": "b931ecd167b94b2b9658bf2d8032167df5591907a2f8d4f6ceb4843266ae4c89",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/config/release.py": "304f50f6a3a1047c80c5d5d1789b4a3e01db01f16054ec86b423faead60a6a55",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/config/release.py": "809a309eac56667b4ac353e9a64055826256318f220100fc88f8ee2225141078",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/config/settings.py": "a8714d0cd2afaab29e7437b5883780e636bb572fc1a5ffb110e402df0bf5bd63",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/core/__init__.py": "1375ec9a079413f4d2f0c99e0f0c6d0c7db93dcfd7c4e259c6b41c15247cc8ed",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/core/application.py": "8a4cde0bc47550a2b2233165faf93eaac8b91024f417447185748c4e9da38792",
@@ -536,10 +302,10 @@
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/resources/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/resources/logos/mrs_logo.png": "7a863a199b72ff8228e0e07a2d4b61a14518e8a5319fe91b8512034afb1634f9",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/accepted_schedule_evidence.py": "2cdaec08c4ae74f3da78e612d515370e434aea452a339765f3f7bba0d04b0d82",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/accepted_schedule_evidence.py": "8925fe214ca2ee71af1cc5125eef39c746185e47ff993ce0b1b60be2a7efdb7e",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/account_source_validation.py": "8e90a2dbbd3fd1eee9b83054010ce2b55be15307cf8b79679085928b9dbeed91",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/amount_review_service.py": "4ff92a0c840e2118ae89b968e219dce61f6c32967c5053ac5bdcf41c312b38f5",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/analytics_service.py": "1374d5a3f24eada66fe68b7870541c5737f0f2dfd91c27e9f80cf82f1d1977e6",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/analytics_service.py": "f3ccec898cb03a83189d484c5503951b0973658f4abae3d3def917f2cb5879e5",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/approval_resolution.py": "4bbdc845d21724ae37324b1cd919dd6eba072fe1388ac10fa49fe2024dfdd4ff",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/arco_context_evidence.py": "d19a70e4a2af3c3f433767dfe07a04e019ade1645fb343d40986f0b73f27225e",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/arco_dialogue_evidence.py": "be8789c6dff6c3a4c4b0883ab98487a847a3cffd9933a0b9ae8c2b2475b7a5a9",
@@ -552,29 +318,32 @@
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/balance_context_evidence.py": "a0d38892e169872492dc551a00787ed448b7463a827ca38d6eae926f9ffe54da",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/bank_service_evidence.py": "619a48cf87d8698ab27402b92ea36a45e7e6c50f182556db2af44c2f26f6577b",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/base_service.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/batch_report_service.py": "3916d14c2b04aba9c6e7f8dd6ef1cc4b8fb8deb414eeb64a372cb69ef2a548c1",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/batch_service.py": "739d7a45fad299f38374243b1318561a275518077638a1e1f6eaaf56783b29e0",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/batch_data_diagnostics.py": "924c93d61d6141bca739e9d6548d8ecac74b30135dcce4e6872e9111f28a90df",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/batch_report_service.py": "87db372d2d86c3d660a36b95eba426cb250f67f9d2b5b970c630c82c6ed4a1c7",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/batch_service.py": "aae7d4765f43b658c4c8d1bc41d72a6af3c105ae2ed6dec70bbcdb6cd8d79ef5",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/call_wait_evidence.py": "607e6a97d5790b6c5ec35b39ec1a9693d71ebe9f62d3ffceadf66f5390a901af",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_amount_recovery.py": "35aafa017c7c9f4d972c98549d56a86aa9ef85244b8c72087340206ffdc0b48a",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_human_review.py": "81c72fa94d12bfa539070c7bb7ef3d0d96b000bc714c316d519bfb3e2a2b6293",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_mora_update.py": "2420e99d22932f1f332f2860b8dadce7195418223ba6f8140d6b7d5ff70dab00",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_output.py": "b068d359261d0977bde133a4daa6970b03ff2e269ae722116c3841072e1ba6eb",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_privacy_review.py": "c999d4ff1856ccb7c9a64fd2ebe2f8d5d6f10bcce3b7add5655cd2d0a1c55195",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_reanalysis.py": "5867d17510898c5050e7452c8409b8d9d89f67043894437a9bb6b7eccb0e714e",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_reanalysis.py": "78dd395328fd95935343f7fe8a256d193c9d26c4d77423ed9238f5c02f76eb40",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_rebuild.py": "375f17a318452fd53e8bc56172b2fbede748450146520263b1c1465ce9f01112",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_recado_batch_review.py": "a3667760dd7af5a1ac488275e876bbef156f3e5f1f40e2f0dd345fb677ef1150",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_review_import.py": "a4820178a6141c73f22d05208599572059d492d34632390fdc9396fd650d6385",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/contact_dialogue_resolution.py": "eb9dd54c34063e76efbd1db3031ef54cda6adadb7ebcdf96f6a4404470789dd5",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_rules.py": "d46564895243482ca94c1c2a6440d0931b86ea1bd278a5706caca2f1bae6bbdc",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/contextual_identity_evidence.py": "b36d945962bcd50efc8fa800a8ffac11d4931017c9465ab15654e17d37855324",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/conversation_evidence.py": "51debb888b2707f0aecd42e99ff27bd28de5ee701181ddb26ee90a1ec730dd8c",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_rules.py": "2b32d53093d5c3ad102a98b5fbec31a538436125ba2c15858620c5574cdbcfa4",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/contextual_identity_evidence.py": "86c2cef7482745bacf27b7246399bdd6e4ee7f9bf4e9d964c2cd5970ba3a4855",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/conversation_cache.py": "892e9e3b9dad16df2f4d717f6c5bb4b107ebfcffa5ba80623dc4e2f805e0b7b0",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/conversation_evidence.py": "39501756f4d53784af651aacf1d7ff765f4d4fabc9c2be2153e84254385d2458",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/corrected_label_export.py": "2f4ce4271039ea88c45eaeb944d7d1ebc02b9eec21e8c58f3ebff9762255fa8a",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/current_payment_amounts.py": "834fade33fe809df2433af5dab4b11721572cd7874c692124f89b2a95ba01037",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/dashboard_service.py": "9ce0b76633446ce09d3591c0f862358dfbbd0a138fdfe971f881a5779196f782",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/death_followup_evidence.py": "c9dcd65cd2c0482dcd99b2dd3c195fec26aed38a275e4fc781e9ea5c1650b456",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/definitive_rejection.py": "d1e13907885c670a4ee54460a3c80b814e52b563942d081188efd68113fe07e3",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/dialogue_confirmation_evidence.py": "c1008bad37854b2e99d99eef6b47e37dd00ba2157f19b0778279cc5f84f06464",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/dialogue_evaluation.py": "65cbd1ebfec15e021964a78eed9aeac13de2d9e77360caa7b4de13084e40fe62",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/declarative_evidence.py": "104bdbe33c340f842fd6d416ac613f30c803af8751c0f6ff5a8dac53e8d5e3a1",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/definitive_rejection.py": "82ffe737035a867089408375b4e46232dc5f76eeb1977f557a3b57650548d339",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/dialogue_confirmation_evidence.py": "2da366e7f8456587c4abc952eb4e886732a343ec99b46cce49be9c375bfa0cef",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/dialogue_evaluation.py": "99bdd32b0ac2c208d82e3b757970430884774b09ca8934e2e340c6fc51b33bfc",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/family_contact_review.py": "55300443d3f2f67db80c80a827352846b82167192a247329b37f68b2a3f2505d",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/financial_review_service.py": "6540bb50e14541a9a6550e6765d91ff31fc781db7db9891a6ffd54a4552d3b76",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/history_service.py": "c33861113a20a6d51cf41e4760e5f34fbdd9e1b5bd980c357ae5e361b85d6a14",
@@ -583,30 +352,30 @@
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/message_contact_evidence.py": "70be621627091a5a1c92064156a8f4d3b32ab39cee31e16fd281b0fdfa91ec0e",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/message_dialogue_evidence.py": "76eeef3970d57915f7753ad08c6b5d5b542f5d1e3630f2951ee717ae70e9daf8",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/mora_payment_policy.py": "02d326d295385e0f72905f7139e66ee5e89a024cc35b6af3fa0c38bcb0b6a6c2",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/nonpayment_report_service.py": "7efb1bd0d930f2eaf9920b66610b43f2b3db7726d61ae880bf17baf7273dc00c",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/nonpayment_report_service.py": "d57a694013fabe65872250a61c8cad669b1b9913bbb373b2a0b9e2f5693284f5",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/offline_model_service.py": "cbec485f0a40a4610a9154bd4ca1b2592640e4f99f3d6a27509f7c2dff8930e2",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/operational_script_evidence.py": "794769a15d6504dfa97a6cc9429dfea09397cbcc408c83bb67c15afb82d252a3",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/payment_instruction_validation.py": "632927cffb7314af7d4a614b2b121320955d592896c9a340d6b2a9af5d6ce6f9",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/payment_reference_validation.py": "c282760955aa3adb7980af69f4472e1f8b8e21d5d54febe26b8ca0349bc3bbb9",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/payment_sequence_evidence.py": "d959ad30095a8848b0d92f8637b5a76b2de529d1f0c9f8131eb89f728da65a4d",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/pending_review_report.py": "a6bacc7d3e343e8cb5a7a59c3fbf03923e67ef418ec2173ad47d9eeba347c7f6",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/pending_review_report.py": "07c115ecfe2c45faf2b55a271aee52393e5653dc4b7359d70dcdb987bbcdf64e",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/privacy_disclosure_review.py": "b66f583302ae0161b80f6f0082b5386d1546570e313e7454756bcf1e8a5f10e2",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/project_service.py": "4829d624e07053c7eea438ca42e443bd95ca33520ad3a6c3b892fa9afc88fb1c",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/quality_decision.py": "07e8abff0f097386c9853303b7dd5a025c56dbd7222485727a01a3436f428f22",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/quality_decision.py": "e6c360f712902d61e97b1a08f5bd4be82dcec44ff6726b8e0d117924111333c4",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/recado_acceptance_review.py": "396641fd534bf9d5f67a5eca09124733f1be26a2c44cf33570bbf803d862ed70",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/recado_receipt_resolution.py": "c549592a9a59dc75d9cc1e69be60cbf051b101eb09a14eadc360e02f47c5652d",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/recado_receipt_resolution.py": "a10e3bd4128f2afca590d9d4c11836c272a8e67945fddff956ac5889654b87a7",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/relation_service.py": "01b58acc3f580a6fbc322e6dffdce6fe8f85c037b2da7f046538f27988f46a07",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/report_service.py": "e2c7fb579429a5c83937f377f28b63fe7ecc12c207f05ab7603500c97805e346",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/reported_payment_amounts.py": "063e2d26cdfaff1bd3a5ff4910483243d994601278a1b4c0989bb62bb429067f",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/retagging_report.py": "b7bfe5ef149bc56f75dca8adac18d23a06de12c6073ea2ca76e98d882685dc3b",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/review_service.py": "c85c12b51400fda59d39aadbc6c661b2e105f046c33db6a4ecf6e07ce3bf9393",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/rule_audit_report.py": "6a0af1a49276522a089a05cc4d746f276864225826c77add17c1b1df2b07a2ce",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/scoped_institutional_speech.py": "584c47825247428013f36e32dce98dc3103829422b20a773519c5511a344b3dc",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/rule_audit_report.py": "0378e73d50ce6a2ecd8c966b4bf07681acdf88260c84b93d4214c5e556cc2a93",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/scoped_institutional_speech.py": "648833b8875bc9af47abcd25dbf3cdfcf4aaa793c72ae8dd01ff79b3801f8835",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/settings_service.py": "89c5cf931c498eda58d54dc47b6b070b9b7550377a1b513137f247d17f7d540d",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/status_message_evidence.py": "e436de533f8e9b00cd9fde11da352036654a3ae5fb00f5b456cab6c2f4912123",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/status_message_evidence.py": "70be16910c8755455751e7f0596be3bccf83ae0750535c5f0bcaa60708373480",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/status_output_label.py": "c990db10c201f420ec6a732884ccf22eb7a69fc6e53f4fdd5e77957489f15e76",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/transcription_services.py": "cc6c12db1cf626713531aad2f397c68b042f6d621ca1447bfbd67e7605936cb7",
-    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/treatment_evidence.py": "3c87f34c243cfccbd10858a522347b5300a3ba93e5761ce66be12de79ae8bf2f",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/treatment_evidence.py": "347d7a51209fd10316fdff695e166a7fb0676da5bf1910c2f51253a7da85bdc3",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/whisper_service.py": "1062308efc0e0bbd9e7de144f757a88a3e28098ebfdb6e9366c36b0cd3cf5298",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/whisper_service_BACKUP.py": "c47c4d35ab141847c33c79d651b776c0785177bbe94952176b35c68c377018d9",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/ui/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -679,6 +448,7 @@
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_checkpoint_reanalysis.py": "49ad8dd18068fc62d6b532b65a2d3a783b18a89727d029ab7875417bbb5213bd",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_checkpoint_rebuild.py": "85630f0aed8384e6102f660824dd2704c6947152de6404de66653bcc8ec94356",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_checkpoint_review_import.py": "a4168d35044fcaac22c0407a1631f0e78f0f3bb1445b23374547676ded60ebdd",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_complete_decision_r52.py": "cd8fe0fb946f82ad0e484027c3df790cb74727b7d33644c98761867ce7829909",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_comprehensive_resolution_r50.py": "ddee5ba91a35c3324a448fb8a9a032ab81ac345c617935565047a9502832d7b4",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_contact_offer_recado.py": "f8642d69b58909f6c5a024d2a9fbab29ab50d260bab5be77634ba4425a9738c4",
     "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_context_details_r38.py": "4f57422cc8bf1e084e78ceef4442421d0ed8223a939a24d8b94a0e4ec2ed9635",

@@ -11,13 +11,14 @@ INTRO=re.compile(r'\b(?:me (?:estoy )?comunicando de|me comunico de|nos (?:estam
                  r'[^.!?]{0,65}\b'+COMPANY+r'\b')
 RELAY=re.compile(r'\b(?:mencione(?:le)?|indique(?:le)?|comente(?:le)?|comparta(?:le)?)\b[^.!?]{0,85}\b(?:se comunico|nos (?:estamos )?comunicando|nos comunicamos)\b'
                  r'[^.!?]{0,90}\b'+COMPANY+r'\b')
+SELF_TASK=re.compile(r'\bmi llamada (?:solo )?es para (?:poderle |poder |le )?(?:notificar|informar|solicitar|requerir)\b')
 QUOTED=re.compile(r'\b(?:dice que|dijo que|me dijo|me dijeron|usted dijo|usted dice|segun|repita|diga que|por ejemplo|supongamos|si yo fuera|soy su (?:espos[oa]|madre|padre|hij[oa]))\b')
 
 
 def institutional_clause_evidence(unit_text,phrase):
     source=normalize(unit_text);target=normalize(phrase);at=source.find(target)
     if at<0:return None
-    for pattern in (INTRO,RELAY):
+    for pattern in (INTRO,RELAY,SELF_TASK):
         for m in pattern.finditer(source[:at]):
             if at-m.end()>230:continue
             prefix=source[max(0,m.start()-110):m.start()]

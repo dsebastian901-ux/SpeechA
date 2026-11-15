@@ -45,7 +45,9 @@ def prohibited_threat(text, segments=(), mora=''):
         r'(?:embargar|retirar|quitar|recoger)\b.{0,45}\b(?:bienes|muebles|casa|vehiculo|propiedad)\b|'
         r'\b(?:embargaremos|retiraremos|quitaremos|recogeremos|embargaran|retiraran|quitaran|recogeran)\b'
         r'.{0,45}\b(?:bienes|muebles|casa|vehiculo|propiedad)\b|'
-        r'\b(?:lo|la) vamos a (?:embargar|demandar)\b|\bva a ir a la carcel\b')
+        r'\b(?:lo|la) vamos a (?:embargar|demandar)\b|\bva a ir a la carcel\b|'
+        r'\b(?:se hara cobrar|se cobrara|cobraremos|le cobraremos|vamos a cobrar|se va a cobrar)\b'
+        r'[^?!]{0,180}\b(?:en|con) (?:sus |los )?bienes(?: y muebles)?\b')
     visit = (
         r'\b(?:vamos a|voy a|se va a|se puede|procederemos a)\s+'
         r'(?:realizar|generar|presentar|efectuar|hacer|programar|agendar)\s+(?:una?\s+)?'

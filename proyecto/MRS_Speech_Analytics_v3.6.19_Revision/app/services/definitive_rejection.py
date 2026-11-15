@@ -14,7 +14,8 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
                        r'no soy (?:su )?mensajer[oa]|no me interesa recibir (?:el |su )?recado|'
                        r'no tengo (?:donde|con que) (?:anotar|apuntar)|no puedo (?:anotar|apuntar|anotarlo|apuntarlo)|'
                        r'no traigo (?:aqui )?(?:en que|con que|como) (?:anotar|apuntar))\b')
-    for unit in sentence_evidence(text,segments):
+    from app.services.declarative_evidence import declarative_units
+    for unit in declarative_units(text,segments):
         value=normalize(unit['text']);at=source.find(value,cursor)
         if at>=0:cursor=at+len(value)
         if unit['speaker_role']in{'GESTOR','TITULAR'}or at<0:continue

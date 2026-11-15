@@ -22,7 +22,9 @@ COUNTER = re.compile(
 OWN_ACCOUNT = re.compile(
     r'\b(?:mi (?:tarjeta|cuenta|saldo|estado de cuenta|aplicacion|pago)|mis pagos|'
     r'yo (?:tengo|tenia|saque|solicite|tramite|contrate) (?:mi |la |una )?(?:tarjeta|cuenta)|'
-    r'(?:ya |yo )?(?:lo pague|pague|hice (?:mi |el )?pago|realice (?:mi |el )?pago|he pagado|he depositado)|'
+    r'(?:(?:ya|yo) ){0,2}(?:lo pague|pague|hice (?:mi |el )?pago|realice (?:mi |el )?pago|he pagado|he depositado)|'
+    r'(?:yo )?(?:tenia|tengo) que pagar|yo (?:se que debo|les debo)|lo que yo les debo|'
+    r'(?:yo )?no estoy negad[oa] a pagar|'
     r'(?:ya |yo )?(?:lo hice|lo realice)|'
     r'(?:este|el) mes (?:yo )?(?:tengo|tenia) (?:un |el |mi )?pago minimo|'
     r'no (?:(?:te|le|les|lo) )?(?:voy a|pienso|quiero) (?:pagar|depositar)|yo no debo nada|(?:yo )?quiero pagar(?:lo|la)|(?:la |mi tarjeta la )?quiero (?:cancelar|dar de baja)|yo lo deje de pagar|por eso lo deje de pagar|'
@@ -89,6 +91,9 @@ def contextual_holder_confirmation(text, segments, identification):
                    r'(?P<answer>(?:si[, ]+)?(?:servidor|servidora|al habla|ella habla|el habla|digame|diganme|dime)|si|asi es|correcto|aja)\b'),
         re.compile(rf'\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)(?:[.?]|,\s*gracias\b)\s*(?P<answer>)'),
         re.compile(r'\bcon\s+(?P<identity>(?:el senor|la senora|la senorita)\s+[^.!?]{2,90}?)(?:[.?]|,\s*gracias\b)\s*(?P<answer>)'),
+        re.compile(rf'\b{identification}\s+(?P<identity>[^,.!?]{{3,90}}?),\s*'
+                   r'(?=le marcamos|le (?:hablo|hablamos)|me (?:estoy comunicando|presento)|mi nombre es)'
+                   r'(?P<answer>)'),
     ]
     units=[];cursor=0
     for unit in sentence_evidence(text,segments):

@@ -147,6 +147,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         blocking=[rejection]
     if critical:
         category = 'FALLA_GRAVE'
+    elif base.get('missing_excel_relation'):
+        category = 'SIN_RELACION_EXCEL'
     elif rejection:
         category = 'NO_APROBADO'
     elif verified_exception and score_ok and not blocking:
@@ -168,6 +170,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     else:
         category = 'APROBADO'
     reasons = list(dict.fromkeys(r for f in blocking for r in f['reasons']))
+    if category == 'SIN_RELACION_EXCEL':
+        reasons.insert(0,'Falta el registro de esta llamada en el Excel de cuentas; corregir la relación de origen. No requiere retranscribir para relacionarla.')
     if category == 'NO_APROBADO':
         reasons.extend(r for f in findings if f['severity']=='OBSERVATION'for r in f['reasons']if r not in reasons)
     if category == 'NO_APROBADO_MENOR_80' and reasons:

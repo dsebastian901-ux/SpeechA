@@ -515,6 +515,14 @@ class BatchReportService:
     @classmethod
     def _row_from_item(cls, item: Dict[str, Any]) -> Dict[str, Any]:
         relation = item.get("relation") or {}
+        if item.get('status') in {'pendiente','procesando','cancelado'} and not item.get('classification'):
+            return {'Archivo original':item.get('file_name',''), 'Nombre final':relation.get('nombre_final',''),
+                'Gestor':relation.get('gestor',''), 'Supervisor':relation.get('supervisor',''),
+                'Estatus Excel':relation.get('estatus_grabacion',''), 'Mora':relation.get('asignacion',''),
+                'Fecha llamada':relation.get('fecha',''), 'Score':'', 'Resultado IA':'PENDIENTE',
+                'Clasificación física':'PENDIENTE', 'Nivel de atención':'NO EVALUADA',
+                'Resultado Final Operativo':'PENDIENTE DE PROCESAMIENTO',
+                'Acción recomendada':'Continuar el procesamiento del lote; no existe dictamen de calidad.'}
         analytics = item.get("analytics") or {}
         metadata = item.get("analytics_metadata") or analytics.get("metadata") or {}
         classification = item.get("classification") or {}
@@ -637,6 +645,7 @@ class BatchReportService:
             "FALLA_GRAVE": "NO APROBADO - FALLA GRAVE",
             "REVISAR": "REVISAR MANUALMENTE",
             "ERROR": "ERROR DE PROCESAMIENTO",
+            "SIN_RELACION_EXCEL": "CORREGIR RELACIÓN CON EXCEL",
         }
         final_operational = final_operational_map.get(physical, "REVISAR MANUALMENTE")
 
@@ -814,8 +823,15 @@ class BatchReportService:
         approved_fill = PatternFill("solid", fgColor="EAF7EE")
         review_fill = PatternFill("solid", fgColor="FFF4E5")
         critical_fill = PatternFill("solid", fgColor="FDECEC")
+        # Leer ws[1] vuelve a calcular dimensiones en openpyxl. Hacerlo por
+        # cada fila de auditoría multiplicaba el trabajo en reportes grandes.
+        header_cells=tuple(ws[1])
+        header_map={str(cell.value or '').strip():idx for idx,cell in enumerate(header_cells)}
+        attention_idx=header_map.get('Nivel de atención')
+        body_alignment=Alignment(vertical='top',wrap_text=True)
+        max_column=ws.max_column
 
-        for cell in ws[1]:
+        for cell in header_cells:
             cell.font = Font(bold=True)
             cell.fill = header_fill
             cell.alignment = Alignment(
@@ -826,15 +842,10 @@ class BatchReportService:
 
         for row in ws.iter_rows(min_row=2):
             for cell in row:
-                cell.alignment = Alignment(vertical="top", wrap_text=True)
+                cell.alignment = body_alignment
 
             # Localiza "Nivel de atención" por encabezado para soportar
             # tanto Modo A como Modo B.
-            header_map = {
-                str(cell.value or "").strip(): idx
-                for idx, cell in enumerate(ws[1])
-            }
-            attention_idx = header_map.get("Nivel de atención")
             attention = (
                 str(row[attention_idx].value or "").strip().upper()
                 if attention_idx is not None and attention_idx < len(row)
@@ -862,7 +873,7 @@ class BatchReportService:
         }
 
         for idx, width in widths.items():
-            if idx <= ws.max_column:
+            if idx <= max_column:
                 ws.column_dimensions[get_column_letter(idx)].width = width
 
         # v3.5.0: anchos por nombre para campos de auditoría y transcripción.
@@ -970,6 +981,9 @@ class BatchReportService:
 
         from app.services.pending_review_report import add_pending_review_sheet
         cls._style_sheet(add_pending_review_sheet(wb,source_items))
+        from app.services.batch_data_diagnostics import add_data_diagnostics
+        for sheet in add_data_diagnostics(wb,source_items):
+            cls._style_sheet(sheet)
 
         from app.services.retagging_report import add_retagging_sheets
         for retagging_sheet in add_retagging_sheets(wb, source_items):
@@ -988,6 +1002,8 @@ class BatchReportService:
             ("NEGOCIACION_INVALIDA", "NEGOCIACION_INVALIDA"),
             ("FALLA_GRAVE", "FALLA_GRAVE"),
             ("REVISAR", "REVISAR"),
+            ("SIN_RELACION_EXCEL", "SIN_RELACION_EXCEL"),
+            ("PENDIENTES_PROCESAMIENTO", "PENDIENTE"),
         ]
         for sheet_name, category in category_sheets:
             cws = wb.create_sheet(sheet_name[:31])
@@ -1074,7 +1090,9 @@ class BatchReportService:
             if r.get("Nivel de atención") == "ALTA"
         )
         avg_score = round(sum(scores) / len(scores), 2) if scores else 0.0
-        approval_pct = round((approved / total) * 100, 2) if total else 0.0
+        pending_processing=sum(r.get('Clasificación física')=='PENDIENTE' for r in rows)
+        processed_total=total-pending_processing
+        approval_pct = round((approved / processed_total) * 100, 2) if processed_total else 0.0
 
         summary_ws.append(["INDICADOR", "VALOR"])
         summary_ws.append([
@@ -1082,6 +1100,9 @@ class BatchReportService:
             "Modo B · Solo audios" if mode_b else "Modo A · Audios + Excel",
         ])
         summary_ws.append(["Total audios", total])
+        summary_ws.append(["Audios procesados", processed_total])
+        summary_ws.append(["Pendientes de procesamiento", pending_processing])
+        summary_ws.append(["Procesados sin relación Excel", sum(r.get('Clasificación física')=='SIN_RELACION_EXCEL' for r in rows)])
         summary_ws.append(["Aprobados", approved])
         summary_ws.append(["De ellos, etiqueta corregida", sum(r.get("Clasificación física")=="APROBADO_ETIQUETA_CORREGIDA" for r in rows)])
         summary_ws.append(["Aprobados sin etiquetar", approved_untagged])
@@ -1188,7 +1209,8 @@ class BatchReportService:
                     if r.get("Score") not in ("", None)
                 ]
                 gavg = round(sum(gscores) / len(gscores), 2) if gscores else 0.0
-                gpct = round((gapproved / gtotal) * 100, 2) if gtotal else 0.0
+                gprocessed=sum(r.get('Clasificación física')!='PENDIENTE' for r in group)
+                gpct = round((gapproved / gprocessed) * 100, 2) if gprocessed else 0.0
 
                 codes = []
                 areas = []

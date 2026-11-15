@@ -10,11 +10,12 @@ from app.services.message_contact_evidence import BAD_PREFIX, _outside_question
 def return_purpose(text, segments=()):
     source=normalize(text);found=[]
     patterns=[
-        r'\bque se (?:comunique|contacte)\b',
+        r'\bque se (?:comunique|contacte|ponga en contacto|pueda poner en contacto)\b',
         r'\bse (?:tiene que|debe(?: de)?) comunicar\b',
         r'\bpara que (?:posteriormente )?(?:(?:el|la) (?:senor(?:a|ita)?|titular) [^.!?]{1,65}?)?se (?:pueda |puede )?comunicar(?: con nosotros)?\b',
         r'\b(?:es |seria )?(?:muy )?importante (?:que )?(?:(?:el|la) (?:senor(?:a|ita)?|titular) [^.!?]{1,65}?)?(?:se comunique|su comunicacion|la comunicacion)\b',
         r'\b(?:que |para que )?(?:me|nos) (?:pueda |puede )?(?:regalar|regala|regale|regresar|regrese) (?:una? |la )llamada\b',
+        r'\b(?:me|nos) (?:pudiera|podria|pued[ao]) (?:regalar|regresar) (?:una? |la )llamada\b',
         r'\b(?:indiquele|digale|mencionele)\b[^.!?]{0,140}\b(?:que se comunique|se comunique|regrese la llamada)\b',
     ]
     for pattern in patterns:
@@ -51,6 +52,19 @@ def extra_message_receipt(text,segments=()):
             found.append({'text':m.group(),'phrase':m['answer'],'method':'RESPUESTA_LOCAL_A_DICTADO_CON_RETORNO_Y_CONTACTO',
                           'speaker_role':_role_at(text,segments,m.start('answer')),'human_verified':False,
                           'contact_digits_verified':False})
+    # La espera de preparación puede separar pregunta y respuesta. Exigir
+    # las dos respuestas del receptor y dictado posterior; «gracias» no basta.
+    ready=re.compile(r'\b(?:tiene|tendra|tendria) (?:usted )?(?:donde|con que) (?:anotar|apuntar)'
+        r'[^?!]{0,90}\?\s*(?:si[^.!?]{0,25}[.!]\s*)?'
+        r'(?:espere(?:me)?|espera|permitame)(?: un (?:momento|momentito)| tantito)?[.!]\s*'
+        r'(?:gracias[.!]\s*)?(?P<answer>a ver[, ]+diga(?:me|nme)|ahora si[, ]+diga(?:me|nme)|listo[, ]+diga(?:me|nme))\b')
+    for m in ready.finditer(source):
+        if _role_at(text,segments,m.start('answer'))in{'GESTOR','TITULAR'}:continue
+        if BAD_PREFIX.search(source[max(0,m.start()-80):m.start()]):continue
+        if re.match(r'\s*\?',source[m.end():]):continue
+        if not re.search(r'\b(?:el numero es|es el|cincuenta|\d{2})\b',source[m.end():m.end()+100]):continue
+        found.append({'text':m.group(),'phrase':m['answer'],'method':'PREPARACION_Y_SOLICITUD_DE_DICTADO_TRAS_ESPERA',
+            'speaker_role':_role_at(text,segments,m.start('answer')),'human_verified':False,'contact_digits_verified':False})
     from app.services.message_contact_evidence import callback_dictation_fragments
     from app.services.payment_reference_validation import callback_numbers
     fragments=callback_dictation_fragments(text)+callback_numbers(text)

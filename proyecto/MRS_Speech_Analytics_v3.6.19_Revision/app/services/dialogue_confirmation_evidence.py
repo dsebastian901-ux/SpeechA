@@ -26,6 +26,13 @@ def future_confirmation_events(text,segments=()):
       ('DECLARACION_FECHA_ACTUAL',re.compile(
         r'\b(?P<answer>(?:lo hago|lo realizo) el dia de hoy|'
         r'(?:hoy|manana) mismo lo (?:hago|realizo)|hoy mismo[^.!?]{0,90}termino de comer lo hago|pero manana queda(?: perfecto)?(?: claro que si)?)\b')),
+      ('PROPUESTA_FECHA_IMPORTE_ACEPTADA',re.compile(
+        r'\b(?:seria|quedaria|quedamos|estaria confirmando|estariamos confirmando|confirmamos) '
+        r'(?P<offer>[^?!]{0,45}'+DATE+r'[^?!]{0,140})[.!?]\s*'
+        r'(?P<answer>(?:(?:ah|bueno|ok|aja)[, ]+){0,2}(?:si|asi es|de acuerdo|esta bien|correcto))\b')),
+      ('COMPROMISO_PROPIO_CON_FECHA',re.compile(
+        r'\b(?P<answer>(?:hoy|manana|el (?:lunes|martes|miercoles|jueves|viernes|sabado|domingo))'
+        r' (?:yo )?(?:me comprometo a pagar(?:lo)?|voy a (?:pagar|depositar|abonar)|realizo (?:el |mi )?pago))\b')),
     ]
     for method,pattern in patterns:
         for match in pattern.finditer(source):
@@ -41,6 +48,11 @@ def future_confirmation_events(text,segments=()):
                     or re.match(r'\s*\?',source[match.end():])):
                 continue
             answer=match['answer'];after=source[match.end():match.end()+75].split('.')[0]
+            if method == 'PROPUESTA_FECHA_IMPORTE_ACEPTADA':
+                if (not re.search(r'\b(?:pago|pagar|depositar|cantidad|pesos)\b',match['offer'])
+                        or not re.search(r'\b(?:\d{2,}|mil|cien|ciento|cientos|quinientos)\b',match['offer'])
+                        or re.search(r'\b(?:anotar|telefono|numero|whatsapp|comprobante|folio|referencia)\b',match['offer'])):
+                    continue
             if method == 'IMPORTE_FINAL_CON_ACEPTACION' and re.search(
                     r'\b(?:whatsapp|telefono|numero de convenio|clave|clabe|folio|referencia|comprobante)\b',before[-100:]):
                 continue

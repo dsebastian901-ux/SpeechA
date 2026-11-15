@@ -1,0 +1,125 @@
+{
+  "revision": "3.6.19-r52",
+  "tests": {
+    "passed": 2499,
+    "skipped": 7,
+    "failed": 0
+  },
+  "rule_evaluations": 2327,
+  "latest_batch": {
+    "items": 1321,
+    "evaluated": 352,
+    "pending_preserved": 969,
+    "before": {
+      "SIN_RELACION_EXCEL": 116,
+      "NO_APROBADO_MENOR_80": 25,
+      "REVISAR": 175,
+      "APROBADO": 15,
+      "FALLA_GRAVE": 11,
+      "NO_APROBADO": 6,
+      "APROBADO_ETIQUETA_CORREGIDA": 3,
+      "MAL_DICTAMINADO": 1
+    },
+    "after": {
+      "SIN_RELACION_EXCEL": 116,
+      "NO_APROBADO_MENOR_80": 25,
+      "REVISAR": 168,
+      "APROBADO": 16,
+      "FALLA_GRAVE": 11,
+      "NO_APROBADO": 7,
+      "APROBADO_ETIQUETA_CORREGIDA": 9
+    },
+    "missing_excel_relations": 399,
+    "processed_missing_excel": 116,
+    "originals_and_asr_preserved": true,
+    "excessive_review_resolved": false
+  },
+  "previous_controls": {
+    "previous403": {
+      "calls": 403,
+      "outcomes": {
+        "REVISAR": 266,
+        "FALLA_GRAVE": 39,
+        "APROBADO": 60,
+        "NO_APROBADO": 11,
+        "APROBADO_ETIQUETA_CORREGIDA": 27
+      }
+    },
+    "previous100": {
+      "calls": 100,
+      "outcomes": {
+        "APROBADO": 21,
+        "REVISAR": 39,
+        "NO_APROBADO": 9,
+        "NO_APROBADO_MENOR_80": 25,
+        "APROBADO_ETIQUETA_CORREGIDA": 3,
+        "FALLA_GRAVE": 3
+      }
+    },
+    "previous103": {
+      "calls": 103,
+      "outcomes": {
+        "REVISAR": 70,
+        "FALLA_GRAVE": 8,
+        "APROBADO": 21,
+        "APROBADO_ETIQUETA_CORREGIDA": 3,
+        "NO_APROBADO_MENOR_80": 1
+      }
+    },
+    "previous1007": {
+      "calls": 1007,
+      "outcomes": {
+        "REVISAR": 800,
+        "NO_APROBADO_MENOR_80": 66,
+        "NO_APROBADO": 20,
+        "APROBADO_ETIQUETA_CORREGIDA": 17,
+        "APROBADO": 88,
+        "FALLA_GRAVE": 16
+      }
+    },
+    "old362": {
+      "calls": 362,
+      "outcomes": {
+        "REVISAR": 255,
+        "APROBADO": 47,
+        "NO_APROBADO": 11,
+        "FALLA_GRAVE": 22,
+        "APROBADO_ETIQUETA_CORREGIDA": 27
+      }
+    }
+  },
+  "confirmed_privacy_preserved": true,
+  "fresh_program": {
+    "revision": "3.6.19-r52",
+    "calls": 22,
+    "selection": "all changed previous-362 outcomes/scores plus deterministic safety and unchanged controls, without saved human confirmations",
+    "asr_executed": false,
+    "asr_boundary": "controlled saved original ASR",
+    "previous_checkpoint_imported_by_application": false,
+    "original_audio_copies_sha256_match": true,
+    "normal_batch_and_reanalysis_match": true,
+    "source_unchanged": true,
+    "reports_and_nonpayment_generated": true,
+    "outcomes": {
+      "APROBADO": 4,
+      "REVISAR": 16,
+      "FALLA_GRAVE": 1,
+      "APROBADO_ETIQUETA_CORREGIDA": 1
+    },
+    "seconds": 8.283946752548218
+  },
+  "new_whisper_run": false,
+  "human_listening_declared": false,
+  "native_windows_run": false,
+  "offline_autonomous_installer_delivered": false,
+  "users_usb_delivered": false,
+  "report_format_validation": {
+    "rows": 1600,
+    "columns": 11,
+    "same_values_and_formatting": true,
+    "baseline_seconds": 1.5561151489996519,
+    "r52_seconds": 0.23459455400006846,
+    "speedup": 6.63,
+    "scope": "synthetic styling benchmark; not Whisper or complete batch timing"
+  }
+}

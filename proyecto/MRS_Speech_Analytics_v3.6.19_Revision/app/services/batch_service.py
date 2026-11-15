@@ -453,6 +453,7 @@ class BatchService:
         category = str(classification.get("clasificacion") or "REVISAR").strip().upper()
         folder_map = {
             "APROBADO_ETIQUETA_CORREGIDA": "APROBADOS_ETIQUETA_CORREGIDA",
+            "SIN_RELACION_EXCEL": "SIN_RELACION_EXCEL",
             "APROBADO": "APROBADOS",
             "APROBADOS": "APROBADOS",
             "APROBADO_SIN_ETIQUETAR": "APROBADO_SIN_ETIQUETAR",
@@ -919,6 +920,7 @@ class BatchService:
                     classification["motivo"] = " | ".join(unique_reasons)
 
                 # Una sola puerta de decisión para individual, lote con Excel y solo audios.
+                classification['missing_excel_relation'] = bool(self.has_relation_excel() and record is None)
                 decision = AnalyticsService.shared_quality_decision(
                     analytics_metadata, score, minimum_score, duration_seconds, classification)
                 classification.update(decision)
@@ -959,7 +961,7 @@ class BatchService:
 
                 if self.has_relation_excel() and record is None:
                     item["message"] = (
-                        f"Analytics {score:.1f}% · REVISAR · "
+                        f"Analytics {score:.1f}% · {classification['clasificacion']} · "
                         "audio sin relacion en Excel"
                     )
                 else:

@@ -75,7 +75,13 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
     if destination == source or destination.exists():
         raise ValueError("Elija una carpeta nueva; no se sobrescriben checkpoints.")
     outcomes = {}
+    pending_count = 0
     for item in updated["items"]:
+        # Un guardado intermedio conserva la cola. No crear ERROR, dictamen,
+        # ni una transcripción para audios que todavía no se procesaron.
+        if item.get('status') in {'pendiente', 'procesando', 'cancelado'} and not item.get('result'):
+            pending_count += 1
+            continue
         try:
             data = item.get("result") or {}
             if not data or (isinstance(data, dict) and not str(data.get("texto") or "").strip()):
@@ -91,7 +97,9 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
             analysis = AnalyticsService.analyze_transcription(transcription, relation)
             old = item.get("classification") or {}
             base = {"estatus_autorizado": old.get("estatus_autorizado"),
-                    "tiene_nombre_final": bool(relation.get("nombre_final"))}
+                    "tiene_nombre_final": bool(relation.get("nombre_final")),
+                    "missing_excel_relation": bool(not relation and (payload.get('mode') == 'A'
+                        or payload.get('relation_excel') or item.get('relation_status') == 'sin_relacion'))}
             decision = AnalyticsService.shared_quality_decision(
                 analysis.metadata, analysis.compliance_score, old.get("puntaje_minimo") or 80,
                 transcription.duration_seconds, base)
@@ -134,7 +142,7 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
         note.append(['Solo se completó asignacion/mora; tarjetas, nombres y transcripciones conservados.'])
     workbook.save(report)
     workbook.close()
-    updated["completed"] = not outcomes.get("ERROR")
+    updated["completed"] = not outcomes.get("ERROR") and pending_count == 0
     updated["updated_at"] = datetime.now(timezone.utc).isoformat()
     updated["last_report_path"] = report
     from app.services.nonpayment_report_service import NonpaymentReportService
@@ -143,8 +151,11 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
     updated['nonpayment_report_error'] = companion_status['error']
     updated["reanalysis"] = {"engine_revision": AnalyticsService.ENGINE_REVISION,
                               "source_sha256": hashlib.sha256(raw).hexdigest(),
-                              "whisper_executed": False, "audio_files_copied": False, "outcomes": outcomes}
+                              "whisper_executed": False, "audio_files_copied": False,
+                              "pending_preserved": pending_count, "outcomes": outcomes}
+    updated['engine_revision'] = AnalyticsService.ENGINE_REVISION
     destination.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
     assert source.read_bytes() == raw, "El origen cambió durante el reanálisis"
     return {"report": report, "nonpayment_report": companion_status["path"], "nonpayment_report_error": companion_status["error"], "checkpoint": str(destination), "outcomes": outcomes,
-            "evaluations": len(updated["items"]), "engine_revision": AnalyticsService.ENGINE_REVISION}
+            "evaluations": sum(outcomes.values()), "pending_preserved": pending_count,
+            "engine_revision": AnalyticsService.ENGINE_REVISION}

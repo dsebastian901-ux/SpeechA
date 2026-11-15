@@ -12,6 +12,12 @@ def callback_acknowledgements(text,segments=()):
         if not m:continue
         pos=phone['text_end']+m.start('answer')
         if _role_at(text,segments,pos)in{'GESTOR','TITULAR'}:continue
+        # «Así es, a ese número que se comunique...» sigue dictando la
+        # instrucción; por sí sola no contiene una respuesta del receptor.
+        continuation=after[m.end():]
+        if (_role_at(text,segments,pos)=='NO DETERMINADO' and re.match(
+                r'[, :]*(?:(?:a|en) (?:ese|este) numero )?que se (?:comunique|contacte|ponga en contacto)\b',continuation)):
+            continue
         if re.match(r'[,. ]*(?:pero no|no puedo|no quiero|si tengo tiempo)\b',after[m.end():]):continue
         found.append({'text':phone['text']+' '+m.group(),'phrase':m['answer'],'method':'ACUSE_LOCAL_TRAS_DICTADO_DE_CONTACTO',
             'speaker_role':_role_at(text,segments,pos),'start':None,'end':None,'human_verified':False,'contact_digits_verified':False})

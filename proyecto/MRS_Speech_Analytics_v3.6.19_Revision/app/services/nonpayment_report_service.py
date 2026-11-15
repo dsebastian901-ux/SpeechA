@@ -41,7 +41,8 @@ def detect_nonpayment(item):
     if contact == 'NO CONOCEN A DEUDOR':
         return answer('NO_CONOCE_AL_DEUDOR')
     # No atribuir la falta de dinero de un familiar al titular ausente.
-    units = sentence_evidence(text, result.get('segmentos') or [])
+    from app.services.declarative_evidence import declarative_units
+    units = list(declarative_units(text, result.get('segmentos') or []))
     holder_turn = any(u['speaker_role'] == 'TITULAR' for u in units)
     if contact.startswith('TERCERO') and not holder_turn:
         return answer('CONTACTO_CON_TERCERO_SIN_MOTIVO_DEL_TITULAR')

@@ -16,6 +16,7 @@ OWN = re.compile(
     r'(?:la tarjeta )?la (?:extr[aavie]+|di de baja)|'
     r'ya tengo el (?:codigo|folio)(?=[^.!?]{0,80}cancelad)|la quiero (?:cancelar|dar de baja)|ya realice (?:mi |el )?pago|por eso lo deje de pagar|no (?:(?:les|le|lo|te) )?(?:voy a|pienso|quiero) pagar|yo no debo nada|'
     r'no (?:he llegado a ningun acuerdo|tengo (?:esa|la) cantidad|me niego a pagar)|'
+    r'no me alcanza|'
     r'(?:me )?(?:hicieron|habian hecho) una propuesta|'
     r'(?:yo )?queria ver si podia hacer (?:algun |un )?acuerdo de pago|'
     r'(?:mi finalidad|lo que quiero hacer) (?:si )?es (?:pagar|un convenio))\b')
@@ -24,6 +25,7 @@ PENDING = re.compile(
     r'no tendr[eia]+ posibilidad|no seria posible|'
     r'no (?:sabria|habria) (?:que )?decirle|'
     r'(?:no tengo|no dispongo de) (?:esa|la) cantidad|'
+    r'no me alcanza|(?:estoy|estaba) esperando (?:a que )?[^.!?]{0,65}\b(?:dinero|deposito|quincena)\b|'
     r'(?:(?:el dia de )?hoy|ahorita)[, ]+no|'
     r'no me niego a pagar[^.!?]{0,110}(?:plazos|seman[aa]|pagos)|'
     r'(?:primero|antes de pagar)[^.!?]{0,90}(?:consultar|revisar|aclarar)|'
