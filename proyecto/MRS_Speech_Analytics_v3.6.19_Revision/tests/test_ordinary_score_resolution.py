@@ -39,7 +39,9 @@ def test_low_score_ordinary_failure_is_rejected_without_certifying_unresolved_id
 ])
 def test_low_score_does_not_close_safety_or_financial_review(key,value):
     m=ordinary();m[key]=value
-    assert A.shared_quality_decision(m,60,duration_seconds=100)['clasificacion']=='REVISAR'
+    d=A.shared_quality_decision(m,60,duration_seconds=100)
+    assert d['clasificacion']=='NO_APROBADO_MENOR_80' and d['requires_alert_review']
+    assert d['pending_alerts']
 
 
 @pytest.mark.parametrize('score',[80,100])
@@ -57,4 +59,4 @@ def test_unexplained_low_score_keeps_review_and_verified_short_duration_is_rejec
     assert A.shared_quality_decision(m,60,duration_seconds=100)['clasificacion']=='REVISAR'
     m=ordinary();m['penalties']=[{'id':'PEN001','points':20}]
     assert A.shared_quality_decision(m,60,duration_seconds=100)['clasificacion']=='REVISAR'
-    assert A.shared_quality_decision(ordinary(),60,duration_seconds=40)['clasificacion']=='NO_APROBADO'
+    assert A.shared_quality_decision(ordinary(),60,duration_seconds=40)['clasificacion']=='NO_APROBADO_MENOR_80'

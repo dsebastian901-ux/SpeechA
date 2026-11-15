@@ -27,6 +27,12 @@ def contact_dialogue_evidence(text, segments=()):
         if _recipient(source,text,segments,m.start('answer'),m.end('answer')):
             if re.search(r'\bno (?:soy|es|somos|era)\b',m['answer']):continue
             result['family'].append(_record(source,m,text,segments,'PARENTESCO_EN_RESPUESTA_LOCAL',phrase=m['kin']))
+    # Declaración de parentesco en respuesta personal, también tras preguntar
+    # si es mayor de edad. No tomar una conjetura del gestor como respuesta.
+    direct_answer=re.compile(r'\b(?P<answer>si[, ]+(?P<kin>'+KIN+r') (?:de (?:el|ella)|suy[oa]))\b')
+    for m in direct_answer.finditer(source):
+        if _recipient(source,text,segments,m.start('answer'),m.end('answer')):
+            result['family'].append(_record(source,m,text,segments,'PARENTESCO_DECLARADO_EN_RESPUESTA',phrase=m['kin']))
     # «Soy hija» y «habla su esposo» son autoidentificación de un tercero.
     direct=re.compile(r'\b(?P<answer>(?:(?:yo )?soy (?:su )?|(?:le )?habl[ao] su |no[, ]+es su )(?P<kin>'+KIN+r'))\b')
     for m in direct.finditer(source):
@@ -105,9 +111,9 @@ def expanded_unknown_response(text,segments=()):
 def declared_intermediary(text,segments=()):
     """Respuesta al nombre solicitado; la pregunta posterior no borra la ausencia."""
     source=normalize(text);none={'confirmed':False,'method':'SIN_RESPUESTA_INTERMEDIARIA','evidence':''}
-    prompt=r'(?:me (?:puede |podria |podre |pueden )?comunicar (?:por favor |de favor )?con|me comunico con|seria tan amable de comunicarme (?:por favor )?con|tengo(?: el)? (?:gusto|uso) con|hablo con|se encuentra)'
-    pattern=re.compile(r'\b'+prompt+r'\s+(?P<identity>[^?!.]{2,105})[?.]\s*(?P<answer>(?:ah[, ]+|este[, ]+|no[, ]+){0,2}'
-        r'(?:no se encuentra(?:n)?|no esta|salio|se le olvido (?:el |su )?telefono))\b')
+    prompt=r'(?:me (?:puede |podria |podre |pueden )?comunicar (?:por favor |de favor )?con|me comunico con|seria tan amable de comunicarme (?:por favor )?con|tengo(?: el)? (?:gusto|uso) con|hablo con|se encuentra|busco a|buenos dias[, ]+con|buenas tardes[, ]+con|buen dia[, ]+con)'
+    pattern=re.compile(r'\b'+prompt+r'\s+(?P<identity>[^?!.]{2,105}?)[?.]\s*(?P<answer>(?:ah[, ]+|este[, ]+|no[, ]+){0,2}'
+        r'(?:(?:el|ella) )?(?:no se encuentra(?:n)?|no esta(?: aqui| en casa)?|no ha llegado|esta trabajando|salio|se le olvido (?:el |su )?telefono))\b')
     negative_identity=re.compile(r'\bes usted(?: (?:el|la) titular)?\?\s*(?P<answer>no(?:[, ]+(?:pero )?digame)?)\b')
     for p in (pattern,negative_identity):
         for m in p.finditer(source):

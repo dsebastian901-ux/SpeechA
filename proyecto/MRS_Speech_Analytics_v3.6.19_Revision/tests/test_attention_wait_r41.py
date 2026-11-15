@@ -247,7 +247,7 @@ def test_report_exposes_complaint_and_wait_windows_without_changing_existing_tai
     assert row['Validación espera 65 s'].startswith('REVISAR')
     assert '25.00–90.00' in row['Intervalos espera 65 s']
     for headers in (B.HEADERS, B.MODE_B_HEADERS):
-        assert headers[-5:] == B.ARCO_HEADERS
+        assert headers[-7:-2] == B.ARCO_HEADERS
         assert len(headers) == len(set(headers))
 
 

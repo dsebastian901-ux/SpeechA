@@ -85,7 +85,7 @@ def test_third_party_identity_alone_is_not_a_delivered_message(identity):
 
 def test_confirmed_message_to_a_third_party_remains_detected():
     r = A.calculate_basic_compliance(
-        "Habla MRS. Es nuestro proveedor. Dígale que se comunique al número de contacto. Le paso el recado.",
+        "Habla MRS. Es nuestro proveedor. Dígale que se comunique al número de contacto 5512345678. Le paso el recado.",
         {"estatus_grabacion": "MENSAJE CON TERCERO"})
     assert r["status_validation"]["matches"] is True
     assert r["status_validation"]["detected_status"] == "MENSAJE CON TERCERO"

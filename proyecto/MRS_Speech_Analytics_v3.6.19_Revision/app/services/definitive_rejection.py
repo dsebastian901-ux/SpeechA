@@ -1,4 +1,4 @@
-"""Incumplimientos ordinarios comprobables; no resuelve alertas de seguridad."""
+"""Incumplimientos comprobables; las alertas independientes se conservan."""
 import re
 from app.services.conversation_evidence import normalize,sentence_evidence,_role_at
 
@@ -12,8 +12,8 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
     pattern=re.compile(r'\b(?:no (?:quiero|puedo|voy a) (?:recibir|tomar|pasar|dar|transmitir) (?:el |un |su )?(?:recado|mensaje)|'
                        r'no (?:le |se lo )?(?:voy a|puedo|quiero) (?:pasar|dar|transmitir) (?:el |un |su )?(?:recado|mensaje)|'
                        r'no soy (?:su )?mensajer[oa]|no me interesa recibir (?:el |su )?recado|'
-                       r'no tengo (?:donde|con que) (?:anotar|apuntar)|no puedo (?:anotar|apuntar|anotarlo|apuntarlo)|'
-                       r'no traigo (?:aqui )?(?:en que|con que|como) (?:anotar|apuntar))\b')
+                       r'no tengo (?:donde|con que) (?:anotar(?:lo)?|apuntar(?:lo)?)|no puedo (?:anotar|apuntar|anotarlo|apuntarlo)|'
+                       r'no traigo (?:aqui )?(?:en que|con que|como) (?:anotar(?:lo)?|apuntar(?:lo)?))\b')
     from app.services.declarative_evidence import declarative_units
     for unit in declarative_units(text,segments):
         value=normalize(unit['text']);at=source.find(value,cursor)
@@ -23,7 +23,7 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
             before=value[max(0,match.start()-90):match.start()]
             if '?'in value or re.search(r'\b(?:dice que|dijo que|diga que|repita que|no es cierto que|'
                                        r'no es verdad que|si|en caso de que|cuando)\b[^.!?]{0,30}$',before):continue
-            if re.search(r'\b(?:anotar|apuntar)\b',match.group()):
+            if re.search(r'\b(?:anotar(?:lo)?|apuntar(?:lo)?)\b',match.group()):
                 from app.services.message_dialogue_evidence import phone_present
                 tail=source[at+match.end():]
                 if phone_present(tail)or re.search(r'\b(?:ya (?:lo )?tengo|pantalla|memorizo|me lo se|mensaje de texto|whatsapp|por mensaje)\b',tail):continue
@@ -43,7 +43,7 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
     if not events:
         # Imposibilidad de anotar seguida de cierre para llamar después. Una
         # alternativa propuesta sin entrega no equivale a recado recibido.
-        unable=re.search(r'\bno (?:puedo (?:anotar|apuntar|anotarlo|apuntarlo)|tengo[^.!?]{0,35}\b(?:anotar|apuntar))\b',source)
+        unable=re.search(r'\bno (?:puedo (?:anotar|apuntar|anotarlo|apuntarlo)|tengo[^.!?]{0,35}\b(?:anotar(?:lo)?|apuntar(?:lo)?))\b',source)
         deferred=re.search(r'\b(?:me comunico|nos comunicamos|le marco|me comunicare|me voy a comunicar|nos comunicaremos) (?:nuevamente |entonces )?(?:mas tarde|en otro momento|nuevamente)\b',source[-220:])
         if unable and deferred and not re.search(r'\b(?:problemas?|dificultades?|nada que|impedimentos?)\b',unable.group()):
             before=source[max(0,unable.start()-600):unable.start()]
@@ -78,8 +78,13 @@ def definitive_rejection(metadata,findings,duration_seconds):
                 and _outside_question(value,at,at+len(phrase))
                 and not re.search(r'\b(?:parece|quizas|tal vez|supongo|podria ser|no se si)\b',value[:at])):
             confirmed_complaint=True;break
-    allowed=ORDINARY_REVIEW_CODES|({'MISTREATMENT_REPORT'}if confirmed_complaint else set())
-    if any(f['severity']=='CRITICAL'or f['code']not in allowed for f in blocking):return None
+    # Decisión expresa de la usuaria: el rechazo comprobado cierra calidad;
+    # otra duda no lo convierte de nuevo en REVISAR ni desaparece del reporte.
+    if any(f['severity']=='CRITICAL'for f in blocking):return None
+    coverage=(metadata.get('negotiation_validation')or{}).get('followup_coverage_validation')or{}
+    if coverage.get('confirmed_failure'):
+        return {'rule_group':12,'code':'CONFIRMED_INSUFFICIENT_FOLLOWUP','severity':'CONFIRMED_NONCRITICAL',
+            'source_field':'negotiation_validation','reasons':[coverage['reason']]}
     if confirmed_complaint:
         return {'rule_group':11,'code':'CONFIRMED_SERVICE_COMPLAINT','severity':'CONFIRMED_NONCRITICAL',
             'source_field':'treatment_validation','reasons':['Queja de atención previa expresada en la conversación; bloquea aprobación por criterio operativo.']}
@@ -87,7 +92,4 @@ def definitive_rejection(metadata,findings,duration_seconds):
     if refused.get('confirmed'):
         return {'rule_group':4,'code':'EXPLICIT_MESSAGE_REFUSAL','severity':'CONFIRMED_NONCRITICAL',
             'source_field':'explicit_message_refusal','reasons':[refused['reason']]}
-    if duration_seconds is not None and 0<float(duration_seconds)<60:
-        return {'rule_group':13,'code':'CONFIRMED_SHORT_DURATION','severity':'CONFIRMED_NONCRITICAL',
-            'source_field':'duration_seconds','reasons':['Duración comprobada inferior al mínimo de 60 segundos.']}
     return None

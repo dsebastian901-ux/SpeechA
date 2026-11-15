@@ -49,7 +49,7 @@ def test_explicit_refusal_is_closed_without_approving_or_clearing_security():
     assert d['clasificacion']=='NO_APROBADO'and not d['aprobado']
     assert a.metadata['explicit_message_refusal']['confirmed']
     unsafe=analyze(text+' Tiene una deuda de 1500 pesos.').metadata['shared_classification']
-    assert unsafe['clasificacion']=='REVISAR'
+    assert unsafe['clasificacion']=='NO_APROBADO' and unsafe['requires_alert_review']
 
 @pytest.mark.parametrize('text',[
  'Gestor: No quiero recibir el recado.',
@@ -62,7 +62,7 @@ def test_quoted_question_or_sender_refusal_is_not_recipient_failure(text):
 
 
 def test_short_duration_with_security_uncertainty_remains_review():
-    assert analyze('Habla MRS. Soy su hermana.',duration=40).metadata['shared_classification']['clasificacion']=='NO_APROBADO'
+    assert analyze('Habla MRS. Soy su hermana.',duration=40).metadata['shared_classification']['clasificacion']=='REVISAR'
     assert analyze('Habla MRS. Soy su hermana. Tiene una deuda de 1500 pesos.',duration=40).metadata['shared_classification']['clasificacion']=='REVISAR'
 
 

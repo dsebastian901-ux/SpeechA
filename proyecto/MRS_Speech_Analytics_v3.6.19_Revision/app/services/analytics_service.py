@@ -431,6 +431,7 @@ class AnalyticsService:
         analysis.metadata["death_followup_validation"] = compliance.get("death_followup_validation", {})
         analysis.metadata["explicit_message_refusal"] = compliance.get("explicit_message_refusal", {})
         analysis.metadata["message_delivery_validation"] = compliance.get("message_delivery_validation", {})
+        analysis.metadata["message_workflow_validation"] = compliance.get("message_workflow_validation", {})
         analysis.metadata["contact_conflict_validation"] = compliance.get("contact_conflict_validation", {})
         analysis.metadata["contact_validation"] = compliance.get("contact_validation", {})
         analysis.metadata['associate_contact_validation'] = compliance.get('associate_contact_validation', {})
@@ -1454,10 +1455,31 @@ class AnalyticsService:
             recado_callback = True
             recado_transmitted = True
             recado_assessment['return_purpose'] = traced_return
-        recado_real = bool(recado_callback and (recado_transmitted or leaves_message)
-                           and not (recado_declines or recado_refusal)
-                           and recado_recibido_explicito and not message_delivery_validation['review_required'])
+        from app.services.message_workflow import directed_notification
+        directed_notice=directed_notification(text,segments)
+        if directed_notice:
+            recado_callback=True;recado_transmitted=True
+            recado_assessment['directed_notification']=directed_notice
+        from app.services.message_workflow import workflow_validation
+        message_workflow_validation=workflow_validation(text,segments,recado_assessment,
+            recado_callback and (recado_transmitted or leaves_message),
+            message_refusal_validation,message_delivery_validation,confirmed_recado)
+        # La imposibilidad temporal o un aviso condicionado a encontrar al
+        # titular no sustituyen el resultado final de recepción.
+        recado_refusal=recado_declines=message_refusal_validation.get('confirmed',False)
+        recado_real=message_workflow_validation['complete']
+        if (not recado_real and message_workflow_validation['recipient_accepted']
+                and message_workflow_validation['directed_body'] and not message_workflow_validation['callback_available']
+                and not message_workflow_validation['final_refusal']):
+            message_delivery_validation={'review_required':True,
+                'reason':'La recepción del recado consta, pero el contacto de retorno no quedó completo ni fue confirmado expresamente como correcto; cotejar el dictado, sin completar dígitos.',
+                'evidence':[u for u in sentence_evidence(text,segments) if re.search(r'\b(?:numero|telefono|anot\w*|\d{2})\b',norm(u['text']))][-8:]}
         if recado_real:
+            message_delivery_validation={'review_required':False,'reason':'Recepción y contacto acreditados en el diálogo.','evidence':message_workflow_validation['events']}
+        if recado_real:
+            if contact_type=='CONTACTO NO DETERMINADO' and agent_statement(text,segments,
+                    r'\b(?:dejo|deja|proporciono) (?:este |su |el )?(?:numero|telefono) (?:como )?(?:numero de )?referencia\b'):
+                contact_type='TERCERO';third_party=True
             detected_status = {"TERCERO / FAMILIAR": "MENSAJE CON FAMILIAR",
                                "TERCERO / TRABAJO": "MENSAJE EN TRABAJO",
                                "TERCERO": "MENSAJE CON TERCERO"}.get(contact_type, detected_status)
@@ -1518,6 +1540,8 @@ class AnalyticsService:
         # Divulgación explícita de mora/atraso a un tercero.
         # No se activa por la palabra "atraso" aislada: exige una construcción
         # que atribuya el atraso/incumplimiento al titular o a su cuenta/tarjeta.
+        from app.services.generic_arrears_policy import mask_generic_arrears_for_legacy
+        protected_legacy_text=mask_generic_arrears_for_legacy(normalized)
         arrears_status_disclosed = bool(
             re.search(
                 r"\b(?:"
@@ -1526,7 +1550,7 @@ class AnalyticsService:
                 r"\batraso\s+(?:con|en)\s+(?:el\s+)?pago\b|"
                 r"\b(?:cuenta|tarjeta)\b.{0,30}\b(?:atrasad|vencid|moros)\w*\b"
                 r")",
-                normalized,
+                protected_legacy_text,
             )
         )
 
@@ -1587,11 +1611,11 @@ class AnalyticsService:
                          r"(?:dos|tres|cuatro|cinco|seis|\d+) mensualidades|"
                          r"presenta (?:un |una )?(?:adeudo|deuda)|"
                          r"cubrir (?:el |su )?atraso|"
-                         r"cuenta (?:que ha sido )?asignada (?:a |al )?(?:juridico|cobranza))\b", normalized)
+                         r"cuenta (?:que ha sido )?asignada (?:a |al )?(?:juridico|cobranza))\b", protected_legacy_text)
             or re.search(r"\b(?:deuda pendiente|adeudo pendiente|"
                          r"negativa de pago|recuperacion (?:del|de su|en el) saldo|"
                          r"respecto a su atraso|en relacion a su atraso|"
-                         r"presenta (?:un )?(?:atraso|adeudo))\b", normalized)
+                         r"presenta (?:un )?(?:atraso|adeudo))\b", protected_legacy_text)
         )
 
         financial_information = any([
@@ -2387,9 +2411,14 @@ class AnalyticsService:
         pending_decision = pending_status(dialogue, commitment_confirmation, payment_confirmation_case)
         non_holder_scenario = contact_type not in {"TITULAR", "CONTACTO NO DETERMINADO"} or recado_real
         explicit_decline = contact_type == "TITULAR" and commitment_confirmation.get('declined') and not payment_confirmation_case
-        is_convenio = bool(not non_holder_scenario and not pending_decision and not explicit_decline and (
-            excel_status == "CONVENIO" or (contact_type == "TITULAR" and confirms_commitment
-                                         and promise_date is not None and not payment_confirmation_case)))
+        # El Excel puede estar mal etiquetado. Las obligaciones de un NUEVO
+        # convenio nacen de su aceptación en la conversación, no de PP en
+        # la fila original. Ofertas prohibidas y fraude se validan aparte.
+        named_agreement=bool(agent_statement(text,segments,
+            r'\b(?:genero|generamos|confirmo|confirmamos) (?:su |el |un )?convenio\b'))
+        is_convenio = bool(not non_holder_scenario and contact_type=='TITULAR'
+            and confirms_commitment and (promise_date is not None or named_agreement)
+            and not payment_confirmation_case and not pending_decision and not explicit_decline)
         # Los lugares de pago también se revisan en llamadas de cobranza donde
         # el gestor instruye o solicita realizar un pago, aunque el estatus Excel
         # no sea literalmente CONVENIO (por ejemplo 1PV).
@@ -2884,7 +2913,10 @@ class AnalyticsService:
                 for u in sentence_evidence(text,segments))
         )
         try:
-            minimum_for_attempt = float(str(context.get("pago_minimo") or "").replace(",", ""))
+            raw_minimum = context.get("pago_minimo")
+            minimum_text = str(raw_minimum).replace("$", "").strip() if raw_minimum is not None else ""
+            minimum_for_attempt = money_value(minimum_text) if minimum_text else None
+            if minimum_for_attempt is not None and minimum_for_attempt < 0:minimum_for_attempt=None
         except (TypeError, ValueError):
             minimum_for_attempt = None
         # v3.6.14: "cubre el mínimo" solo puede afirmarse cuando existen
@@ -3001,7 +3033,7 @@ class AnalyticsService:
                 ["FP011", "FP012", "FP013", "FP014", "FP015"],
             )
 
-        if partial_payment and not partial_explanation:
+        if requires_new_negotiation_validation and partial_payment and not partial_explanation:
             add_penalty(
                 "PEN015",
                 "Negociación",
@@ -3034,7 +3066,7 @@ class AnalyticsService:
                 r"\b(?:tiene|cuenta con|mande|envie|comparta|enviar|mandar|enviarnos|haga llegar)\b[^.!?]{0,60}"
                 r"\b(?:comprobante|captura|ticket)\b") or receipt_followup_question or (not negotiation_attempt and agent_statement(text,segments,r'\batencion al cliente\b') and re.search(r'\bsi el pago ya se ve reflejado\b',normalized))))
         new_payment_proposals = remaining_payment_proposals(text, segments)
-        unaccepted_new_payment_instruction = bool(is_convenio and payment_confirmation_case
+        unaccepted_new_payment_instruction = bool(contact_type=='TITULAR' and payment_confirmation_case and payment_followup_case
             and not confirms_commitment and (bool(new_payment_proposals) or agent_statement(text, segments,
                 r"\b(?:tiene|tendria|tendriamos|necesita) que (?:realizar|aplicar|cubrir|hacer) (?:un |el |su )?(?:pago|deposito)\b|"
                 r"\bseria que realice (?:un |el |su )?pago\b|"
@@ -3348,6 +3380,9 @@ class AnalyticsService:
                 # No depende de que exista o no una palabra financiera cerca. Si la cifra
                 # pertenece sintácticamente a terminación/tarjeta/referencia/teléfono,
                 # jamás entra al conjunto de cantidades monetarias.
+                if re.search(r'\b(?:a las|a la|hasta las|desde las|horario de)\s*$',before):
+                    return True  # La hora de pago/atención no es importe.
+
                 direct_before = before[-70:]
                 direct_after = after[:70]
                 if re.search(
@@ -4027,6 +4062,7 @@ class AnalyticsService:
             "date_rule": None,
             "date_effect": None,
             "is_negotiation": requires_new_negotiation_validation,
+            "financial_validation_applicable": bool(requires_new_negotiation_validation or payment_confirmation_case or detected_claim_amount is not None or detected_balance_amount is not None or amount_review),
             "dispute_guidance": dispute_guidance,
             "pending_decision": pending_decision,
             "payment_already_made": payment_already_made,
@@ -4134,6 +4170,18 @@ class AnalyticsService:
             negotiation_validation["review_required"] = True
             negotiation_validation["reasons"].append(prior_payment_binding["reason"] or
                 "Pago reportado sin importe y mínimo comparables; confirmar comprobante antes de dar cobertura por acreditada.")
+        pure_paid_followup=bool(payment_followup_case and not new_payment_proposals and not unaccepted_new_payment_instruction
+            and not prior_payment_with_current_decline and not prior_payment_with_current_condition)
+        negotiation_validation['followup_coverage_validation']={
+            'applies':pure_paid_followup,'reported_payment':prior_payment_total,'required_minimum':minimum_for_attempt,
+            'confirmed_failure':bool(pure_paid_followup and not data_inconsistency
+                and prior_payment_total is not None and minimum_for_attempt is not None and minimum_for_attempt>0
+                and prior_payment_total+.009<minimum_for_attempt and not prior_payment_binding['review_required']),
+            'reason':'El pago reportado es menor al mínimo de origen y el seguimiento no gestiona un complemento vigente.'}
+        if pure_paid_followup and not prior_payment_covers_minimum:
+            negotiation_validation['valid']=False
+            negotiation_validation['review_required']=True
+            negotiation_validation['reasons'].append('El seguimiento no demuestra que el pago reportado cubra el mínimo del Excel; confirmar importe y cobertura, sin acreditar el pago bancario.')
         if unaccepted_new_payment_instruction:
             negotiation_validation['valid']=False
             negotiation_validation['review_required']=True
@@ -4501,6 +4549,7 @@ class AnalyticsService:
             "explicit_message_refusal": (message_refusal_validation if contact_type != "TITULAR" else
                 {"confirmed":False,"evidence":[],"reason":"No corresponde rechazo de recado: conversación con titular."}),
             "message_delivery_validation": message_delivery_validation,
+            "message_workflow_validation": message_workflow_validation,
             "contact_conflict_validation": contact_conflict_validation,
             "contact_validation": contact_confirmation,
             "dialogue_evaluation": {k:v for k,v in dialogue.items() if k!="units"},

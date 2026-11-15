@@ -39,7 +39,7 @@ def add_rule_audit_sheets(workbook, items):
             detail.append(row)
             counts[group,evaluation['state']] += 1
     summary = workbook.create_sheet('RESUMEN_13_REGLAS')
-    states = ['SIN_HALLAZGOS','DESCUENTO_APLICADO','REQUIERE_REVISION','INCUMPLIMIENTO_CRITICO',
+    states = ['SIN_HALLAZGOS','DESCUENTO_APLICADO','REQUIERE_REVISION','ALERTA_PENDIENTE','INCUMPLIMIENTO_CRITICO',
               'INCUMPLIMIENTO_CONFIRMADO','OBSERVACION_CONSERVADA',
               'EXCEPCION_VALIDADA','ETIQUETA_CORREGIDA','NO_APLICA','NO_EVALUADO']
     summary.append(['Grupo','Regla','Total llamadas',*states])

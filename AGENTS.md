@@ -47,3 +47,7 @@ El usuario acepta identificación mediante pregunta nominal, respuesta y convers
 ## Corrección ratificada por la usuaria para r51
 - Un estatus de gestión diferente con evidencia suficiente, calidad >=80 y seguridad debe resolverse con APROBADOS_ETIQUETA_CORREGIDA, no REVISAR solo por la discrepancia. Conservar los bloqueos independientes y el requisito de fragmento probatorio.
 - Distinguir resultado de calidad de estatus de gestión. No imputar al gestor una falta solo porque el motor no extrae evidencia.
+
+## Decisiones integrales posteriores, 15/nov/2026
+- Aplicar DECISIONES_OPERATIVAS_20261115.md: respuestas explícitas de la usuaria posteriores a estas reglas. Aviso genérico de atraso permitido; aprobación menor de 60 segundos solo con gestión completa y carpeta separada; espera >=65 segundos cuenta aunque anunciada; seguimiento de pago exige cobertura del mínimo; contacto previo confirmado y recepción con aviso condicionado son válidos; separar quejas bancarias de atención; NO_APROBADO por incumplimiento comprobado conserva alertas de seguridad pendientes visibles, con FALLA_GRAVE confirmada prioritaria.
+- No producir una entrega por cada duda. Completar la revisión de todas las causas y entregar los cambios generales del programa conjuntamente.

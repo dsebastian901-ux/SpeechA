@@ -32,6 +32,8 @@ def mistreatment_reports(text, segments, phrases):
         r'(?:insulto|agredio|ofendio|amenazo|grito)|se esta burlando de mi)\b')
     paid_source=normalize(text)
     paid_report=bool(re.search(r'\bya (?:lo |les )?pague\b',paid_source))
+    from app.services.conversation_evidence import completed_payment
+    paid_report=paid_report or completed_payment(text,segments)['confirmed']
     cancelled_report=bool(re.search(r'\b(?:tarjeta (?:ya )?esta cancelada|ya (?:la |lo )?cancele|dio de baja la tarjeta)\b',paid_source))
     paid_call_complaint = bool(re.search(r'\b(?:mi cuenta ya esta liquidada|ceros? mi cuenta)\b',paid_source)
         and re.search(r'\b(?:respecto (?:a )?esta molestia|me molesta|estoy molest[oa]|no he tenido buenos comentarios anteriores)\b',paid_source))
@@ -53,6 +55,8 @@ def mistreatment_reports(text, segments, phrases):
             # Un pago reportado como no reconocido por el despacho previo es
             # una queja del servicio; no se confunde con esperar actualización.
             matches.extend(re.finditer(r'\bno (?:me |lo |me lo )?(?:hicieron|hizo|han hecho) valido\b',value))
+        if paid_report and re.search(r'\b(?:no es posible|cansado de explicar|cansada de explicar|pedi la aclaracion|sigo en las mismas)\b',paid_source):
+            matches.extend(re.finditer(r'\bme (?:estan )?(?:hablando|marcando|llamando) todos los dias\b',value))
         if paid_call_complaint:
             matches.extend(re.finditer(r'\b(?:a que se debe que|por que) me (?:sigan|siguen) llamando\b',value))
         matches.extend(re.finditer(
@@ -68,7 +72,7 @@ def mistreatment_reports(text, segments, phrases):
         previous = normalize(units[index-1]['text']) if index and units[index-1]['speaker_role'] != 'GESTOR' else ''
         if re.search(r'\b(?:les (?:marque|mande|envie)|hable y mande|mande muchos mensajes|llamadas por whatsapp)\b',value+' '+previous):
             matches.extend(re.finditer(r'\bno me (?:contestaron|respondieron|respondia|respondio)\b',value))
-        phone_context = bool(re.search(r'\b(?:llamadas?|llame|llamar|marcan|marcando|marcado|marcaron)\b', value+' '+previous))
+        phone_context = bool(re.search(r'\b(?:llamadas?|llame|llamar|llamando|llaman|marcan|marcando|marcado|marcaron)\b', value+' '+previous))
         if cancelled_report:
             matches.extend(re.finditer(r'\b(?:es molesto que esten (?:marque y marque|llamando)|'
                 r'(?:me |nos )?(?:sigan|siguen|estan) (?:molestando|hostigando)|'
@@ -76,7 +80,7 @@ def mistreatment_reports(text, segments, phrases):
         if phone_context:
             matches.extend(re.finditer(r'\b(?:me tienen|estoy) inundad[oa] de llamadas\b',value))
             if paid_report:
-                matches.extend(re.finditer(r'\b(?:(?:ya )?(?:le )?estoy recibiendo (?:las )?llamadas|me (?:llaman|marcan|hablan)) a cada rato\b',value))
+                matches.extend(re.finditer(r'\b(?:(?:ya )?(?:le )?estoy recibiendo (?:las )?llamadas|me (?:siguen )?(?:llamando|marcando|hablando)|me (?:llaman|marcan|hablan)) a cada rato\b',value))
             matches.extend(re.finditer(r'\b(?:no (?:me )?dejan(?: a uno)?[^.!?]{0,65}\b(?:tranquil[oa]|en paz)|'
                 r'me (?:estan|han estado|estuvieron) (?:hostigando|acosando)|'
                 r'no me (?:sigan|siguieran) (?:molestando|hostigando|acosando)|'
@@ -92,7 +96,7 @@ def mistreatment_reports(text, segments, phrases):
                 r'no me (?:lo |la )?quisieron (?:dar|resolver)|'
                 r'(?:me (?:enganaron|engano)|no se vale que enganen)|'
                 r'(?:muy|son|fueron|estan) (?:prepotentes|prepotantes|preputantes))\b',value))
-            matches.extend(re.finditer(r'\bno (?:les )?pedi (?:la |esa )?tarjeta\b',value))
+            # Desconocer una tarjeta por sí solo es disputa bancaria, no maltrato.
             if re.search(r'\b(?:estado de cuenta|desglose|folio)\b',value+' '+previous):
                 matches.extend(re.finditer(r'\b(?:ya fui[^.!?]{0,30}(?:no|tampoco) me lo dan|no me (?:dan|dieron|quieren dar) (?:el )?(?:estado de cuenta|desglose|folio))\b',value))
         if re.search(r'\b(?:ya pague|ya lo pague|ya les pague|capturas? de que ya pague)\b',value):

@@ -11,7 +11,7 @@ from app.services.whisper_service import whisper_service
 
 
 def source_checkpoint(tmp_path, *, name='same.wav', embedded=None):
-    text = {'archivo': name, 'texto': 'Habla MRS. Soy su madre. Dígale que se comunique. Le paso el recado.',
+    text = {'archivo': name, 'texto': 'Habla MRS. Soy su madre. Dígale que se comunique al número telefónico 5512345678. Le paso el recado.',
             'duracion_segundos': 90, 'segmentos': []}
     folder = tmp_path/'transcripts'; folder.mkdir()
     (folder/'same.json').write_text(json.dumps(text), encoding='utf-8-sig')

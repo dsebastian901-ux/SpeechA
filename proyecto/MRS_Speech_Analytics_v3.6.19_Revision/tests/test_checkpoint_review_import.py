@@ -30,7 +30,7 @@ def batches():
     validated["result"]["ruta_audio"] = "D:/new/synthetic.wav"
     master.append(amount); donors.append(validated)
     master.append({"file_name":"untouched.wav", "result":{"archivo":"untouched.wav", "duracion_segundos":90,
-        "texto":"Habla MRS. Soy su madre. Dígale que se comunique. Le paso el recado."}})
+        "texto":"Habla MRS. Soy su madre. Dígale que se comunique al número telefónico 5512345678. Le paso el recado."}})
     return {"items":master}, {"items":donors}
 
 

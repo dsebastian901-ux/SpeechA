@@ -52,7 +52,7 @@ def test_own_payment_after_named_request_resolves_holder_context():
 
 
 def test_institutional_attribution_is_local_and_does_not_fake_acoustic_voice():
- text='Nos comunicamos de jurídico MRS por atraso de su tarjeta.'
+ text='Nos comunicamos de jurídico MRS por tres meses de atraso de su tarjeta.'
  p=assess_privacy(text,third_party_confirmed=True)
  assert p['confirmed_disclosure']and not p['review_required']
  e=next(e for e in p['evidence']if e['confirmed']);assert not e['role_evidence']['human_verified']and not e['role_evidence']['acoustic_voice_identified']
@@ -110,7 +110,8 @@ def test_clear_service_complaint_closes_nonapproval_but_other_safety_uncertainty
  a=analyze('Habla MRS. Soy su hermana. En la llamada anterior me trataron mal.')
  assert a.metadata['shared_classification']['clasificacion']=='NO_APROBADO'
  b=analyze('Habla MRS. Soy su hermana. En la llamada anterior me trataron mal. Tiene una deuda de 1500 pesos.')
- assert b.metadata['shared_classification']['clasificacion']=='REVISAR'
+ assert b.metadata['shared_classification']['clasificacion']=='NO_APROBADO'
+ assert b.metadata['shared_classification']['requires_alert_review']
 
 @pytest.mark.parametrize('reply',['No se encuentra, ¿de parte de quién?','No está, dígame.','No se encuentra de parte de quién?'])
 def test_absence_reply_to_named_request_is_a_third_party_even_with_followup_question(reply):

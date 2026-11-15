@@ -16,7 +16,7 @@ from app.services.privacy_disclosure_review import (
     disclosure_candidates, make_disclosure_confirmation, validate_disclosure_confirmation,
 )
 
-BASE = 'Habla MRS. Soy su madre. Dígale que se comunique. Le paso el recado.'
+BASE = 'Habla MRS. Soy su madre. Dígale que se comunique al número telefónico 5512345678. Le paso el recado.'
 FINANCE = 'Tiene un saldo vencido de 500 pesos.'
 
 

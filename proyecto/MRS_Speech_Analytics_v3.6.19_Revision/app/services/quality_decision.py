@@ -110,14 +110,19 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     ]:
         if treatment.get(field):
             add(10,code,reason,'treatment_validation')
-    if duration_seconds is not None and float(duration_seconds) < 60:
-        add(13,'SHORT_DURATION','Duración inferior a 60 segundos','duration_seconds')
+    short_call=bool(duration_seconds is not None and 0<float(duration_seconds)<60)
+    if duration_seconds is not None and float(duration_seconds)<=0:
+        add(13,'INVALID_DURATION','La duración no es positiva; comprobar el archivo de audio.','duration_seconds')
     duration = m.get('duration_validation') or {}
-    if duration.get('valid') is False:
+    if duration.get('valid') is False and not(short_call and duration.get('maximum_met',True)):
         add(13,'INVALID_DURATION',duration.get('reason') or 'Duración fuera del rango permitido','duration_validation')
 
     from app.services.status_output_label import corrected_status_label
     output_label = corrected_status_label(m)
+    from app.services.short_call_policy import management_completeness
+    completeness=management_completeness(m,output_label)if short_call else{}
+    if short_call and not completeness.get('complete'):
+        add(13,'SHORT_MANAGEMENT_INCOMPLETE',completeness['reasons'],'management_completeness')
     if output_label['valid']:
         # La discrepancia permanece documentada; solo se resuelve el motivo
         # de etiqueta. Las demás dudas conservan toda su prioridad.
@@ -141,10 +146,16 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     base = base_classification or {}
     from app.services.definitive_rejection import definitive_rejection
     rejection = definitive_rejection(m,findings,duration_seconds)
-    if rejection and not critical:
-        for finding in blocking:finding['severity']='OBSERVATION'
-        findings.append(rejection)
-        blocking=[rejection]
+    score_rejection=bool(not score_ok and ordinary_score_rejection(m,score,minimum_score,duration_seconds))
+    pending_alerts=[]
+    if (rejection or score_rejection) and not critical:
+        for finding in blocking:
+            if finding['code']in{'STATUS_INVALID','STATUS_NOT_CONFIRMED','SHORT_MANAGEMENT_INCOMPLETE'}:
+                finding['severity']='OBSERVATION'
+            else:
+                finding['severity']='PENDING_ALERT';pending_alerts.append(dict(finding))
+        if rejection:findings.append(rejection)
+        blocking=[rejection]if rejection else[]
     if critical:
         category = 'FALLA_GRAVE'
     elif base.get('missing_excel_relation'):
@@ -153,7 +164,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         category = 'NO_APROBADO'
     elif verified_exception and score_ok and not blocking:
         category = 'APROBADO_ETIQUETA_CORREGIDA' if output_label['valid'] else 'APROBADO_CON_EXCEPCION'
-    elif not score_ok and ordinary_score_rejection(m,score,minimum_score,duration_seconds):
+    elif score_rejection:
         category = 'NO_APROBADO_MENOR_80'
     elif blocking:
         category = 'REVISAR'
@@ -169,11 +180,16 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         category = 'REVISAR'
     else:
         category = 'APROBADO'
+    if short_call and category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_CON_EXCEPCION'}:
+        category='APROBADO_DURACION_MENOR'
     reasons = list(dict.fromkeys(r for f in blocking for r in f['reasons']))
     if category == 'SIN_RELACION_EXCEL':
         reasons.insert(0,'Falta el registro de esta llamada en el Excel de cuentas; corregir la relación de origen. No requiere retranscribir para relacionarla.')
-    if category == 'NO_APROBADO':
+    if category in {'NO_APROBADO','NO_APROBADO_MENOR_80'}:
         reasons.extend(r for f in findings if f['severity']=='OBSERVATION'for r in f['reasons']if r not in reasons)
+    if pending_alerts:
+        reasons.extend('[Pendiente '+f['code']+'] '+r for f in pending_alerts for r in f['reasons'])
+        reasons.append('El rechazo conserva '+str(len(pending_alerts))+' alerta(s) pendiente(s) de revisión; consultar ALERTAS_PENDIENTES.')
     if category == 'NO_APROBADO_MENOR_80' and reasons:
         reasons.insert(0,'Puntaje inferior al mínimo por incumplimientos ordinarios; rechazo automático. Las observaciones pendientes se conservan.')
     # Los descuentos se conservan como evidencia, sin convertirlos de nuevo
@@ -189,6 +205,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     for number, label in RULES:
         relevant = [f for f in findings if f['rule_group']==number]
         state = ('INCUMPLIMIENTO_CRITICO' if any(f['severity']=='CRITICAL' for f in relevant) else
+                 'ALERTA_PENDIENTE' if any(f['severity']=='PENDING_ALERT' for f in relevant) else
                  'REQUIERE_REVISION' if any(f['severity']=='REVIEW' for f in relevant) else
                  'INCUMPLIMIENTO_CONFIRMADO' if any(f['severity']=='CONFIRMED_NONCRITICAL' for f in relevant) else
                  'OBSERVACION_CONSERVADA' if any(f['severity']=='OBSERVATION' for f in relevant) else
@@ -198,7 +215,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
                  'NO_APLICA' if applicability.get(number) is False else
                  'SIN_HALLAZGOS' if m else 'NO_EVALUADO')
         evaluations.append({'id':number,'rule':label,'state':state,'finding_codes':[f['code'] for f in relevant]})
-    return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA'},
+    return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR'},
             'calidad_aprobada':category.startswith('APROBADO'), 'score':score,'puntaje_minimo':minimum_score,
             'cumple_puntaje':score_ok,'rechazo_automatico_por_puntaje':category=='NO_APROBADO_MENOR_80',
             'rechazo_automatico_por_reglas':category=='NO_APROBADO',
@@ -206,4 +223,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
             'motivo':('Excepción por hostilidad validada en audio; gestor profesional' if category=='APROBADO_CON_EXCEPCION' else
                       ' | '.join(reasons) if reasons else 'Cumple calidad y seguridad; etiqueta corregida en copia separada' if category=='APROBADO_ETIQUETA_CORREGIDA' else 'Cumple reglas de aprobación' if score_ok else 'Puntaje inferior al mínimo'),
             'decision_findings':findings,'rule_evaluation':evaluations,
-            'output_label_correction':output_label,'decision_policy':'THIRTEEN_RULE_GROUPS_V1'}
+            'output_label_correction':output_label,'pending_alerts':pending_alerts,
+            'requires_alert_review':bool(pending_alerts),'pending_alert_count':len(pending_alerts),
+            'short_duration_approval':category=='APROBADO_DURACION_MENOR','management_completeness':completeness,
+            'decision_policy':'INTEGRATED_USER_POLICY_20261115'}

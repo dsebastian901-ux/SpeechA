@@ -144,7 +144,7 @@ def test_dispute_guidance_does_not_require_a_collection_offer_and_keeps_the_comp
 
 
 @pytest.mark.parametrize('text,expected',[
-    ('Yo no les pedí la tarjeta, me la estuvieron ofreciendo y les dije que no quería.',True),
+    ('Yo no les pedí la tarjeta, me la estuvieron ofreciendo y les dije que no quería.',False),
     ('No es cierto que no les pedí la tarjeta.',False),
     ('Gestor: Yo no les pedí la tarjeta y me la estuvieron ofreciendo.',False),
 ])
@@ -165,7 +165,7 @@ def test_accepted_high_mora_schedule_is_valid_in_call_month_and_keeps_place_dedu
 
 
 def missing_date_analysis():
-    t=TranscriptionModel.from_dict({'archivo':'source.ogg','texto':'Habla MRS. Soy yo. Puede realizar un pago de 3000 pesos para regularizar su cuenta.', 'duracion_segundos':150})
+    t=TranscriptionModel.from_dict({'archivo':'source.ogg','texto':'Soy yo. Confirmo su convenio. Me comprometo a pagar 3000 pesos para regularizar mi cuenta.', 'duracion_segundos':150})
     return A.analyze_transcription(t,{'estatus_grabacion':'CONVENIO','pago_minimo':2500,'saldo_total':5000,
         'asignacion':'1PV','fecha':'2026-11-05','corte':20,'vencimiento':'2026-11-20'})
 
@@ -187,7 +187,8 @@ def test_definitive_low_score_rejection_does_not_require_review_just_for_missing
 ])
 def test_missing_date_rejection_never_hides_other_safety_uncertainty(risk):
     a=missing_date_analysis();a.metadata.update(risk)
-    assert A.shared_quality_decision(a.metadata,a.compliance_score,duration_seconds=150)['clasificacion']=='REVISAR'
+    d=A.shared_quality_decision(a.metadata,a.compliance_score,duration_seconds=150)
+    assert d['clasificacion']=='NO_APROBADO_MENOR_80' and d['requires_alert_review']
 
 
 @pytest.mark.parametrize('text',[

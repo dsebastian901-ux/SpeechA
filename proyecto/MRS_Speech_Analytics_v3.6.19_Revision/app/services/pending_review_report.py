@@ -18,6 +18,15 @@ ACTIONS={
  'SHORT_DURATION':('DURACION','Verificar la duración y resolver primero los riesgos de seguridad independientes.'),
  'STATUS_INVALID':('ESTATUS','Confirmar el hecho de conversación que sostiene el estatus.'),
  'STATUS_NOT_CONFIRMED':('ESTATUS','Confirmar el estatus con evidencia de conversación.'),
+ 'SHORT_MANAGEMENT_INCOMPLETE':('DURACION','Confirmar los elementos faltantes de gestión; una llamada menor de 60 s solo puede aprobar con gestión completa.'),
+ 'CONTACT_CONTRADICTION':('INTERLOCUTOR','Resolver las respuestas contradictorias sobre conocer al titular; cotejar si se habla de personas distintas.'),
+ 'PAYMENT_DESTINATION':('SEGURIDAD_PAGO','Confirmar a quién pertenece el destino de pago y los datos de transferencia señalados.'),
+ 'LIQUIDATION_UNATTRIBUTED':('NEGOCIACION','Confirmar si la liquidación es una oferta actual del gestor, una pregunta o el relato de un acuerdo anterior.'),
+ 'CALL_END':('CIERRE','Cotejar el final y la devolución de llamada; no atribuir abandono solo por un hueco ASR.'),
+ 'INVALID_DURATION':('DURACION','Comprobar la duración del audio y el límite máximo configurado.'),
+ 'UNCERTAIN_CONFRONTATION':('TRATO','Confirmar la expresión y quién la dice; el texto por sí solo no demuestra el tono.'),
+ 'RECADO_CONFIRMATION':('RECADO','Comprobar que la confirmación guardada corresponde al mismo audio, texto y contexto de cuenta.'),
+ 'FAMILY_CONFIRMATION':('INTERLOCUTOR','Comprobar el parentesco en el mismo audio y contexto; no trasladar confirmaciones entre llamadas.'),
 }
 FIELDS={
  'UNIDENTIFIED_CONTACT':'contact_validation','UNCERTAIN_DISCLOSURE':'privacy_validation',
@@ -60,7 +69,7 @@ def review_steps(item):
   code=f['code']
   if code in{'STATUS_INVALID','STATUS_NOT_CONFIRMED'}and(non_status or 'STATUS_INVALID'in seen):continue
   seen.add(code);domain,action=ACTIONS.get(code,('EVIDENCIA','Verificar el motivo y el campo de evidencia señalado.'))
-  field=FIELDS.get(code,f.get('source_field')or'');data=metadata.get(field,{})
+  field=FIELDS.get(code,f.get('source_field')or'');data=metadata.get(field,classification.get(field,{}))
   evidence=_evidence(data)
   if not evidence and code in {'UNIDENTIFIED_CONTACT','STATUS_INVALID','STATUS_NOT_CONFIRMED'}:
    raw=item.get('result')or{}
@@ -75,6 +84,13 @@ def review_steps(item):
    if not evidence and raw.get('texto'):
     evidence=[{'text':raw['texto'][:1000] if code=='UNIDENTIFIED_CONTACT' else raw['texto'][-1000:],
                'start':None,'end':None,'speaker_role':'NO DETERMINADO','method':'CONTEXTO_ASR_SIN_TIEMPOS'}]
+  if not evidence:
+   # Una falta de extracción no produce una cita probatoria. Mostrar el
+   # contexto original permite cotejar el motivo, sin inventar voz o tiempos.
+   transcript=str((item.get('result')or{}).get('texto')or'')
+   if transcript:
+    evidence=[{'text':transcript[:12000],'start':None,'end':None,'speaker_role':'NO DETERMINADO',
+      'method':'CONTEXTO_ASR_COMPLETO_PARA_COTEJO'if len(transcript)<=12000 else'CONTEXTO_ASR_TRUNCADO_A_12000_PARA_COTEJO'}]
   result.append({'code':code,'domain':domain,'reason':' | '.join(f.get('reasons')or[]),'action':action,
     'source_field':field,'evidence':evidence,'dependent_status_codes':[v['code']for v in findings if v['code']in{'STATUS_INVALID','STATUS_NOT_CONFIRMED'}]})
  return result

@@ -22,6 +22,7 @@ from typing import Any, Dict, Iterable, List
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
+from app.services.classification_policy import APPROVED_RESULTS,corrected_approval
 
 
 class BatchReportService:
@@ -218,6 +219,8 @@ class BatchReportService:
     MODE_B_HEADERS[1:1] = LABEL_HEADERS
     HEADERS += ARCO_HEADERS
     MODE_B_HEADERS += ARCO_HEADERS
+    HEADERS += ['Alertas pendientes','Revisión prioritaria pendiente']
+    MODE_B_HEADERS += ['Alertas pendientes','Revisión prioritaria pendiente']
 
 
     @staticmethod
@@ -634,6 +637,7 @@ class BatchReportService:
         # La clasificación física ya incorpora la prioridad operativa v3.6.1.
         final_operational_map = {
             "APROBADO_ETIQUETA_CORREGIDA": "APROBADO CON ETIQUETA CORREGIDA",
+            "APROBADO_DURACION_MENOR": "APROBADO - DURACIÓN MENOR",
             "APROBADO": "APROBADO",
             "APROBADOS": "APROBADO",
             "APROBADO_SIN_ETIQUETAR": "APROBADO SIN ETIQUETAR",
@@ -650,16 +654,19 @@ class BatchReportService:
         final_operational = final_operational_map.get(physical, "REVISAR MANUALMENTE")
 
         output_label = classification.get('output_label_correction') or {}
-        label_applied = physical == 'APROBADO_ETIQUETA_CORREGIDA' and output_label.get('valid')
+        from app.services.classification_policy import corrected_approval
+        label_applied = corrected_approval(classification)
         output_name = output_label['corrected_name'] if label_applied else relation.get('nombre_final') or ''
         if label_applied:
             dictamen = 'CORREGIDO EN COPIA'
             motivo_dictamen = output_label['original_status']+' → '+output_label['corrected_status']
         return {
+            "Alertas pendientes":int(classification.get('pending_alert_count')or 0),
+            "Revisión prioritaria pendiente":'SÍ'if classification.get('requires_alert_review')else'NO',
             "Nombre antes de reetiquetar": relation.get('nombre_final') or '',
             "Estatus de salida": output_label.get('corrected_status') if label_applied else relation.get('estatus_grabacion') or '',
             "Código de salida": output_label.get('corrected_code') if label_applied else '',
-            "Carpeta de etiqueta corregida": output_label.get('folder') if label_applied else '',
+            "Carpeta de etiqueta corregida": ('APROBADAS_DURACION_MENOR' if classification.get('clasificacion')=='APROBADO_DURACION_MENOR' else output_label.get('folder')) if label_applied else '',
             "Archivo original": item.get("file_name") or Path(str(item.get("path") or "")).name,
             "Nombre final": output_name,
             "Gestor": relation.get("gestor") or "",
@@ -708,7 +715,7 @@ class BatchReportService:
             "Motivo Dictamen": motivo_dictamen,
             "Resultado Final Operativo": final_operational,
             "Validación Negociación": (
-                "VÁLIDA" if negotiation.get("valid") is True
+                "NO APLICA" if negotiation.get("financial_validation_applicable") is False else "VÁLIDA" if negotiation.get("valid") is True
                 else "INVÁLIDA" if negotiation.get("hard_invalid") is True
                 else "REVISAR" if negotiation.get("valid") is False or negotiation.get("review_required")
                 else "NO DETERMINADA"
@@ -981,6 +988,8 @@ class BatchReportService:
 
         from app.services.pending_review_report import add_pending_review_sheet
         cls._style_sheet(add_pending_review_sheet(wb,source_items))
+        from app.services.pending_alert_report import add_pending_alert_sheet
+        cls._style_sheet(add_pending_alert_sheet(wb,source_items))
         from app.services.batch_data_diagnostics import add_data_diagnostics
         for sheet in add_data_diagnostics(wb,source_items):
             cls._style_sheet(sheet)
@@ -994,6 +1003,7 @@ class BatchReportService:
         # =====================================================
         category_sheets = [
             ("APROBADOS_ETIQUETA_CORREGIDA", "APROBADO_ETIQUETA_CORREGIDA"),
+            ("APROBADAS_DURACION_MENOR", "APROBADO_DURACION_MENOR"),
             ("APROBADO_SIN_ETIQUETAR", "APROBADO_SIN_ETIQUETAR"),
             ("APROBADO_CON_EXCEPCION", "APROBADO_CON_EXCEPCION"),
             ("NO_APROBADOS", "NO_APROBADO"),
@@ -1059,7 +1069,7 @@ class BatchReportService:
         total = len(rows)
         approved = sum(
             1 for r in rows
-            if r.get("Clasificación física") in {"APROBADO", "APROBADOS", "APROBADO_ETIQUETA_CORREGIDA"}
+            if r.get("Clasificación física") in APPROVED_RESULTS
         )
         review = sum(1 for r in rows if r.get("Clasificación física") == "REVISAR")
         approved_untagged = sum(1 for r in rows if r.get("Clasificación física") == "APROBADO_SIN_ETIQUETAR")
@@ -1104,7 +1114,9 @@ class BatchReportService:
         summary_ws.append(["Pendientes de procesamiento", pending_processing])
         summary_ws.append(["Procesados sin relación Excel", sum(r.get('Clasificación física')=='SIN_RELACION_EXCEL' for r in rows)])
         summary_ws.append(["Aprobados", approved])
-        summary_ws.append(["De ellos, etiqueta corregida", sum(r.get("Clasificación física")=="APROBADO_ETIQUETA_CORREGIDA" for r in rows)])
+        summary_ws.append(["De ellos, etiqueta corregida", sum(corrected_approval(i.get('classification')or{})for i in source_items)])
+        summary_ws.append(["Aprobadas de duración menor",sum(r.get('Clasificación física')=='APROBADO_DURACION_MENOR'for r in rows)])
+        summary_ws.append(["Llamadas rechazadas con alertas pendientes",sum(bool((i.get('classification')or{}).get('requires_alert_review'))for i in source_items)])
         summary_ws.append(["Aprobados sin etiquetar", approved_untagged])
         summary_ws.append(["No aprobados por incumplimiento confirmado", confirmed_rejection])
         summary_ws.append(["No aprobados menor a 80%", under_80])
@@ -1192,7 +1204,7 @@ class BatchReportService:
                 gtotal = len(group)
                 gapproved = sum(
                     1 for r in group
-                    if r.get("Clasificación física") in {"APROBADO", "APROBADOS", "APROBADO_ETIQUETA_CORREGIDA"}
+                    if r.get("Clasificación física") in APPROVED_RESULTS
                 )
                 greview = sum(r.get("Clasificación física")=="REVISAR" for r in group)
                 gincorrect = sum(
@@ -1251,7 +1263,7 @@ class BatchReportService:
                     sum(str(r.get("Clasificación física")or"").startswith('NO_APROBADO')or r.get("Clasificación física")in{'MAL_DICTAMINADO','NEGOCIACION_INVALIDA'}for r in group),
                     sum(r.get("Clasificación física")=="FALLA_GRAVE"for r in group),
                     sum(r.get("Clasificación física")=="ERROR"for r in group),
-                    sum(r.get("Clasificación física")not in{'APROBADO','APROBADOS','APROBADO_ETIQUETA_CORREGIDA','REVISAR','NO_APROBADO','NO_APROBADO_MENOR_80','MAL_DICTAMINADO','NEGOCIACION_INVALIDA','FALLA_GRAVE','ERROR'}for r in group),
+                    sum(r.get("Clasificación física")not in APPROVED_RESULTS|{'REVISAR','NO_APROBADO','NO_APROBADO_MENOR_80','MAL_DICTAMINADO','NEGOCIACION_INVALIDA','FALLA_GRAVE','ERROR'}for r in group),
                 ])
 
             gestor_widths = {
@@ -1281,6 +1293,16 @@ class BatchReportService:
             cls._style_sheet(control_ws)
 
         if not processed_only:
+            from app.services.pending_alert_report import write_pending_alerts_word
+            alert_control=wb.create_sheet('REPORTE_ALERTAS')
+            alert_control.append(['Reporte Word de alertas','Estado'])
+            try:
+                alert_word=write_pending_alerts_word(source_items,report_path)
+                alert_control.append(['Archivo',Path(alert_word).name if alert_word else'SIN ALERTAS EN RECHAZOS'])
+                if alert_word:alert_control['B2'].hyperlink=Path(alert_word).name
+            except Exception as error:
+                alert_control.append(['NO GENERADO',str(error)])
+            cls._style_sheet(alert_control)
             from app.services.nonpayment_report_service import NonpaymentReportService
             companion_ws = wb.create_sheet('MOTIVOS_NO_PAGO')
             companion_ws.append(['Reporte adicional', 'Resultado'])

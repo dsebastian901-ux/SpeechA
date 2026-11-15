@@ -28,7 +28,7 @@ def analyze(data,relation,**reviews):
 
 
 def test_callback_acknowledgement_yo_le_digo_is_reception_in_context_only():
-    text='Habla MRS. Es mi esposa. Que se comunique ese número para llegar a un arreglo. Ok, yo le digo.'
+    text='Habla MRS. Es mi esposa. El número telefónico es 5512345678. Que se comunique ese número para llegar a un arreglo. Ok, yo le digo.'
     a=analyze(*fixture(text))
     assert a.metadata['final_result']=='APROBADO'
     assert any(e.get('method')=='CONFIRMA_AVISO_TRAS_RECONTACTO' for e in a.metadata['status_validation']['recado_evidence']['evidence']['acceptance'])

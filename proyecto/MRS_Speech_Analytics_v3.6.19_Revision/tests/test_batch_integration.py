@@ -78,7 +78,7 @@ def test_new_audio_batch_generates_nonpayment_report_once_after_all_calls(tmp_pa
 
 
 @pytest.mark.parametrize("text,expected", [
-    ("Habla MRS. Soy su madre. Dígale que se comunique al número de contacto. Le paso el recado.", "APROBADO"),
+    ("Habla MRS. Soy su madre. Dígale que se comunique al número de contacto 5512345678. Le paso el recado.", "APROBADO"),
     ("Habla MRS. Soy su madre. Tiene una deuda de 1500 pesos.", "REVISAR"),
     ("Familiar: Soy su madre.\nGestor: Tiene una deuda de 1500 pesos.", "FALLA_GRAVE"),
     ("Habla MRS. Referencia de pago 1234567890123456.", "REVISAR"),
@@ -141,7 +141,7 @@ def test_excel_recado_with_uncertain_disclosure_cannot_be_approved(tmp_path, mon
     source.write_bytes(b"synthetic copy fixture")
     output = tmp_path / "project" / "02_Audios" / "Transcripciones"
     output.mkdir(parents=True)
-    text = ("Habla MRS. Soy su madre. Dígale que se comunique al número de contacto. "
+    text = ("Habla MRS. Soy su madre. Dígale que se comunique al número de contacto 5512345678. "
             "Le paso el recado. Tiene una deuda de 1500 pesos.")
     (output/"synthetic.json").write_text(json.dumps({"archivo": source.name, "texto": text,
         "duracion_segundos": 90, "segmentos": []}), encoding="utf-8")

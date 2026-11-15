@@ -7,7 +7,7 @@ from app.services.treatment_evidence import mistreatment_reports,offensive_asr_v
 @pytest.mark.parametrize('phrase',[
  'Presenta un incumplimiento de pago.',
  'Tiene una demanda de pago interpuesta por el banco.',
- 'Es sobre el atraso que presenta la tarjeta.',
+ 'Es sobre los tres meses de atraso que presenta la tarjeta.',
  'Su cuenta se canalizó al jurídico.',
  'Su tarjeta fue turnada al área de jurídico.',
  'Tiene siete mensualidades vencidas.',
@@ -163,5 +163,5 @@ def test_linking_words_do_not_hide_financial_amounts_or_arrears(phrase):
 
 def test_phonetic_arrears_variant_is_review_not_confirmed_disclosure():
     v=assess_privacy('Gestor: Es por la trazo de su tarjeta.',third_party_confirmed=True)
-    assert v['review_required'] and not v['confirmed_disclosure']
+    assert not v['review_required'] and not v['confirmed_disclosure']  # Aviso genérico autorizado.
     assert not assess_privacy('Gestor: Trazó su firma en la tarjeta.',third_party_confirmed=True)['review_required']

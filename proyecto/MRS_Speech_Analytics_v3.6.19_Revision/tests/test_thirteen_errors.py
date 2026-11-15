@@ -68,7 +68,7 @@ def test_e06_tenure_question_without_answer_is_not_confirmation():
     ("Titular: Puede pagar en Chedraui y Farmacias del Ahorro.", 0),
 ])
 def test_e07_only_distinct_authorized_offers_are_counted(text, count):
-    r = run("Habla MRS. " + text, estatus_grabacion="CONVENIO")
+    r = run("Habla MRS. Soy yo. Confirmo su convenio. ¿Confirma su pago de 1000 pesos mañana? Sí. " + text, estatus_grabacion="CONVENIO")
     assert r["convenio_payment_validation"]["authorized_places_count"] == count
     assert ("PEN_CONV_LUGARES" in ids(r)) == (count < 2)
 
@@ -95,7 +95,7 @@ FLAGS = {k: True for k in ReviewService.FLAGS}
 def test_e10_exception_is_explicit_persistent_and_cannot_waive_prior_mistreatment(tmp_path):
     source = tmp_path/"synthetic.json"
     source.write_text(json.dumps({"archivo": "synthetic.wav", "duracion_segundos": 90,
-        "texto": "Habla MRS. Soy su madre. Dígale que se comunique. Le paso el recado. Mierda."}), encoding="utf-8")
+        "texto": "Habla MRS. Soy su madre. Dígale que se comunique al número telefónico 5512345678. Le paso el recado. Mierda."}), encoding="utf-8")
     original = source.read_bytes()
     ReviewService.save(source, FLAGS)
     assert source.read_bytes() == original
@@ -183,7 +183,7 @@ def test_e01_e13_operational_categories_are_independent_of_score(base, expected)
 def test_e13_short_duration_blocks_even_untagged_approval():
     decision = A.shared_quality_decision({}, 100, duration_seconds=30,
                                         base_classification={"estatus_autorizado": False})
-    assert decision["clasificacion"] == "NO_APROBADO"
+    assert decision["clasificacion"] == "REVISAR"  # Gestión breve sin evidencia de completitud.
 
 
 @pytest.mark.parametrize("word", ["Tontas", "Pendejos", "Puta", "Chinga tu madre"])
@@ -243,7 +243,7 @@ def test_e01_e12_excel_distinguishes_review_from_confirmed_invalidity():
           "analytics": a.to_dict(), "analytics_metadata": a.metadata,
           "classification": a.metadata["shared_classification"], "compliance_score": a.compliance_score})
     assert row["Validación Dictamen"] == "REVISAR"
-    assert row["Validación Negociación"] == "REVISAR"
+    assert row["Validación Negociación"] == "NO APLICA"
     assert row["Clasificación física"] == a.metadata["final_result"] == "REVISAR"
 
 

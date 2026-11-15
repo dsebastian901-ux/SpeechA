@@ -25,12 +25,19 @@ PENDING = re.compile(
     r'no tendr[eia]+ posibilidad|no seria posible|'
     r'no (?:sabria|habria) (?:que )?decirle|'
     r'(?:no tengo|no dispongo de) (?:esa|la) cantidad|'
+    r'no (?:puedo|sabria) (?:prometer|confirmar|asegurar)(?:le)? (?:cuanto|una cantidad|la cantidad|una fecha)|'
+    r'(?:no[, ]+)?(?:pues[, ]+)?no (?:la |lo )?tengo(?=[.!?]|$)|'
+    r'(?:voy a|tengo que|necesito) (?:ver|checar|revisar) (?:si|cuanto|con cuanto)\b|'
+    r'(?:hago|hacer|sacar|revisar) mis cuentas|'
+    r'si (?:arreglo|resuelvo|consigo) (?:todo|el dinero|esto)|'
     r'no me alcanza|(?:estoy|estaba) esperando (?:a que )?[^.!?]{0,65}\b(?:dinero|deposito|quincena)\b|'
     r'(?:(?:el dia de )?hoy|ahorita)[, ]+no|'
     r'no me niego a pagar[^.!?]{0,110}(?:plazos|seman[aa]|pagos)|'
     r'(?:primero|antes de pagar)[^.!?]{0,90}(?:consultar|revisar|aclarar)|'
     r'como me mandarian algo por escrito antes de pagarlo|'
     r'me podria comunicar con ustedes mas tarde|'
+    r'(?:puedo|podria|le puedo|les puedo) regresar la llamada (?:en|dentro de)[^.!?]{0,40}minutos|'
+    r'(?:por si|para ver si) (?:mi )?(?:mama|papa|familia|herman[oa]) me (?:puede )?prestar[^.!?]{0,25}dinero|'
     r'me puede volver a llamar[^.!?]{0,40}(?:manana|tarde)|'
     r'lo voy a (?:analizar|pensar|consultar|revisar)|'
     r'(?:no|pero) (?:te |le )?estoy diciendo que no[^.!?]{0,80}(?:quiero|convenio))\b')
@@ -95,6 +102,16 @@ def scan_dialogue(text, segments=()):
                     'start':unit['start'], 'finish':unit['end'],
                     'source':'ORIGINAL_TRANSCRIPT', 'human_verified':False,
                     'id':f'{kind}:{position}:{start+match.end()}'})
+    from app.services.payment_dialogue_frames import payment_replies
+    for reply in payment_replies(text,segments):
+        kinds=[]
+        if reply['own_financial_response']:kinds.append('OWN_FINANCES')
+        if reply['declined']or reply['conditional']:kinds.append('PENDING_DECISION')
+        for kind in kinds:
+            events.append({'kind':kind,'position':reply['position'],'end':reply['end'],
+                'evidence':reply['evidence'],'phrase':reply['reply'],'speaker_role':reply['speaker_role'],
+                'start':None,'finish':None,'source':'ORIGINAL_TRANSCRIPT_LOCAL_PAYMENT_REPLY',
+                'human_verified':False,'id':f"{kind}:{reply['position']}:{reply['end']}"})
     return {'source_sha256':hashlib.sha256(str(text).encode('utf-8')).hexdigest(),
             'events':events, 'units':units, 'human_verified':False}
 

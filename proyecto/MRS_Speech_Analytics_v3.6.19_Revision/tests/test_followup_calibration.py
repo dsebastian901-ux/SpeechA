@@ -87,7 +87,7 @@ def test_payment_receipt_followup_does_not_claim_unknown_amount_covers_minimum()
               estatus_grabacion='NO DEFINE FECHA DE PAGO',pago_minimo='700',saldo_total='3000')
     n=a.metadata['negotiation_validation']
     assert n['reported_payment_amount_pending'] and not n['prior_payment_covers_minimum']
-    assert a.metadata['final_result']=='APROBADO'
+    assert a.metadata['final_result']=='REVISAR'
     assert n['prior_payment_total'] is None
     assert 'PEN_SIN_INTENTO_NEGOCIACION' not in {p['id'] for p in a.metadata['penalties']}
 
@@ -118,7 +118,7 @@ def test_prior_payment_does_not_exempt_a_new_payment_instruction_without_accepta
 
 def test_explicit_arrears_in_a_family_message_are_not_silently_approved():
     a=analyze('Habla MRS. ¿Qué parentesco tiene con él? Hermana. '
-              '¿Puedo dejar un recado? Sí, claro. Dígale que se comunique por el atraso de la tarjeta.',
+              '¿Puedo dejar un recado? Sí, claro. Dígale que se comunique por tres meses de atraso de la tarjeta.',
               estatus_grabacion='RECADO REF1')
     assert a.metadata['privacy_validation']['review_required']
     assert a.metadata['final_result']=='REVISAR'
@@ -162,7 +162,7 @@ def test_generic_reply_family_absence_and_agent_do_not_get_holder_identity(text)
 @pytest.mark.parametrize('answer',['Hermana.','No la escuché. Hermana.','Madre.'])
 def test_kinship_response_and_actual_message_acceptance(answer):
     text=('Habla MRS. ¿Qué parentesco tiene con él? '+answer+
-          ' ¿Puedo dejar un recado con usted? Sí, claro. Dígale que se comunique al número de contacto.')
+          ' ¿Puedo dejar un recado con usted? Sí, claro. Dígale que se comunique al número de contacto 5512345678.')
     a=analyze(text,estatus_grabacion='RECADO REF1')
     assert a.metadata['status_validation']['recado_evidence']['confirmed_recado']
     assert a.metadata['final_result']=='APROBADO'
@@ -300,7 +300,7 @@ def test_historical_payment_with_later_different_firm_amount_is_not_automaticall
 
 
 def test_unrelated_uncertainty_does_not_negate_explicit_message_transmission():
-    text='Es mi sobrino. Dígale que se comunique. No sé si se comunicó, le paso el dato y que se comunique.'
+    text='Es mi sobrino. Dígale que se comunique al teléfono 5512345678. No sé si se comunicó, le paso el dato y que se comunique.'
     assert assess_recado(text)['acceptance']
     a=analyze('Habla MRS. '+text,estatus_grabacion='RECADO REF1')
     assert a.metadata['status_validation']['recado_evidence']['confirmed_recado']

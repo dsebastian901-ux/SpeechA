@@ -80,12 +80,19 @@ def contextual_holder_confirmation(text, segments, identification):
     explicit = re.search(r'\bcon (?:el senor|la senora|la senorita) (?P<identity>[a-z ]{3,85}?)\s*[,?.]?\s+(?P<answer>a sus ordenes|para servirle|su servidor|su servidora)\b',source)
     if explicit and valid_nominal_request(source,explicit.start(),explicit['identity']) and not BAD_IDENTITY.search(explicit['identity']) and _role_at(text,segments,explicit.start('answer')) not in {'GESTOR','TERCERO'}:
         return {'confirmed':True,'method':'IDENTIFICACION_NOMINAL_CON_RESPUESTA_DE_SERVICIO','evidence':explicit.group(),'speaker_role':'NO DETERMINADO','human_verified':False}
+    named_self=re.compile(r'\b(?:busco (?:a |al |el |la )?|encuentro |encuentra |se encuentra |me comunico con )(?P<identity>[^.!?]{3,100}?)(?:[.!?]\s*|\s+)(?P<answer>(?:si[, ]+)?(?:con ella habla|con el habla|ella habla|el habla))\b')
+    for m in named_self.finditer(source):
+        if (valid_nominal_request(source,m.start(),m['identity']) and not BAD_IDENTITY.search(m['identity'])
+                and _role_at(text,segments,m.start('answer')) not in {'GESTOR','TERCERO'}
+                and not re.match(r'\s*\?',source[m.end():])):
+            return {'confirmed':True,'method':'RESPUESTA_EXPLICITA_A_BUSQUEDA_NOMINAL','evidence':m.group(),'human_verified':False,'speaker_role':'NO DETERMINADO'}
     requests=[
+        re.compile(r'\b(?:usted es|es usted)\s+(?P<identity>[^.!?]{3,85}?)\?\s*(?P<answer>si|asi es|correcto)\b'),
         re.compile(r'\b(?:buenos dias|buenas dias|buenas tardes)[, .]*con\s+'
                    r'(?P<identity>[a-z ]{3,85}?) por favor[, .?]\s*(?P<answer>)'),
         re.compile(r'\bme (?:podre|podria|pudo|pude|he podido|voy a poder) (?:a )?(?:comunicar|comentar) (?:de favor )?con\s+'
-                   r'(?P<identity>[^.!?]{2,100}?)[.?]\s*(?P<answer>)'),
-        re.compile(rf'\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)[.?]\s*'
+                   r'(?P<identity>[^.!?]{2,100}?)[.!?]\s*(?P<answer>)'),
+        re.compile(rf'\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)[.!?]\s*'
                    r'(?P<answer>si|asi es|correcto|aja)\b'),
         re.compile(r'\bcon\s+(?P<identity>(?:el senor|la senora|la senorita)\s+[^.!?]{2,90}?)[.?]\s*'
                    r'(?P<answer>(?:si[, ]+)?(?:servidor|servidora|al habla|ella habla|el habla|digame|diganme|dime)|si|asi es|correcto|aja)\b'),
@@ -115,7 +122,7 @@ def contextual_holder_confirmation(text, segments, identification):
             after=source[request.end():request.end()+75]
             if re.search(r'\b(?:espere|permita|se lo comunico|lo busco|la busco|le paso|no esta)\b',after):continue
             if re.match(r'\s+(?:me espera|me permite|quiere|puede|necesita|consigo|tuviera)\b',after):continue
-            if pattern is requests[3] and answer not in {'si','asi es','correcto','aja'}:
+            if re.fullmatch(r'(?:si[, ]+)?(?:servidor|servidora|al habla|ella habla|el habla|digame|diganme|dime)',answer):
                 return {'confirmed':True,'method':'RESPUESTA_EXPLICITA_TRAS_NOMBRE_CON_TRATAMIENTO',
                         'evidence':request.group(),'speaker_role':'NO DETERMINADO'}
             for start,end,unit,value in units:

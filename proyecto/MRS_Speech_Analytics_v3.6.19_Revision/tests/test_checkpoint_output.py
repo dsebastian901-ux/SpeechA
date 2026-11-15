@@ -20,7 +20,7 @@ def test_repeated_operations_escape_deep_source_and_use_independent_folders(tmp_
     source.parent.mkdir(parents=True)
     payload = {"items": [{"file_name": "synthetic.wav", "result": {
         "archivo": "synthetic.wav", "duracion_segundos": 90,
-        "texto": "Habla MRS. Soy su madre. Dígale que se comunique. Le paso el recado."}}]}
+        "texto": "Habla MRS. Soy su madre. Dígale que se comunique al número telefónico 5512345678. Le paso el recado."}}]}
     source.write_text(json.dumps(payload), encoding="utf-8")
     assert len(str(source)) > 260
     raw = source.read_bytes()

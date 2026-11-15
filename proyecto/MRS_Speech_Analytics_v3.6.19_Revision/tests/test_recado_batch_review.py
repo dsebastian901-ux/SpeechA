@@ -12,7 +12,7 @@ import pytest
 from app.services.checkpoint_recado_batch_review import prepare_recado_selections, confirm_checkpoint_recados
 from app.services.recado_acceptance_review import SCOPE, DELIVERY_SCOPE, make_recado_confirmation
 
-TEXT = 'Habla MRS. Es mi hermana. Le dejo un mensaje. Que se comunique con nosotros.'
+TEXT = 'Habla MRS. Es mi hermana. Le dejo un mensaje. Que se comunique con nosotros al número telefónico 5512345678.'
 DESCRIPTION = 'Número para que la titular negocie el restante.'
 
 

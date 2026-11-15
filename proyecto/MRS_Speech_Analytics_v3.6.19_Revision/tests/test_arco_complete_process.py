@@ -184,7 +184,7 @@ def test_report_distinguishes_each_required_step_without_certifying_partial_proc
     from app.services.batch_report_service import BatchReportService as B
     a=analyze(text)
     row=B._row_from_item({'path':'sample.ogg','analytics_metadata':a.metadata})
-    assert [row[k] for k in B.HEADERS[-5:]]==expected
+    assert [row[k] for k in B.ARCO_HEADERS]==expected
 
 
 def test_report_shows_non_applicable_arco_for_an_unrelated_holder_call():
@@ -192,7 +192,7 @@ def test_report_shows_non_applicable_arco_for_an_unrelated_holder_call():
     a=A.analyze_transcription(TranscriptionModel('sample.ogg','sample.ogg',
         'Habla MRS. Soy el titular.',duration_seconds=120),{})
     row=B._row_from_item({'path':'sample.ogg','analytics_metadata':a.metadata})
-    assert [row[k] for k in B.HEADERS[-5:]]==['N/A']*5
+    assert [row[k] for k in B.ARCO_HEADERS]==['N/A']*5
 
 
 def test_both_report_modes_retain_previous_financial_and_audio_columns_before_arco():
@@ -200,6 +200,6 @@ def test_both_report_modes_retain_previous_financial_and_audio_columns_before_ar
     previous=['Parcialidades finales confirmadas','Historial de propuestas de parcialidades',
               'Lectura adicional audio','Alertas lectura ASR','Riesgos lectura adicional']
     for headers in (B.HEADERS,B.MODE_B_HEADERS):
-        assert headers[-10:-5]==previous
-        assert headers[-5:]==B.ARCO_HEADERS
+        assert headers[-12:-7]==previous
+        assert headers[-7:-2]==B.ARCO_HEADERS
         assert len(headers)==len(set(headers))

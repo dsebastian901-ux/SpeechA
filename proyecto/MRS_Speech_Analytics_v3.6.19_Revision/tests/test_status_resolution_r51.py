@@ -51,16 +51,16 @@ def test_high_confidence_without_trace_is_still_not_retaggable():
 
 
 def test_reported_payment_status_carries_original_evidence_for_output_correction():
- text=('Habla MRS. ¿Me puede comunicar con Ana López? Sí, soy yo. Mi tarjeta ya la pagué ayer. '
+ text=('Habla MRS. ¿Me puede comunicar con Ana López? Sí, soy yo. Mi tarjeta ya la pagué ayer por 1000 pesos. '
        '¿Mandó el comprobante a algún número de WhatsApp? Sí, ya lo mandé. Estamos esperando que se actualice el pago.')
  a=AnalyticsService.analyze_transcription(TranscriptionModel.from_dict({'archivo':'synthetic.ogg','texto':text,'duracion_segundos':130}),
-   {'estatus_grabacion':'NO CONOCEN A DEUDOR','numero_de_tarjeta':'1234567890123456','asignacion':'C3',
+   {'estatus_grabacion':'NO CONOCEN A DEUDOR','pago_minimo':1000,'numero_de_tarjeta':'1234567890123456','asignacion':'C3',
     'nombre_final':'0001234567890123456_C3_300_NC_AGENTE_MRS_20261108'})
  s=a.metadata['status_validation'];assert s['detected_status']=='ACLARACION'and s['evidence']
  assert a.metadata['shared_classification']['output_label_correction']['valid']
  assert a.metadata['shared_classification']['clasificacion']=='APROBADO_ETIQUETA_CORREGIDA'
  unsafe=AnalyticsService.analyze_transcription(TranscriptionModel.from_dict({'archivo':'synthetic.ogg','texto':text+' En la llamada anterior me trataron mal.','duracion_segundos':130}),
-   {'estatus_grabacion':'NO CONOCEN A DEUDOR','numero_de_tarjeta':'1234567890123456','asignacion':'C3','nombre_final':'0001234567890123456_C3_300_NC_AGENTE_MRS_20261108'})
+   {'estatus_grabacion':'NO CONOCEN A DEUDOR','pago_minimo':1000,'numero_de_tarjeta':'1234567890123456','asignacion':'C3','nombre_final':'0001234567890123456_C3_300_NC_AGENTE_MRS_20261108'})
  assert not unsafe.metadata['shared_classification']['aprobado']
 
 

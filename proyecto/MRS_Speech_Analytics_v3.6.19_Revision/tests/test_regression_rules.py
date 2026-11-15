@@ -21,7 +21,7 @@ def penalties(result):
 ])
 @pytest.mark.parametrize("status", ["RECADO REF1", "RECADO REF2", "RECADO REF 1", "MENSAJE CON FAMILIAR"])
 def test_recado_equivalence_requires_actual_message(phrase, status):
-    r = compliance(phrase + " Habla MRS. Dígale que se comunique al número de contacto. Le paso el recado.",
+    r = compliance(phrase + " Habla MRS. Dígale que se comunique al número de contacto 5512345678. Le paso el recado.",
                    estatus_grabacion=status)
     assert r["status_validation"]["matches"] is True
     assert r["status_validation"]["valid"] is True

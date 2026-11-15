@@ -121,8 +121,8 @@ def test_report_distinguishes_receipt_request_from_channel_and_preserves_arco_ta
     row=B._row_from_item({'path':'sample.wav','analytics_metadata':a.metadata})
     assert row['Solicitud comprobante/ticket']=='SI'
     assert row['Canal comprobante']=='NO CONFIRMADO'
-    assert row['Comprobante WhatsApp']=='NO'
-    assert B.HEADERS[-5:]==B.MODE_B_HEADERS[-5:]==B.ARCO_HEADERS
+    assert row['Comprobante WhatsApp']=='N/A'  # No hay nuevo convenio confirmado.
+    assert B.ARCO_HEADERS==B.MODE_B_HEADERS[-7:-2]==B.ARCO_HEADERS
 
 
 def test_receipt_asr_uncertainty_is_reviewed_without_asserting_omission():

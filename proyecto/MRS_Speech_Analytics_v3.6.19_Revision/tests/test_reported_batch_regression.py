@@ -108,7 +108,7 @@ def test_contextual_smr_requires_company_presentation():
 def test_payment_question_and_negative_answer_are_not_a_completed_payment():
     r = A.calculate_basic_compliance("Habla MRS. Soy yo. ¿Ya realizó su pago? No.", {"estatus_grabacion": "CONVENIO"})
     assert not r["negotiation_validation"]["payment_confirmation_case"]
-    assert "PEN_CONV_LUGARES" in {p["id"] for p in r["penalties"]}
+    assert "PEN_CONV_LUGARES" not in {p["id"] for p in r["penalties"]}  # Excel PP no prueba aceptación.
 
 
 def test_known_agent_cannot_answer_own_identity_or_payment_question():
@@ -132,7 +132,7 @@ def test_future_payment_instructions_do_not_exempt_new_collection(instruction):
     assert not n["payment_already_made"]
     assert not n["payment_confirmation_case"]
     assert not n["prior_payment_evidence"]
-    assert "PEN_CONV_LUGARES" in {p["id"] for p in r["penalties"]}
+    assert "PEN_CONV_LUGARES" not in {p["id"] for p in r["penalties"]}  # Excel PP no prueba aceptación.
 
 
 @pytest.mark.parametrize("report", [

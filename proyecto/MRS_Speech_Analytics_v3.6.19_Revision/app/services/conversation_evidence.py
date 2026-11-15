@@ -135,7 +135,7 @@ def holder_confirmation(text, segments=()):
         r"(?:me )?voy a comunicar con|puede comunicar con|"
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|se encuentra|estoy buscando a|hablo con|"
         r"me estoy comunicando al numero telefonico de|seria tan amable de comunicarme con|"
-        r"tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|me comunica con|comunico con|(?<=¿)con)")
+        r"tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|me comunica con|comunico con|me he comunicado con|busco a|busco al|busco el|busco la|encuentro|encuentra|(?<=¿)con)")
     explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+)?(?:digame|diganme|dime|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b"
     prompt = re.compile(
         rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)(?:[.?]|,)\s*" + explicit_answer)
@@ -154,7 +154,7 @@ def holder_confirmation(text, segments=()):
         rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}})[.?].{{0,250}}?"
         r"(?P<answer>(?:si[, ]+)?(?:ella habla|el habla))(?=[.!?]|$)")
     direct = re.compile(
-        r"\bes usted(?P<identity>[^.!?]{0,85})\?\s*"
+        r"\b(?:es usted|usted es)(?P<identity>[^.!?]{0,85})\?\s*"
         r"(?P<answer>si|asi es|correcto|aja)\b")
     contextual = re.compile(
         rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}})[.?]\s*"
@@ -182,9 +182,9 @@ def holder_confirmation(text, segments=()):
                     r"banco|despacho|corporativo|cobranza|pago|deuda|cuenta|departamento|encargad[oa]|"
                     r"tarjeta|dinero|cantidad|telefono|linea|numero|servicio)\b", match["identity"]):
                 continue
-            if pattern is direct and match["identity"].strip() and not re.match(
-                    r"(?:el caballero|la senora|la senorita|el senor|el titular|la titular|caballero|senora|senorita|senor)\b",
-                    match["identity"].strip()):
+            if pattern is direct and re.search(
+                    r"\d|\b(?:mayor|menor|edad|responsable|quien|casa|disponible|encargad[oa]|medic[oa]|abogad[oa]|contador|enfermer[oa]|licenciad[oa]|doctor[oa]|mrs|juridico)\b|^\s*(?:de|del)\b",
+                    match["identity"]):
                 continue
             if pattern is direct and re.search(
                     r"\b(?:familiar|espos[oa]|madre|padre|herman[oa]|referencia|conocid[oa]|quien|pagar|pago)\b",
@@ -368,8 +368,8 @@ def payment_commitment(text, segments=()):
                 continue
         positive = re.search(
             r"\b(?:me comprometo a (?:pagar|depositar|abonar|cubrir)|"
-            r"(?:yo )?voy a (?:ir a )?(?:pagar|depositar|abonar|cubrir)|lo voy a realizar|pagare|depositare|abonare|"
-            r"(?:hoy|manana) (?:mismo )?(?:deposito|abono|lo hago|lo realizo|hago el deposito|hago el pago)|"
+            r"(?:yo )?voy a (?:ir a )?(?:pagar|depositar|abonar|cubrir)|lo voy a realizar|pagare|depositare|abonare|realizare (?:un |el |mi )?pago|hare (?:un |el |mi )pago|"
+            r"(?:hoy|manana) (?:mismo )?(?:deposito|abono|lo hago|lo realizo|hago el deposito|hago (?:el|mi) pago|realizo (?:el|mi) pago)|"
             r"(?:manana|(?:el )?(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)) "
             r"(?:(?:le )?(?:pago|deposito)|mando a pagar(?:lo)?))\b", s)
         if positive and positive.group() == 'pagare' and re.search(
@@ -396,6 +396,8 @@ def payment_commitment(text, segments=()):
             r"hare lo posible|a lo mejor|yo creo|no sabria decir(?:le|te)? (?:si|cuanto|cuando)|no se cuanto (?:voy a|vaya a|pueda) (?:pagar|depositar)|"
             r"no se cuando (?:pueda|voy a) pagar)\b", s)
         conditional = conditional or _payment_review_condition(s) or (not positive and _payment_review_deferral(s))
+        if positive and re.search(r'\bsi (?:yo )?(?:tuviera|tuviese|pudiera|pudiese)\b[^.!?]{0,90}$',s[:positive.start()]):
+            conditional=re.search(r'\bsi (?:yo )?(?:tuviera|tuviese|pudiera|pudiese)\b',s)
         # Una instrucción o cita del propio gestor no acredita una decisión
         # del receptor, aunque Whisper no haya separado ambos turnos.
         for kind,match in [('positive',positive),('negative',negative),('conditional',conditional)]:
@@ -421,7 +423,7 @@ def payment_commitment(text, segments=()):
             continue
         if negative:
             events.append((position, False, unit["text"]))
-        elif positive and not re.search(r"\b(?:no|si pudiera|si tuviera)\b.{0,18}"+re.escape(positive.group()), s):
+        elif positive and not re.search(r"\b(?:no|si pudiera|si tuviera)\b[^,;.!?]{0,18}"+re.escape(positive.group()), s):
             events.append((position, True, unit["text"]))
     question = re.compile(
         r"\b(?:podemos (?:contemplar|contar con|confirmar)|se compromete a|puedo confirmar|"
@@ -516,6 +518,12 @@ def payment_commitment(text, segments=()):
     from app.services.dialogue_confirmation_evidence import future_confirmation_events
     extra_events = future_confirmation_events(text,segments)
     events.extend((event['position'],True,event['evidence']) for event in extra_events)
+    from app.services.payment_dialogue_frames import payment_replies
+    framed_replies=payment_replies(text,segments)
+    for reply in framed_replies:
+        events.append((reply['position'],None if reply['conditional']else reply['accepted'],reply['evidence']))
+        if reply['accepted']:
+            extra_events.append({'position':reply['position'],'evidence':reply.get('date_evidence')or reply['evidence'],'method':reply['method']})
     if not events:
         return {"accepted": False, "declined": False, "evidence": ""}
     _, accepted, evidence = max(events, key=lambda e: e[0])
@@ -825,6 +833,8 @@ def assess_recado(text, segments=()):
     acceptances.extend(extended['acceptance'])
     from app.services.message_contact_evidence import callback_permission_evidence
     acceptances.extend(callback_permission_evidence(text, segments))
+    from app.services.message_workflow import receipt_events
+    acceptances.extend(receipt_events(text,segments))
     return {"family": families, "acceptance": acceptances,
             "refusal": refusals, "unknown_recipient": unknown,
             'directed_messages': directed_relay_message(text, segments),
@@ -1125,6 +1135,9 @@ def sensitive_financial_matches(text):
     source = normalize(text)
     matches = []
     for match in SENSITIVE.finditer(source):
+        from app.services.generic_arrears_policy import generic_arrears_match
+        if generic_arrears_match(match.group()):
+            continue
         if match.group() in {'saldo pendiente','saldo vencido'}:
             tail = source[match.end():match.end()+200]
             immediate = re.match(
@@ -1143,6 +1156,7 @@ def sensitive_financial_matches(text):
     # Importes anunciados como términos actuales, no un pago histórico que
     # el familiar informa. Conservar palabras de enlace como «por la cantidad».
     amount_phrases=[
+        rf'\batraso\s+(?:es\s+)?(?:de|por|son|asciende a)\s+(?:(?:la )?(?:cantidad|monto) (?:de |por )?)?\$?\s*{NUMBER}\b',
         rf'\bsaldo\s+(?:es\s+)?(?:de|por|son|asciende a)\s+\$?\s*{NUMBER}\b(?!\s+(?:tarjetas?|cuentas?|meses?|anos?|mensualidades?))',
         rf'\b(?:saldo (?:tal|total)|pago minimo)\b[^.!?]{{0,45}}?\b(?:cantidad|monto) (?:de |por )?\$?\s*{NUMBER}\b',
         rf'\bpara (?:liquidar|regularizar|ponerse al corriente)\b[, ]*(?:es|seria|sera) (?:por |de )?(?:(?:la )?(?:cantidad|monto) (?:de |por )?)?\$?\s*{NUMBER}\b',
@@ -1166,6 +1180,7 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
                    expected_third_party=False, titular=False, legacy_financial=False):
     evidence = []
     allowed_mentions = []
+    allowed_arrears = []
     last_recipient = None
     privacy_units = sentence_evidence(text, segments)
     for unit_index, unit in enumerate(privacy_units):
@@ -1173,6 +1188,10 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
         if role in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:
             last_recipient = role
         s = normalize(unit["text"])
+        from app.services.generic_arrears_policy import generic_arrears_match
+        for generic in SENSITIVE.finditer(s):
+            if generic_arrears_match(generic.group()):
+                allowed_arrears.append(dict(unit,phrase=generic.group(),policy='AVISO_GENERICO_DE_ATRASO_SIN_CANTIDAD_NI_MORA_DETALLADA'))
         matches = sensitive_financial_matches(s)
         # Un punto o un corte ASR no debe ocultar «Saldo pendiente. Son $500».
         # El rol decisivo es el de quien proporciona el importe, nunca el de
@@ -1230,6 +1249,7 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
     return {"confirmed_disclosure": confirmed, "review_required": review,
             "third_party_confirmed": bool(third_party_confirmed), "evidence": evidence,
             "allowed_generic_balance_mentions": allowed_mentions,
+            "allowed_generic_arrears_mentions": allowed_arrears,
             "reason": ("Divulgación atribuida al gestor ante un tercero confirmado." if confirmed else
                        "Posible divulgación financiera; confirmar hablante y destinatario en audio." if review else
                        "Sin divulgación a terceros confirmada.")}

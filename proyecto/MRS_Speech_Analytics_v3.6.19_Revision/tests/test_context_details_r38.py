@@ -78,7 +78,8 @@ def test_distant_month_without_year_is_not_critical_by_automatic_rollover():
     assert n['date_year_rollover_review']
     assert not n['promise_date_confirmed_from_call']
     assert 'PEN005' not in {p['id'] for p in a.metadata['penalties']}
-    assert a.metadata['shared_classification']['clasificacion']=='REVISAR'
+    assert a.metadata['shared_classification']['clasificacion']=='NO_APROBADO_MENOR_80'
+    assert a.metadata['shared_classification']['requires_alert_review']
 
 
 def test_explicit_distant_year_does_not_waive_overdue_promise():

@@ -11,7 +11,7 @@ def test_reanalysis_generates_excel_without_original_audio_or_whisper(tmp_path):
     source = tmp_path/"batch_checkpoint.json"
     payload = {"items": [{"path": "C:/missing/synthetic.wav", "file_name": "synthetic.wav",
         "result": {"archivo": "synthetic.wav", "duracion_segundos": 90,
-                   "texto": "Habla MRS. Soy su madre. Dígale que se comunique. Le paso el recado."},
+                   "texto": "Habla MRS. Soy su madre. Dígale que se comunique al número telefónico 5512345678. Le paso el recado."},
         "classification": {}, "status": "completado"}]}
     source.write_text(json.dumps(payload), encoding="utf-8")
     original = source.read_bytes()
@@ -48,7 +48,7 @@ def test_existing_human_treatment_review_is_preserved(tmp_path, complete, expect
              "prevented_script": complete, "agent_professional": complete}
     source.write_text(json.dumps({"items": [{"path": "missing.wav", "file_name": "missing.wav",
         "result": {"archivo": "missing.wav", "duracion_segundos": 90,
-                   "texto": "Habla MRS. Soy su madre. Dígale que se comunique. Le paso el recado. Mierda."},
+                   "texto": "Habla MRS. Soy su madre. Dígale que se comunique al número telefónico 5512345678. Le paso el recado. Mierda."},
         "analytics_metadata": {"hostile_interlocutor_exception": flags}}]}), encoding="utf-8")
     result = reanalyze_checkpoint(source, tmp_path/"output")
     assert result["outcomes"] == {expected: 1}

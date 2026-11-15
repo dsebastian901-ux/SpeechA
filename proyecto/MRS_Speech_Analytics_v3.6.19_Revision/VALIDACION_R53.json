@@ -1,0 +1,126 @@
+{
+  "revision": "3.6.19-r53",
+  "tests": {
+    "passed": 2563,
+    "skipped": 7,
+    "failed": 0
+  },
+  "supplementary_report_context_tests": {
+    "passed": 61,
+    "failed": 0,
+    "new_fallback_cases": 4
+  },
+  "rule_evaluations": 2327,
+  "latest_batch": {
+    "items": 1321,
+    "evaluated": 352,
+    "pending_preserved": 969,
+    "before": {
+      "SIN_RELACION_EXCEL": 116,
+      "NO_APROBADO_MENOR_80": 25,
+      "REVISAR": 175,
+      "APROBADO": 15,
+      "FALLA_GRAVE": 11,
+      "NO_APROBADO": 6,
+      "APROBADO_ETIQUETA_CORREGIDA": 3,
+      "MAL_DICTAMINADO": 1
+    },
+    "after": {
+      "SIN_RELACION_EXCEL": 116,
+      "NO_APROBADO_MENOR_80": 13,
+      "REVISAR": 169,
+      "FALLA_GRAVE": 12,
+      "APROBADO": 24,
+      "NO_APROBADO": 6,
+      "APROBADO_ETIQUETA_CORREGIDA": 12
+    },
+    "missing_excel_relations": 399,
+    "processed_missing_excel": 116,
+    "originals_and_asr_preserved": true,
+    "excessive_review_resolved": false
+  },
+  "previous_controls": {
+    "previous403": {
+      "calls": 403,
+      "outcomes": {
+        "REVISAR": 266,
+        "FALLA_GRAVE": 37,
+        "APROBADO": 60,
+        "NO_APROBADO": 13,
+        "APROBADO_ETIQUETA_CORREGIDA": 26,
+        "NO_APROBADO_MENOR_80": 1
+      }
+    },
+    "previous100": {
+      "calls": 100,
+      "outcomes": {
+        "APROBADO": 17,
+        "REVISAR": 42,
+        "NO_APROBADO": 18,
+        "NO_APROBADO_MENOR_80": 13,
+        "APROBADO_ETIQUETA_CORREGIDA": 6,
+        "FALLA_GRAVE": 3,
+        "APROBADO_DURACION_MENOR": 1
+      }
+    },
+    "previous103": {
+      "calls": 103,
+      "outcomes": {
+        "REVISAR": 74,
+        "FALLA_GRAVE": 8,
+        "APROBADO": 18,
+        "APROBADO_ETIQUETA_CORREGIDA": 2,
+        "NO_APROBADO_MENOR_80": 1
+      }
+    },
+    "previous1007": {
+      "calls": 1007,
+      "outcomes": {
+        "REVISAR": 813,
+        "NO_APROBADO": 36,
+        "APROBADO": 72,
+        "APROBADO_ETIQUETA_CORREGIDA": 37,
+        "NO_APROBADO_MENOR_80": 32,
+        "FALLA_GRAVE": 17
+      }
+    },
+    "old362": {
+      "calls": 362,
+      "outcomes": {
+        "REVISAR": 255,
+        "APROBADO": 48,
+        "NO_APROBADO": 12,
+        "FALLA_GRAVE": 20,
+        "APROBADO_ETIQUETA_CORREGIDA": 26,
+        "NO_APROBADO_MENOR_80": 1
+      }
+    }
+  },
+  "confirmed_privacy_preserved": true,
+  "fresh_program": {
+    "revision": "3.6.19-r53",
+    "calls": 46,
+    "selection": "all changed previous-362 outcomes/scores plus deterministic safety and unchanged controls, without saved human confirmations",
+    "asr_executed": false,
+    "asr_boundary": "controlled saved original ASR",
+    "previous_checkpoint_imported_by_application": false,
+    "original_audio_copies_sha256_match": true,
+    "normal_batch_and_reanalysis_match": true,
+    "source_unchanged": true,
+    "reports_and_nonpayment_generated": true,
+    "outcomes": {
+      "APROBADO": 7,
+      "REVISAR": 27,
+      "FALLA_GRAVE": 1,
+      "APROBADO_ETIQUETA_CORREGIDA": 4,
+      "NO_APROBADO": 6,
+      "NO_APROBADO_MENOR_80": 1
+    },
+    "seconds": 19.574914932250977
+  },
+  "new_whisper_run": false,
+  "human_listening_declared": false,
+  "native_windows_run": false,
+  "offline_autonomous_installer_delivered": false,
+  "users_usb_delivered": false
+}

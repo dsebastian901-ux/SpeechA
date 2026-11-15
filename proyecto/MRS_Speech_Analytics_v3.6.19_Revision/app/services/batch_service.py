@@ -452,6 +452,7 @@ class BatchService:
         approved = bool(classification.get("aprobado"))
         category = str(classification.get("clasificacion") or "REVISAR").strip().upper()
         folder_map = {
+            "APROBADO_DURACION_MENOR": "APROBADAS_DURACION_MENOR",
             "APROBADO_ETIQUETA_CORREGIDA": "APROBADOS_ETIQUETA_CORREGIDA",
             "SIN_RELACION_EXCEL": "SIN_RELACION_EXCEL",
             "APROBADO": "APROBADOS",
@@ -468,7 +469,9 @@ class BatchService:
         destination_dir = classified_root / folder_map.get(category, "REVISAR")
 
         correction = classification.get('output_label_correction') or {}
-        if category == 'APROBADO_ETIQUETA_CORREGIDA':
+        from app.services.classification_policy import corrected_approval
+        corrected=corrected_approval(classification)
+        if category == 'APROBADO_ETIQUETA_CORREGIDA' or corrected:
             if not approved or not correction.get('valid') or not correction.get('corrected_name'):
                 raise ValueError('La etiqueta corregida no cuenta con una aprobación válida.')
             from app.services.status_output_label import audio_output_filename
@@ -486,7 +489,7 @@ class BatchService:
             # Los no aprobados conservan el nombre original para auditoría.
             filename = source.name
 
-        if category == 'APROBADO_ETIQUETA_CORREGIDA' and (destination_dir/filename).exists():
+        if corrected and (destination_dir/filename).exists():
             import hashlib
             destination_dir = destination_dir/('duplicado_'+hashlib.sha256(source.name.encode()).hexdigest()[:12])
             if (destination_dir/filename).exists():
@@ -1164,6 +1167,9 @@ class BatchService:
         return {'analizados':len(records),'aprobados':sum(bool(c.get('aprobado')) for c in records),
             'revisar':counts['REVISAR'],'no_aprobados':sum(n for c,n in counts.items() if c.startswith('NO_APROBADO')),
             'fallas_graves':counts['FALLA_GRAVE'],'errores':counts['ERROR'],
+            'aprobadas_duracion_menor':counts['APROBADO_DURACION_MENOR'],
+            'llamadas_con_alertas_pendientes':sum(bool(c.get('requires_alert_review'))for c in records),
+            'total_alertas_pendientes':sum(int(c.get('pending_alert_count')or 0)for c in records),
             'puntaje_minimo':self.relation_service.get_minimum_score()}
 
     # =========================================================
