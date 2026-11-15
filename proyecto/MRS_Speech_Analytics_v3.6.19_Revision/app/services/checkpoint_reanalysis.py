@@ -95,6 +95,17 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
             decision = AnalyticsService.shared_quality_decision(
                 analysis.metadata, analysis.compliance_score, old.get("puntaje_minimo") or 80,
                 transcription.duration_seconds, base)
+            from app.services.source_validation_gate import enforce_excel_source
+            # El JSON histórico puede contener aprobaciones analíticas aunque
+            # nunca existiera registro para ese audio en el Excel.
+            decision = enforce_excel_source(
+                decision, relation, excel_required=(updated.get("mode") == "A"),
+            )
+            analysis.metadata["source_data_validation"] = {
+                "status": decision.get("source_data_status", "CON_RELACION"),
+                "blocked": bool(decision.get("source_data_blocked")),
+                "preliminary_classification": decision.get("preliminary_classification"),
+            }
             analysis.metadata["final_result"] = decision["clasificacion"]
             analysis.metadata["shared_classification"] = decision
             item["analytics"] = analysis.to_dict()

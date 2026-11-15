@@ -463,6 +463,7 @@ class BatchService:
             "NEGOCIACION_INVALIDA": "NEGOCIACION_INVALIDA",
             "FALLA_GRAVE": "FALLA_GRAVE",
             "REVISAR": "REVISAR",
+            "SIN_RELACION_EXCEL": "SIN_RELACION_EXCEL",
         }
         destination_dir = classified_root / folder_map.get(category, "REVISAR")
 
@@ -632,13 +633,9 @@ class BatchService:
                     else None
                 )
 
-                if record is not None:
-                    from dataclasses import replace
-                    from app.services.account_source_validation import apply_output_name_authority
-                    name_copy = {'relation':record.to_dict()}
-                    if apply_output_name_authority(name_copy):
-                        record = replace(record,nombre_final=name_copy['relation']['nombre_final'])
-                        item['output_name_normalization'] = name_copy['output_name_normalization']
+                # nombre_final se conserva exactamente como lo proporciona Excel.
+                # La tarjeta solo es referencia para validar el contenido de la llamada.
+                item.pop("account_identity_conflict", None)
 
                 # Un audio relacionado con un estatus NO autorizado puede ser,
                 # por su propia naturaleza, un buzón/silencio/cuelgue y no
@@ -921,11 +918,21 @@ class BatchService:
                 # Una sola puerta de decisión para individual, lote con Excel y solo audios.
                 decision = AnalyticsService.shared_quality_decision(
                     analytics_metadata, score, minimum_score, duration_seconds, classification)
+                from app.services.source_validation_gate import enforce_excel_source
+                decision = enforce_excel_source(
+                    decision, record,
+                    excel_required=bool(self.has_relation_excel()),
+                )
                 classification.update(decision)
                 operational_class = decision["clasificacion"]
                 if decision.get("motivo"):
                     manual_reasons.append(decision["motivo"])
                 # Un mismo dictamen en checkpoint, reporte y metadatos.
+                analytics_metadata["source_data_validation"] = {
+                    "status": decision.get("source_data_status", "CON_RELACION"),
+                    "blocked": bool(decision.get("source_data_blocked")),
+                    "preliminary_classification": decision.get("preliminary_classification"),
+                }
                 analytics_metadata["final_result"] = operational_class
                 analytics_metadata["shared_classification"] = decision
                 if isinstance(analytics_data, dict):
@@ -959,8 +966,8 @@ class BatchService:
 
                 if self.has_relation_excel() and record is None:
                     item["message"] = (
-                        f"Analytics {score:.1f}% · REVISAR · "
-                        "audio sin relacion en Excel"
+                        f"Analytics {score:.1f}% · {classification['clasificacion']} · "
+                        "audio sin relación en Excel; dictamen de calidad provisional"
                     )
                 else:
                     item["message"] = (

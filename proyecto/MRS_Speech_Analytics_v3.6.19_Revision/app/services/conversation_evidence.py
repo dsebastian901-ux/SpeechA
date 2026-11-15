@@ -101,6 +101,50 @@ def sentence_evidence(text, segments=()):
     return result
 
 
+def nominee_conflict_with_confirmed_name(text, contact_confirmation):
+    """Evitar convertir al receptor de recado en TITULAR por un «sí».
+
+    Solo se activa si el motor confirmó explícitamente un segundo nombre que
+    no comparte apellidos/nombre significativos con el primer deudor buscado.
+    No atribuye una voz ni determina que el receptor es un tercero: exige
+    contrastar el audio y conserva la alerta de privacidad.
+    """
+    none = {"conflict": False, "requested_name": "", "confirmed_name": ""}
+    if (not isinstance(contact_confirmation, dict)
+            or not contact_confirmation.get("confirmed")
+            or contact_confirmation.get("method") != "RESPUESTA_A_IDENTIFICACION"):
+        return none
+    source = normalize(text)
+    evidence = normalize(contact_confirmation.get("evidence") or "")
+    first_request = re.search(
+        r"\b(?:me (?:puede|podria|podre|puedes|podrias) comunicar"
+        r"(?:me)?(?:\s*,?\s*(?:por|de) favor\s*,?)?\s*(?:con|a)|"
+        r"busco a|me comunico con)\s+"
+        r"(?P<identity>[a-z ,]{4,90}?)(?:\?|\.|\s+por favor\b)", source
+    )
+    confirmed_request = re.search(
+        r"\b(?:tengo(?: el)? gusto con|me comunico con|hablo con)\s+"
+        r"(?P<identity>[a-z ,]{4,90}?)\s*,?\s*[¿? ]*"
+        r"(?:correcto|es correcto)\s*\?\s*si\b", evidence
+    )
+    if not first_request or not confirmed_request:
+        return none
+    def tokens(value):
+        ignored = {"el", "la", "los", "de", "del", "senor", "senora",
+                   "senorita", "caballero", "por", "favor"}
+        return {word for word in re.findall(r"[a-z]{3,}", value)
+                if word not in ignored}
+    requested = tokens(first_request["identity"])
+    confirmed = tokens(confirmed_request["identity"])
+    # Diferencia nominal demostrable; errores parciales de Whisper no bastan.
+    if len(requested) < 2 or len(confirmed) < 2 or requested & confirmed:
+        return none
+    return {"conflict": True,
+            "requested_name": first_request["identity"].strip(),
+            "confirmed_name": confirmed_request["identity"].strip(),
+            "method": "DOS_IDENTIDADES_NOMINALES_DISTINTAS"}
+
+
 def holder_confirmation(text, segments=()):
     """Confirmación conversacional del titular, independiente de la etiqueta Excel."""
     s = normalize(text)
@@ -116,7 +160,41 @@ def holder_confirmation(text, segments=()):
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|se encuentra|estoy buscando a|hablo con|"
         r"me estoy comunicando al numero telefonico de|seria tan amable de comunicarme con|"
         r"tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|(?<=¿)con)")
-    explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+)?(?:digame|diganme|dime|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b"
+    # Segundo paso de identidad en llamadas reales: «Busco a Nombre Apellido.
+    # ¿Usted es Nombre? Sí.» No basta «sí» aislado: el nombre debe haber sido
+    # solicitado explícitamente antes, sin contradicción de tercero.
+    followup_identity = re.compile(
+        r"\busted es\s+(?P<identity>[a-z][a-z ]{2,64}?)\s*\?\s*"
+        r"(?P<answer>si|asi es|correcto)\b"
+    )
+    for match in followup_identity.finditer(s):
+        identity = match["identity"].strip()
+        if (not valid_nominal_request(s, match.start(), identity)
+                or re.search(r"\b(?:familiar|espos[oa]|madre|padre|herman[oa]|"
+                             r"referencia|banco|despacho|cobranza|titular|"
+                             r"tarjeta|pago|cuenta|telefono|servicio|quien)\b", identity)
+                or re.search(r"\d", identity)
+                or _role_at(text, segments, match.start("answer")) in {"GESTOR", "TERCERO"}):
+            continue
+        context = s[max(0, match.start()-320):match.start()]
+        request = list(re.finditer(
+            r"\b(?:busco(?: a)?|me (?:comunico|comunica|comunicaria|"
+            r"puede comunicar|podria comunicar) con|"
+            r"me puede comunicar(?: con)?|con (?:el senor|la senorita)|"
+            r"esta con)\b", context
+        ))
+        if not request or not re.search(r"\b"+re.escape(identity)+r"\b", context[request[-1].start():]):
+            continue
+        after = s[match.end():match.end()+170]
+        if (counter.search(after) or
+                re.search(r"\b(?:no esta|se lo comunico|le paso|"
+                          r"no soy|lo busco|la busco)\b", after)):
+            continue
+        return {"confirmed": True, "method": "CONFIRMACION_NOMINAL_SEGUNDO_PASO",
+                "evidence": match.group(), "speaker_role": "NO DETERMINADO"}
+
+    # Tolerancia ASR solo tras solicitud nominal, con exclusión de terceros.
+    explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+(?:digamos|diga|ya hablo|ya habla)|ya habla|(?:si[, ]+)?(?:digame|diganme|dime|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella)))\b"
     prompt = re.compile(
         rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)(?:[.?]|,)\s*" + explicit_answer)
     salutation_prompt = re.compile(
@@ -483,6 +561,12 @@ def completed_payment(text, segments=()):
         candidates.extend(re.finditer(r"\bpagué\b", verbatim, re.I))
         candidates.extend(re.finditer(r"\bdeposité\b", verbatim, re.I))
         candidates.extend(re.finditer(r"\brealicé (?:mi|el|un) pago\b", verbatim, re.I))
+        # ASR puede transcribir «depositamos» como «repositamos».
+        # Exigir un marcador de pasado para no confundir con pago futuro.
+        candidates.extend(re.finditer(
+            r"\b(?:ayer|anoche|el dia de ayer)\b.{0,80}\brepositamos\b|"
+            r"\brepositamos\b.{0,50}\b(?:ayer|anoche)\b", s))
+
         # Sin tilde, «realice» puede ser subjuntivo: una instrucción para un
         # pago futuro no acredita un depósito anterior, aunque mencione recibo.
         future_instructions = list(re.finditer(
@@ -937,17 +1021,29 @@ SENSITIVE = re.compile(
     r"(?:tiene|presenta|cuenta con) (?:un |una |dos |tres |cuatro |\d+ )?(?:deuda|adeudo|atraso|mens(?:u)?alidad(?:es)?)|"
     r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciseis|diecisiete|dieciocho|diecinueve|veinte) (?:mes(?:es)?|anos?|mens(?:u)?alidad(?:es)?)(?: de)? (?:atraso|vencid[ao]s?)|"
     r"mens(?:u)?alidades vencidas|(?:meses|anos) de atraso|"
+    # Divulgación cuantificada en orden inverso: «atraso de más de siete
+    # meses». Antes escapaba aun cuando se decía explícitamente a un familiar.
+    r"(?:atraso|mora)(?: de| por| de mas de| de mas| de alrededor de)?\s*"
+    r"(?:mas de\s+)?(?:\d+|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|"
+    r"nueve|diez|once|doce|trece|catorce|quince|veinte)\s+mes(?:es)?|"
     r"(?:\d+|un|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|veinte) (?:meses?|anos?) (?:que no (?:se )?(?:ha )?(?:efectuado|realizado|aplicado|presentado|registrado|recibido|presenta|efectua|realiza|registra|recibe)|sin (?:realizar|efectuar|registrar)) (?:un |el |su |ningun )?(?:pago|abono)|"
     r"(?:deuda|adeudo|pago minimo|monto) (?:de |es |por )?\d[\d.,]*|"
     r"(?:adeuda|debe)\s+(?:\d[\d.,]*|mil|cien|doscientos|trescientos|quinientos)|"
     r"(?:su|una|la) deuda|(?:su|un|el) adeudo|cubrir (?:el |su )?atraso|respecto a su atraso|por (?:el |su )?atraso|"
     r"negativa de pago|recuperacion (?:del|de su|en el) saldo|"
+    # Un recado genérico puede mencionar al banco, pero hablar de un
+    # «acuerdo de pago sobre su tarjeta» revela la situación financiera.
+    # Solo bloquear aprobación cuando el receptor es tercero o desconocido;
+    # no inferir un hablante a partir de las ventanas acústicas de Whisper.
+    r"(?:acuerdo|convenio) de pago (?:sobre|de|por|para) (?:su|la|una) (?:tarjeta|cuenta)|"
+    r"(?:generar|formalizar|negociar) (?:un|el|su) acuerdo de pago[^.!?]{0,65}"
+    r"(?:tarjeta|cuenta)|"
     r"deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas|"
     r"(?:tiene|presenta) (?:lo que es )?(?:una|su|la) cuenta extrajudicial|"
     r"(?:su |la )?cuenta(?: se encuentra| esta)? en extrajudicial|se encuentra en extrajudicial (?:su |la )?tarjeta|"
     r"(?:su|la|esa) cuenta[^.!?]{0,65}\b(?:se encuentra|esta|asignada|canalizada) (?:en |a |al )?(?:el |la )?area de cobranza|"
     r"detener (?:la|su) demanda (?:de tipo )?mercantil|por la trazo de su tarjeta|"
-    r"demanda (?:de|por) (?:pago|incumplimiento)|pagos? vencidos?|incumplimiento (?:al|del|de) (?:contrato|pago)|"
+    r"demanda (?:de|por) (?:pago|incumplimiento)|pagos? vencidos?|incumplimiento (?:a|al|del|de) (?:el )?(?:contrato|pago)|"
     r"(?:sobre|respecto a) (?:el|su) atraso (?:que presenta|de su (?:tarjeta|cuenta))|"
     r"(?:cuenta|tarjeta)(?:[^.!?]{0,45}?) (?:se (?:canalizo|turno|envio)|fue (?:canalizada|turnada|enviada)) (?:al |a (?:el |un )?)?(?:area de |departamento )?juridico|"
     r"(?:tiene|maneja|cuenta con) (?:una |la |su )?tarjeta)\b")
@@ -1110,6 +1206,17 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
             last_recipient = role
         s = normalize(unit["text"])
         matches = sensitive_financial_matches(s)
+        # «tres nacionalidades vencidas» es una posible deformación ASR de
+        # «tres mensualidades vencidas». Si se dice sobre una tarjeta/cuenta
+        # delante de un tercero, no aprobar en silencio: pedir cotejo del audio.
+        # NO supone divulgación confirmada ni atribuye voz al gestor.
+        if (third_party_confirmed or expected_third_party) and re.search(
+            r"\b(?:tarjeta|cuenta|visa|pago)\b", s
+        ):
+            matches.extend(re.finditer(
+                r"\b(?:\d+|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+"
+                r"nacionalidades\s+vencidas\b", s
+            ))
         # Un punto o un corte ASR no debe ocultar «Saldo pendiente. Son $500».
         # El rol decisivo es el de quien proporciona el importe, nunca el de
         # un familiar que informa su propio pago en el turno siguiente.
@@ -1133,7 +1240,14 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
             hypothetical = bool("?" in s or "¿" in s or re.search(r"\b(?:si|no|nunca)\s*$", prefix)
                                 or re.search(r"\b(?:no tiene|sin (?:deuda|adeudo|atraso)|si tuviera|en caso de)\b", s))
             protected = third_party_confirmed and last_recipient != "TITULAR"
-            asr_uncertainty=bool(re.fullmatch(r"por la trazo de su tarjeta|deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas",match.group()))
+            asr_uncertainty=bool(
+                re.fullmatch(
+                    r"por la trazo de su tarjeta|deudo con su tarjeta|la deudo que presenta|"
+                    r"el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas|"
+                    r"(?:\d+|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez) nacionalidades vencidas",
+                    match.group()
+                )
+            )
             scoped_role=None
             if role=="NO DETERMINADO" and protected and not hypothetical and not asr_uncertainty:
                 from app.services.scoped_institutional_speech import institutional_clause_evidence

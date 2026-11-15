@@ -88,7 +88,10 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     ids = {p.get('id') for p in penalties if isinstance(p,dict)}
     if 'PEN_SIN_INTENTO_NEGOCIACION' in ids:
         add(12,'NO_COLLECTION_ATTEMPT','No se confirmó intento de negociación con el titular','penalties')
-    if status.get('excel_status') and status.get('matches') is None:
+    # No crear DOS bloqueos por la misma ausencia de evidencia de estatus.
+    # STATUS_INVALID ya explica la razón y mantiene REVISAR si corresponde.
+    if (status.get('excel_status') and status.get('matches') is None
+            and status.get('valid') is not False):
         add(1,'STATUS_NOT_CONFIRMED','Estatus de Excel sin coincidencia confirmada; requiere revisión','status_validation')
     if status.get('valid') is False:
         add(1,'STATUS_INVALID',status.get('reasons') or ['Estatus pendiente de validación'],'status_validation')
@@ -145,12 +148,41 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         for finding in blocking:finding['severity']='OBSERVATION'
         findings.append(rejection)
         blocking=[rejection]
+    # El estatus distinto con evidencia ALTA no debe quedar eternamente en
+    # REVISAR cuando la única objeción es la propia dictaminación.
+    # Nunca resuelve dudas independientes de privacidad, referencia o trato;
+    # tampoco confirma un dictamen sin fuente Excel.
+    status_misdictaminado_confirmado = bool(
+        score_ok
+        and status.get('excel_status')
+        and status.get('detected_status')
+        and status.get('matches') is False
+        and status.get('detection_confidence') == 'ALTA'
+        and status.get('evidence')
+        # En esta fase solo clasificar como MAL_DICTAMINADO la discrepancia
+        # de tipo de recado cuando su entrega está documentada.
+        # El resto (incluidas frases hipotéticas de pago) conserva REVISAR.
+        and status.get('evidence_method') in {
+            'RECADO_ACEPTADO_CON_CONTACTO',
+            'RECADO_ACEPTADO_Y_PARENTESCO_CONFIRMADO_POR_USUARIO',
+        }
+        and not status.get('review_required')
+        and not output_label.get('valid')
+        and blocking
+        and all(f['code'] in {'STATUS_INVALID', 'STATUS_NOT_CONFIRMED'} for f in blocking)
+        and not critical
+    )
     if critical:
         category = 'FALLA_GRAVE'
     elif rejection:
         category = 'NO_APROBADO'
+    elif status_misdictaminado_confirmado:
+        category = 'MAL_DICTAMINADO'
     elif verified_exception and score_ok and not blocking:
-        category = 'APROBADO_ETIQUETA_CORREGIDA' if output_label['valid'] else 'APROBADO_CON_EXCEPCION'
+        # La excepción hostil/lasciva confirmada SIEMPRE tiene su propia carpeta.
+        # Una corrección de etiqueta se conserva en metadata, pero no debe
+        # trasladar el audio a APROBADO_ETIQUETA_CORREGIDA.
+        category = 'APROBADO_CON_EXCEPCION'
     elif not score_ok and ordinary_score_rejection(m,score,minimum_score,duration_seconds):
         category = 'NO_APROBADO_MENOR_80'
     elif blocking:

@@ -30,6 +30,11 @@ PENDING = re.compile(
     r'como me mandarian algo por escrito antes de pagarlo|'
     r'me podria comunicar con ustedes mas tarde|'
     r'me puede volver a llamar[^.!?]{0,40}(?:manana|tarde)|'
+    # Respuestas de titular con decisión pendiente: no son promesas y NO
+    # equivalen a negativa definitiva. Requieren contexto de cobro cercano.
+    r'(?:no[, ]+pues[, ]+)?dejeme ver y me (?:habla|llama|marca) (?:al rato|mas tarde|luego)|'
+    r'voy a ver cuanto (?:puedo|voy a) juntar|'
+    r'dej(?:eme|enme)[, ]+(?:casi )?le puedo regresar la llamada en (?:unos? )?\d+ minutos|'
     r'lo voy a (?:analizar|pensar|consultar|revisar)|'
     r'(?:no|pero) (?:te |le )?estoy diciendo que no[^.!?]{0,80}(?:quiero|convenio))\b')
 DISPUTE = re.compile(

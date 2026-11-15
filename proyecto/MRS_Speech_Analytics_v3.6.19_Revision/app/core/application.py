@@ -10,6 +10,8 @@ import customtkinter as ctk
 from app.config import settings
 from app.services.settings_service import SettingsService
 from app.ui.main_window import MainWindow
+from app.ui.login_window import LoginWindow
+from app.services.auth_service import AuthService
 
 
 class SpeechAnalyticsApplication:
@@ -38,10 +40,20 @@ class SpeechAnalyticsApplication:
         # ---------------------------------------------------
         # Crear la ventana principal
         # ---------------------------------------------------
-        self.window = MainWindow()
+        self.auth = AuthService()
+        self.window = None
 
     def run(self):
         """
         Inicia el ciclo principal de la aplicación.
         """
-        self.window.mainloop()
+        while True:
+            login = LoginWindow(self.auth)
+            login.mainloop()
+            if not login.authenticated:
+                break
+            self.window = MainWindow(auth=self.auth)
+            self.window.mainloop()
+            if not getattr(self.window, 'logout_requested', False):
+                break
+            self.auth.logout()

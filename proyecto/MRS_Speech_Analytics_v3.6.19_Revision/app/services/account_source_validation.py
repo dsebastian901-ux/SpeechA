@@ -4,58 +4,22 @@ from pathlib import PureWindowsPath
 
 
 def validate_account_source(relation):
-    name = PureWindowsPath(str(relation.get("nombre_final") or "")).name
-    match = re.match(r"^(0*\d{16})(?=_)", name)
-    card = str(relation.get("numero_de_tarjeta") or "").strip()
-    if not match:
-        return {"review_required": False, "reason": ""}
-    encoded = match[1][-16:]
-    if not re.fullmatch(r"\d{16}", card):
-        return {"review_required": True, "reason": "El nombre final contiene una tarjeta sin referencia válida de origen."}
-    mismatch = encoded != card
-    return {"review_required": mismatch, "expected_last4": card[-4:], "name_last4": encoded[-4:],
-            "reason": (f"Datos de cuenta: nombre_final termina en {encoded[-4:]} y numero_de_tarjeta en {card[-4:]}; "
-                       "confirmar el identificador antes de renombrar.") if mismatch else ""}
+    """nombre_final y numero_de_tarjeta son campos independientes.
+
+    El numero_de_tarjeta es referencia para la comprobacion del audio; ninguna
+    diferencia con el nombre de salida constituye un conflicto de identidad.
+    """
+    return {"review_required": False, "reason": ""}
 
 
 def corrected_account_name(relation):
-    if not validate_account_source(relation)["review_required"]:
-        raise ValueError("No hay una diferencia de identificador que corregir.")
-    card = str(relation.get("numero_de_tarjeta") or "").strip()
-    if not re.fullmatch(r"\d{16}", card):
-        raise ValueError("Se requiere numero_de_tarjeta de 16 dígitos.")
-    name = str(relation.get("nombre_final") or "")
-    match = re.match(r"^(0*\d{16})(?=_)", name)
-    if not match:
-        raise ValueError("El nombre final no tiene el formato de tarjeta reconocido.")
-    prefix = match[1][:-16]
-    return prefix+card+name[match.end():]
+    """No está permitida la corrección de nombres a partir de la tarjeta."""
+    raise ValueError("nombre_final es independiente de numero_de_tarjeta.")
 
 
 def apply_output_name_authority(item):
-    """Aplicar la autoridad de numero_de_tarjeta a una COPIA de trabajo.
-
-    La usuaria indicó que la tarjeta del Excel manda sobre nombre_final. No
-    se altera el Excel, la tarjeta, la transcripción ni una validación humana.
-    Un identificador incompleto se conserva para revisión, sin completarlo.
-    """
-    relation = item.get('relation') or {}
-    validation = validate_account_source(relation)
-    if not validation.get('review_required'):
-        return False
-    try:
-        corrected = corrected_account_name(relation)
-    except ValueError:
-        return False
-    previous = str(relation.get('nombre_final') or '')
-    item['relation'] = dict(relation, nombre_final=corrected)
-    item['output_name_normalization'] = {
-        'schema':1,'source':'NUMERO_DE_TARJETA_AUTHORITY',
-        'previous_name':previous,'corrected_name':corrected,
-        'card_last4':str(relation['numero_de_tarjeta'])[-4:],
-        'human_verified':False,'original_excel_modified':False,
-    }
-    return True
+    """Compatibilidad con llamadas anteriores: nunca reescribir nombre_final."""
+    return False
 
 
 def write_corrected_relation_excel(source_excel, corrections, destination):
