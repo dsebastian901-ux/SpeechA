@@ -39,6 +39,10 @@ PENDING = re.compile(
     r'(?:puedo|podria|le puedo|les puedo) regresar la llamada (?:en|dentro de)[^.!?]{0,40}minutos|'
     r'(?:por si|para ver si) (?:mi )?(?:mama|papa|familia|herman[oa]) me (?:puede )?prestar[^.!?]{0,25}dinero|'
     r'me puede volver a llamar[^.!?]{0,40}(?:manana|tarde)|'
+    # Evidencia verbal de incertidumbre cuando se habla de cumplir el pago:
+    # «lo intentaré» no es compromiso firme; «no tengo fechas» no confirma día.
+    # Requieren un objeto de pago en el mismo turno o pregunta previa.
+    r'(?:lo intentare|voy a intentar|no tengo (?:una )?fechas?)\b|'
     # Una decisión pospuesta, no un convenio ni un compromiso firme.
     # scan_dialogue exige contexto financiero y descarta voz del gestor.
     r'(?:dejeme|dejenme) (?:ver|revisar|checar)[^.!?]{0,45}'
@@ -69,6 +73,25 @@ def _deferred_payment_context(source, value, start, match):
     y nunca una pregunta sobre teléfono, comprobante o anotaciones.
     """
     phrase = value[match.start():match.end()]
+    if re.match(r"(?:lo intentare|voy a intentar|no tengo (?:una )?fechas?)\b", phrase):
+        # Ej. «estoy juntando dinero para liquidar, pero no tengo fechas»;
+        # «¿podemos contar con el pago? — lo intentaré».
+        # Excluir «lo intentaré» referido a un teléfono u otra gestión.
+        around = value[max(0, match.start()-135):min(len(value), match.end()+65)]
+        if NON_PAYMENT_TASK.search(around) and not PAYMENT_DECISION_TOPIC.search(around):
+            return False
+        if PAYMENT_DECISION_TOPIC.search(around) and not NON_PAYMENT_TASK.search(around):
+            return True
+        prefix = source[max(0, start+match.start()-250):start+match.start()]
+        question_end = prefix.rfind("?")
+        question_start = prefix.rfind("¿")
+        if question_end < 0 or question_start < 0 or question_start >= question_end:
+            return False
+        question = prefix[question_start:question_end+1]
+        if len(prefix[question_end+1:]) > 85:
+            return False
+        return bool(PAYMENT_DECISION_TOPIC.search(question)
+                    and not NON_PAYMENT_TASK.search(question))
     if not re.match(r"(?:dejeme|dejenme)\s+(?:ver|revisar|checar)\b", phrase):
         return True
     if NON_PAYMENT_TASK.search(phrase) and not PAYMENT_DECISION_TOPIC.search(phrase):
