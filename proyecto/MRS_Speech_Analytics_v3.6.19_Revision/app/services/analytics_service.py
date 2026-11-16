@@ -2895,6 +2895,17 @@ class AnalyticsService:
         negotiation_attempt = bool(
             explicit_settlement_offer
             or (promise_date_evidence and not payment_confirmation_case)
+            # Solicitudes futuras explícitas: demuestra gestión de cobro,
+            # no un acuerdo del titular ni confirmación de fecha/importe.
+            # Debe atribuirse al gestor, no bastan menciones del cliente.
+            or agent_statement(text, segments,
+                r"\b(?:se le esta (?:requiriendo|solicitando|pidiendo) (?:el |su |un )?pago|"
+                r"(?:usted )?podria realizar su pago(?: de)?\s+(?:\d+|"
+                r"un|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|"
+                r"diez|cien|quinientos|ochocientos|mil)\b|"
+                r"ya tendra (?:usted )?(?:su |el )?pago para (?:el dia de )?(?:hoy|manana)|"
+                r"(?:podemos|podriamos) contar con (?:su |el )?pago|"
+                r"se confirma su pago para (?:el dia de )?(?:hoy|manana))\b")
             or re.search(r"\b(?:cuanto\s+puede\s+pagar|que\s+cantidad\s+puede|"
                          r"que\s+dia\s+puede\s+pagar|cuando\s+puede\s+pagar|"
                          r"propuesta\s+de\s+pago|opcion\s+de\s+pago|convenio|"
