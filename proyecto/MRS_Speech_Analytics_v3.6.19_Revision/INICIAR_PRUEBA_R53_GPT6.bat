@@ -12,4 +12,17 @@ if not exist main.py (
   pause
   exit /b 1
 )
+set "MRS_PYTHON=python"
+where py >nul 2>&1
+if not errorlevel 1 (
+  py -3.10 --version >nul 2>&1
+  if not errorlevel 1 set "MRS_PYTHON=py -3.10"
+)
+echo Verificando sintaxis del programa ANTES de iniciar Whisper...
+%MRS_PYTHON% -m compileall -q app tools
+if errorlevel 1 (
+  echo ERROR DE CODIGO: No se inicia la prueba ni Whisper.
+  pause
+  exit /b 1
+)
 call "INICIAR_MRS.bat"
