@@ -1,8 +1,8 @@
 MRS SPEECH ANALYTICS - VERSION AISLADA DE PRUEBA
-Motor: 3.6.19-r53-gpt6-test1
+Motor: 3.6.19-r53-gpt6-test2
 Base: Codex entrega r53
 Propuesta de correcciones: GPT-6 revisada por Codex, PR #2
-Rama test/r53-gpt6-integrada-20261115
+Rama test/r53-gpt6-integrada-test2-20261115
 Fecha: 15/11/2026
 
 IMPORTANTE: ES UNA VERSION DE PRUEBA, NO LA ENTREGA FINAL.
@@ -13,7 +13,7 @@ IMPORTANTE: ES UNA VERSION DE PRUEBA, NO LA ENTREGA FINAL.
   todavia no se han acreditado en esta version.
 
 PASOS EN WINDOWS
-1. Descargue el ZIP de la RAMA test/r53-gpt6-integrada-20261115.
+1. Descargue el ZIP de la RAMA test/r53-gpt6-integrada-test2-20261115.
    GitHub > Code > Download ZIP. No use el archivo antiguo entregas/r53.zip:
    ese ZIP no incluye estas nuevas correcciones.
 2. Extraiga todo el ZIP en carpeta NUEVA, por ejemplo C:\MRS_PRUEBA_R53_GPT6
@@ -54,3 +54,19 @@ LIMITES Y PROXIMO COTEJO
 
 Codigo y comparacion para Codex:
 https://github.com/dsebastian901-ux/SpeechA/pull/2
+
+RECUPERACION DEL CHECKPOINT 16/NOV/2026 - 40 FALLOS DE SINTAXIS
+- Archivo original: batch_checkpoint(20261116-021623).json
+- 727 completados conservan resultados r51 previos; 40 tienen texto,
+  segmentos y metadatos Whisper guardados, aunque quedaron en ERROR.
+- 554 llamadas siguen pendientes y SIN transcripcion.
+- NO ejecute nuevamente la transcripcion para recuperar los 40 errores.
+- Abra REANALIZAR_PRUEBA_R53_GPT6.bat y elija el checkpoint completo
+  original. Reanaliza en COPIA las 767 llamadas con transcripcion.
+- Las otras 554 permaneceran PENDIENTE sin generarse un falso ERROR.
+- El programa revisa primero la sintaxis de todo app/ y tools/.
+  Si falla, no abre GUI, no comienza Whisper ni reanaliza.
+- Los resultados r53 test2 aun requieren cotejo del mismo lote
+  contra el r51 original; no afirmar una mejora solo por cambiar contador.
+- Esta rama contiene las correcciones a los dos hallazgos P2 de Codex
+  sobre preguntas de pagos pasados y notas de telefono.
