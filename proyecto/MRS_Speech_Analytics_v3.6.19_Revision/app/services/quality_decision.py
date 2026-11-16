@@ -88,7 +88,9 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     ids = {p.get('id') for p in penalties if isinstance(p,dict)}
     if 'PEN_SIN_INTENTO_NEGOCIACION' in ids:
         add(12,'NO_COLLECTION_ATTEMPT','No se confirmó intento de negociación con el titular','penalties')
-    if status.get('excel_status') and status.get('matches') is None:
+    # Si STATUS_INVALID ya representa la causa, no duplicar su bloqueo.
+    if (status.get('excel_status') and status.get('matches') is None
+            and status.get('valid') is not False):
         add(1,'STATUS_NOT_CONFIRMED','Estatus de Excel sin coincidencia confirmada; requiere revisión','status_validation')
     if status.get('valid') is False:
         add(1,'STATUS_INVALID',status.get('reasons') or ['Estatus pendiente de validación'],'status_validation')
