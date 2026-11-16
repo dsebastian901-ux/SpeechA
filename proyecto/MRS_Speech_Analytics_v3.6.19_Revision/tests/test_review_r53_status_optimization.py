@@ -128,3 +128,43 @@ def test_full_analysis_recognizes_payment_question_without_15_point_penalty():
         p["id"] for p in meta["penalties"]
     }
     assert not meta["negotiation_validation"]["commitment_evidence"]["accepted"]
+
+
+def test_codex_review_historical_payment_question_is_not_new_collection():
+    # Cobro ya efectuado; pedir confirmación de ese mismo depósito no basta.
+    text = (
+        "Titular: Ayer pagué 100 pesos. "
+        "Gestor: ¿Podríamos contar con el pago que realizó ayer?"
+    )
+    assert not collection_request_question(text)["detected"]
+
+
+def test_codex_review_historical_plus_real_future_question_detects_future():
+    text = (
+        "Gestor: ¿Podríamos contar con el pago que realizó ayer? "
+        "Gestor: ¿Ya tendrá su pago para mañana?"
+    )
+    e = collection_request_question(text)
+    assert e["detected"] and e["method"] == "SOLICITUD_DE_PAGO_FUTURO"
+
+
+def test_codex_review_note_taking_not_a_payment_decision():
+    text = (
+        "Gestor: Le llamo sobre su tarjeta. "
+        "Gestor: ¿Puede anotar el teléfono? "
+        "Titular: Déjeme revisar dónde tengo una pluma y me habla al rato."
+    )
+    events = scan_dialogue(text)["events"]
+    assert not any(e["kind"] == "PENDING_DECISION" for e in events)
+    assert pending_status(
+        {"events": events}, {"accepted": False, "declined": False}
+    ) is None
+
+
+def test_short_deferred_response_needs_actual_payment_question():
+    text = (
+        "Gestor: ¿Podría pagar 800 pesos mañana? "
+        "Titular: No, déjeme ver y me habla al rato."
+    )
+    events = scan_dialogue(text)["events"]
+    assert any(e["kind"] == "PENDING_DECISION" for e in events)
