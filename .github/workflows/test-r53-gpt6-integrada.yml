@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - test/r53-gpt6-integrada-20261115
+      - test/r53-gpt6-correctiva-20261115
   workflow_dispatch:
 
 jobs:
@@ -24,6 +25,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements-dev.txt
+      - name: Verificar sintaxis de fuentes antes de pruebas
+        run: |
+          python -m compileall -q app tools tests
       - name: Ejecutar pruebas de version integrada y reglas de r53
         run: |
           python -m pytest -q tests/test_review_r53_exceptions_and_excel.py tests/test_review_r53_status_optimization.py tests/test_integrated_operational_policy_r53.py tests/test_short_batch_outputs_r53.py
