@@ -23,12 +23,6 @@ _QUOTES = re.compile(
     r"\b(?:diga\s+que|dijo\s+que|usted\s+dijo|usted\s+dice|"
     r"repita|por\s+ejemplo|supongamos\s+que)\b"
 )
-_NOT_REQUEST = re.compile(
-    r"\b(?:ya\s+(?:pague|pago|realice|hice)|pago\s+(?:anterior|pasado)|"
-    r"comprobante\s+(?:de|del)\s+pago|el\s+pago\s+ya\s+se\s+realizo)\b"
-)
-
-
 def collection_request_question(text, segments=()):
     """Evidencia positiva de solicitud; sin atribuir voz cuando no hay roles."""
     none = {
@@ -44,8 +38,9 @@ def collection_request_question(text, segments=()):
         normalized = normalize(unit.get("text") or "")
         for match in _REQUEST.finditer(normalized):
             prefix = normalized[max(0, match.start() - 85):match.start()]
-            clause = normalized[max(0, match.start() - 120):match.end() + 80]
-            if _QUOTES.search(prefix) or _NOT_REQUEST.search(clause):
+            # La solicitud futura se analiza localmente: no anularla porque
+            # en una oración anterior mencionaron un comprobante o pago.
+            if _QUOTES.search(prefix):
                 continue
             if re.search(r"\b(?:no|nunca)\s+$", prefix):
                 continue
