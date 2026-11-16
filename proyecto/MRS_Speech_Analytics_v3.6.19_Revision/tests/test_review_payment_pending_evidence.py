@@ -41,3 +41,20 @@ def test_uncertain_phrase_never_overrides_confirmed_agreement():
         "Titular: Confirmo que pagaré el próximo viernes."
     )
     assert pending_status(dialogue, {"accepted": True, "declined": False}) is None
+
+
+# Errores P2 confirmados por Codex; el texto financiero incidental
+# nunca transforma vacaciones ni conseguir una pluma en decisión de pago.
+@pytest.mark.parametrize("text", [
+    "Gestor: ¿Podemos contar con su pago hoy? "
+    "Titular: Antes necesito anotar el teléfono para aclarar mi pago, "
+    "voy a intentar encontrar una pluma.",
+    "Titular: No tengo fechas para mis vacaciones, el pago de mi tarjeta "
+    "está al corriente.",
+    "Gestor: ¿Podemos contar con su pago hoy? "
+    "Titular: Voy a intentar encontrar mi comprobante por WhatsApp.",
+    "Gestor: ¿Podemos contar con su pago hoy? "
+    "Titular: Lo intentaré, necesito anotar el número de teléfono.",
+])
+def test_codex_p2_no_false_payment_status_from_logistics(text):
+    assert _pending(text) is None
