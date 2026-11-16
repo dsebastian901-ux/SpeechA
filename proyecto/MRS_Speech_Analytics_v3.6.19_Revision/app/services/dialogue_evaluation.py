@@ -142,7 +142,12 @@ def scan_dialogue(text, segments=()):
                 if re.search(r'\b(?:no es cierto que|no dije que|diga|si)\s*$', value[:match.start()]):
                     continue
                 if (kind=='PENDING_DECISION' and match.group().startswith('lo voy a ')
-                        and re.search(r'\bno\s*
+                        and re.search(r'\bno\s*$',value[:match.start()])):
+                    continue  # «No lo voy a revisar» no acredita decidir revisarlo.
+                # No calificar como decisión de pago una dificultad para anotar.
+                if kind == 'PENDING_DECISION' and not _deferred_payment_context(
+                        source, value, start, match):
+                    continue
                 # «Ahorita no se refleja» y «hoy no puede anotar» describen
                 # trámites, no una decisión de pago del interlocutor.
                 if kind == 'PENDING_DECISION' and re.fullmatch(r'(?:(?:el dia de )?hoy|ahorita)[, ]+no',match.group()):
