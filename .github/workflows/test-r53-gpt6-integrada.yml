@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - test/r53-gpt6-integrada-20261115
+      - test/r53-gpt6-integrada-test2-20261115
   workflow_dispatch:
 
 jobs:
