@@ -74,24 +74,50 @@ def _deferred_payment_context(source, value, start, match):
     """
     phrase = value[match.start():match.end()]
     if re.match(r"(?:lo intentare|voy a intentar|no tengo (?:una )?fechas?)\b", phrase):
-        # Ej. «estoy juntando dinero para liquidar, pero no tengo fechas»;
-        # «¿podemos contar con el pago? — lo intentaré».
-        # Excluir «lo intentaré» referido a un teléfono u otra gestión.
-        around = value[max(0, match.start()-135):min(len(value), match.end()+65)]
-        if NON_PAYMENT_TASK.search(around) and not PAYMENT_DECISION_TOPIC.search(around):
+        # No basta con que la llamada mencione una tarjeta o un pago.
+        # El objeto de «intentar»/«fechas» debe ser financiero, no una
+        # pluma, teléfono, vacaciones u otro trámite explícito.
+        before = value[max(0, match.start()-160):match.start()]
+        after = value[match.end():min(len(value),match.end()+110)]
+        utterance = value[max(0, match.start()-120):min(len(value),match.end()+90)]
+        if re.search(r"(?:intentar|intentare)\s+(?:buscar|encontrar|"
+                     r"anotar|escribir|conseguir|localizar|revisar)\s+"
+                     r"(?:(?:un|una|el|la|mi|su)\s+)?"
+                     r"(?:pluma|lapiz|telefono|numero|folio|comprobante|"
+                     r"papel|recibo|correo|whatsapp)\b", utterance):
             return False
-        if PAYMENT_DECISION_TOPIC.search(around) and not NON_PAYMENT_TASK.search(around):
-            return True
+        if re.match(r"(?:\s*(?:para|de)\s+)(?:(?:mis|las|el|la)\s+)?"
+                    r"(?:vacaciones|viaje|cita|reunion|turno|medico|"
+                    r"entrevista|escuela|trabajo)\b", after):
+            return False
+        # Una tarea logística expresada por el titular prevalece incluso
+        # si en la misma oración aparece «aclarar mi pago».
+        if NON_PAYMENT_TASK.search(utterance):
+            return False
         prefix = source[max(0, start+match.start()-250):start+match.start()]
         question_end = prefix.rfind("?")
         question_start = prefix.rfind("¿")
-        if question_end < 0 or question_start < 0 or question_start >= question_end:
-            return False
-        question = prefix[question_start:question_end+1]
-        if len(prefix[question_end+1:]) > 85:
-            return False
-        return bool(PAYMENT_DECISION_TOPIC.search(question)
-                    and not NON_PAYMENT_TASK.search(question))
+        prior_payment_question = (
+            question_end >= 0 and question_start >= 0 and question_start < question_end
+            and len(prefix[question_end+1:]) <= 85
+            and bool(PAYMENT_DECISION_TOPIC.search(prefix[question_start:question_end+1]))
+            and not NON_PAYMENT_TASK.search(prefix[question_start:question_end+1])
+        )
+        is_date_uncertainty = phrase.startswith("no tengo")
+        if is_date_uncertainty:
+            # «No tengo fechas» solo cuando habla de conseguir dinero,
+            # liquidar o cubrir el pago, o responde una pregunta de pago.
+            preceding = before[-130:]
+            due_payment = (bool(PAYMENT_DECISION_TOPIC.search(preceding))
+                           and not re.search(r"\b(?:vacaciones|viaje|cita|"
+                                             r"reunion|escuela|trabajo)\b", preceding))
+            return bool(due_payment or prior_payment_question)
+        # «Lo intentaré» sin objeto financiero requiere pregunta directa;
+        # «voy a intentar pagar» sí expresa decisión no confirmada.
+        tail_financial = re.match(
+            r"\s+(?:pagar|abonar|depositar|cubrir|liquidar|"
+            r"realizar\s+(?:el|mi|un)\s+pago)\b", after)
+        return bool(tail_financial or prior_payment_question)
     if not re.match(r"(?:dejeme|dejenme)\s+(?:ver|revisar|checar)\b", phrase):
         return True
     if NON_PAYMENT_TASK.search(phrase) and not PAYMENT_DECISION_TOPIC.search(phrase):
