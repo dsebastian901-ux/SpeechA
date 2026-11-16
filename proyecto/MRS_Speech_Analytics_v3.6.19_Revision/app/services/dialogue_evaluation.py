@@ -39,6 +39,11 @@ PENDING = re.compile(
     r'(?:puedo|podria|le puedo|les puedo) regresar la llamada (?:en|dentro de)[^.!?]{0,40}minutos|'
     r'(?:por si|para ver si) (?:mi )?(?:mama|papa|familia|herman[oa]) me (?:puede )?prestar[^.!?]{0,25}dinero|'
     r'me puede volver a llamar[^.!?]{0,40}(?:manana|tarde)|'
+    # Una decisión pospuesta, no un convenio ni un compromiso firme.
+    # scan_dialogue exige contexto financiero y descarta voz del gestor.
+    r'(?:dejeme|dejenme) (?:ver|revisar|checar)[^.!?]{0,45}'
+    r'(?:y |para )?(?:me |le |les )?(?:hable|habla|llame|llama|marque|marca) '
+    r'(?:al rato|mas tarde|despues|luego)|'
     r'lo voy a (?:analizar|pensar|consultar|revisar)|'
     r'(?:no|pero) (?:te |le )?estoy diciendo que no[^.!?]{0,80}(?:quiero|convenio))\b')
 DISPUTE = re.compile(
