@@ -39,65 +39,12 @@ PENDING = re.compile(
     r'(?:puedo|podria|le puedo|les puedo) regresar la llamada (?:en|dentro de)[^.!?]{0,40}minutos|'
     r'(?:por si|para ver si) (?:mi )?(?:mama|papa|familia|herman[oa]) me (?:puede )?prestar[^.!?]{0,25}dinero|'
     r'me puede volver a llamar[^.!?]{0,40}(?:manana|tarde)|'
-    # Una decisión pospuesta, no un convenio ni un compromiso firme.
-    # scan_dialogue exige contexto financiero y descarta voz del gestor.
-    r'(?:dejeme|dejenme) (?:ver|revisar|checar)[^.!?]{0,45}'
-    r'(?:y |para )?(?:me |le |les )?(?:hable|habla|llame|llama|marque|marca) '
-    r'(?:al rato|mas tarde|despues|luego)|'
+    r'(?:dejeme|dejenme)\s+(?:ver|revisar|checar)[^.!?]{0,45}'
+    r'(?:y\s+|para\s+)?(?:me\s+|le\s+|les\s+)?'
+    r'(?:hable|habla|llame|llama|marque|marca)\s+'
+    r'(?:al\s+rato|mas\s+tarde|despues|luego)|'
     r'lo voy a (?:analizar|pensar|consultar|revisar)|'
     r'(?:no|pero) (?:te |le )?estoy diciendo que no[^.!?]{0,80}(?:quiero|convenio))\b')
-# Una pausa para buscar pluma, anotar teléfono, WhatsApp o comprobante
-# NO constituye una respuesta sobre pagar. Esta protección se evalúa
-# especialmente para «déjeme ver ... y me habla al rato».
-PAYMENT_DECISION_TOPIC = re.compile(
-    r"\b(?:pago|pagar|deposito|depositar|abonar|abono|dinero|"
-    r"cantidad|monto|pesos|cubrir|liquidar|juntar|prestamo|"
-    r"quincena|convenio|acuerdo\s+de\s+pago)\b"
-)
-NON_PAYMENT_TASK = re.compile(
-    r"\b(?:pluma|lapiz|boligrafo|anotar|apuntar|escribir|papel|"
-    r"telefono|numero|whatsapp|correo|folio|comprobante|"
-    r"ticket|recibo|agenda|direccion)\b"
-)
-
-
-def _deferred_payment_context(source, value, start, match):
-    """Aplazamiento: respuesta económica, no dificultad logística.
-
-    El nombre de la tarjeta o cuenta en los 220 caracteres previos NO basta.
-    Si la respuesta no habla de dinero, exigir una pregunta de pago inmediata
-    y nunca una pregunta sobre teléfono, comprobante o anotaciones.
-    """
-    phrase = value[match.start():match.end()]
-    if not re.match(r"(?:dejeme|dejenme)\s+(?:ver|revisar|checar)\b", phrase):
-        return True
-    if NON_PAYMENT_TASK.search(phrase) and not PAYMENT_DECISION_TOPIC.search(phrase):
-        return False
-    # No inferir intención económica desde palabras del gestor/Excel si el
-    # interlocutor describió explícitamente una tarea distinta.
-    utterance = value[max(0, match.start()-20):min(len(value), match.end()+35)]
-    if NON_PAYMENT_TASK.search(utterance) and not PAYMENT_DECISION_TOPIC.search(utterance):
-        return False
-    if PAYMENT_DECISION_TOPIC.search(phrase):
-        return True
-    # Respuestas breves como «déjeme ver y me habla al rato» solo acreditan
-    # decisión pendiente si contestan una pregunta inmediata sobre pagar.
-    position = start + match.start()
-    prefix = source[max(0, position-220):position]
-    question_end = prefix.rfind("?")
-    question_start = prefix.rfind("¿")
-    if question_end < 0 or question_start < 0 or question_start >= question_end:
-        return False
-    question = prefix[question_start:question_end+1]
-    post_question = prefix[question_end+1:]
-    if len(post_question) > 95:
-        return False
-    return bool(
-        PAYMENT_DECISION_TOPIC.search(question)
-        and not NON_PAYMENT_TASK.search(question)
-    )
-
-
 DISPUTE = re.compile(
     r'\b(?:yo no he usado (?:esa|mi|la) tarjeta|'
     r'no (?:he utilizado|he usado) (?:esa|mi|la) tarjeta|'
@@ -144,79 +91,21 @@ def scan_dialogue(text, segments=()):
                 if (kind=='PENDING_DECISION' and match.group().startswith('lo voy a ')
                         and re.search(r'\bno\s*$',value[:match.start()])):
                     continue  # «No lo voy a revisar» no acredita decidir revisarlo.
-                # No calificar como decisión de pago una dificultad para anotar.
-                if kind == 'PENDING_DECISION' and not _deferred_payment_context(
-                        source, value, start, match):
-                    continue
-                # «Ahorita no se refleja» y «hoy no puede anotar» describen
-                # trámites, no una decisión de pago del interlocutor.
-                if kind == 'PENDING_DECISION' and re.fullmatch(r'(?:(?:el dia de )?hoy|ahorita)[, ]+no',match.group()):
-                    tail=value[match.end():].lstrip(' ,')
-                    if tail and not re.match(r'(?:[.!]|(?:tengo (?:el dinero|dinero|para pagar|previsto)|lo tengo previsto|cuento|puedo (?:pagar|depositar|abonar)|voy a (?:pagar|depositar|abonar))\b)',tail):
+                # Posponer anotaciones no demuestra decisión de pago.
+                if kind == 'PENDING_DECISION' and re.match(
+                        r'(?:dejeme|dejenme)\s+(?:ver|revisar|checar)\b', match.group()):
+                    around = value[max(0, match.start()-20):min(len(value), match.end()+45)]
+                    if re.search(r'\b(?:pluma|lapiz|anotar|apuntar|escribir|papel|'
+                                 r'telefono|numero|whatsapp|correo|folio|comprobante|'
+                                 r'ticket|recibo|agenda|direccion)\b', around):
                         continue
-                    local=source[max(0,start-160):start+match.start()]
-                    if re.search(r'\b(?:whatsapp|anotar|numero|escucho|hablar|comprobante|reflejado)\b',local[-100:]):
+                    local = source[max(0, start+match.start()-220):start+match.start()]
+                    question = list(re.finditer(r'¿[^?]{0,180}\?', local))
+                    if not question or not re.search(
+                            r'\b(?:pago|pagar|depositar|abonar|dinero|cantidad|'
+                            r'monto|pesos|cubrir|liquidar|convenio)\b',
+                            question[-1].group()):
                         continue
-                position = start + match.start()
-                events.append({'kind':kind, 'position':position, 'end':start+match.end(),
-                    'evidence':unit['text'], 'phrase':match.group(), 'speaker_role':unit['speaker_role'],
-                    'start':unit['start'], 'finish':unit['end'],
-                    'source':'ORIGINAL_TRANSCRIPT', 'human_verified':False,
-                    'id':f'{kind}:{position}:{start+match.end()}'})
-    from app.services.payment_dialogue_frames import payment_replies
-    for reply in payment_replies(text,segments):
-        kinds=[]
-        if reply['own_financial_response']:kinds.append('OWN_FINANCES')
-        if reply['declined']or reply['conditional']:kinds.append('PENDING_DECISION')
-        for kind in kinds:
-            events.append({'kind':kind,'position':reply['position'],'end':reply['end'],
-                'evidence':reply['evidence'],'phrase':reply['reply'],'speaker_role':reply['speaker_role'],
-                'start':None,'finish':None,'source':'ORIGINAL_TRANSCRIPT_LOCAL_PAYMENT_REPLY',
-                'human_verified':False,'id':f"{kind}:{reply['position']}:{reply['end']}"})
-    return {'source_sha256':hashlib.sha256(str(text).encode('utf-8')).hexdigest(),
-            'events':events, 'units':units, 'human_verified':False}
-
-
-def full_payment_refusal(commitment):
-    """Rechazar intereses/compras o una oferta no equivale a rechazar toda deuda."""
-    if not commitment.get('declined') or commitment.get('accepted'):
-        return False
-    reply=normalize(commitment.get('evidence') or '')
-    match=re.search(r'\bno (?:(?:lo|le|la|les) )?(?:voy a|pienso) pagar\b',reply)
-    if not match or QUOTED.search(reply) or '?' in reply:
-        return False
-    before=reply[:match.start()]
-    if re.search(r'\b(?:no es que|no digo que|no dije que)\s*$',before):
-        return False
-    conditional=re.search(r'\b(?:si|cuando)\b[^.!?]{0,140}$',before)
-    affirmative_bridge=re.search(r'(?:^|[.!])\s*(?:claro[, ]+)?si[, ]+pero\s*$',before)
-    if conditional and not affirmative_bridge:
-        return False
-    scope=reply[match.end():].split('.')[0][:85]
-    return not re.search(r'\b(?:eso|esos|esas|(?:esta|esa|la) cantidad|(?:este|ese) monto|intereses|cargos|compras|solo|solamente|menos|menor|sino)\b',scope)
-
-
-def pending_status(dialogue, commitment, payment_followup=False):
-    """Una decisión pendiente acreditada no es un convenio incumplido.
-
-    No inferir un estatus por ausencia de sí, por el Excel, por cortarse el
-    audio o por una dificultad de registro en una aplicación.
-    """
-    if commitment.get('accepted') or payment_followup:
-        return None
-    if full_payment_refusal(commitment):
-        return None  # Una negativa final completa prevalece sobre una duda anterior.
-    candidates = [e for e in dialogue['events'] if e['kind'] in {'PENDING_DECISION','ACCOUNT_DISPUTE'}]
-    if not candidates:
-        return None
-    event = max(candidates, key=lambda e:e['position'])
-    return {'detected_status':'NO DEFINE FECHA DE PAGO', 'confidence':'ALTA',
-            'method':event['kind'], 'evidence':event['evidence'], 'event_id':event['id']}
-,value[:match.start()])):
-                    continue  # «No lo voy a revisar» no acredita decidir revisarlo.
-                if kind == 'PENDING_DECISION' and not _deferred_payment_context(
-                        source, value, start, match):
-                    continue
                 # «Ahorita no se refleja» y «hoy no puede anotar» describen
                 # trámites, no una decisión de pago del interlocutor.
                 if kind == 'PENDING_DECISION' and re.fullmatch(r'(?:(?:el dia de )?hoy|ahorita)[, ]+no',match.group()):
