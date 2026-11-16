@@ -31,7 +31,7 @@ jobs:
           python -m compileall -q app tools tests
       - name: Ejecutar pruebas de version integrada y reglas de r53
         run: |
-          python -m pytest -q tests/test_review_r53_exceptions_and_excel.py tests/test_review_r53_status_optimization.py tests/test_review_payment_pending_evidence.py tests/test_integrated_operational_policy_r53.py tests/test_short_batch_outputs_r53.py
+          python -m pytest -q tests/test_review_r53_exceptions_and_excel.py tests/test_review_r53_status_optimization.py tests/test_review_payment_pending_evidence.py tests/test_checkpoint_revision_summary.py tests/test_integrated_operational_policy_r53.py tests/test_short_batch_outputs_r53.py
       - name: Ejecutar regresión completa del programa
         run: |
           python -m pytest -q
