@@ -217,7 +217,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
                  'NO_APLICA' if applicability.get(number) is False else
                  'SIN_HALLAZGOS' if m else 'NO_EVALUADO')
         evaluations.append({'id':number,'rule':label,'state':state,'finding_codes':[f['code'] for f in relevant]})
-    return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR','APROBADO_CON_EXCEPCION'},
+    return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR'},
             'calidad_aprobada':category.startswith('APROBADO'), 'score':score,'puntaje_minimo':minimum_score,
             'cumple_puntaje':score_ok,'rechazo_automatico_por_puntaje':category=='NO_APROBADO_MENOR_80',
             'rechazo_automatico_por_reglas':category=='NO_APROBADO',
