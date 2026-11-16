@@ -1,8 +1,8 @@
 MRS SPEECH ANALYTICS - VERSION AISLADA DE PRUEBA
-Motor: 3.6.19-r53-gpt6-test1
+Motor: 3.6.19-r53-gpt6-test2
 Base: Codex entrega r53
 Propuesta de correcciones: GPT-6 revisada por Codex, PR #2
-Rama test/r53-gpt6-integrada-20261115
+Rama test/r53-gpt6-correctiva-20261115
 Fecha: 15/11/2026
 
 IMPORTANTE: ES UNA VERSION DE PRUEBA, NO LA ENTREGA FINAL.
