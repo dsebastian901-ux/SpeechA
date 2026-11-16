@@ -11,6 +11,10 @@ on:
 jobs:
   regression:
     runs-on: windows-latest
+    # Evita corruptelas de Windows cp1252 al recuperar JSON UTF-8.
+    env:
+      PYTHONUTF8: '1'
+      PYTHONIOENCODING: utf-8
     timeout-minutes: 20
     defaults:
       run:
