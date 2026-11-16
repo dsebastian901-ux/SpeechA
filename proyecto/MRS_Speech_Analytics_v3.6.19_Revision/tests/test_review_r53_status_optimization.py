@@ -39,6 +39,14 @@ def test_prior_payment_and_quotes_do_not_count_as_new_attempt(phrase):
     assert not collection_request_question("Gestor: " + phrase)["detected"]
 
 
+def test_future_request_after_previous_receipt_is_still_collection():
+    text = (
+        "Gestor: Recibimos su comprobante de pago anterior. "
+        "¿Usted podría realizar su pago de 800 pesos para el día de hoy?"
+    )
+    assert collection_request_question(text)["detected"]
+
+
 def test_role_explicitly_not_agent_does_not_count():
     assert not collection_request_question(
         "Titular: ¿Usted podría realizar su pago de 800 pesos para el día de hoy?"
