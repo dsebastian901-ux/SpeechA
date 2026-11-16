@@ -39,6 +39,10 @@ PENDING = re.compile(
     r'(?:puedo|podria|le puedo|les puedo) regresar la llamada (?:en|dentro de)[^.!?]{0,40}minutos|'
     r'(?:por si|para ver si) (?:mi )?(?:mama|papa|familia|herman[oa]) me (?:puede )?prestar[^.!?]{0,25}dinero|'
     r'me puede volver a llamar[^.!?]{0,40}(?:manana|tarde)|'
+    r'(?:dejeme|dejenme)\s+(?:ver|revisar|checar)[^.!?]{0,45}'
+    r'(?:y\s+|para\s+)?(?:me\s+|le\s+|les\s+)?'
+    r'(?:hable|habla|llame|llama|marque|marca)\s+'
+    r'(?:al\s+rato|mas\s+tarde|despues|luego)|'
     r'lo voy a (?:analizar|pensar|consultar|revisar)|'
     r'(?:no|pero) (?:te |le )?estoy diciendo que no[^.!?]{0,80}(?:quiero|convenio))\b')
 DISPUTE = re.compile(
@@ -87,6 +91,21 @@ def scan_dialogue(text, segments=()):
                 if (kind=='PENDING_DECISION' and match.group().startswith('lo voy a ')
                         and re.search(r'\bno\s*$',value[:match.start()])):
                     continue  # «No lo voy a revisar» no acredita decidir revisarlo.
+                # Posponer anotaciones no demuestra decisión de pago.
+                if kind == 'PENDING_DECISION' and re.match(
+                        r'(?:dejeme|dejenme)\s+(?:ver|revisar|checar)\b', match.group()):
+                    around = value[max(0, match.start()-20):min(len(value), match.end()+45)]
+                    if re.search(r'\b(?:pluma|lapiz|anotar|apuntar|escribir|papel|'
+                                 r'telefono|numero|whatsapp|correo|folio|comprobante|'
+                                 r'ticket|recibo|agenda|direccion)\b', around):
+                        continue
+                    local = source[max(0, start+match.start()-220):start+match.start()]
+                    question = list(re.finditer(r'¿[^?]{0,180}\?', local))
+                    if not question or not re.search(
+                            r'\b(?:pago|pagar|depositar|abonar|dinero|cantidad|'
+                            r'monto|pesos|cubrir|liquidar|convenio)\b',
+                            question[-1].group()):
+                        continue
                 # «Ahorita no se refleja» y «hoy no puede anotar» describen
                 # trámites, no una decisión de pago del interlocutor.
                 if kind == 'PENDING_DECISION' and re.fullmatch(r'(?:(?:el dia de )?hoy|ahorita)[, ]+no',match.group()):

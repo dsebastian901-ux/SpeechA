@@ -88,7 +88,9 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     ids = {p.get('id') for p in penalties if isinstance(p,dict)}
     if 'PEN_SIN_INTENTO_NEGOCIACION' in ids:
         add(12,'NO_COLLECTION_ATTEMPT','No se confirmó intento de negociación con el titular','penalties')
-    if status.get('excel_status') and status.get('matches') is None:
+    # Si STATUS_INVALID ya representa la causa, no duplicar su bloqueo.
+    if (status.get('excel_status') and status.get('matches') is None
+            and status.get('valid') is not False):
         add(1,'STATUS_NOT_CONFIRMED','Estatus de Excel sin coincidencia confirmada; requiere revisión','status_validation')
     if status.get('valid') is False:
         add(1,'STATUS_INVALID',status.get('reasons') or ['Estatus pendiente de validación'],'status_validation')
@@ -163,7 +165,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     elif rejection:
         category = 'NO_APROBADO'
     elif verified_exception and score_ok and not blocking:
-        category = 'APROBADO_ETIQUETA_CORREGIDA' if output_label['valid'] else 'APROBADO_CON_EXCEPCION'
+        category = 'APROBADO_CON_EXCEPCION'  # La excepción validada mantiene su dictamen y carpeta exclusivos.
     elif score_rejection:
         category = 'NO_APROBADO_MENOR_80'
     elif blocking:
@@ -180,7 +182,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         category = 'REVISAR'
     else:
         category = 'APROBADO'
-    if short_call and category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_CON_EXCEPCION'}:
+    if short_call and category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA'}:
         category='APROBADO_DURACION_MENOR'
     reasons = list(dict.fromkeys(r for f in blocking for r in f['reasons']))
     if category == 'SIN_RELACION_EXCEL':
@@ -215,7 +217,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
                  'NO_APLICA' if applicability.get(number) is False else
                  'SIN_HALLAZGOS' if m else 'NO_EVALUADO')
         evaluations.append({'id':number,'rule':label,'state':state,'finding_codes':[f['code'] for f in relevant]})
-    return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR'},
+    return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR','APROBADO_CON_EXCEPCION'},
             'calidad_aprobada':category.startswith('APROBADO'), 'score':score,'puntaje_minimo':minimum_score,
             'cumple_puntaje':score_ok,'rechazo_automatico_por_puntaje':category=='NO_APROBADO_MENOR_80',
             'rechazo_automatico_por_reglas':category=='NO_APROBADO',
