@@ -2892,8 +2892,11 @@ class AnalyticsService:
         # v3.5.8 · trabajo de cobranza: si se contacta al TITULAR debe existir
         # intento real de negociación, salvo reporte de pago ya realizado que
         # cubra el mínimo (o cuyo monto no pueda determinarse con seguridad).
+        from app.services.collection_attempt_evidence import collection_request_question
+        future_collection_request = collection_request_question(text, segments)
         negotiation_attempt = bool(
-            explicit_settlement_offer
+            future_collection_request['detected']
+            or explicit_settlement_offer
             or (promise_date_evidence and not payment_confirmation_case)
             # Solicitudes futuras explícitas: demuestra gestión de cobro,
             # no un acuerdo del titular ni confirmación de fecha/importe.
