@@ -149,7 +149,7 @@ class TranscriptionService:
         try:
             with path.open(
                 mode="r",
-                encoding="utf-8",
+                encoding="utf-8-sig",
             ) as file:
                 data = json.load(
                     file

@@ -4,6 +4,39 @@ from app.services.conversation_evidence import normalize, _role_at
 from app.services.reported_payment_amounts import NUMBER, money_value
 
 
+def callback_dictation_spans(text):
+    """Excluir cifras dictadas como contacto sin completar ni validar el teléfono."""
+    from app.services.payment_reference_validation import callback_numbers, TOKEN
+    from app.services.message_contact_evidence import callback_dictation_fragments
+    source=normalize(text);spans=[]
+    for record in callback_numbers(source)+callback_dictation_fragments(source):
+        if 'text_start' in record:
+            spans.append((record['text_start'],record['text_end']))
+        elif record.get('text'):
+            for match in re.finditer(re.escape(record['text']),source):
+                spans.append((match.start(),match.end()))
+    # Un contacto incompleto sigue siendo un identificador, aunque no alcance
+    # para certificar recepción o validar sus diez dígitos. No exigir aquí las
+    # condiciones positivas de un recado para excluirlo del dinero.
+    gap=re.compile(r'[\W_]*(?:(?:es|seria|el|aja|si|ok|correcto|perdon|a ver)[\W_]*)*')
+    for cue in re.finditer(r'\b(?:numero(?: telefonico| de contacto| de telefono)?|telefono|whatsapp)\b',source):
+        before=source[max(0,cue.start()-250):cue.start()]
+        if cue.group()=='numero' and not re.search(r'\b(?:anotar|anotarte|anotarlo|apuntar|llamada|contacto|whatsapp|telefono)\b',before):
+            continue
+        tail=source[cue.end():cue.end()+220]
+        tokens=list(TOKEN.finditer(tail))
+        if not tokens or tokens[0].start()>65 or not gap.fullmatch(tail[:tokens[0].start()]):
+            continue
+        group=[tokens[0]]
+        for token in tokens[1:]:
+            if not gap.fullmatch(tail[group[-1].end():token.start()]):break
+            group.append(token)
+        if re.match(r'\s*(?:pesos?|por ciento|dias?|meses?|parcialidades)\b',tail[group[-1].end():]):
+            continue
+        spans.append((cue.end()+group[0].start(),cue.end()+group[-1].end()))
+    return sorted(set(spans))
+
+
 def balance_corrections(text):
     source = normalize(text)
     anchor = r'\bsaldo(?: total| pendiente| vencido)?\s+(?:(?:es|de|por|la|cantidad)\s+){0,4}'
@@ -27,7 +60,7 @@ def balance_scope(text, segments, start, end):
     role=_role_at(text,segments,start)
     if source.rfind('¿',0,start)>source.rfind('?',0,start):
         return 'IMPORTE_EN_PREGUNTA_NO_DECLARACION_DE_SALDO'
-    if re.search(r'\b(?:me habian comentado|me habian dicho|me comentaron|me dijeron)\b[^.!?]{0,95}$',before):
+    if re.search(r'\b(?:me habian comentado|me habian dicho|me comentaron|me dijeron|me decian)\b[^.!?]{0,95}$',before):
         return 'PROPUESTA_ANTERIOR_REPORTADA'
     if role in {'TITULAR','TERCERO','INTERLOCUTOR'}:
         return 'IMPORTE_DICHO_POR_INTERLOCUTOR'

@@ -221,6 +221,11 @@ class BatchReportService:
     MODE_B_HEADERS += ARCO_HEADERS
     HEADERS += ['Alertas pendientes','Revisión prioritaria pendiente']
     MODE_B_HEADERS += ['Alertas pendientes','Revisión prioritaria pendiente']
+    CONTEXT_HEADERS=['Relectura local realizada','Identidad corroborada en relecturas',
+                     'Contacto corroborado en relecturas','Alerta de relectura']
+    for _headers in (HEADERS, MODE_B_HEADERS):
+        _index = _headers.index('MRS detectado') + 1
+        _headers[_index:_index] = CONTEXT_HEADERS
 
 
     @staticmethod
@@ -684,6 +689,10 @@ class BatchReportService:
             "Clasificación física": physical,
             "Nivel de atención": cls._nivel_atencion(classification, metadata),
             "MRS detectado": cls._yes_no(checks.get("identifica_mrs")),
+            "Relectura local realizada": cls._yes_no((metadata.get('context_audio_validation')or{}).get('present')),
+            "Identidad corroborada en relecturas": cls._yes_no((metadata.get('context_audio_validation')or{}).get('holder')),
+            "Contacto corroborado en relecturas": cls._yes_no((metadata.get('context_audio_validation')or{}).get('callback')),
+            "Alerta de relectura": (metadata.get('context_audio_validation')or{}).get('reason',''),
             "Estatus detectado IA": status.get("detected_status") or "",
             "Fecha de pago detectada": negotiation.get("promise_date") or "",
             "Fecha textual escuchada": negotiation.get("promise_date_text") or "",

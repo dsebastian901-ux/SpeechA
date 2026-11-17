@@ -49,7 +49,7 @@ def directed_notification(text,segments=()):
     return found
 
 
-def workflow_validation(text,segments,assessment,body,refusal,delivery,human=None):
+def workflow_validation(text,segments,assessment,body,refusal,delivery,human=None,context_audio=None):
     from app.services.message_dialogue_evidence import callback_available,existing_callback_confirmation
     source=normalize(text);events=[]
     for evidence in assessment.get('acceptance',[]):
@@ -57,7 +57,8 @@ def workflow_validation(text,segments,assessment,body,refusal,delivery,human=Non
         if position is None:position=source.find(fragment)if fragment else-1
         if position>=0:events.append(dict(evidence,position=position,kind='RECEPTION'))
     human=human or{}
-    supplied=bool(callback_available(text,segments))
+    context_audio=context_audio or {}
+    supplied=bool(callback_available(text,segments)or(context_audio.get('valid')and context_audio.get('callback')))
     known=existing_callback_confirmation(text,segments)
     valid=bool(assessment.get('acceptance') and body and supplied and not refusal.get('confirmed'))
     if human.get('valid')and human.get('message_delivered')and human.get('callback_delivered'):

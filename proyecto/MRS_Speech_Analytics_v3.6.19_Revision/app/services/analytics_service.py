@@ -331,6 +331,15 @@ class AnalyticsService:
         apply_output_name_authority(naming_copy)
         enriched_context = naming_copy['relation']
         enriched_context["_segments"] = list(getattr(transcription, "segments", []) or [])
+        from app.services.context_audio_recovery import validate as validate_context_audio
+        context_source = dict(getattr(transcription,'metadata',{}) or {})
+        context_source.setdefault('archivo',transcription.file_name)
+        context_source.setdefault('texto',transcription.text)
+        context_source.setdefault('segmentos',transcription.segments)
+        context_source.setdefault('duracion_segundos',transcription.duration_seconds)
+        context_audio_validation = validate_context_audio(context_source.get('context_asr_recovery'),
+            context_source, operational_context or {}, getattr(transcription,'audio_path',''))
+        enriched_context['_context_audio_validation'] = context_audio_validation
         enriched_context["_duration_seconds"] = float(getattr(transcription, "duration_seconds", 0.0) or 0.0)
         enriched_context["_amount_recovery"] = (getattr(transcription, "metadata", {}) or {}).get("recuperacion_importes")
         financial_source = dict(getattr(transcription, "metadata", {}) or {})
@@ -472,6 +481,7 @@ class AnalyticsService:
         )
         analysis.metadata["payment_reference_validation"] = compliance.get("payment_reference_validation", {})
         analysis.metadata["privacy_validation"] = compliance.get("privacy_validation", {})
+        analysis.metadata['context_audio_validation'] = context_audio_validation
         analysis.metadata['home_recovery_warning']=compliance.get('home_recovery_warning',{})
         analysis.metadata['clarification_validation']=compliance.get('clarification_validation',{})
         exception = (operational_context or {}).get("hostile_interlocutor_exception") or (getattr(transcription, "metadata", {}) or {}).get("hostile_interlocutor_exception")
@@ -1179,6 +1189,13 @@ class AnalyticsService:
             r"\b(?:soy yo|(?:si )?soy (?:el |la )?titular|habla (?:el |la )titular)\b")
         contact_confirmation = holder_confirmation(text, segments)
         titular = titular or contact_confirmation["confirmed"]
+        recovered_context=context.get('_context_audio_validation') or {}
+        if (recovered_context.get('valid')and recovered_context.get('holder')
+                and not titular and not(family or third_party or work_contact or unknown_debtor)):
+            titular=True
+            contact_confirmation={'confirmed':True,'method':'IDENTIFICACION_CORROBORADA_EN_DOS_RELECTURAS_LOCALES',
+                'evidence':' / '.join(e['texts'][0]for e in recovered_context['evidence']if e['purpose']=='holder'),
+                'speaker_role':'NO DETERMINADO','human_verified':False,'source':'LOCAL_AUDIO_CONTEXT'}
         from app.services.contact_dialogue_resolution import declared_intermediary
         declared_contact=declared_intermediary(text,segments)
         if declared_contact['confirmed']:
@@ -1461,9 +1478,18 @@ class AnalyticsService:
             recado_callback=True;recado_transmitted=True
             recado_assessment['directed_notification']=directed_notice
         from app.services.message_workflow import workflow_validation
+        recovered_callback=(context.get('_context_audio_validation')or{})
+        from app.services.message_dialogue_evidence import negated_return_only
+        if (recovered_callback.get('valid')and recovered_callback.get('callback')
+                and recado_assessment['acceptance'] and (recado_transmitted or leaves_message)
+                and not message_refusal_validation.get('confirmed')and not negated_return_only(text)):
+            recado_callback=True
+            message_delivery_validation={'review_required':False,
+                'reason':'Contacto corroborado por dos relecturas locales del mismo audio; se conserva el ASR original.',
+                'evidence':[e for e in recovered_callback['evidence']if e['purpose']=='callback']}
         message_workflow_validation=workflow_validation(text,segments,recado_assessment,
             recado_callback and (recado_transmitted or leaves_message),
-            message_refusal_validation,message_delivery_validation,confirmed_recado)
+            message_refusal_validation,message_delivery_validation,confirmed_recado,recovered_callback)
         # La imposibilidad temporal o un aviso condicionado a encontrar al
         # titular no sustituyen el resultado final de recepción.
         recado_refusal=recado_declines=message_refusal_validation.get('confirmed',False)
@@ -3475,6 +3501,12 @@ class AnalyticsService:
         total_expected = parse_money_value(context.get("saldo_total"))
         source_norm = normalized
         money_mentions = monetary_mentions(source_norm)
+        # El dictado de contacto puede decir solo «¿qué número es?» y contener
+        # puntos/echos. No escalar 7.22 a $7220 ni arrastrar el «saldo» previo.
+        from app.services.balance_context_evidence import callback_dictation_spans
+        callback_spans = callback_dictation_spans(text)
+        money_mentions = [m for m in money_mentions if re.search(r'\$|\bpesos?\b',m[3]) or not any(
+            start <= m[0] and m[1] <= end for start, end in callback_spans)]
         fragmented_balance_evidence = fragmented_balance_amounts(text)
         money_mentions = [m for m in money_mentions if not any(f['start'] <= m[0] < f['end'] for f in fragmented_balance_evidence)]
         explicit_balance_corrections = balance_corrections(text)

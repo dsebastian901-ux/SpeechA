@@ -10,6 +10,7 @@ ACTIONS={
  'CALLBACK_NOT_DELIVERED':('RECADO','Confirmar entrega y recepción del contacto; una oferta de dictarlo no acredita recepción.'),
  'CARD_REFERENCE':('TARJETA','Cotejar los dígitos del audio con numero_de_tarjeta; no completar desde Excel.'),
  'OFFENSIVE_LANGUAGE':('TRATO','Confirmar expresión, hablante y contexto de la ofensa.'),
+ 'CONTEXT_AUDIO_RISK':('TRATO','Escuchar el intervalo indicado de la relectura local; confirmar expresión y hablante.'),
  'MISTREATMENT_REPORT':('TRATO','Confirmar que la queja describe la atención de una llamada.'),
  'WAIT_WITHOUT_RESUMPTION':('ESPERA','Cotejar el intervalo de 65 segundos; los huecos ASR no prueban silencio acústico.'),
  'NEGOTIATION_INVALID_OR_UNCERTAIN':('NEGOCIACION','Verificar los importes, fechas y aceptación indicados en el motivo.'),

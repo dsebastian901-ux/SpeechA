@@ -51,6 +51,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         (5,'account_source_validation','ACCOUNT_SOURCE','Datos de cuenta inconsistentes; revisar nombre de salida'),
         (12,'financial_review_validation','FINANCIAL_CONFIRMATION','Confirmación financiera pendiente de revisión'),
         (13,'call_end_validation','CALL_END','Silencio o finalización sin responsable confirmado; revisar audio'),
+        (9,'context_audio_validation','CONTEXT_AUDIO_RISK','Expresión ofensiva en relectura local pendiente de atribución.'),
     ]:
         pending(domain, field, code, message)
     additional = m.get('audio_block_evidence_validation') or {}

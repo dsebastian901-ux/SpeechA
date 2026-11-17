@@ -33,6 +33,7 @@ def transcription_with_saved_reviews(item, data=None):
     transcription.metadata['recado_acceptance_confirmation']=deepcopy(item.get('recado_acceptance_confirmation'))
     transcription.metadata['privacy_disclosure_confirmation']=deepcopy(item.get('privacy_disclosure_confirmation'))
     transcription.metadata['home_warning_confirmation']=deepcopy(item.get('home_warning_confirmation'))
+    transcription.metadata['context_asr_recovery']=deepcopy(item.get('context_asr_recovery'))
     return transcription
 
 

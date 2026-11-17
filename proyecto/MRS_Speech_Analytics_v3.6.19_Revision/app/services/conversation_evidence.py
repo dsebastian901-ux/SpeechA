@@ -135,7 +135,10 @@ def holder_confirmation(text, segments=()):
         r"(?:me )?voy a comunicar con|puede comunicar con|"
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|se encuentra|estoy buscando a|hablo con|"
         r"me estoy comunicando al numero telefonico de|seria tan amable de comunicarme con|"
-        r"tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|me comunica con|comunico con|me he comunicado con|busco a|busco al|busco el|busco la|encuentro|encuentra|(?<=¿)con)")
+        r"tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|me comunica con|comunico con|me he comunicado con|busco a|busco al|busco el|busco la|encuentro|encuentra|encuentre|(?<=¿)con)")
+    # Whisper puede separar la búsqueda nominal y el nombre con puntos de
+    # vacilación; conservar el nombre y la respuesta, sin reescribir el texto.
+    identification = rf"(?:{identification})(?:\s*\.\s*){{0,3}}"
     explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+)?(?:digame|diganme|dime|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b"
     prompt = re.compile(
         rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)(?:[.?]|,)\s*" + explicit_answer)

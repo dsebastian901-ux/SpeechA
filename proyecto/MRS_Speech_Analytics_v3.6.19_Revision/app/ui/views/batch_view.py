@@ -729,7 +729,8 @@ class BatchView(ctk.CTkFrame):
             return
 
         partial_report_path = None
-        if int(checkpoint.get("completed", 0) or 0) + int(checkpoint.get("errors", 0) or 0) > 0:
+        outdated = int(checkpoint.get('outdated', 0) or 0)
+        if not outdated and int(checkpoint.get("completed", 0) or 0) + int(checkpoint.get("errors", 0) or 0) > 0:
             try:
                 partial_report_path = self.batch_service.generate_partial_report_from_checkpoint(
                     output_directory
@@ -740,18 +741,23 @@ class BatchView(ctk.CTkFrame):
                 partial_report_path = None
 
         answer = messagebox.askyesnocancel(
-            "Lote interrumpido detectado",
-            "Se encontró un lote sin terminar.\n\n"
+            "Actualizar lote" if outdated else "Lote interrumpido detectado",
+            ("Se encontraron dictámenes pendientes de actualizar.\n\n" if outdated
+             else "Se encontró un lote sin terminar.\n\n")
+            +
             f"Modo: {checkpoint.get('mode')}\n"
             f"Total: {checkpoint.get('total')}\n"
             f"Completados: {checkpoint.get('completed')}\n"
             f"Errores: {checkpoint.get('errors')}\n"
             f"Pendientes: {checkpoint.get('pending')}\n"
+            f"Dictámenes por actualizar: {outdated}\n"
             f"Último guardado: {checkpoint.get('updated_at') or ''}\n\n"
             + (
                 "Reporte parcial actualizado: Reporte_Parcial_Lote.xlsx\n\n"
                 if partial_report_path else
-                "No fue posible actualizar el reporte parcial automáticamente.\n\n"
+                ("Los dictámenes anteriores se conservan como historial. Se volverán a evaluar "
+                 "con las reglas actuales; cambiar solo las reglas no requiere transcribir otra vez.\n\n"
+                 if outdated else "No fue posible actualizar el reporte parcial automáticamente.\n\n")
             )
             + "Sí = Reanudar\nNo = Descartar checkpoint\nCancelar = Conservarlo",
         )

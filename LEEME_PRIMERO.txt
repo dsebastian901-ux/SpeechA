@@ -1,22 +1,6 @@
-MRS r52 — PROGRAMA COMPLETO
+MRS Speech Analytics 3.6.19-r54
 
-1. Extraiga TODO el ZIP en una carpeta nueva.
-2. Abra INICIAR_PROGRAMA.bat. Compruebe 3.6.19-r52.
-3. Use Procesamiento por lotes con audios y Excel, Python y Whisper local existentes.
-
-Un estatus de gestion distinto, si se conoce con certeza y cumple calidad y seguridad,
-se corrige en APROBADOS_ETIQUETA_CORREGIDA. No se deja REVISAR solo por la diferencia.
-Los bloqueos de seguridad independientes y la evidencia insuficiente se conservan.
-El Excel original no se modifica. Las cuentas reetiquetadas aparecen en el reporte.
-
-Los audios sin procesar se muestran PENDIENTES, sin dictamen ni puntaje.
-La falta de relacion Excel se muestra aparte de la revision de calidad.
-El porcentaje de aprobacion usa las llamadas procesadas.
-
-Para actualizar reglas de un checkpoint anterior puede usar
-REANALIZAR_CHECKPOINT.bat: conserva los audios pendientes y los originales.
-No sustituya el checkpoint de un lote que siga ejecutandose en otra ventana.
-Para un lote nuevo use normalmente Procesamiento por lotes.
-
-Consulte REVISION_52_PROGRAMA.md y VALIDACION_R52.json, en la carpeta del programa.
-La revision excesiva no se declara resuelta: las dudas sin evidencia permanecen.
+Extraiga TODO en una carpeta nueva. Abra INICIAR_PROGRAMA.bat.
+Compruebe r54 en la barra del programa. Use Procesamiento por lotes.
+Utiliza el Python y Whisper ya instalados. No es un instalador autonomo.
+Lea README.md y REVISION_54_PROGRAMA.md para cambios y alcance comprobado.

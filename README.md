@@ -1,13 +1,33 @@
-# MRS Speech Analytics — programa r51
+# MRS Speech Analytics — r54
 
-Extraiga todo el ZIP en una carpeta nueva y abra INICIAR_PROGRAMA.bat. Debe mostrar 3.6.19-r51. Se usa el Python y modelo local de Whisper existentes; no es el instalador autónomo futuro.
+Extraiga todo el ZIP en una carpeta nueva y abra INICIAR_PROGRAMA.bat.
+La barra debe mostrar **3.6.19-r54**. Utiliza el Python y el modelo local
+ya instalados; la relectura no necesita descargar otro modelo.
 
-El estatus de gestión del Excel (CONVENIO, NEGATIVA DE PAGO, MENSAJE, ACLARACION, etc.) es distinto del resultado de calidad. Si la llamada cumple 80 puntos y seguridad y se confirma un estatus diferente con evidencia suficiente, se guarda en APROBADOS_ETIQUETA_CORREGIDA. Solo cambia ese bloque del nombre; los originales se conservan. La tabla de cuentas reetiquetadas explica el cambio.
+Los cambios se aplican al Procesamiento por lotes de proyectos nuevos.
+También se corrige la recuperación de lotes anteriores: actualiza los
+resultados desactualizados reutilizando la transcripción compatible y
+conserva un historial del checkpoint anterior.
 
-Se corrige la pérdida del fragmento probatorio en seguimientos de pago detectados como ACLARACION. Se incorporan respuestas locales de aceptación de dictado y retorno con teléfono disponible, distinguiéndolas de una instrucción del gestor. Una afirmación «claro, sí, pero no lo voy a pagar» no se interpreta como hipótesis solo por contener sí. No hay excepciones por llamada.
+En audio nuevo, si queda REVISAR por identidad del interlocutor o contacto
+incompleto del recado, intenta dos relecturas locales acotadas con el modelo
+cargado. Solo incorpora esos hechos con evidencia compatible en ambas.
+Conserva el ASR original, no completa datos desde Excel ni certifica voces.
+El Excel final muestra la relectura y sus alertas.
 
-La etiqueta corregible resuelve exclusivamente el bloqueo de estatus. No exime privacidad, quejas, groserías, referencia, negociación, espera ni puntaje. Cuando falta evidencia del nuevo estatus o hay otra alerta, sigue pendiente con su motivo; no se declara una falta del gestor solo porque el detector no la entienda.
+Se corrige confundir teléfonos con dinero, atribuir un saldo referido de
+una llamada anterior al gestor actual e identificar al receptor del recado
+como titular. Reconoce más respuestas familiares y nominales sin omitir
+los filtros de privacidad, trato, negociación y seguridad acordados.
 
-Los reportes de calidad, motivos de no pago y reetiquetado siguen generándose al finalizar. REVISION_PENDIENTE muestra causas y evidencia disponible. No sumar códigos de estatus dependientes como llamadas adicionales ni contar carpetas vacías como resultados.
+Continúan los reportes de motivos de no pago y cuentas reetiquetadas.
+Reportes incorpora consolidación local de varios lotes, contados por
+separado, con exportación Excel y Word.
 
-Consulte REVISION_51_PROGRAMA.md y VALIDACION_R51.json. Las validaciones distinguen reglas sobre ASR recibido, proyecto nuevo con ASR controlado, y escucha humana. No se declara nueva escucha humana, retranscripción completa ni prueba nativa Windows.
+Consulte REVISION_54_PROGRAMA.md en la carpeta del programa y VALIDACION_R54.json
+para el alcance comprobado. Las pruebas con ASR guardado o salida controlada
+del modelo no equivalen a retranscribir el lote real con Faster-Whisper.
+No se acredita aquí una reducción de REVISAR mediante transcripción nueva.
+
+Este paquete usa la instalación existente. El inicio de sesión y el
+instalador autónomo permanecen pendientes de integración.

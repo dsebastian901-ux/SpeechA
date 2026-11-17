@@ -18,6 +18,7 @@ from app.services.relation_service import RelationService
 from app.services.analytics_service import AnalyticsService
 from app.services.transcription_services import TranscriptionService
 from app.services.batch_report_service import BatchReportService
+from app.services import batch_runtime_state as runtime_state
 from app.config.approval_rules import (
     MIN_APPROVAL_DURATION_SECONDS,
     MAX_APPROVAL_DURATION_SECONDS,
@@ -50,6 +51,77 @@ class BatchService:
         self.last_partial_report_path = None
         self.checkpoint_path = None
         self.partial_report_every = 10
+        self.relation_origin = None
+
+    def _runtime_context(self):
+        return {
+            'engine_fingerprint': runtime_state.engine_fingerprint(),
+            'runtime': whisper_service.get_runtime_configuration(),
+            'mode': 'A' if self.has_relation_excel() else 'B',
+            'minimum_score': self.relation_service.get_minimum_score(),
+            'authorized_statuses': sorted(self.relation_service.authorized_statuses),
+        }
+
+    @staticmethod
+    def _saved_authorized_statuses(payload):
+        values = payload.get('authorized_statuses')
+        if isinstance(values, list):
+            return [value for value in values if isinstance(value, str)]
+        # Un checkpoint antiguo no guardaba el catálogo. Recuperar únicamente
+        # las autorizaciones que su dictamen registró explícitamente.
+        return sorted({str((item.get('relation') or {}).get('estatus_grabacion'))
+                       for item in payload.get('items', [])
+                       if (item.get('classification') or {}).get('estatus_autorizado') is True
+                       and (item.get('relation') or {}).get('estatus_grabacion')})
+
+    def _archive_checkpoint(self, output_directory):
+        """Conservar el dictamen anterior completo antes de actualizarlo."""
+        if not output_directory:
+            return None
+        import hashlib
+        path = self._get_checkpoint_path(output_directory)
+        if not path.exists():
+            return None
+        raw = path.read_bytes()
+        json.loads(raw.decode('utf-8-sig'))
+        directory = path.parent / 'historial_evaluaciones'
+        directory.mkdir(parents=True, exist_ok=True)
+        target = directory / ('checkpoint_' + hashlib.sha256(raw).hexdigest() + '.json')
+        if not target.exists():
+            target.write_bytes(raw)
+        return str(target)
+
+    def _prepare_runtime_refresh(self, output_directory, context):
+        outdated = [item for item in self.items if item.get('status') == 'completado'
+                    and not runtime_state.is_current(item, context, output_directory)]
+        if not outdated:
+            return
+        history = self._archive_checkpoint(output_directory)
+        for item in outdated:
+            item['previous_evaluation'] = {
+                'checkpoint': history, 'classification': item.get('classification'),
+                'compliance_score': item.get('compliance_score'),
+                'evaluation_stamp': item.get('evaluation_stamp'),
+            }
+            item['status'] = 'pendiente'
+            item['message'] = 'Dictamen anterior pendiente de actualizar con las reglas actuales'
+            item['classification'] = None
+            item['compliance_score'] = None
+
+    def _retire_classified_copy(self, item, output_directory):
+        """Retirar solo la copia gestionada; nunca mover el audio original."""
+        if not output_directory or not item.get('classified_audio_path'):
+            return
+        previous = Path(item['classified_audio_path']).resolve()
+        root = Path(output_directory).resolve().parent / 'Audios Clasificados'
+        original = Path(item['path']).resolve()
+        if previous == original or not previous.is_relative_to(root) or not previous.is_file():
+            return
+        archive = self._get_checkpoint_path(output_directory).parent / 'historial_clasificacion'
+        target = self._safe_copy_path(archive / previous.parent.name, previous.name)
+        shutil.move(str(previous), str(target))
+        item['previous_classified_audio_path'] = str(target)
+        item['classified_audio_path'] = None
 
     # =========================================================
     # CHECKPOINT / REANUDACION
@@ -84,14 +156,22 @@ class BatchService:
             return None
         path = self._get_checkpoint_path(output_directory)
         self.checkpoint_path = str(path)
+        context = self._runtime_context()
+        current = sum(i.get('status') == 'completado' and
+                      all((i.get('evaluation_stamp') or {}).get(k) == v
+                          for k, v in context.items()) for i in self.items)
+        outdated = sum(i.get('status') == 'completado' for i in self.items) - current
         payload = {
             "version": 1,
             "engine_revision": AnalyticsService.ENGINE_REVISION,
+            "evaluation_status": {"current": current, "outdated": outdated},
             "updated_at": datetime.now().isoformat(timespec="seconds"),
             "completed": bool(completed),
             "output_directory": str(Path(output_directory).resolve()),
             "mode": "A" if self.has_relation_excel() else "B",
             "relation_excel": self.relation_excel if self.has_relation_excel() else None,
+            "relation_origin": self.relation_origin,
+            "authorized_statuses": list(self.relation_service.authorized_statuses),
             "last_report_path": self.last_report_path,
             "last_nonpayment_report_path": self.last_nonpayment_report_path,
             "nonpayment_report_error": self.nonpayment_report_error,
@@ -141,7 +221,7 @@ class BatchService:
             if not candidate.exists():
                 continue
             try:
-                payload = json.loads(candidate.read_text(encoding="utf-8"))
+                payload = json.loads(candidate.read_text(encoding="utf-8-sig"))
                 used_path = candidate
                 break
             except Exception:
@@ -149,16 +229,23 @@ class BatchService:
 
         if payload is None:
             return None
-        if payload.get("completed") or not payload.get("items"):
+        if not payload.get("items"):
             return None
         items = payload["items"]
+        context = self._runtime_context()
+        context['mode'] = payload.get('mode', 'B')
+        context['authorized_statuses'] = sorted(self._saved_authorized_statuses(payload))
+        outdated = sum(i.get('status') == 'completado' and
+                       not runtime_state.is_current(i, context, output_directory) for i in items)
+        if payload.get('completed') and not outdated:
+            return None
         completed = sum(i.get("status") == "completado" for i in items)
         errors = sum(i.get("status") == "error" for i in items)
         processing = sum(i.get("status") == "procesando" for i in items)
         pending = sum(i.get("status") == "pendiente" for i in items) + processing
         return {"path":str(used_path),"mode":payload.get("mode","B"),
                 "relation_excel":payload.get("relation_excel"),"total":len(items),
-                "completed":completed,"errors":errors,"pending":pending,
+                "completed":completed,"errors":errors,"pending":pending,"outdated":outdated,
                 "updated_at":payload.get("updated_at")}
 
     def resume_from_checkpoint(self, output_directory):
@@ -171,7 +258,7 @@ class BatchService:
             if not candidate.exists():
                 continue
             try:
-                payload = json.loads(candidate.read_text(encoding="utf-8"))
+                payload = json.loads(candidate.read_text(encoding="utf-8-sig"))
                 used_path = candidate
                 break
             except Exception:
@@ -180,19 +267,47 @@ class BatchService:
         if payload is None:
             raise RuntimeError("El checkpoint principal y su respaldo no son válidos.")
 
-        if payload.get("completed") or not payload.get("items"):
+        if not payload.get("items"):
             raise RuntimeError("No existe un lote pendiente válido.")
         self.items = payload["items"]
         for item in self.items:
             if item.get("status") == "procesando":
                 item["status"] = "pendiente"
                 item["message"] = "Pendiente por reanudación"
+            elif item.get('status') == 'error':
+                item['status'] = 'pendiente'
+                item['message'] = 'Reintento de procesamiento solicitado al reanudar'
         self.batch_elapsed_seconds = float(payload.get("batch_elapsed_seconds",0) or 0)
         self.last_report_path = payload.get("last_report_path")
         self.checkpoint_path = str(used_path)
         excel = payload.get("relation_excel")
         if payload.get("mode") == "A" and excel and Path(excel).exists():
             self.set_relation_excel(excel)
+        elif payload.get('mode') == 'A':
+            # El Excel puede estar en otro equipo. Conservar los datos que ya
+            # estaban relacionados; las llamadas sin relación siguen sin ella.
+            from dataclasses import fields
+            from app.services.relation_service import RelationRecord
+            names = {field.name for field in fields(RelationRecord)}
+            self.relation_service = RelationService()
+            self.relation_service.authorized_statuses = self._saved_authorized_statuses(payload)
+            for item in self.items:
+                relation = item.get('relation')
+                if not isinstance(relation, dict) or not relation:
+                    continue
+                data = {key: value for key, value in relation.items() if key in names}
+                if not data.get('archivo_original'):
+                    data['archivo_original'] = item.get('file_name') or Path(item['path']).name
+                if self.relation_service.find_record(item['path']) is not None:
+                    raise ValueError('Hay relaciones duplicadas en el checkpoint; seleccione el Excel original.')
+                self.relation_service.records.append(RelationRecord(**data))
+            self.relation_excel = excel or 'EXCEL_GUARDADO_EN_CHECKPOINT'
+            self.relation_enabled = True
+            self.relation_origin = 'CHECKPOINT'
+            # No redondear las filas guardadas a un dataclass: añadir columnas
+            # vacías también cambiaría la vinculación de las confirmaciones.
+            self.relation_validation = self.relation_service.validate_audio_files(
+                [item['path'] for item in self.items])
         else:
             self.clear_relation_excel()
         return self.get_summary()
@@ -296,6 +411,7 @@ class BatchService:
 
         self.relation_excel = str(path)
         self.relation_enabled = True
+        self.relation_origin = 'EXCEL'
         self.relation_validation = None
 
         if self.items:
@@ -318,6 +434,7 @@ class BatchService:
     def clear_relation_excel(self):
         self.relation_excel = None
         self.relation_enabled = False
+        self.relation_origin = None
         self.relation_validation = None
 
         for item in self.items:
@@ -528,6 +645,8 @@ class BatchService:
         results = []
         batch_started = perf_counter()
         previous_elapsed = float(self.batch_elapsed_seconds or 0.0)
+        runtime_context = self._runtime_context()
+        self._prepare_runtime_refresh(output_directory, runtime_context)
         self._save_checkpoint(output_directory, completed=False)
         self.model_was_loaded_at_start = bool(
             getattr(whisper_service, "is_model_loaded", False)
@@ -556,12 +675,15 @@ class BatchService:
                 )
 
             try:
+                self._retire_classified_copy(item, output_directory)
                 whisper_started = perf_counter()
 
                 # RECUPERACIÓN:
                 # Si ya existe un JSON válido de esta llamada, reutiliza la
                 # transcripción y evita volver a ejecutar Whisper.
                 recovered_json = None
+                recovered_payload = None
+                candidate_json = None
                 if output_directory:
                     candidate_json = (
                         Path(output_directory).expanduser().resolve()
@@ -569,30 +691,50 @@ class BatchService:
                     )
                     if candidate_json.exists():
                         try:
-                            recovered_payload = json.loads(
-                                candidate_json.read_text(encoding="utf-8")
-                            )
-                            recovered_audio = str(
-                                recovered_payload.get("archivo") or ""
-                            ).strip()
-                            if (
-                                recovered_audio
-                                and Path(recovered_audio).stem.lower()
-                                == Path(item["path"]).stem.lower()
-                            ):
+                            data = json.loads(candidate_json.read_text(encoding="utf-8-sig"))
+                            if runtime_state.compatible_transcription(data, item, runtime_context['runtime']):
                                 recovered_json = candidate_json
+                                recovered_payload = data
                         except Exception:
                             recovered_json = None
 
-                if recovered_json is not None:
+                # El checkpoint puede contener lecturas y confirmaciones que no
+                # están en el JSON inicial. Solo preferir el JSON si cambió desde
+                # la última evaluación de esta llamada.
+                saved_source = (item.get('evaluation_stamp') or {}).get('source', {})
+                source_now = runtime_state.source_state(item, output_directory)
+                sidecar_changed = bool(saved_source.get('sidecar_sha256') and
+                    saved_source.get('sidecar_sha256') !=
+                    source_now.get('sidecar_sha256'))
+                if not sidecar_changed and runtime_state.compatible_transcription(
+                        item.get('result'), item, runtime_context['runtime']):
+                    recovered_payload = item['result']
+                    recovered_json = None
+
+                saved_runtime = (item.get('evaluation_stamp') or {}).get('runtime')
+                if ((saved_source.get('audio') is not None and
+                     saved_source['audio'] != source_now.get('audio')) or
+                    (saved_runtime is not None and saved_runtime != runtime_context['runtime'])):
+                    recovered_payload = None
+                    recovered_json = None
+
+                if recovered_payload is not None:
                     result = {
-                        "ruta_json": str(recovered_json),
-                        "json_path": str(recovered_json),
+                        "ruta_json": str(recovered_json) if recovered_json else '',
+                        "json_path": str(recovered_json) if recovered_json else '',
                         "archivo": Path(item["path"]).name,
                         "recuperado": True,
                     }
                     item["message"] = "Transcripción recuperada · sin reprocesar Whisper"
                 else:
+                    if candidate_json is not None and candidate_json.exists():
+                        import hashlib
+                        raw = candidate_json.read_bytes()
+                        archive = self._get_checkpoint_path(output_directory).parent / 'historial_transcripciones'
+                        archive.mkdir(parents=True, exist_ok=True)
+                        target = archive / (candidate_json.stem + '_' + hashlib.sha256(raw).hexdigest() + '.json')
+                        if not target.exists():
+                            target.write_bytes(raw)
                     result = whisper_service.transcribe_audio(
                         audio_path=item["path"],
                         output_directory=output_directory,
@@ -601,16 +743,14 @@ class BatchService:
                 item["whisper_seconds"] = max(
                     0.0, perf_counter() - whisper_started
                 )
-                item["transcription_recovered"] = bool(recovered_json)
+                item["transcription_recovered"] = recovered_payload is not None
                 item["processing_origin"] = {
                     "flow": "PROCESAMIENTO_POR_LOTES",
                     "engine_revision": AnalyticsService.ENGINE_REVISION,
                     "transcription_source": (
-                        "TRANSCRIPCION_EXISTENTE" if recovered_json else "WHISPER_NUEVO"
+                        "TRANSCRIPCION_EXISTENTE" if recovered_payload is not None else "WHISPER_NUEVO"
                     ),
                 }
-
-                item["result"] = result
 
                 json_path = (
                     result.get("ruta_json")
@@ -618,17 +758,26 @@ class BatchService:
                     or ""
                 )
 
-                if not json_path:
+                if recovered_payload is None and not json_path:
                     raise RuntimeError(
                         "Whisper no devolvio la ruta JSON de la transcripcion."
                     )
 
-                transcription = TranscriptionService.load_from_json(
-                    json_path
-                )
+                from app.services.checkpoint_reanalysis import transcription_with_saved_reviews
+                if recovered_payload is None:
+                    recovered_payload = json.loads(Path(json_path).read_text(encoding='utf-8-sig'))
+                    if not runtime_state.compatible_transcription(recovered_payload, item, runtime_context['runtime']):
+                        raise ValueError('Whisper devolvió una transcripción de otro audio o configuración.')
+                transcription = transcription_with_saved_reviews(item, recovered_payload)
+                if json_path:
+                    # Conservar también las revisiones locales asociadas al JSON.
+                    loaded = TranscriptionService.load_from_json(json_path)
+                    loaded.metadata.update({key: value for key, value in transcription.metadata.items()
+                                            if value is not None})
+                    transcription = loaded
                 # Conservar la evidencia antes del análisis: un error de reglas
                 # no debe borrar una transcripción ya completada.
-                item["result"] = json.loads(Path(json_path).read_text(encoding="utf-8-sig"))
+                item["result"] = recovered_payload
 
                 record = (
                     self.relation_service.find_record(item["path"])
@@ -729,23 +878,11 @@ class BatchService:
                 operational_context = {}
 
                 if record is not None:
-                    record_data = record.to_dict()
-
-                    operational_context = {
-                        "nombre_final": record_data.get("nombre_final"),
-                        "estatus_grabacion": record_data.get("estatus_grabacion"),
-                        "campana": record_data.get("campana"),
-                        "fecha_asignacion": record_data.get("fecha_asignacion"),
-                        "corte": record_data.get("corte"),
-                        "vencimiento": record_data.get("vencimiento"),
-                        "asignacion": record_data.get("asignacion"),
-                        "fecha": record_data.get("fecha"),
-                        "gestor": record_data.get("gestor"),
-                        "supervisor": record_data.get("supervisor"),
-                        "numero_de_tarjeta": record_data.get("numero_de_tarjeta"),
-                        "pago_minimo": record_data.get("pago_minimo"),
-                        "saldo_total": record_data.get("saldo_total"),
-                    }
+                    # El mismo contexto completo que usa el reanálisis. Recortar
+                    # columnas invalidaba hechos humanos correctamente vinculados.
+                    operational_context = (dict(item['relation'])
+                        if self.relation_origin == 'CHECKPOINT' and item.get('relation')
+                        else record.to_dict())
 
                 analytics_started = perf_counter()
                 analysis = AnalyticsService.analyze_transcription(
@@ -753,6 +890,27 @@ class BatchService:
                     operational_context=operational_context,
                 )
                 item["analytics_seconds"] = max(0.0, perf_counter() - analytics_started)
+                # La recuperación de reglas no ejecuta Whisper. Para audio nuevo,
+                # comprobar el contexto dudoso con el modelo local ya cargado
+                # antes de cerrar REVISAR; jamás descargar otro modelo.
+                from app.services.context_audio_recovery import needs_recovery
+                if (not item['transcription_recovered'] and needs_recovery(analysis.metadata)
+                        and whisper_service.is_model_loaded):
+                    recovery_started=perf_counter()
+                    try:
+                        recovered_context=whisper_service.recover_context(item['path'],item['result'],
+                            operational_context,analysis.metadata)
+                        if recovered_context is not None:
+                            item['context_asr_recovery']=recovered_context
+                            transcription.audio_path=item['path']
+                            transcription.metadata['context_asr_recovery']=recovered_context
+                            recovery_analysis_started=perf_counter()
+                            analysis=AnalyticsService.analyze_transcription(transcription,
+                                operational_context=operational_context)
+                            item['analytics_seconds']+=max(0.,perf_counter()-recovery_analysis_started)
+                    except Exception as recovery_error:
+                        item['context_asr_recovery_error']=str(recovery_error)
+                    item['context_recovery_seconds']=max(0.,perf_counter()-recovery_started)
 
                 score = float(
                     getattr(
@@ -995,6 +1153,8 @@ class BatchService:
                 item["classified_audio_path"] = None
                 item["copy_status"] = "ERROR_ANALISIS_O_PROCESAMIENTO"
             finally:
+                if item.get('status') == 'completado':
+                    item['evaluation_stamp'] = runtime_state.make_stamp(item, runtime_context, output_directory)
                 # Guarda primero los tiempos de trabajo y mide por separado el checkpoint.
                 item["elapsed_seconds"] = max(0.0, perf_counter() - item_started)
                 self.batch_elapsed_seconds = previous_elapsed + max(0.0, perf_counter() - batch_started)

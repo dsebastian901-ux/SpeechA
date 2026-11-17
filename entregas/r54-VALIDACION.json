@@ -1,0 +1,40 @@
+{
+  "revision": "3.6.19-r54",
+  "tests": {
+    "tests": 2688,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 7,
+    "passed": 2681
+  },
+  "exact_tested_source_unchanged": true,
+  "context_recovery_tests": 23,
+  "new_audio_batch_integration": "Actual BatchService, account classification, audio copy, report and resume; primary ASR and reread outputs controlled in tests",
+  "local_audio_adapter": "PCM decoded from WAV, loaded model interface controlled in tests; no model download",
+  "historical_normal_batch": {
+    "calls": 175,
+    "received_prior_review_calls": 140,
+    "fresh_asr_executed": false,
+    "source": "saved ASR; local audio path adjusted in private copy",
+    "normal_batch_decisions_and_scores_match_rule_regression": true,
+    "original_audio_and_excel_and_checkpoint_unchanged": true,
+    "copied_audio_sha256_matches": true,
+    "quality_and_nonpayment_reports_verified": true,
+    "outcomes": {
+      "REVISAR": 135,
+      "FALLA_GRAVE": 1,
+      "APROBADO": 16,
+      "NO_APROBADO": 5,
+      "NO_APROBADO_MENOR_80": 8,
+      "APROBADO_DURACION_MENOR": 1,
+      "APROBADO_ETIQUETA_CORREGIDA": 9
+    }
+  },
+  "fresh_faster_whisper_executed": false,
+  "new_real_batch_approval_rate_verified": false,
+  "native_windows_gui_verified": false,
+  "standalone_installer_complete": false,
+  "login_integration_complete": false,
+  "offline_recovery": "Uses only already loaded Faster-Whisper model; at most four bounded windows, original ASR preserved",
+  "privacy": "No real checkpoints, recordings, account spreadsheets, report data or credentials in distribution"
+}

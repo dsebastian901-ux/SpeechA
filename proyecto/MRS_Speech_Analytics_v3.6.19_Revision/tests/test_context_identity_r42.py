@@ -16,6 +16,9 @@ QUESTION='¿Me puede comunicar con Persona de Ejemplo? Sí.'
     'Yo voy a pagar el viernes.',
     'Ya he pagado en tienda.',
     'Lo hice por 950 pesos.',
+    'Mi adeudo aumentó por los intereses de la tarjeta.',
+    'Mi deuda se incrementó. No puedo cubrir todo el saldo.',
+    'Di el pago inicial de 1500 pesos y después me quedé sin trabajo.',
 ])
 def test_nominal_yes_and_own_account_conversation_identifies_holder(response):
     text=QUESTION+' Gracias. Habla MRS sobre el pago de su tarjeta. '+response
@@ -33,6 +36,9 @@ def test_nominal_yes_and_own_account_conversation_identifies_holder(response):
     'Si yo tuviera mi tarjeta, le diría.',
     'El cliente dice que mi tarjeta ya está pagada.',
     'Para que lo pague, primero tiene que ir a la tienda.',
+    '¿Mi adeudo subió por intereses?',
+    'Soy su esposa. Mi adeudo es distinto del suyo.',
+    'El cliente dice que mi deuda es de mil pesos.',
 ])
 def test_context_does_not_invent_holder_from_incomplete_or_third_party_reply(response):
     text=QUESTION+' Habla MRS sobre el pago de su tarjeta. '+response

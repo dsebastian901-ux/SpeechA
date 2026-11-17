@@ -20,14 +20,17 @@ COUNTER = re.compile(
     r'(?:solicite|saque|tramite|contrate|adquiri) (?:la |una )?tarjeta (?:para|a nombre de) (?:ella|mi (?:espos[oa]|madre|padre|hij[oa]|herman[oa]))|'
     r'se lo comunico|le paso (?:al|con|a la)|lo busco|la busco)\b')
 OWN_ACCOUNT = re.compile(
-    r'\b(?:mi (?:tarjeta|cuenta|saldo|estado de cuenta|aplicacion|pago)|mis pagos|'
+    r'\b(?:mi (?:tarjeta|cuenta|saldo|adeudo|deuda|credito|contrato|estado de cuenta|aplicacion|pago)|mis pagos|'
     r'yo (?:tengo|tenia|saque|solicite|tramite|contrate) (?:mi |la |una )?(?:tarjeta|cuenta)|'
     r'(?:(?:ya|yo) ){0,2}(?:lo pague|pague|hice (?:mi |el )?pago|realice (?:mi |el )?pago|he pagado|he depositado)|'
+    r'(?:yo )?di (?:el |mi |un )?pago(?: inicial)?|'
+    r'yo (?:pago|pagaba|iba a pagar|estoy pagando|estaba pagando|estuve pagando)|'
+    r'me (?:estan|siguen|han estado) cobrando|'
     r'(?:yo )?(?:tenia|tengo) que pagar|yo (?:se que debo|les debo)|lo que yo les debo|'
     r'(?:yo )?no estoy negad[oa] a pagar|'
     r'(?:ya |yo )?(?:lo hice|lo realice)|'
     r'(?:este|el) mes (?:yo )?(?:tengo|tenia) (?:un |el |mi )?pago minimo|'
-    r'no (?:(?:te|le|les|lo) )?(?:voy a|pienso|quiero) (?:pagar|depositar)|yo no debo nada|(?:yo )?quiero pagar(?:lo|la)|(?:la |mi tarjeta la )?quiero (?:cancelar|dar de baja)|yo lo deje de pagar|por eso lo deje de pagar|'
+    r'no (?:(?:te|le|les|lo) )?(?:voy a|pienso|quiero) (?:pagar|depositar)|yo no (?:les )?debo nada|(?:yo )?quiero pagar(?:lo|la)|(?:la |mi tarjeta la )?quiero (?:cancelar|dar de baja)|yo lo deje de pagar|por eso lo deje de pagar|'
     r'he (?:querido|intentado) (?:hacer|realizar) (?:una |la |mi )?transferencia|'
     r'no he podido (?:realizarlo|ir(?: porque| hasta))|'
     r'ya les digo si puedo o no|'
@@ -80,13 +83,14 @@ def contextual_holder_confirmation(text, segments, identification):
     explicit = re.search(r'\bcon (?:el senor|la senora|la senorita) (?P<identity>[a-z ]{3,85}?)\s*[,?.]?\s+(?P<answer>a sus ordenes|para servirle|su servidor|su servidora)\b',source)
     if explicit and valid_nominal_request(source,explicit.start(),explicit['identity']) and not BAD_IDENTITY.search(explicit['identity']) and _role_at(text,segments,explicit.start('answer')) not in {'GESTOR','TERCERO'}:
         return {'confirmed':True,'method':'IDENTIFICACION_NOMINAL_CON_RESPUESTA_DE_SERVICIO','evidence':explicit.group(),'speaker_role':'NO DETERMINADO','human_verified':False}
-    named_self=re.compile(r'\b(?:busco (?:a |al |el |la )?|encuentro |encuentra |se encuentra |me comunico con )(?P<identity>[^.!?]{3,100}?)(?:[.!?]\s*|\s+)(?P<answer>(?:si[, ]+)?(?:con ella habla|con el habla|ella habla|el habla))\b')
+    named_self=re.compile(r'\b(?:busco (?:a |al |el |la )?|encuentro |encuentra |encuentre |se encuentra |me comunico con )(?P<identity>[^.!?]{3,100}?)(?:[.!?]\s*|\s+)(?P<answer>(?:si[, ]+)?(?:con ella habla|con el habla|ella habla|el habla))\b')
     for m in named_self.finditer(source):
         if (valid_nominal_request(source,m.start(),m['identity']) and not BAD_IDENTITY.search(m['identity'])
                 and _role_at(text,segments,m.start('answer')) not in {'GESTOR','TERCERO'}
                 and not re.match(r'\s*\?',source[m.end():])):
             return {'confirmed':True,'method':'RESPUESTA_EXPLICITA_A_BUSQUEDA_NOMINAL','evidence':m.group(),'human_verified':False,'speaker_role':'NO DETERMINADO'}
     requests=[
+        re.compile(r'\b(?:cual es|es)\s+(?P<identity>(?:el senor|la senora|la senorita)\s+[^.!?]{3,75}?)\?\s*(?P<answer>si|asi es|correcto)\b'),
         re.compile(r'\b(?:usted es|es usted)\s+(?P<identity>[^.!?]{3,85}?)\?\s*(?P<answer>si|asi es|correcto)\b'),
         re.compile(r'\b(?:buenos dias|buenas dias|buenas tardes)[, .]*con\s+'
                    r'(?P<identity>[a-z ]{3,85}?) por favor[, .?]\s*(?P<answer>)'),
@@ -111,7 +115,7 @@ def contextual_holder_confirmation(text, segments, identification):
         for request in pattern.finditer(source):
             identity=request['identity']
             if not valid_nominal_request(source,request.start(),identity):continue
-            if BAD_IDENTITY.search(identity) or re.search(r'\d',identity):continue
+            if BAD_IDENTITY.search(identity) or re.search(r'\d|\b(?:que|cual|cuanto)\b',identity):continue
             person=re.sub(r'^(?:(?:el|la) )?(?:senorita|senora|senor|caballero)\s*','',identity).strip(', ')
             if not re.search(r'[a-z]{2,}',person):continue
             answer=request['answer']
@@ -147,7 +151,11 @@ def contextual_holder_confirmation(text, segments, identification):
                 conditional=re.search(r'\b(?:que|cuando|si|para que)(?:\s+(?:se|usted|yo|ya|lo|le|me)){0,3}\s*$',before)
                 verbatim=re.sub(r'\s+',' ',unicodedata.normalize('NFC',unit['text']).lower()).strip()
                 accented_past=re.search(r'\b(?:pagué|realicé)\b',verbatim[own.start():own.end()])
-                if conditional and not accented_past and not re.search(r'\bes que\s*$',before) and not (re.search(r'\bsi yo\s*$',before) and own.group().startswith('no he usado')):continue
+                # «Me dijeron que MI cuenta...» y «por qué ME están cobrando»
+                # acreditan autorreferencia, sin certificar el saldo o el pago.
+                # Las órdenes, voces conocidas e hipótesis se excluyen arriba.
+                personal_financial_state=own.group().startswith(('mi ','mis ','me estan cobrando','me siguen cobrando','me han estado cobrando'))
+                if conditional and not personal_financial_state and not accented_past and not re.search(r'\bes que\s*$',before) and not (re.search(r'\bsi yo\s*$',before) and own.group().startswith('no he usado')):continue
                 return {'confirmed':True,'method':('IDENTIFICACION_NOMINAL_Y_CONVERSACION_PROPIA' if answer else
                                                    'AUTORREFERENCIA_FINANCIERA_TRAS_PREGUNTA_NOMINAL'),
                         'evidence':request.group()+' / '+unit['text'],

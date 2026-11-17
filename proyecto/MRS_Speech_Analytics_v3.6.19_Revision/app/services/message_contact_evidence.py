@@ -50,6 +50,14 @@ def message_contact_evidence(text,segments=()):
         if (_recipient(text,segments,match.start('answer')) and not re.match(r'\s*\?',source[match.end():])
                 and not BAD_PREFIX.search(source[max(0,match.start()-65):match.start()])):
             result['family'].append(_item(source,match,'RESPUESTA_PARENTESCO_A_PREGUNTA_FAMILIAR',text,segments,'answer'))
+    personal_family_reply=re.compile(
+        r'\b(?:es (?:usted )?familiar de (?:el|ella)|es familiar del titular|es familiar de la titular)'
+        r'\?\s*(?:si[, ]+)?(?:(?:soy|es) )?(?:su )?(?P<answer>'+KIN+r')\b')
+    for match in personal_family_reply.finditer(source):
+        if (_recipient(text,segments,match.start('answer'))
+                and not re.match(r'\s*\?',source[match.end():])
+                and not BAD_PREFIX.search(source[max(0,match.start()-65):match.start()])):
+            result['family'].append(_item(source,match,'PARENTESCO_EN_RESPUESTA_A_FAMILIAR_DEL_TITULAR',text,segments,'answer'))
     confirmed_kin=re.compile(r'\bes (?:usted )?su (?P<kin>'+KIN+r')(?:[, ]+no)?[?.]\s*(?P<answer>si|asi es|correcto)\b')
     for match in confirmed_kin.finditer(source):
         if (_recipient(text,segments,match.start('answer')) and not re.match(r'\s*\?',source[match.end():])

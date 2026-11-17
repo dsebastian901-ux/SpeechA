@@ -83,6 +83,12 @@ def contact_dialogue_evidence(text, segments=()):
             value=normalize(unit['text'])
             if re.fullmatch(r'(?:(?:ah|ok|si|bueno)[, ]+){0,2}(?:le (?:doy|paso|comento|aviso) (?:el |su )?(?:numero|recado)|yo le (?:comento|aviso)|pasame la razon|voy a capturar)[.!]?',value):
                 result['acceptance'].append(dict(unit,method='RECEPTOR_CONFIRMA_AVISO_O_CAPTURA',human_verified=False))
+    relay=declared_intermediary(text,segments)
+    if relay.get('recipient_accepted'):
+        result['acceptance'].append({'text':relay['evidence'],
+            'phrase':relay['answer'],'position':relay['position'],
+            'method':'PIDE_RECADO_TRAS_CONFIRMAR_CONTACTO_CON_EL_AUSENTE',
+            'speaker_role':relay['speaker_role'],'start':None,'end':None,'human_verified':False})
     return result
 
 
@@ -111,6 +117,40 @@ def expanded_unknown_response(text,segments=()):
 def declared_intermediary(text,segments=()):
     """Respuesta al nombre solicitado; la pregunta posterior no borra la ausencia."""
     source=normalize(text);none={'confirmed':False,'method':'SIN_RESPUESTA_INTERMEDIARIA','evidence':''}
+    # Confirmar el nombre del receptor al cerrar un recado no identifica al
+    # titular. La intermediación se prueba por el diálogo, no por el Excel.
+    relay_queries=[
+        r'\b(?:tiene|tendra|tendria|mantiene) (?:usted )?(?:algun )?contacto con (?:el|ella)\b[^?!.]{0,95}\b(?:recado|mensaje)\b[^?!.]{0,35}',
+        r'\b(?:pero )?(?:si[, ]+)?conoce (?:a )?[^?!.]{2,95}\bpara (?:poder )?dejar(?:le)? (?:un |el )?(?:recado|mensaje)\b[^?!.]{0,30}',
+    ]
+    for query in relay_queries:
+        pattern=re.compile(query+r'[?.]\s*(?:eh[, .]+)?(?P<answer>si(?:[, ]+diga(?:me|nme))?|asi es|correcto|claro(?: que si)?(?:[, ]+diga(?:me|nme))?)\b')
+        for match in pattern.finditer(source):
+            if not _recipient(source,text,segments,match.start('answer'),match.end('answer')):continue
+            before=source[max(0,match.start()-90):match.start()]
+            if QUOTED.search(before)or re.search(r'\b(?:no|no se si)\s*$',before):continue
+            tail=source[match.end():]
+            if re.search(r'\b(?:se lo comunico|le paso al titular|ahora habla (?:el|la) titular)\b',tail):continue
+            return {'confirmed':True,'method':'CONTACTO_EXPLICITO_PARA_ENTREGAR_RECADO',
+                    'evidence':match.group(),'human_verified':False,
+                    'recipient_accepted':bool(re.search(r'\bdiga(?:me|nme)\b',match['answer'])),
+                    'answer':match['answer'],'position':match.start('answer'),
+                    'speaker_role':_role_at(text,segments,match.start('answer'))}
+    directed=re.compile(r'\ble puede (?:mencionar|comentar|indicar|avisar|decir)\b[^.!?]{0,160}'
+                        r'\b(?:se comunique con nosotros|nos (?:llame|marque)|se ponga en contacto con nosotros)\b')
+    from app.services.contextual_identity_evidence import OWN_ACCOUNT
+    own_statement=any(OWN_ACCOUNT.search(normalize(unit['text'])) and '?'not in unit['text']
+                      and unit['speaker_role']not in{'GESTOR','TERCERO'}
+                      for unit in sentence_evidence(text,segments))
+    if not own_statement:
+        for match in directed.finditer(source):
+            if _role_at(text,segments,match.start())in{'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+            if not _outside_question(source,match.start(),match.end()):continue
+            before=source[max(0,match.start()-90):match.start()]
+            if QUOTED.search(before)or re.search(r'\bno\s*$',before):continue
+            if re.search(r'\b(?:se lo comunico|le paso al titular|ahora habla (?:el|la) titular)\b',source[match.end():]):continue
+            return {'confirmed':True,'method':'RECEPTOR_DE_MENSAJE_DIRIGIDO_AL_AUSENTE',
+                    'evidence':match.group(),'human_verified':False}
     prompt=r'(?:me (?:puede |podria |podre |pueden )?comunicar (?:por favor |de favor )?con|me comunico con|seria tan amable de comunicarme (?:por favor )?con|tengo(?: el)? (?:gusto|uso) con|hablo con|se encuentra|busco a|buenos dias[, ]+con|buenas tardes[, ]+con|buen dia[, ]+con)'
     pattern=re.compile(r'\b'+prompt+r'\s+(?P<identity>[^?!.]{2,105}?)[?.]\s*(?P<answer>(?:ah[, ]+|este[, ]+|no[, ]+){0,2}'
         r'(?:(?:el|ella) )?(?:no se encuentra(?:n)?|no esta(?: aqui| en casa)?|no ha llegado|esta trabajando|salio|se le olvido (?:el |su )?telefono))\b')

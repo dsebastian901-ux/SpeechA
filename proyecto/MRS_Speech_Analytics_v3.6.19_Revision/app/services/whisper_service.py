@@ -256,6 +256,38 @@ class WhisperService:
             self._model = None
             self._loaded_model_config = None
 
+    def recover_context(self, audio_path, data, relation, metadata):
+        """Dos lecturas locales con el modelo actual; no descarga ni sustituye ASR."""
+        model = self._model
+        if model is None:
+            return None
+        from faster_whisper.audio import decode_audio
+        from app.services.context_audio_recovery import collect
+        samples = decode_audio(str(audio_path), sampling_rate=16000)
+        language = str(data.get('idioma_solicitado') or 'es')
+        if language.lower() == 'auto':
+            language = None
+
+        def read_window(start, end, beam):
+            audio = samples[int(start*16000):int(end*16000)]
+            with self._transcription_lock:
+                stream, _ = model.transcribe(audio, language=language,
+                    task='transcribe', beam_size=beam, vad_filter=False,
+                    word_timestamps=False, condition_on_previous_text=False)
+                rows = []
+                for segment in stream:
+                    row = {'text':str(segment.text).strip(),
+                           'start':float(segment.start)+start,'end':float(segment.end)+start}
+                    for field in ('avg_logprob','no_speech_prob','compression_ratio'):
+                        value = getattr(segment,field,None)
+                        if isinstance(value,(int,float)):
+                            row[field] = value
+                    rows.append(row)
+            return {'text':' '.join(r['text'] for r in rows),'segments':rows}
+
+        return collect(audio_path,data,relation,metadata,read_window,
+                       'Faster-Whisper:'+str(data.get('modelo') or 'local'))
+
     # =========================================================
     # TRANSCRIBIR AUDIO
     # =========================================================
