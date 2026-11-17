@@ -8,6 +8,10 @@ ACTIONS={
  'CONFIRMED_DISCLOSURE':('PRIVACIDAD','Divulgación confirmada; conservar bloqueo.'),
  'ARCO_INCOMPLETE':('ARCO','Cotejar el elemento ARCO que falta: derechos, procedimiento, correo, documentos o antigüedad.'),
  'CALLBACK_NOT_DELIVERED':('RECADO','Confirmar entrega y recepción del contacto; una oferta de dictarlo no acredita recepción.'),
+ 'CALLBACK_NOT_CONFIRMED':('RECADO','Cotejar únicamente el contacto que quedó incompleto; no completar sus dígitos con ecos ni con otra llamada.'),
+ 'MESSAGE_RECEIPT_NOT_CONFIRMED':('RECADO','Cotejar la respuesta del receptor al mensaje; una afirmación del gestor no sustituye la aceptación.'),
+ 'MESSAGE_BODY_NOT_CONFIRMED':('RECADO','Localizar la instrucción o mensaje dirigido al titular ausente.'),
+ 'PAYMENT_OUTCOME_NOT_CONFIRMED':('NEGOCIACION','Cotejar la respuesta final sobre el pago; no confundir una oferta, un convenio anterior o el dictado de WhatsApp con una aceptación.'),
  'CARD_REFERENCE':('TARJETA','Cotejar los dígitos del audio con numero_de_tarjeta; no completar desde Excel.'),
  'OFFENSIVE_LANGUAGE':('TRATO','Confirmar expresión, hablante y contexto de la ofensa.'),
  'CONTEXT_AUDIO_RISK':('TRATO','Escuchar el intervalo indicado de la relectura local; confirmar expresión y hablante.'),
@@ -72,6 +76,12 @@ def review_steps(item):
   seen.add(code);domain,action=ACTIONS.get(code,('EVIDENCIA','Verificar el motivo y el campo de evidencia señalado.'))
   field=FIELDS.get(code,f.get('source_field')or'');data=metadata.get(field,classification.get(field,{}))
   evidence=_evidence(data)
+  label=classification.get('output_label_correction')or{}
+  status=metadata.get('status_validation')or{}
+  if (code=='STATUS_INVALID' and not non_status and label.get('reason')
+      and status.get('detection_confidence')=='ALTA' and not status.get('review_required')):
+   domain='DATOS_ETIQUETA';action='Corregir los datos o el formato de nombre_final en el Excel: '+label['reason']+' No requiere repetir la escucha para confirmar el estatus ya acreditado.'
+   evidence=_evidence(status);field='status_validation / output_label_correction'
   if not evidence and code in {'UNIDENTIFIED_CONTACT','STATUS_INVALID','STATUS_NOT_CONFIRMED'}:
    raw=item.get('result')or{}
    segments=raw.get('segmentos')or[]

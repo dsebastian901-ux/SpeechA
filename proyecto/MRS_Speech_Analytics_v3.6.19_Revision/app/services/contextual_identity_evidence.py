@@ -22,7 +22,9 @@ COUNTER = re.compile(
 OWN_ACCOUNT = re.compile(
     r'\b(?:mi (?:tarjeta|cuenta|saldo|adeudo|deuda|credito|contrato|estado de cuenta|aplicacion|pago)|mis pagos|'
     r'yo (?:tengo|tenia|saque|solicite|tramite|contrate) (?:mi |la |una )?(?:tarjeta|cuenta)|'
-    r'(?:(?:ya|yo) ){0,2}(?:lo pague|pague|hice (?:mi |el )?pago|realice (?:mi |el )?pago|he pagado|he depositado)|'
+    r'(?:(?:ya|yo) ){0,2}(?:lo pague|pague|hice (?:mi |el |un )?pago|realice (?:mi |el |un )?pago|he pagado|he depositado)|'
+    r'me (?:bloquearon|cancelaron) (?:mi |la )?tarjeta|'
+    r'no me la (?:podian|podia|pudieron) desbloquear|'
     r'(?:yo )?di (?:el |mi |un )?pago(?: inicial)?|'
     r'yo (?:pago|pagaba|iba a pagar|estoy pagando|estaba pagando|estuve pagando)|'
     r'me (?:estan|siguen|han estado) cobrando|'
@@ -90,6 +92,7 @@ def contextual_holder_confirmation(text, segments, identification):
                 and not re.match(r'\s*\?',source[m.end():])):
             return {'confirmed':True,'method':'RESPUESTA_EXPLICITA_A_BUSQUEDA_NOMINAL','evidence':m.group(),'human_verified':False,'speaker_role':'NO DETERMINADO'}
     requests=[
+        re.compile(rf'\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)[.?]\s*(?P<answer>si[, ]+habla)[.!](?!\s*\?)'),
         re.compile(r'\b(?:cual es|es)\s+(?P<identity>(?:el senor|la senora|la senorita)\s+[^.!?]{3,75}?)\?\s*(?P<answer>si|asi es|correcto)\b'),
         re.compile(r'\b(?:usted es|es usted)\s+(?P<identity>[^.!?]{3,85}?)\?\s*(?P<answer>si|asi es|correcto)\b'),
         re.compile(r'\b(?:buenos dias|buenas dias|buenas tardes)[, .]*con\s+'
@@ -104,6 +107,9 @@ def contextual_holder_confirmation(text, segments, identification):
         re.compile(r'\bcon\s+(?P<identity>(?:el senor|la senora|la senorita)\s+[^.!?]{2,90}?)(?:[.?]|,\s*gracias\b)\s*(?P<answer>)'),
         re.compile(rf'\b{identification}\s+(?P<identity>[^,.!?]{{3,90}}?),\s*'
                    r'(?=le marcamos|le (?:hablo|hablamos)|me (?:estoy comunicando|presento)|mi nombre es)'
+                   r'(?P<answer>)'),
+        re.compile(rf'\b{identification}\s+(?P<identity>[^.!?]{{3,90}}?)\s+'
+                   r'(?=(?:no )?(?:me estoy comunicando|estoy comunicando|le marcamos|mi nombre es|me presento)\b)'
                    r'(?P<answer>)'),
     ]
     units=[];cursor=0
@@ -121,12 +127,12 @@ def contextual_holder_confirmation(text, segments, identification):
             answer=request['answer']
             if request.start()>600 and not answer:continue
             prefix=source[max(0,request.start()-75):request.start()]
-            if re.search(r'\b(?:dijo que|me dijo|el cliente dice|usted dijo|si alguien pregunta)\b',prefix):continue
+            if re.search(r'\b(?:dijo que|me dijo|me dijeron|diga que|repita que|el cliente dice|usted dijo|si alguien pregunta)\b',prefix):continue
             if answer and _role_at(text,segments,request.start('answer')) in {'GESTOR','TERCERO'}:continue
             after=source[request.end():request.end()+75]
             if re.search(r'\b(?:espere|permita|se lo comunico|lo busco|la busco|le paso|no esta)\b',after):continue
             if re.match(r'\s+(?:me espera|me permite|quiere|puede|necesita|consigo|tuviera)\b',after):continue
-            if re.fullmatch(r'(?:si[, ]+)?(?:servidor|servidora|al habla|ella habla|el habla|digame|diganme|dime)',answer):
+            if re.fullmatch(r'(?:si[, ]+)?(?:habla|servidor|servidora|al habla|ella habla|el habla|digame|diganme|dime)',answer):
                 return {'confirmed':True,'method':'RESPUESTA_EXPLICITA_TRAS_NOMBRE_CON_TRATAMIENTO',
                         'evidence':request.group(),'speaker_role':'NO DETERMINADO'}
             for start,end,unit,value in units:

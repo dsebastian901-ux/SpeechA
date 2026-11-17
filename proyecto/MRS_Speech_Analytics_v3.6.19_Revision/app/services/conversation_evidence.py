@@ -393,6 +393,10 @@ def payment_commitment(text, segments=()):
             r"no (?:lo )?(?:puedo|voy a poder) (?:pagar|hacer)|no lo confirmo|"
             r"(?:manana|hoy) no (?:podria|puedo)|no (?:tendria|tendre)\s+(?:\d+|dos|mil)|"
             r"(?:ahorita|por el momento) (?:todavia )?no puedo|no puedo (?:ahorita|hacer (?:ese |el |un )?pago))\b", s)
+        if (negative and unit['speaker_role']=='NO DETERMINADO'
+                and re.match(r'no puedo confirmar\s+(?:su|el) pago\b',s[negative.start():])
+                and re.search(r'\b(?:whatsapp|anotar|tomar nota|comprobante|validacion)\b',s[negative.end():])):
+            negative=None
         conditional = re.search(
             r"\b(?:si me da tiempo|si consigo (?:el )?dinero|si tengo dinero|si puedo juntar|"
             r"lo podria(?: hacer)?|(?:yo )?pagaria|"
@@ -422,12 +426,13 @@ def payment_commitment(text, segments=()):
         if conditional and re.search(r"\b(?:lo podria repetir|podria repetirlo)\b",s):
             conditional = None
         if conditional:
-            events.append((position, None, unit["text"]))
-            continue
+            events.append((position+(conditional.start()if hasattr(conditional,'start')else 0), None, unit["text"]))
         if negative:
-            events.append((position, False, unit["text"]))
-        elif positive and not re.search(r"\b(?:no|si pudiera|si tuviera)\b[^,;.!?]{0,18}"+re.escape(positive.group()), s):
-            events.append((position, True, unit["text"]))
+            events.append((position+negative.start(), False, unit["text"]))
+        if (positive and not(negative and negative.start()<=positive.start()<negative.end())
+                and not re.search(r"\b(?:no|nunca|jamas)(?: (?:lo|la|le|les|se))?\s*$",s[:positive.start()])):
+            conditional_scope=bool(conditional and (not hasattr(conditional,'start')or conditional.start()<=positive.start()))
+            events.append((position+positive.start(),None if conditional_scope else True,unit['text']))
     question = re.compile(
         r"\b(?:podemos (?:contemplar|contar con|confirmar)|se compromete a|puedo confirmar|"
         r"(?:se )?confirmaria|confirma(?:mos|s)?|puede confirmar|seria posible|estarias? confirmando)\b"
@@ -601,7 +606,7 @@ def completed_payment(text, segments=()):
     question = re.compile(
         r"\bya (?P<verb>pudo|puedo|realizo|ha realizado|ha podido|hizo)\b[^?!]{0,95}"
         r"\b(?:pago|pado)\b[^?!]{0,25}\?\s*"
-        r"(?:(?:titular|cliente|interlocutor)\s*:\s*)?(?P<answer>si|asi es)\b")
+        r"(?:(?:titular|cliente|interlocutor)\s*:\s*)?(?P<answer>si|asi es|ya(?:[, ]+yo tambien)?)\b")
     for match in question.finditer(source):
         role = _role_at(text, segments, match.start("answer"))
         reply = source[match.start("answer"):match.end()+90].split(".")[0]
@@ -613,6 +618,8 @@ def completed_payment(text, segments=()):
         past_question = re.search(
             r"\b(?:que dia lo (?:realice|realizo|hizo|pago)|cuando (?:lo )?(?:pago|realizo)|"
             r"que cantidad (?:pago|deposito))\b", followup)
+        if match['answer'].startswith('ya')and not past_question:
+            continue
         if match["verb"] == "puedo" and not past_question:
             continue
         if "pado" in match.group() and not past_question:
@@ -1120,11 +1127,14 @@ def reported_card_clarification(text,segments=()):
     recorded=agent_statement(text,segments,r'\b(?:lo metemos|lo manejamos|manejamos|se registra|registramos|paso el reporte)\b[^.!?]{0,65}\baclaracion\b')
     cancelled_followup=bool(explicit_cancel and folio_reference and recorded and re.search(r'\bcancelad[ao]\b',source))
     cancellation_confirmed=bool(cancellation_confirmed or cancelled_followup)
-    return {'confirmed':bool(loss and folio and followup) or cancellation_confirmed,
+    from app.services.active_clarification_evidence import active_clarification
+    active=active_clarification(text,segments)
+    return {'confirmed':bool(loss and folio and followup) or cancellation_confirmed or active['confirmed'],
+            'active_dispute_followup':active['confirmed'],'active_dispute_evidence':active['evidence'],
             'reported_cancellation':cancellation, 'cancellation_followup':cancellation_confirmed,
             'reported_loss':bool(loss),
             'case_number_acknowledged':folio,'resolution_followup':followup,
-            'method':('CANCELACION_REPORTADA_FOLIO_Y_REGISTRO_EN_SISTEMA' if cancellation_confirmed else 'PERDIDA_REPORTADA_FOLIO_CONFIRMADO_Y_SEGUIMIENTO')}
+            'method':('SEGUIMIENTO_DE_ACLARACION_ABIERTA_Y_FOLIO_SOLICITADO' if active['confirmed'] else 'CANCELACION_REPORTADA_FOLIO_Y_REGISTRO_EN_SISTEMA' if cancellation_confirmed else 'PERDIDA_REPORTADA_FOLIO_CONFIRMADO_Y_SEGUIMIENTO')}
 
 
 def sensitive_financial_matches(text):

@@ -70,6 +70,12 @@ def mistreatment_reports(text, segments, phrases):
         if re.search(r'\b(?:llevo|he tratado|tratando|comunicarme|arreglar)\b',value):
             matches.extend(re.finditer(r'\bno me (?:han )?contestad[oa]\b|\bno me contestan\b',value))
         previous = normalize(units[index-1]['text']) if index and units[index-1]['speaker_role'] != 'GESTOR' else ''
+        service_context=bool(re.search(r'\b(?:banco|atencion (?:a )?clientes|'
+            r'marque|llame|llamada|me comunique|asesor[ae]?|gestor[ae]?)\b',value+' '+previous))
+        if service_context:
+            matches.extend(re.finditer(r'\bme (?:cortan|cortaron|cortaba|cortaban)\b',value))
+            matches.extend(re.finditer(r'\b(?:la|una) (?:senorita|asesora|gestora) '
+                r'(?:muy|bien) grosera\b[^.!?]{0,40}\b(?:me |le )?(?:dijo|hablo|colgo)\b',value))
         if re.search(r'\b(?:les (?:marque|mande|envie)|hable y mande|mande muchos mensajes|llamadas por whatsapp)\b',value+' '+previous):
             matches.extend(re.finditer(r'\bno me (?:contestaron|respondieron|respondia|respondio)\b',value))
         phone_context = bool(re.search(r'\b(?:llamadas?|llame|llamar|llamando|llaman|marcan|marcando|marcado|marcaron)\b', value+' '+previous))

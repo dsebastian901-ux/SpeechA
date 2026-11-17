@@ -41,7 +41,7 @@ def corrected_status_label(metadata, policy=None):
     old_key='MENSAJE CON FAMILIAR' if old_status=='RECADO REF2' else old_status  # Solo compatibilidad de entrada.
     new_status=str(status['detected_status'])
     codes=policy.get('codes') or {}
-    if old_key not in codes or new_status not in codes:
+    if new_status not in codes:
         return dict(none,reason='Estatus sin código de salida configurado; no se inventa una etiqueta.')
     context=metadata.get('operational_context') or {}
     name=str(context.get('nombre_final') or '')
@@ -54,7 +54,8 @@ def corrected_status_label(metadata, policy=None):
     if not re.fullmatch(r'\d{16}',card) or not re.fullmatch(r'0*'+re.escape(card),parts[0]):
         return dict(none,reason='El nombre no corresponde a la tarjeta de origen; no se reetiqueta.')
     before=parts[index];target=codes[new_status]
-    if before not in {codes[old_key],target} or not re.fullmatch(r'[A-Z0-9]+',target):
+    expected_before={codes[old_key],target}if old_key in codes else set(codes.values())
+    if before not in expected_before or not re.fullmatch(r'[A-Z0-9]+',target):
         return dict(none,reason='El componente de estatus no coincide con el catálogo; requiere revisión.')
     parts[index]=target
     return {'eligible':True,'valid':True,'original_status':old_status,'corrected_status':new_status,

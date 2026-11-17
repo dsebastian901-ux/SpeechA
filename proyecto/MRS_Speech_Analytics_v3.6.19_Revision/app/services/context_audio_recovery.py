@@ -194,6 +194,8 @@ def validate(record,data,relation,audio_path):
         if result['risks']:
             result.update(review_required=True,
                 reason='La relectura local detectó lenguaje ofensivo sin voz confirmada; verificar el fragmento.')
+        elif not result['holder'] and not result['callback']:
+            result['reason']='Las relecturas no aportaron coincidencia suficiente para resolver la duda; se conserva el dictamen del texto original.'
     except (ValueError,TypeError,KeyError,AttributeError,OSError):
         result.update(valid=False,holder=False,callback=None,reason='Registro de relectura incompleto o no verificable.')
     return result

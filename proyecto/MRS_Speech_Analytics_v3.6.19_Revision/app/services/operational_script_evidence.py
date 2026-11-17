@@ -35,7 +35,7 @@ def company_alias_evidence(text, segments=()):
     return found
 
 
-RECEIPT = r'(?:comprobantes?(?!\s+de\s+(?:(?:la|su|el)\s+)?(?:domicilio|linea|telefono))|tickets?|tickers?|tiquet[ea]?s?|tiques?|capturas?|fichas? de pago|recibos? de (?:su )?pago)'
+RECEIPT = r'(?:comprobantes?(?!\s+de\s+(?:(?:la|su|el)\s+)?(?:domicilio|linea|telefono))|tickets?|tickers?|tiquet[ea]?s?|tiques?|capturas?|fichas? de pago|recibos? de (?:su )?pago|(?:fotos?|fotografias?) de (?:su |el )?pago)'
 
 
 def receipt_request_evidence(text, segments=()):
@@ -44,7 +44,7 @@ def receipt_request_evidence(text, segments=()):
     requests, received, channels, pending = [], [], [], []
     explicit_refusal = False
     verbs = (r'(?:mandar|mand(?:e|a)(?:me|nos)?|mandando|enviar|envi(?:e|a)(?:me|nos)?|enviarme|enviarnos|enviando|'
-             r'compartir|compartiria(?:mos)?|nos compartiria|comparta(?:me|nos)?|comparte|compartirnos|compartiendo|haga llegar|hacer llegar|reportar|reporte|reportarnos|regala|'
+             r'compartir|compartiria(?:mos)?|nos compartiria|comparta(?:me|nos)?|comparte|compartirnos|compartiendo|haga llegar|hacer llegar|reportar|reporte|reporta|reportarnos|regala|'
              r'proporcione|proporcionar|remitir|remita)')
     request = re.compile(rf'\b{verbs}\b[^.!?]{{0,100}}?\b{RECEIPT}\b')
     reporting = re.compile(r'\b(?:reporte|reportar|reportarnos|reportando|reporteme)\b[^.!?]{0,65}'
@@ -53,7 +53,8 @@ def receipt_request_evidence(text, segments=()):
         rf'\b(?:esper(?:o|amos|aremos|aria|aremos)|(?:estamos|estaremos) esperando|'
         rf'(?:quedamos|quedo|quedaremos|que damos|se quedo) (?:(?:al|el) pendiente[s]? de|a la espera de|en espera de|en espera del|a la espera del|la espera del reporte de)|en espera de)'
         rf'\s+(?:(?:de |la fotografia de |la foto de )?(?:su|sus|el|los|la|las|un|una)\s+)?{RECEIPT}\b')
-    for unit in sentence_evidence(text, segments):
+    units=sentence_evidence(text, segments)
+    for index,unit in enumerate(units):
         value = normalize(unit['text'])
         role = unit['speaker_role']
         if role not in {'TITULAR','TERCERO','INTERLOCUTOR'}:
@@ -89,6 +90,13 @@ def receipt_request_evidence(text, segments=()):
                 prefix=value[max(0,photo.start()-60):photo.start()]
                 if not re.search(r'\b(?:no|nunca|yo|ya|dice que|dijo que|diga que)\s*$',prefix):
                     requests.append(dict(unit,phrase=photo.group(),method='SOLICITA_FOTOGRAFIA_DE_PAGO'))
+            pronoun=re.search(r'\bes importante\b[^.!?]{0,40}\b(?:los|lo|las|la) '
+                r'(?:(?:pueda|puedas|podais|puedan) )?(?:reportar|enviar|mandar)\b',value)
+            antecedents=units[max(0,index-2):index]
+            if pronoun and any(re.search(r'\b'+RECEIPT+r'\b',normalize(u['text']))for u in antecedents):
+                before=value[:pronoun.start()]
+                if not re.search(r'\b(?:no|nunca|dice que|dijo que|diga que)\s*$',before):
+                    requests.append(dict(unit,phrase=pronoun.group(),method='SOLICITA_DOCUMENTO_DE_PAGO_MENCIONADO_EN_DOS_FRASES_PREVIAS'))
         if role not in {'TITULAR','TERCERO','INTERLOCUTOR'}:
             uncertain = re.search(rf'\b(?:a este|al) whatsapp\b[^.!?]{{0,45}}\b(?:mas a llegar|hace llegar)\b[^.!?]{{0,40}}\b{RECEIPT}\b',value)
             if uncertain:
@@ -118,7 +126,7 @@ def receipt_request_evidence(text, segments=()):
     return {'requested':bool(requests),'reported_sent':bool(received),
             'channel':'WHATSAPP' if channels else 'NO CONFIRMADO',
             'request_evidence':requests,'reported_sent_evidence':received,'channel_evidence':channels,
-            'review_required':bool(pending) and not requests,'uncertain_request_evidence':pending}
+            'review_required':bool(pending) and not requests and not received,'uncertain_request_evidence':pending}
 
 
 def remaining_payment_proposals(text, segments=()):

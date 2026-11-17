@@ -12,6 +12,8 @@ def future_confirmation_events(text,segments=()):
     patterns=[('IMPORTE_FINAL_CON_ACEPTACION',re.compile(
         r'\bseria (?:por|de) (?P<amount>'+NUMBER+r')[.!?]\s*'
         r'(?P<answer>(?:aja[, ]+)?esta bien|si[, ]+esta bien|de acuerdo)\b')),
+      ('AFIRMACION_PAGO_ACTUAL',re.compile(
+        r'\b(?P<answer>si[, ]+(?:hoy|manana) (?:lo )?puedo (?:dejar|pagar|depositar|realizar))\b')),
       ('RESPUESTA_IMPORTE_Y_FECHA_FUTURA',re.compile(
         r'\b(?:me )?(?:podria|puede|puedes) confirmar (?:nada mas )?(?:el )?monto '
         r'que va a (?:realizar|pagar|depositar)[^?!]{0,30}que dia\?\s*'
@@ -36,6 +38,9 @@ def future_confirmation_events(text,segments=()):
     ]
     for method,pattern in patterns:
         for match in pattern.finditer(source):
+            if method=='AFIRMACION_PAGO_ACTUAL':
+                verbatim=re.sub(r'\s+',' ',unicodedata.normalize('NFC',str(text)).lower()).strip()
+                if not re.match(r'sí\b',verbatim[match.start('answer'):]):continue
             if method == 'DECLARACION_FECHA_ACTUAL':
                 verbatim=re.sub(r'\s+',' ',unicodedata.normalize('NFC',str(text)).lower()).strip()
                 if re.search(r'\brealizó\b',verbatim[match.start():match.end()]):continue

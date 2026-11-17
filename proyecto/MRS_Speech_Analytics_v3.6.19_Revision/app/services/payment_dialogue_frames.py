@@ -10,7 +10,7 @@ DATE=r'(?:hoy|manana|(?:el |este |proximo )?(?:lunes|martes|miercoles|jueves|vie
 OTHER_TOPIC=re.compile(r'\b(?:comprobante|ticket|recibo|whatsapp|telefono|numero|folio|anotar|apuntar|correo)\b')
 FINANCIAL=re.compile(r'\b(?:pago|pagar|depositar|deposito|abonar|abono|monto|cantidad|pesos|convenio)\b')
 QUOTED=re.compile(r'\b(?:dice que|dijo que|diga que|usted dijo|usted dice|repita|por ejemplo|supongamos)\b[^.!?]{0,90}$')
-CONDITION=re.compile(r'\b(?:yo creo|a lo mejor|tal vez|posiblemente|si consigo|si puedo|si arreglo|si resuelvo|si me (?:dan|prestan|depositan|liberan)|hare lo posible|voy a (?:ver|tratar)|no (?:puedo|sabria) (?:confirmar|prometer|decir)|no se (?:si|cuanto|cuando))\b')
+CONDITION=re.compile(r'\b(?:(?:yo )?creo|a lo mejor|tal vez|posiblemente|si consigo|si puedo|si arreglo|si resuelvo|si me (?:dan|prestan|depositan|liberan)|hare lo posible|voy a (?:ver|tratar)|no (?:puedo|podria|podre|sabria) (?:confirmar|prometer|decir|pagar|depositar|abonar)|no se (?:si|cuanto|cuando))\b')
 
 
 def payment_replies(text,segments=()):
@@ -51,7 +51,9 @@ def payment_replies(text,segments=()):
             r'(?:seria|lo (?:realizo|aplico)|(?:el pago )?queda(?:ria)?) (?:el dia de |el dia |para )?'+DATE+r'\b)',reply))
         # La respuesta «mañana a las diez» a una alternativa explícita de
         # fecha se refiere al pago, sin exigir «sí, pagaré» literalmente.
-        if temporal and not(conditional or declined)and re.match(r'(?:seria |el dia de |el dia )?'+DATE+r'\b',reply):accepted=True
+        date_prefix=r'(?:(?:seria|para) )?(?:el dia de |el dia )?'
+        if re.match(date_prefix+DATE+r'[, ]+no\b',reply):declined=True
+        if temporal and not(conditional or declined)and re.match(date_prefix+DATE+r'\b',reply):accepted=True
         if not(accepted or declined or conditional):continue
         evidence=source[q_start:start+len(reply)]
         own=bool(re.search(r'\b(?:yo|mi|mis|no (?:puedo|tengo|cuento)|estoy|me (?:pagan|quede)|voy a)\b',reply))
@@ -78,4 +80,30 @@ def payment_replies(text,segments=()):
             'evidence':evidence,'date_evidence':offer.group(),'reply':match['reply'],
             'own_financial_response':False,'method':'ACEPTACION_TRAS_ACLARAR_DIA_ACTUAL',
             'speaker_role':_role_at(text,segments,pos),'human_verified':False,'acoustic_voice_identified':False})
+    # Una limitación personal explícita sigue siendo respuesta sobre pago
+    # cuando ASR perdió el signo de la pregunta previa. No la extender a
+    # dictado de teléfonos, documentos, citas o trámites.
+    from app.services.declarative_evidence import declarative_units
+    cursor=0
+    for unit in declarative_units(text,segments):
+        value=normalize(unit['text']);at=source.find(value,cursor)
+        if at<0:continue
+        cursor=at+len(value)
+        if unit['speaker_role']in{'GESTOR','TERCERO'}or OTHER_TOPIC.search(value):continue
+        limitation=re.search(r'\bno (?:puedo|podria)\b[^.!?]{0,55}\bhasta '
+            r'(?:el (?:dia )?\d{1,2}|el fin de semana|la quincena)\b',value)
+        if not limitation:continue
+        prefix=value[:limitation.start()]
+        if QUOTED.search(prefix)or re.search(r'\b(?:si|cuando|supongamos que)\s*$',prefix):continue
+        context=source[max(0,at-220):at]+value[:limitation.end()]
+        topics=list(re.finditer(r'\b(?:pago|pagar|cantidad|monto|pesos|convenio|whatsapp|'
+            r'telefono|numero|folio|comprobante|cita|consulta medica)\b',context))
+        if not topics or not FINANCIAL.fullmatch(topics[-1].group()):continue
+        position=at+limitation.start()
+        if any(e['position']==position for e in found):continue
+        found.append({'position':position,'end':at+limitation.end(),'accepted':False,
+            'declined':True,'conditional':False,'evidence':unit['text'],'reply':limitation.group(),
+            'own_financial_response':True,'date_evidence':'',
+            'method':'LIMITACION_PERSONAL_DE_PAGO_CON_PLAZO_EXPLICITO',
+            'speaker_role':unit['speaker_role'],'human_verified':False,'acoustic_voice_identified':False})
     return found

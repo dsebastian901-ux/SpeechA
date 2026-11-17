@@ -231,3 +231,47 @@ def test_normal_new_audio_batch_executes_recovery_before_closing_review(tmp_path
     assert len(resumed.process_all(output))==1
     assert resumed.items[0]['transcription_recovered']
     assert resumed.items[0]['classification']['aprobado']
+
+
+def test_saved_asr_also_recovers_context_without_retranscribing_full_call(tmp_path,monkeypatch):
+    path,data,relation=fixture(tmp_path);output=tmp_path/'project/01_Audios/transcripciones'
+    output.mkdir(parents=True);(output/(path.stem+'.json')).write_text(json.dumps(data))
+    monkeypatch.setattr(whisper_service,'get_runtime_configuration',lambda:{'model':'small'})
+    monkeypatch.setattr(whisper_service,'_model',object())
+    def forbidden(*args,**kwargs):raise AssertionError('No retranscribir audio completo ni descargar modelos')
+    monkeypatch.setattr(whisper_service,'transcribe_audio',forbidden)
+    monkeypatch.setattr(whisper_service,'load_model',forbidden)
+    calls=[]
+    def recover(audio_path,raw,context,metadata):
+        calls.append(audio_path);return make_record(path,raw,context)
+    monkeypatch.setattr(whisper_service,'recover_context',recover)
+    service=BatchService();service.set_files([path]);assert len(service.process_all(output))==1
+    item=service.items[0]
+    assert item['transcription_recovered']and item['classification']['aprobado']
+    assert item['processing_origin']['transcription_source']=='TRANSCRIPCION_EXISTENTE'
+    assert item['context_recovery_status']=='FRAGMENTOS_RELEIDOS_LOCALMENTE'
+    assert item['result']==data and len(calls)==1
+    item['evaluation_stamp']={}
+    assert len(service.process_all(output))==1
+    assert len(calls)==1
+
+
+def test_missing_local_model_is_attempted_once_per_batch_and_keeps_saved_asr(tmp_path,monkeypatch):
+    path,data,relation=fixture(tmp_path);output=tmp_path/'project/01_Audios/transcripciones'
+    output.mkdir(parents=True)
+    other=tmp_path/'other.wav';other.write_bytes(path.read_bytes())
+    for audio in [path,other]:
+        raw=dict(data,archivo=audio.name,ruta_audio=str(audio))
+        (output/(audio.stem+'.json')).write_text(json.dumps(raw))
+    monkeypatch.setattr(whisper_service,'_model',None)
+    monkeypatch.setattr(whisper_service,'get_runtime_configuration',lambda:{'model':'small'})
+    attempts=[]
+    def unavailable():attempts.append(True);raise FileNotFoundError('Modelo local no instalado')
+    monkeypatch.setattr(whisper_service,'load_model',unavailable)
+    def forbidden(*args,**kwargs):raise AssertionError('No descargar ni retranscribir llamada completa')
+    monkeypatch.setattr(whisper_service,'transcribe_audio',forbidden)
+    service=BatchService();service.set_files([path,other])
+    assert len(service.process_all(output))==2
+    assert len(attempts)==1
+    assert all(i['transcription_recovered']for i in service.items)
+    assert all(i['classification']['clasificacion']=='REVISAR'for i in service.items)

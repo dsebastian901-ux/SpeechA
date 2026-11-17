@@ -93,6 +93,20 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         add(1,'STATUS_NOT_CONFIRMED','Estatus de Excel sin coincidencia confirmada; requiere revisión','status_validation')
     if status.get('valid') is False:
         add(1,'STATUS_INVALID',status.get('reasons') or ['Estatus pendiente de validación'],'status_validation')
+    # Explicar el hecho pendiente. Una discrepancia de etiqueta por sí sola
+    # no describe qué falta confirmar en un recado ni en una negociación.
+    workflow=m.get('message_workflow_validation')or{}
+    if (status.get('evidence_method')=='TERCERO_SIN_RECADO_CONFIRMADO'
+            and not(m.get('explicit_message_refusal')or{}).get('confirmed')):
+        if not workflow.get('recipient_accepted'):
+            add(4,'MESSAGE_RECEIPT_NOT_CONFIRMED','El ASR no acredita una respuesta de recepción del recado; no basta el agradecimiento del gestor.','message_workflow_validation')
+        if not workflow.get('directed_body'):
+            add(4,'MESSAGE_BODY_NOT_CONFIRMED','No quedó acreditado el mensaje dirigido al titular ausente.','message_workflow_validation')
+        if not workflow.get('callback_available')and not(m.get('message_delivery_validation')or{}).get('review_required'):
+            add(4,'CALLBACK_NOT_CONFIRMED','El contacto no quedó completo en ASR ni fue confirmado expresamente como disponible; no completar dígitos por ecos.','message_workflow_validation')
+    if (m.get('quality_contact_type')=='TITULAR' and status.get('evidence_method')=='SIN_EVIDENCIA'
+            and status.get('matches')is None and negotiation.get('negotiation_attempt_detected')):
+        add(12,'PAYMENT_OUTCOME_NOT_CONFIRMED','Se identifica al titular y una gestión de pago, pero no se acredita su resultado final: aceptación firme, negativa o decisión pendiente.','negotiation_validation')
     if ids & {'PEN_CONV_FRAUDE','PEN_CONV_TRANSFER_REV'}:
         add(12,'PAYMENT_DESTINATION','Método o datos de pago requieren revisión de seguridad','convenio_payment_validation')
     if checks.get('queja_maltrato_detectada') or treatment.get('mistreatment_report_evidence') or 'PEN_QUEJA_MALTRATO' in ids:
@@ -151,7 +165,10 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     pending_alerts=[]
     if (rejection or score_rejection) and not critical:
         for finding in blocking:
-            if finding['code']in{'STATUS_INVALID','STATUS_NOT_CONFIRMED','SHORT_MANAGEMENT_INCOMPLETE'}:
+            if rejection and finding['code']in rejection.get('resolves_codes',[]):
+                finding['severity']='CONFIRMED_NONCRITICAL'
+                finding['resolved_by']=rejection['code']
+            elif finding['code']in{'STATUS_INVALID','STATUS_NOT_CONFIRMED','SHORT_MANAGEMENT_INCOMPLETE'}:
                 finding['severity']='OBSERVATION'
             else:
                 finding['severity']='PENDING_ALERT';pending_alerts.append(dict(finding))

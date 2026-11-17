@@ -1205,7 +1205,12 @@ class AnalyticsService:
         third_party = third_party or (not titular and associate_confirmation['confirmed'])
         from app.services.arco_context_evidence import positive_knowledge_denial
         contact_denial = unknown_debtor_statement(text,segments) or positive_knowledge_denial(text,segments,ignore_relationships=True)['confirmed']
-        contact_conflict = bool(contact_denial and (family or work_contact or third_party or titular))
+        receiver_only = bool(declared_contact.get('confirmed')
+            and declared_contact.get('method') in {'OBJETO_EXPLICITO_DE_LA_LLAMADA','PERSONA_QUE_DEJO_REFERENCIA','REFERENCIA_DE_PERSONA_AUSENTE','LOCALIZACION_INICIAL_DE_PERSONA_DISTINTA'}
+            and not(family or work_contact or recado_assessment.get('third_party_relationships')
+                    or associate_confirmation.get('confirmed')))
+        contact_conflict = bool(contact_denial and (family or work_contact or titular
+            or (third_party and not receiver_only)))
         contact_conflict_validation = {'review_required':contact_conflict,
             'reason':'Hay respuestas contradictorias sobre conocer al titular; no se confirma una omisión ARCO ni la identidad.' if contact_conflict else '',
             'method':'CONOCIMIENTO_Y_DESCONOCIMIENTO_EN_CONVERSACION' if contact_conflict else 'SIN_CONTRADICCION_DETECTADA'}
@@ -1746,13 +1751,14 @@ class AnalyticsService:
         # «Finiquitar la deuda» expresa liquidación total, aunque la oferta
         # termine con una pregunta o quede partida entre ventanas de Whisper.
         settlement_pattern = (
-            r"\b(?:se le esta ofreciendo|le (?:ofrecemos|ofrezco)|le podemos ofrecer)\b"
+            r"\b(?:se le esta ofreciendo|le (?:ofrecemos|ofrezco)|le podemos ofrecer|"
+            r"el banco le esta (?:proporcionando|ofreciendo|otorgando))\b"
             r".{0,80}\b(?:descuento|opcion)\b.{0,45}\bpara\s+"
             r"(?:(?:finiquitar|fin de quitar) (?:la |su )?(?:deuda|cuenta)|liquidar (?:la |su )?cuenta|"
-            r"liquidar lo que (?:ya )?es la cuenta)\b")
+            r"liquidar lo que (?:ya )?es la cuenta|(?:realizar )?(?:lo que es )?(?:una |la )?liquidacion)\b")
         explicit_settlement_offer = any(
             unit["speaker_role"] not in {"TITULAR", "TERCERO", "INTERLOCUTOR"}
-            and not re.search(r"\b(?:me dijeron|me habian dicho|segun yo|crei|pense)\b", norm(unit["text"]))
+            and not re.search(r"\b(?:me dijeron|me habian dicho|me indicaron|el cliente dice|usted dijo|usted dice|diga que|segun yo|crei|pense)\b", norm(unit["text"]))
             and agent_statement(unit["text"], (), settlement_pattern)
             for unit in sentence_evidence(text, segments))
         agent_liquidation_offer = explicit_settlement_offer
@@ -2240,7 +2246,7 @@ class AnalyticsService:
             "tonta", "tonto", "idiota", "estupida", "estupido",
             "pendeja", "pendejo", "chingando", "chingada", "chingado", "chingarazo", "chingadazo",
             "pinche vieja", "pinche viejo", "pinche", "cabron", "cabrona",
-            "mierda", "hijo de puta", "hija de puta", "vete a la chingada",
+            "mierda", "culero", "culera", "hijo de puta", "hija de puta", "vete a la chingada",
             "puta", "puto", "chingar", "chinga tu madre", "jodete", "vete al carajo",
             "que poca madre",
             "quiero acostarme contigo", "quiero tener sexo contigo", "quiero cogerte",
@@ -2959,10 +2965,13 @@ class AnalyticsService:
         reported_amount_pending = bool(contact_type == 'TITULAR' and payment_confirmation_case and not negotiation_attempt
             and (prior_payment_total is None or minimum_for_attempt is None
                  or prior_payment_binding["review_required"]))
-        dispute_guidance = bool(contact_type == 'TITULAR'
-            and any(e['kind']=='ACCOUNT_DISPUTE' for e in dialogue['events'])
+        clarification_validation=reported_card_clarification(text,segments)
+        dispute_guidance = bool(contact_type == 'TITULAR' and (
+            (clarification_validation.get('active_dispute_followup') and not payment_confirmation_case)
+            or (
+            any(e['kind']=='ACCOUNT_DISPUTE' for e in dialogue['events'])
             and re.search(r'\b(?:folio de aclaracion|aclaracion por cargos no reconocidos|estado de cuenta detallado)\b',normalized)
-            and re.search(r'\b(?:servicio a clientes?|reverso de la tarjeta|numero que viene)\b',normalized))
+            and re.search(r'\b(?:servicio a clientes?|reverso de la tarjeta|numero que viene)\b',normalized))))
         missing_collection_attempt = bool(
             contact_type == "TITULAR"
             and canonical_excel_status != 'ACLARACION'
@@ -3099,7 +3108,6 @@ class AnalyticsService:
                 r"\b(?:se le esta requiriendo|se le esta solicitando|se le requiere) (?:un |el |su )?pago\b")
                 or (prior_payment_total is not None and minimum_for_attempt is not None
                     and not prior_payment_covers_minimum and negotiation_attempt)))
-        clarification_validation=reported_card_clarification(text,segments)
         if contact_type == "TITULAR" and not detected_status:
             agreement_evidence = bool(re.search(
                 r"\b(?:gener(?:o|amos|are|amos)\s+(?:su\s+|el\s+)?convenio|"
@@ -3116,13 +3124,16 @@ class AnalyticsService:
                 status_detection_confidence = "ALTA"
                 status_evidence = commitment_confirmation["evidence"]
                 status_evidence_method = "COMPROMISO_ACEPTADO_CON_FECHA"
-            elif clarification_validation['confirmed'] and not confirms_commitment and not negotiation_attempt:
+            elif (clarification_validation['confirmed'] and not confirms_commitment and not negotiation_attempt
+                  and not(clarification_validation.get('active_dispute_followup') and payment_confirmation_case)):
                 detected_status='ACLARACION'
-                status_detection_confidence='MEDIA'
+                status_detection_confidence='ALTA' if clarification_validation.get('active_dispute_followup') else 'MEDIA'
                 status_evidence=('Cancelación reportada por el interlocutor, folio aportado y registro en sistema para detener llamadas.'
                                  if clarification_validation.get('cancellation_followup') else
                                  'Pérdida de tarjeta reportada, folio confirmado y seguimiento de resolución.')
                 status_evidence_method=clarification_validation['method']
+                if clarification_validation.get('active_dispute_followup'):
+                    status_evidence=clarification_validation['active_dispute_evidence']
             elif pending_decision:
                 detected_status=pending_decision['detected_status']
                 status_detection_confidence=pending_decision['confidence']
@@ -3638,7 +3649,8 @@ class AnalyticsService:
             # Se amplía a 120 caracteres para cubrir repeticiones de confirmación
             # inmediatamente posteriores: "saldo ... 7.200. 7.200, ok?".
             corrected = any(c['start']==mm[0] for c in explicit_balance_corrections)
-            if balance_intro or corrected or (balance_distance <= 120 and balance_distance <= pay_distance):
+            from app.services.balance_context_evidence import attached_balance_amount
+            if balance_intro or corrected or attached_balance_amount(text,mm[0]) or (balance_distance <= 120 and balance_distance <= pay_distance):
                 if balance_scope(text, segments, mm[0], mm[1]) != 'SALDO_ACTUAL_DECLARADO':
                     continue
                 balance_amount_candidates.append((0 if corrected else balance_distance, mm))

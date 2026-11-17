@@ -81,12 +81,34 @@ def definitive_rejection(metadata,findings,duration_seconds):
     # Decisión expresa de la usuaria: el rechazo comprobado cierra calidad;
     # otra duda no lo convierte de nuevo en REVISAR ni desaparece del reporte.
     if any(f['severity']=='CRITICAL'for f in blocking):return None
+    n=metadata.get('negotiation_validation')or{}
+    policy=n.get('mora_payment_policy')or{}
+    if (metadata.get('quality_contact_type')=='TITULAR'
+            and n.get('financial_validation_applicable') and n.get('valid')is False
+            and not n.get('review_required')
+            and n.get('payment_date_confirmed') and n.get('commitment_confirmed')
+            and n.get('amount_confirmed') and not n.get('date_year_rollover_review')
+            and not n.get('payment_confirmation_case') and not n.get('multipago_detectado')
+            and not(n.get('accepted_schedule')or{}).get('confirmed')
+            and not(n.get('installment_window')or{}).get('applies')):
+        from datetime import date
+        try:
+            promised=date.fromisoformat(str(n['promise_date'])[:10])
+            maximum=date.fromisoformat(str(policy['window_end'])[:10])
+            if promised>maximum:
+                return {'rule_group':12,'code':'CONFIRMED_PAYMENT_DATE_OUTSIDE_POLICY',
+                    'severity':'CONFIRMED_NONCRITICAL','source_field':'negotiation_validation',
+                    'resolves_codes':['NEGOTIATION_INVALID_OR_UNCERTAIN'],
+                    'reasons':[f'La fecha de pago aceptada ({promised}) excede el plazo autorizado ({maximum}); incumplimiento comprobado.']}
+        except (ValueError,KeyError,TypeError):
+            pass
     coverage=(metadata.get('negotiation_validation')or{}).get('followup_coverage_validation')or{}
     if coverage.get('confirmed_failure'):
         return {'rule_group':12,'code':'CONFIRMED_INSUFFICIENT_FOLLOWUP','severity':'CONFIRMED_NONCRITICAL',
             'source_field':'negotiation_validation','reasons':[coverage['reason']]}
     if confirmed_complaint:
         return {'rule_group':11,'code':'CONFIRMED_SERVICE_COMPLAINT','severity':'CONFIRMED_NONCRITICAL',
+            'resolves_codes':['MISTREATMENT_REPORT'],
             'source_field':'treatment_validation','reasons':['Queja de atención previa expresada en la conversación; bloquea aprobación por criterio operativo.']}
     refused=metadata.get('explicit_message_refusal')or{}
     if refused.get('confirmed'):

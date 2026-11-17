@@ -54,7 +54,7 @@ def contact_dialogue_evidence(text, segments=()):
     for unit in sentence_evidence(text,segments):
         if unit['speaker_role']in{'GESTOR','TITULAR'}:continue
         value=normalize(unit['text'])
-        if re.search(r'\b(?:ya no trabaja|ya no trabajo) con nosotros\b',value) and '?'not in value:
+        if re.search(r'\b(?:ya no trabaja|ya no trabajo) con nosotros\b|\bya no trabaja conmigo\b|\bera (?:un |mi )companero del trabajo\b',value) and '?'not in value:
             result['work_relationships'].append(dict(unit,phrase='ya no trabaja con nosotros',method='CONTACTO_LABORAL_REPORTADO',human_verified=False))
         if re.search(r'\b(?:fue mi vecin[oa]|era mi pareja|eramos esposos|somos vecin[oa]s)\b',value)and '?'not in value:
             result['third_party_relationships'].append(dict(unit,phrase=value,method='VINCULO_CONOCIDO_REPORTADO',human_verified=False))
@@ -117,6 +117,9 @@ def expanded_unknown_response(text,segments=()):
 def declared_intermediary(text,segments=()):
     """Respuesta al nombre solicitado; la pregunta posterior no borra la ausencia."""
     source=normalize(text);none={'confirmed':False,'method':'SIN_RESPUESTA_INTERMEDIARIA','evidence':''}
+    from app.services.management_subject_evidence import management_subject
+    subject=management_subject(text,segments)
+    if subject['confirmed']:return subject
     # Confirmar el nombre del receptor al cerrar un recado no identifica al
     # titular. La intermediación se prueba por el diálogo, no por el Excel.
     relay_queries=[

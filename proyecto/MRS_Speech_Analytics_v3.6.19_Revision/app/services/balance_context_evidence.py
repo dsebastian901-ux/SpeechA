@@ -58,6 +58,9 @@ def balance_corrections(text):
 def balance_scope(text, segments, start, end):
     source=normalize(text);before=source[max(0,start-200):start];after=source[end:end+110]
     role=_role_at(text,segments,start)
+    if (re.search(r'\bsaldo\s*$',before)and re.fullmatch(r'\d{1,2}',source[start:end])
+            and not re.match(r'\s*pesos?\b',after)):
+        return 'CIFRA_SIN_DETERMINANTE_MONETARIO'
     if source.rfind('¿',0,start)>source.rfind('?',0,start):
         return 'IMPORTE_EN_PREGUNTA_NO_DECLARACION_DE_SALDO'
     if re.search(r'\b(?:me habian comentado|me habian dicho|me comentaron|me dijeron|me decian)\b[^.!?]{0,95}$',before):
@@ -82,3 +85,18 @@ def fragmented_balance_amounts(text):
                        r'(?P<number>\d{1,3}\s+mil\s+\d{4,})(?!\w)')
     return [{'start':m.start('number'),'end':m.end('number'),'text':m['number'],
              'method':'SALDO_ASR_FRAGMENTADO_REQUIERE_AUDIO'} for m in pattern.finditer(source)]
+
+
+def attached_balance_amount(text,start):
+    """«Saldo ..., tarjeta ..., una cantidad de X» conserva el sujeto saldo.
+
+    «Cantidad» no es por sí sola una nueva propuesta de pago. Un verbo de
+    pago, descuento o propuesta entre ambos sí cambia el objeto financiero.
+    """
+    source=normalize(text);prefix=source[max(0,start-160):start]
+    if not re.search(r'\b(?:una |la )?cantidad de\s*$',prefix):return False
+    anchors=list(re.finditer(r'\bsaldo(?: total| pendiente| vencido)?\b',prefix))
+    if not anchors:return False
+    bridge=prefix[anchors[-1].end():]
+    return not re.search(r'\b(?:pagar|pago|depositar|abonar|minimo|descuento|'
+                         r'liquidar|propuesta|convenio)\b',bridge)

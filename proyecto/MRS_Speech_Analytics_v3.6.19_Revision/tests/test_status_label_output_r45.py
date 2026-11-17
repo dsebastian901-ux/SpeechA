@@ -66,6 +66,27 @@ def test_only_status_component_changes_in_the_separate_approved_category(score):
     assert m==original
 
 
+def test_legacy_excel_status_does_not_block_a_proven_valid_target_when_existing_code_is_valid():
+    m=metadata();m['status_validation'].update(excel_status='TITULAR CUELGA',
+        detected_status='ACLARACION',evidence_method='ACLARACION_ABIERTA',evidence='Ya tengo una aclaración y me enviaron el folio.')
+    label=corrected_status_label(m)
+    assert label['valid']and label['corrected_code']=='ACLARA'
+    assert label['original_status']=='TITULAR CUELGA'
+    assert label['corrected_name']==NAME.replace('_PP_','_ACLARA_')
+    m['operational_context']['nombre_final']=NAME.replace('_PP_','_UNKNOWN_')
+    assert not corrected_status_label(m)['valid']
+
+
+def test_missing_filename_is_reported_as_label_data_not_an_unknown_audio_status():
+    from app.services.pending_review_report import review_steps
+    m=metadata();m['operational_context']['nombre_final']=''
+    d=evaluate_quality(m,100)
+    steps=review_steps({'classification':d,'analytics_metadata':m})
+    assert d['clasificacion']=='REVISAR'
+    assert len(steps)==1 and steps[0]['domain']=='DATOS_ETIQUETA'
+    assert 'No requiere repetir la escucha' in steps[0]['action']
+
+
 @pytest.mark.parametrize('field,value',[
     ('privacy_validation',{'review_required':True}),
     ('privacy_validation',{'confirmed_disclosure':True}),

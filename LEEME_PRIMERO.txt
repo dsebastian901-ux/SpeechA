@@ -1,6 +1,6 @@
-MRS Speech Analytics 3.6.19-r54
+MRS Speech Analytics 3.6.19-r55
 
 Extraiga TODO en una carpeta nueva. Abra INICIAR_PROGRAMA.bat.
-Compruebe r54 en la barra del programa. Use Procesamiento por lotes.
+Compruebe r55 en la barra del programa. Use Procesamiento por lotes.
 Utiliza el Python y Whisper ya instalados. No es un instalador autonomo.
-Lea README.md y REVISION_54_PROGRAMA.md para cambios y alcance comprobado.
+Lea README.md y REVISION_55_PROGRAMA.md para cambios y alcance comprobado.
