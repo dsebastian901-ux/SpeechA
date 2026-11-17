@@ -39,6 +39,10 @@ PENDING = re.compile(
     r'(?:puedo|podria|le puedo|les puedo) regresar la llamada (?:en|dentro de)[^.!?]{0,40}minutos|'
     r'(?:por si|para ver si) (?:mi )?(?:mama|papa|familia|herman[oa]) me (?:puede )?prestar[^.!?]{0,25}dinero|'
     r'me puede volver a llamar[^.!?]{0,40}(?:manana|tarde)|'
+    # Evidencia verbal de incertidumbre cuando se habla de cumplir el pago:
+    # «lo intentaré» no es compromiso firme; «no tengo fechas» no confirma día.
+    # Requieren un objeto de pago en el mismo turno o pregunta previa.
+    r'(?:lo intentare|voy a intentar|no tengo (?:una )?fechas?)\b|'
     # Una decisión pospuesta, no un convenio ni un compromiso firme.
     # scan_dialogue exige contexto financiero y descarta voz del gestor.
     r'(?:dejeme|dejenme) (?:ver|revisar|checar)[^.!?]{0,45}'
@@ -69,6 +73,51 @@ def _deferred_payment_context(source, value, start, match):
     y nunca una pregunta sobre teléfono, comprobante o anotaciones.
     """
     phrase = value[match.start():match.end()]
+    if re.match(r"(?:lo intentare|voy a intentar|no tengo (?:una )?fechas?)\b", phrase):
+        # No basta con que la llamada mencione una tarjeta o un pago.
+        # El objeto de «intentar»/«fechas» debe ser financiero, no una
+        # pluma, teléfono, vacaciones u otro trámite explícito.
+        before = value[max(0, match.start()-160):match.start()]
+        after = value[match.end():min(len(value),match.end()+110)]
+        utterance = value[max(0, match.start()-120):min(len(value),match.end()+90)]
+        if re.search(r"(?:intentar|intentare)\s+(?:buscar|encontrar|"
+                     r"anotar|escribir|conseguir|localizar|revisar)\s+"
+                     r"(?:(?:un|una|el|la|mi|su)\s+)?"
+                     r"(?:pluma|lapiz|telefono|numero|folio|comprobante|"
+                     r"papel|recibo|correo|whatsapp)\b", utterance):
+            return False
+        if re.match(r"(?:\s*(?:para|de)\s+)(?:(?:mis|las|el|la)\s+)?"
+                    r"(?:vacaciones|viaje|cita|reunion|turno|medico|"
+                    r"entrevista|escuela|trabajo)\b", after):
+            return False
+        # Una tarea logística expresada por el titular prevalece incluso
+        # si en la misma oración aparece «aclarar mi pago».
+        if NON_PAYMENT_TASK.search(utterance):
+            return False
+        prefix = source[max(0, start+match.start()-250):start+match.start()]
+        question_end = prefix.rfind("?")
+        question_start = prefix.rfind("¿")
+        prior_payment_question = (
+            question_end >= 0 and question_start >= 0 and question_start < question_end
+            and len(prefix[question_end+1:]) <= 85
+            and bool(PAYMENT_DECISION_TOPIC.search(prefix[question_start:question_end+1]))
+            and not NON_PAYMENT_TASK.search(prefix[question_start:question_end+1])
+        )
+        is_date_uncertainty = phrase.startswith("no tengo")
+        if is_date_uncertainty:
+            # «No tengo fechas» solo cuando habla de conseguir dinero,
+            # liquidar o cubrir el pago, o responde una pregunta de pago.
+            preceding = before[-130:]
+            due_payment = (bool(PAYMENT_DECISION_TOPIC.search(preceding))
+                           and not re.search(r"\b(?:vacaciones|viaje|cita|"
+                                             r"reunion|escuela|trabajo)\b", preceding))
+            return bool(due_payment or prior_payment_question)
+        # «Lo intentaré» sin objeto financiero requiere pregunta directa;
+        # «voy a intentar pagar» sí expresa decisión no confirmada.
+        tail_financial = re.match(
+            r"\s+(?:pagar|abonar|depositar|cubrir|liquidar|"
+            r"realizar\s+(?:el|mi|un)\s+pago)\b", after)
+        return bool(tail_financial or prior_payment_question)
     if not re.match(r"(?:dejeme|dejenme)\s+(?:ver|revisar|checar)\b", phrase):
         return True
     if NON_PAYMENT_TASK.search(phrase) and not PAYMENT_DECISION_TOPIC.search(phrase):

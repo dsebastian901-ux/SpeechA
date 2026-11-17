@@ -48,7 +48,7 @@ def test_verified_exception_is_approved_and_kept_in_exclusive_category(
     }
     decision = evaluate_quality(metadata, 90, 80, duration_seconds=seconds)
     assert decision["clasificacion"] == "APROBADO_CON_EXCEPCION"
-    assert decision["aprobado"] is True
+    assert decision["aprobado"] is False  # Excepción validada, sin copia automática como APROBADO
     assert decision["calidad_aprobada"] is True
     assert decision["clasificacion"] in APPROVED_RESULTS
     assert decision["output_label_correction"]["valid"] is correctable
