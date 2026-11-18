@@ -43,7 +43,17 @@ jobs:
       - name: Crear instalador de Windows (Inno Setup)
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           choco install innosetup -y --no-progress
+          if ($LASTEXITCODE -ne 0) { throw "No se pudo instalar Inno Setup" }
+          $candidates = @(
+            (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
+            (Join-Path ${env:ProgramFiles} 'Inno Setup 6\ISCC.exe'),
+            'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          )
+          $compiler = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $compiler) { throw "No se encontro ISCC.exe; rutas revisadas: $($candidates -join ', ')" }
+          Write-Host "Compilador Inno Setup: $compiler"
           $output = Join-Path (Get-Location).Path 'windows-installer'
           New-Item -ItemType Directory -Force $output | Out-Null
           @'
@@ -69,8 +79,11 @@ jobs:
           [Run]
           Filename: "{app}\MRS_Speech_Analytics_R55_Login.exe"; Description: "Iniciar MRS Speech Analytics"; Flags: nowait postinstall skipifsilent
           '@ | Set-Content -Path 'mrs_installer.iss' -Encoding utf8
-          & "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe" "mrs_installer.iss"
-          if ($LASTEXITCODE -ne 0) { throw "Fallo al crear el instalador" }
+          & $compiler "mrs_installer.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Fallo al crear el instalador (ISCC exit $LASTEXITCODE)" }
+          $installer = Join-Path $output 'MRS_Speech_Analytics_R55_Login_Instalador.exe'
+          if (-not (Test-Path $installer)) { throw "No se genero el instalador en $installer" }
+          Get-Item $installer | Select-Object FullName,Length
       - uses: actions/upload-artifact@v4
         with:
           name: MRS_R55_Login_Instalador_Windows
