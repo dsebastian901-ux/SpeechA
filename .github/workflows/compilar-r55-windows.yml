@@ -27,7 +27,7 @@ jobs:
       - name: Confirmar ejecutable
         shell: pwsh
         run: |
-          $exe = "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/dist/MRS_Speech_Analytics_R55/MRS_Speech_Analytics_R55.exe"
+          $exe = "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/dist/MRS_Speech_Analytics_R55_Login/MRS_Speech_Analytics_R55_Login.exe"
           if (!(Test-Path $exe)) { throw "No se genero el exe" }
           Get-Item $exe | Select-Object FullName,Length
       - name: Instrucciones para el usuario
@@ -36,15 +36,14 @@ jobs:
           @'
           MRS Speech Analytics 3.6.19-r55
           Extraer TODO el ZIP antes de ejecutar.
-          Abrir MRS_Speech_Analytics_R55.exe.
+          Abrir MRS_Speech_Analytics_R55_Login.exe.
           Este paquete no incluye los pesos del modelo de transcripcion: utiliza el modelo instalado localmente.
           Esta compilacion comprueba que se genero el EXE; requiere prueba en un equipo Windows real.
-          '@ | Set-Content -Encoding utf8 "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/dist/MRS_Speech_Analytics_R55/LEEME.txt"
+          '@ | Set-Content -Encoding utf8 "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/dist/MRS_Speech_Analytics_R55_Login/LEEME.txt"
       - name: Crear instalador de Windows (Inno Setup)
         shell: pwsh
         run: |
           choco install innosetup -y --no-progress
-          $app = (Resolve-Path 'proyecto/MRS_Speech_Analytics_v3.6.19_Revision/dist/MRS_Speech_Analytics_R55_Login').Path
           $output = Join-Path (Get-Location).Path 'windows-installer'
           New-Item -ItemType Directory -Force $output | Out-Null
           @'
@@ -80,7 +79,7 @@ jobs:
           retention-days: 14
       - uses: actions/upload-artifact@v4
         with:
-          name: MRS_Speech_Analytics_R55_Windows_EXE
-          path: proyecto/MRS_Speech_Analytics_v3.6.19_Revision/dist/MRS_Speech_Analytics_R55/
+          name: MRS_Speech_Analytics_R55_Login_Portable
+          path: proyecto/MRS_Speech_Analytics_v3.6.19_Revision/dist/MRS_Speech_Analytics_R55_Login/
           if-no-files-found: error
           retention-days: 14
