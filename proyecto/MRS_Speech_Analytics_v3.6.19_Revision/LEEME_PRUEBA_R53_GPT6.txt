@@ -1,0 +1,56 @@
+MRS SPEECH ANALYTICS - VERSION AISLADA DE PRUEBA
+Motor: 3.6.19-r53-gpt6-test2
+Base: Codex entrega r53
+Propuesta de correcciones: GPT-6 revisada por Codex, PR #2
+Rama test/r53-gpt6-correctiva-20261115
+Fecha: 15/11/2026
+
+IMPORTANTE: ES UNA VERSION DE PRUEBA, NO LA ENTREGA FINAL.
+- Mantenga intactas las carpetas anteriores de r51 y r53.
+- No reemplace ejecutables o archivos sueltos de una version con otra.
+- No importe datos reales al repositorio. Trabaje solo con archivos locales.
+- Las pruebas automatizadas completas y las pruebas nativas en Windows
+  todavia no se han acreditado en esta version.
+
+PASOS EN WINDOWS
+1. Descargue el ZIP de la RAMA test/r53-gpt6-integrada-20261115.
+   GitHub > Code > Download ZIP. No use el archivo antiguo entregas/r53.zip:
+   ese ZIP no incluye estas nuevas correcciones.
+2. Extraiga todo el ZIP en carpeta NUEVA, por ejemplo C:\MRS_PRUEBA_R53_GPT6
+3. Abra dentro de lo extraido:
+   proyecto\MRS_Speech_Analytics_v3.6.19_Revision\
+4. Para instalar en otra PC (requiere Python 3.10 x64 e Internet):
+   ejecute INSTALAR.bat una vez. Si ya tiene dependencias instaladas,
+   no es necesario repetir la instalacion.
+5. Abra la aplicacion con INICIAR_PRUEBA_R53_GPT6.bat
+6. Para evaluar las transcripciones ya disponibles sin ejecutar Whisper:
+   use REANALIZAR_PRUEBA_R53_GPT6.bat. Seleccione una COPIA del
+   checkpoint que ya tiene. El reanalisis crea salida nueva.
+7. Conserve el checkpoint anterior, el reporte anterior y las carpetas de
+   audios originales para comparar. NO procese de nuevo los 727 audios
+   con Whisper solo para evaluar cambios de las reglas.
+8. Para validar solo los casos nuevos automatizados, instale
+   requirements-dev.txt y ejecute VALIDAR_PRUEBA_R53_GPT6.bat.
+
+QUE INCLUYE
+- Codex r53: protocolo de 13 grupos de reglas, alertas y reportes,
+  APROBADO_DURACION_MENOR solo por gestion completa y sin bloqueos.
+- GPT-6: APROBADO_CON_EXCEPCION en categoria exclusiva, coherencia de
+  aprobado/calidad, reporte SIN_RELACION_EXCEL como NO VALIDABLE,
+  deteccion protegida de preguntas de cobro futuro, decision pendiente
+  con contexto y eliminacion de bloqueos duplicados de estatus.
+- Reglas de seguridad conservadas: privacidad, ARCO, groserias,
+  fallas graves y referencias bancarias.
+
+LIMITES Y PROXIMO COTEJO
+- El checkpoint 15/nov contiene 1321 registros (727 procesados,
+  594 pendientes). No asumir que fueron evaluados por r53.
+- Se requiere cotejo del reanalisis del MISMO checkpoint para afirmar
+  mejoras reales. Diferenciar sin Excel, REVISAR, NO APROBADO y FALLA_GRAVE.
+- Si falta relacion en Excel, el reanalisis no reconstruye automaticamente
+  esa informacion; requiere corregir el Excel de origen.
+- NO se integraron en esta rama todos los cambios adicionales de r51,
+  como el control local de usuarios; no sustituir esa version de trabajo.
+
+Codigo y comparacion para Codex:
+https://github.com/dsebastian901-ux/SpeechA/pull/2

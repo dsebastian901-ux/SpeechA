@@ -18,6 +18,7 @@ from app.services.relation_service import RelationService
 from app.services.analytics_service import AnalyticsService
 from app.services.transcription_services import TranscriptionService
 from app.services.batch_report_service import BatchReportService
+from app.services.checkpoint_revision_summary import summarize_result_revisions
 from app.config.approval_rules import (
     MIN_APPROVAL_DURATION_SECONDS,
     MAX_APPROVAL_DURATION_SECONDS,
@@ -50,6 +51,7 @@ class BatchService:
         self.last_partial_report_path = None
         self.checkpoint_path = None
         self.partial_report_every = 10
+        self.last_checkpoint_engine_warning = ""
 
     # =========================================================
     # CHECKPOINT / REANUDACION
@@ -87,6 +89,9 @@ class BatchService:
         payload = {
             "version": 1,
             "engine_revision": AnalyticsService.ENGINE_REVISION,
+            # Versión del ejecutable != motor de los dictámenes recuperados.
+            "result_revision_summary": summarize_result_revisions(
+                self.items, AnalyticsService.ENGINE_REVISION),
             "updated_at": datetime.now().isoformat(timespec="seconds"),
             "completed": bool(completed),
             "output_directory": str(Path(output_directory).resolve()),
@@ -156,7 +161,10 @@ class BatchService:
         errors = sum(i.get("status") == "error" for i in items)
         processing = sum(i.get("status") == "procesando" for i in items)
         pending = sum(i.get("status") == "pendiente" for i in items) + processing
+        revisions = summarize_result_revisions(items, AnalyticsService.ENGINE_REVISION)
         return {"path":str(used_path),"mode":payload.get("mode","B"),
+                "old_engine_results": revisions["previous_engine_results"],
+                "requires_explicit_reanalysis": revisions["requires_explicit_reanalysis"],
                 "relation_excel":payload.get("relation_excel"),"total":len(items),
                 "completed":completed,"errors":errors,"pending":pending,
                 "updated_at":payload.get("updated_at")}
@@ -183,6 +191,13 @@ class BatchService:
         if payload.get("completed") or not payload.get("items"):
             raise RuntimeError("No existe un lote pendiente válido.")
         self.items = payload["items"]
+        provenance = summarize_result_revisions(self.items, AnalyticsService.ENGINE_REVISION)
+        self.last_checkpoint_engine_warning = (
+            f"{provenance['previous_engine_results']} dictámenes proceden "
+            "de versiones anteriores. Reanudar NO los vuelve a evaluar. "
+            "Use REANALIZAR_PRUEBA_R53_GPT6.bat para comparar las reglas."
+            if provenance["requires_explicit_reanalysis"] else ""
+        )
         for item in self.items:
             if item.get("status") == "procesando":
                 item["status"] = "pendiente"
@@ -1209,4 +1224,7 @@ class BatchService:
             "errors": errors,
             "pending": pending,
             "processing": processing,
+            "previous_engine_results": summarize_result_revisions(
+                self.items, AnalyticsService.ENGINE_REVISION)["previous_engine_results"],
+            "engine_warning": self.last_checkpoint_engine_warning,
         }

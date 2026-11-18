@@ -39,8 +39,114 @@ PENDING = re.compile(
     r'(?:puedo|podria|le puedo|les puedo) regresar la llamada (?:en|dentro de)[^.!?]{0,40}minutos|'
     r'(?:por si|para ver si) (?:mi )?(?:mama|papa|familia|herman[oa]) me (?:puede )?prestar[^.!?]{0,25}dinero|'
     r'me puede volver a llamar[^.!?]{0,40}(?:manana|tarde)|'
+    # Evidencia verbal de incertidumbre cuando se habla de cumplir el pago:
+    # «lo intentaré» no es compromiso firme; «no tengo fechas» no confirma día.
+    # Requieren un objeto de pago en el mismo turno o pregunta previa.
+    r'(?:lo intentare|voy a intentar|no tengo (?:una )?fechas?)\b|'
+    # Una decisión pospuesta, no un convenio ni un compromiso firme.
+    # scan_dialogue exige contexto financiero y descarta voz del gestor.
+    r'(?:dejeme|dejenme) (?:ver|revisar|checar)[^.!?]{0,45}'
+    r'(?:y |para )?(?:me |le |les )?(?:hable|habla|llame|llama|marque|marca) '
+    r'(?:al rato|mas tarde|despues|luego)|'
     r'lo voy a (?:analizar|pensar|consultar|revisar)|'
     r'(?:no|pero) (?:te |le )?estoy diciendo que no[^.!?]{0,80}(?:quiero|convenio))\b')
+# Una pausa para buscar pluma, anotar teléfono, WhatsApp o comprobante
+# NO constituye una respuesta sobre pagar. Esta protección se evalúa
+# especialmente para «déjeme ver ... y me habla al rato».
+PAYMENT_DECISION_TOPIC = re.compile(
+    r"\b(?:pago|pagar|deposito|depositar|abonar|abono|dinero|"
+    r"cantidad|monto|pesos|cubrir|liquidar|juntar|prestamo|"
+    r"quincena|convenio|acuerdo\s+de\s+pago)\b"
+)
+NON_PAYMENT_TASK = re.compile(
+    r"\b(?:pluma|lapiz|boligrafo|anotar|apuntar|escribir|papel|"
+    r"telefono|numero|whatsapp|correo|folio|comprobante|"
+    r"ticket|recibo|agenda|direccion)\b"
+)
+
+
+def _deferred_payment_context(source, value, start, match):
+    """Aplazamiento: respuesta económica, no dificultad logística.
+
+    El nombre de la tarjeta o cuenta en los 220 caracteres previos NO basta.
+    Si la respuesta no habla de dinero, exigir una pregunta de pago inmediata
+    y nunca una pregunta sobre teléfono, comprobante o anotaciones.
+    """
+    phrase = value[match.start():match.end()]
+    if re.match(r"(?:lo intentare|voy a intentar|no tengo (?:una )?fechas?)\b", phrase):
+        # No basta con que la llamada mencione una tarjeta o un pago.
+        # El objeto de «intentar»/«fechas» debe ser financiero, no una
+        # pluma, teléfono, vacaciones u otro trámite explícito.
+        before = value[max(0, match.start()-160):match.start()]
+        after = value[match.end():min(len(value),match.end()+110)]
+        utterance = value[max(0, match.start()-120):min(len(value),match.end()+90)]
+        if re.search(r"(?:intentar|intentare)\s+(?:buscar|encontrar|"
+                     r"anotar|escribir|conseguir|localizar|revisar)\s+"
+                     r"(?:(?:un|una|el|la|mi|su)\s+)?"
+                     r"(?:pluma|lapiz|telefono|numero|folio|comprobante|"
+                     r"papel|recibo|correo|whatsapp)\b", utterance):
+            return False
+        if re.match(r"(?:\s*(?:para|de)\s+)(?:(?:mis|las|el|la)\s+)?"
+                    r"(?:vacaciones|viaje|cita|reunion|turno|medico|"
+                    r"entrevista|escuela|trabajo)\b", after):
+            return False
+        # Una tarea logística expresada por el titular prevalece incluso
+        # si en la misma oración aparece «aclarar mi pago».
+        if NON_PAYMENT_TASK.search(utterance):
+            return False
+        prefix = source[max(0, start+match.start()-250):start+match.start()]
+        question_end = prefix.rfind("?")
+        question_start = prefix.rfind("¿")
+        prior_payment_question = (
+            question_end >= 0 and question_start >= 0 and question_start < question_end
+            and len(prefix[question_end+1:]) <= 85
+            and bool(PAYMENT_DECISION_TOPIC.search(prefix[question_start:question_end+1]))
+            and not NON_PAYMENT_TASK.search(prefix[question_start:question_end+1])
+        )
+        is_date_uncertainty = phrase.startswith("no tengo")
+        if is_date_uncertainty:
+            # «No tengo fechas» solo cuando habla de conseguir dinero,
+            # liquidar o cubrir el pago, o responde una pregunta de pago.
+            preceding = before[-130:]
+            due_payment = (bool(PAYMENT_DECISION_TOPIC.search(preceding))
+                           and not re.search(r"\b(?:vacaciones|viaje|cita|"
+                                             r"reunion|escuela|trabajo)\b", preceding))
+            return bool(due_payment or prior_payment_question)
+        # «Lo intentaré» sin objeto financiero requiere pregunta directa;
+        # «voy a intentar pagar» sí expresa decisión no confirmada.
+        tail_financial = re.match(
+            r"\s+(?:pagar|abonar|depositar|cubrir|liquidar|"
+            r"realizar\s+(?:el|mi|un)\s+pago)\b", after)
+        return bool(tail_financial or prior_payment_question)
+    if not re.match(r"(?:dejeme|dejenme)\s+(?:ver|revisar|checar)\b", phrase):
+        return True
+    if NON_PAYMENT_TASK.search(phrase) and not PAYMENT_DECISION_TOPIC.search(phrase):
+        return False
+    # No inferir intención económica desde palabras del gestor/Excel si el
+    # interlocutor describió explícitamente una tarea distinta.
+    utterance = value[max(0, match.start()-20):min(len(value), match.end()+35)]
+    if NON_PAYMENT_TASK.search(utterance) and not PAYMENT_DECISION_TOPIC.search(utterance):
+        return False
+    if PAYMENT_DECISION_TOPIC.search(phrase):
+        return True
+    # Respuestas breves como «déjeme ver y me habla al rato» solo acreditan
+    # decisión pendiente si contestan una pregunta inmediata sobre pagar.
+    position = start + match.start()
+    prefix = source[max(0, position-220):position]
+    question_end = prefix.rfind("?")
+    question_start = prefix.rfind("¿")
+    if question_end < 0 or question_start < 0 or question_start >= question_end:
+        return False
+    question = prefix[question_start:question_end+1]
+    post_question = prefix[question_end+1:]
+    if len(post_question) > 95:
+        return False
+    return bool(
+        PAYMENT_DECISION_TOPIC.search(question)
+        and not NON_PAYMENT_TASK.search(question)
+    )
+
+
 DISPUTE = re.compile(
     r'\b(?:yo no he usado (?:esa|mi|la) tarjeta|'
     r'no (?:he utilizado|he usado) (?:esa|mi|la) tarjeta|'
@@ -87,6 +193,10 @@ def scan_dialogue(text, segments=()):
                 if (kind=='PENDING_DECISION' and match.group().startswith('lo voy a ')
                         and re.search(r'\bno\s*$',value[:match.start()])):
                     continue  # «No lo voy a revisar» no acredita decidir revisarlo.
+                # No calificar como decisión de pago una dificultad para anotar.
+                if kind == 'PENDING_DECISION' and not _deferred_payment_context(
+                        source, value, start, match):
+                    continue
                 # «Ahorita no se refleja» y «hoy no puede anotar» describen
                 # trámites, no una decisión de pago del interlocutor.
                 if kind == 'PENDING_DECISION' and re.fullmatch(r'(?:(?:el dia de )?hoy|ahorita)[, ]+no',match.group()):
