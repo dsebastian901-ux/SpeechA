@@ -1,7 +1,7 @@
-name: Compilar EXE MRS Speech Analytics R55
+name: Compilar R55 con Login e Instalador
 on:
   push:
-    branches: [build/r55-windows-exe]
+    branches: [build/r55-login-installer]
   workflow_dispatch:
 jobs:
   windows-exe:
@@ -23,7 +23,7 @@ jobs:
         shell: pwsh
         working-directory: proyecto/MRS_Speech_Analytics_v3.6.19_Revision
         run: |
-          python -m PyInstaller --noconfirm --clean --onedir --windowed --name MRS_Speech_Analytics_R55 --collect-all customtkinter --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers --collect-all imageio_ffmpeg --collect-all av --collect-all docx --hidden-import tkinter --hidden-import PIL._tkinter_finder --contents-directory . main.py
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name MRS_Speech_Analytics_R55_Login --collect-all customtkinter --collect-all faster_whisper --collect-all ctranslate2 --collect-all tokenizers --collect-all imageio_ffmpeg --collect-all av --collect-all docx --hidden-import tkinter --hidden-import PIL._tkinter_finder --contents-directory . main.py
       - name: Confirmar ejecutable
         shell: pwsh
         run: |
@@ -40,6 +40,44 @@ jobs:
           Este paquete no incluye los pesos del modelo de transcripcion: utiliza el modelo instalado localmente.
           Esta compilacion comprueba que se genero el EXE; requiere prueba en un equipo Windows real.
           '@ | Set-Content -Encoding utf8 "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/dist/MRS_Speech_Analytics_R55/LEEME.txt"
+      - name: Crear instalador de Windows (Inno Setup)
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $app = (Resolve-Path 'proyecto/MRS_Speech_Analytics_v3.6.19_Revision/dist/MRS_Speech_Analytics_R55_Login').Path
+          $output = Join-Path (Get-Location).Path 'windows-installer'
+          New-Item -ItemType Directory -Force $output | Out-Null
+          @'
+          [Setup]
+          AppId={{BD82D8B2-91BA-4B6B-AC35-FD8BC8E51A74}
+          AppName=MRS Speech Analytics R55 Login
+          AppVersion=3.6.19.55
+          DefaultDirName={localappdata}\\Programs\\MRS Speech Analytics R55 Login
+          DefaultGroupName=MRS Speech Analytics
+          PrivilegesRequired=lowest
+          OutputDir=windows-installer
+          OutputBaseFilename=MRS_Speech_Analytics_R55_Login_Instalador
+          Compression=lzma
+          SolidCompression=yes
+          WizardStyle=modern
+          [Files]
+          Source: "proyecto\\MRS_Speech_Analytics_v3.6.19_Revision\\dist\\MRS_Speech_Analytics_R55_Login\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+          [Icons]
+          Name: "{group}\\MRS Speech Analytics R55"; Filename: "{app}\\MRS_Speech_Analytics_R55_Login.exe"
+          Name: "{autodesktop}\\MRS Speech Analytics R55"; Filename: "{app}\\MRS_Speech_Analytics_R55_Login.exe"; Tasks: desktopicon
+          [Tasks]
+          Name: desktopicon; Description: "Crear acceso directo en escritorio"; Flags: unchecked
+          [Run]
+          Filename: "{app}\\MRS_Speech_Analytics_R55_Login.exe"; Description: "Iniciar MRS Speech Analytics"; Flags: nowait postinstall skipifsilent
+          '@ | Set-Content -Path 'mrs_installer.iss' -Encoding utf8
+          & "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe" "mrs_installer.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Fallo al crear el instalador" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MRS_R55_Login_Instalador_Windows
+          path: windows-installer/*.exe
+          if-no-files-found: error
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         with:
           name: MRS_Speech_Analytics_R55_Windows_EXE
