@@ -1,0 +1,2 @@
+entregas/r56/*.zip filter=lfs diff=lfs merge=lfs -text
+entregas/r56/*.exe filter=lfs diff=lfs merge=lfs -text
