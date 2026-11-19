@@ -109,4 +109,7 @@ def main():
         print("Se conservaron los originales. No se ejecutó Whisper ni se copiaron audios.")
 
 
-if __name__=="__main__":main()
+if __name__=="__main__":
+    from app.services.access_service import require_admin_tool
+    require_admin_tool()
+    main()

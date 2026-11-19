@@ -47,7 +47,9 @@ def prohibited_threat(text, segments=(), mora=''):
         r'.{0,45}\b(?:bienes|muebles|casa|vehiculo|propiedad)\b|'
         r'\b(?:lo|la) vamos a (?:embargar|demandar)\b|\bva a ir a la carcel\b|'
         r'\b(?:se hara cobrar|se cobrara|cobraremos|le cobraremos|vamos a cobrar|se va a cobrar)\b'
-        r'[^?!]{0,180}\b(?:en|con) (?:sus |los )?bienes(?: y muebles)?\b')
+        r'[^?!]{0,180}\b(?:en|con) (?:sus |los )?bienes(?: y muebles)?\b|'
+        r'\b(?:bienes(?: inmuebles| muebles)?|cosas muebles)\b[^.!?]{0,100}'
+        r'\b(?:es|son|sera|seran) lo primero que (?:va|van) a (?:ir a )?(?:cobrar|recoger|quitar) (?:el )?banco\b')
     visit = (
         r'\b(?:vamos a|voy a|se va a|se puede|procederemos a)\s+'
         r'(?:realizar|generar|presentar|efectuar|hacer|programar|agendar)\s+(?:una?\s+)?'
@@ -65,6 +67,8 @@ def prohibited_threat(text, segments=(), mora=''):
                 continue
             for match in pattern.finditer(clause):
                 prefix = clause[:match.start()]
+                if re.search(r'\b(?:no|nunca|jamas) (?:es|son|sera|seran) lo primero\b',match.group()):
+                    continue
                 if re.search(r'\b(?:no|nunca|jamas)\s*$', prefix):
                     continue
                 if re.search(r'\b(?:me dijeron|me dijo|dice|dijo|dijeron|usted dijo|me amenazo) que\b[^.!?]{0,100}$', prefix):
@@ -75,7 +79,8 @@ def prohibited_threat(text, segments=(), mora=''):
 
 def announced_hangup(text, segments=()):
     unilateral, callback = [], []
-    pattern = re.compile(r'\b(?:le voy a colgar|voy a colgar la llamada|le cuelgo|procedo a colgar|terminare la llamada)\b')
+    pattern = re.compile(r'\b(?:le voy a colgar|voy a colgar la llamada|le cuelgo|procedo a colgar|terminare la llamada|'
+                         r'voy a finalizar con la llamada|voy a dar por terminada la llamada)\b')
     for unit in sentence_evidence(text, segments):
         if unit['speaker_role'] in {'TITULAR', 'TERCERO', 'INTERLOCUTOR'}:
             continue

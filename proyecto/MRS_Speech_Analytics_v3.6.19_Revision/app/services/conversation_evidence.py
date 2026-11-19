@@ -130,7 +130,7 @@ def holder_confirmation(text, segments=()):
     # Una confirmación aparente seguida de ausencia/tercero no acredita titular.
     counter = re.compile(r"\b(?:no (?:se encuentra|esta aqui|esta en casa)|no soy|soy su (?:espos[oa]|madre|padre|herman[oa])|es nuestro proveedor)\b")
     identification = (
-        r"(?:me (?:puede|puedes|pueden|puedo|pude|podria|podrias|podrian|podre|podeis) comunicar[, ]*(?:(?:por|de|el) favor[, ]*)?(?:con|a)|"
+        r"(?:me (?:puede|puedes|pueden|puedo|pude|podria|podrias|podrian|podre|podeis) (?:a )?comunicar[, ]*(?:(?:por|de|el) favor[, ]*)?(?:con|a)|"
         r"me comunican?[, ]*(?:(?:por|de) favor[, ]*)?con|me comunique con|me puede conectar con|"
         r"(?:me )?voy a comunicar con|puede comunicar con|"
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|se encuentra|estoy buscando a|hablo con|"
@@ -179,6 +179,7 @@ def holder_confirmation(text, segments=()):
         r"(?P<answer>(?:ah[, ]+)?(?:si[, ]+)?(?:digame|diganme|dime))\b")
     for pattern in (prompt, salutation_prompt, direct, contextual, named_identity, delayed_self_identity, split_honorific, greeted_identity, company_reply):
         for match in pattern.finditer(s):
+            if pattern in {contextual,greeted_identity}:continue
             if not valid_nominal_request(s,match.start(),match["identity"]):continue
             if pattern is not direct and re.search(
                     r"\b(?:familiar|espos[oa]|madre|padre|herman[oa]|referencia|quien|usted(?:es)?|"
@@ -219,6 +220,8 @@ def holder_confirmation(text, segments=()):
         r"yo (?:tengo|tenia) una (?:cuenta|tarjeta)|"
         r"yo (?:solicite|saque|contrate|tramite|adquiri) (?:mi |la |una |esa |esta )?(?:cuenta|tarjeta)|"
         r"(?:yo )?(?:cancele|bloquee|rompi) (?:mi |la )?tarjeta)\b")
+    from app.services.contact_evidence_graph import nonholder_context
+    third_person=third_person or nonholder_context(text,segments)
     requested_person=(re.sub(r'^(?:(?:el|la) )?(?:senorita|senora|senor|caballero)\s*','',request['identity']).strip(', ')
                       if request else '')
     if request and valid_nominal_request(s,request.start(),request["identity"]) and re.search(r'[a-z]{2,}',requested_person) and not third_person and not re.search(
@@ -236,6 +239,9 @@ def holder_confirmation(text, segments=()):
     contextual_identity=contextual_holder_confirmation(text,segments,identification)
     if contextual_identity['confirmed']:
         return contextual_identity
+    from app.services.contact_evidence_graph import contextual_contact
+    contact=contextual_contact(text,segments)
+    if contact['confirmed']:return contact
     return {"confirmed": False, "method": "SIN_CONFIRMACION", "evidence": ""}
 
 
@@ -393,6 +399,8 @@ def payment_commitment(text, segments=()):
             r"no (?:lo )?(?:puedo|voy a poder) (?:pagar|hacer)|no lo confirmo|"
             r"(?:manana|hoy) no (?:podria|puedo)|no (?:tendria|tendre)\s+(?:\d+|dos|mil)|"
             r"(?:ahorita|por el momento) (?:todavia )?no puedo|no puedo (?:ahorita|hacer (?:ese |el |un )?pago))\b", s)
+        if negative and re.match(r'(?:manana|hoy|ahorita) no (?:puedo|podria)',negative.group()):
+            if re.match(r'\s+(?:hablar|atender|escuchar|anotar|apuntar|enviar|mandar|contestar)\b',s[negative.end():]):negative=None
         if (negative and unit['speaker_role']=='NO DETERMINADO'
                 and re.match(r'no puedo confirmar\s+(?:su|el) pago\b',s[negative.start():])
                 and re.search(r'\b(?:whatsapp|anotar|tomar nota|comprobante|validacion)\b',s[negative.end():])):
@@ -419,6 +427,10 @@ def payment_commitment(text, segments=()):
                                     source[max(0, position-220):cursor])
         if conditional and not payment_context:
             conditional = None
+        if conditional and hasattr(conditional,'start') and conditional.group()=='pagaria':
+            before=s[max(0,conditional.start()-100):conditional.start()]
+            if re.search(r'\b(?:restante|resto|diferencia)\b',before) and re.search(r'\bno (?:lo |la )?$',before):
+                conditional=None
         if conditional and not (positive or negative) and re.search(
                 r"\b(?:no se (?:ha )?reflejado|no (?:habia|tenia|tienen) sistema|"
                 r"ustedes son|empresa.*seria)\b", s):
@@ -440,7 +452,8 @@ def payment_commitment(text, segments=()):
         r"(?:(?:titular|cliente|interlocutor|gestor|tercero)\s*:\s*)?"
         r"(?P<answer>si|de acuerdo|esta bien|claro|correcto)\b")
     for match in question.finditer(source):
-        if (_role_at(text, segments, match.start("answer")) not in {"GESTOR","TERCERO"}
+        if (not re.search(r'\bno (?:le )?$',source[max(0,match.start()-30):match.start()])
+                and _role_at(text, segments, match.start("answer")) not in {"GESTOR","TERCERO"}
                 and not re.search(r'\b(?:realizado|efectuado|ayer|pasado|recibido|reportado|whatsapp|comprobante|telefono|recibo)\b',source[match.start():match.start('answer')])):
             reply = source[match.start("answer"):match.end()+100].split(".")[0]
             if not (re.search(r"\b(?:si me da tiempo|si consigo|si puedo juntar|yo creo|a lo mejor|no puedo|no tengo)\b", reply)
@@ -468,7 +481,8 @@ def payment_commitment(text, segments=()):
         r'(?P<answer>(?:aja[, ]+)?(?:si|de acuerdo|esta bien|correcto))\b')
     for match in agreement_question.finditer(source):
         reply=source[match.start('answer'):match.end()+100].split('.')[0]
-        if (_role_at(text,segments,match.start('answer')) not in {'GESTOR','TERCERO'}
+        if (not re.search(r'\bno (?:le )?$',source[max(0,match.start()-30):match.start()])
+                and _role_at(text,segments,match.start('answer')) not in {'GESTOR','TERCERO'}
                 and not _payment_review_condition(reply) and not _payment_review_deferral(reply)
                 and not re.search(r'\b(?:si puedo|si consigo|no puedo|yo creo|a lo mejor)\b',reply)):
             events.append((match.start('answer'),True,match.group()))
@@ -491,7 +505,8 @@ def payment_commitment(text, segments=()):
         r"podemos contar con (?:su |el )?pago (?:para )?(?:hoy|manana))[^?!.]{0,45}\?\s*"
         r"(?P<answer>si(?:[, ]+[^.!?]{0,65})?)")
     for match in future_question.finditer(source):
-        if (_role_at(text, segments, match.start('answer')) not in {'GESTOR', 'TERCERO'}
+        if (not re.search(r'\bno (?:le )?$',source[max(0,match.start()-30):match.start()])
+                and _role_at(text, segments, match.start('answer')) not in {'GESTOR', 'TERCERO'}
                 and not re.search(r"\b(?:creo|si puedo|si consigo|si me da|no puedo|a lo mejor)\b", match['answer'])
                 and not _payment_review_condition(match['answer']) and not _payment_review_deferral(match['answer'])):
             events.append((match.start('answer'), True, match.group()))
@@ -532,9 +547,23 @@ def payment_commitment(text, segments=()):
         events.append((reply['position'],None if reply['conditional']else reply['accepted'],reply['evidence']))
         if reply['accepted']:
             extra_events.append({'position':reply['position'],'evidence':reply.get('date_evidence')or reply['evidence'],'method':reply['method']})
+    from app.services.payment_lifecycle import payment_decision_events
+    for event in payment_decision_events(text,segments):
+        events.append((event['position'],None if event['conditional']else event['accepted'],event['evidence']))
+        if event['accepted']:
+            extra_events.append({'position':event['position'],'evidence':event['date_evidence'],'method':event['method']})
+    from app.services.payment_intent_frames import payment_frames
+    for frame in payment_frames(text,segments):
+        if frame['history'] or not(frame['accepted']or frame['declined']or frame['conditional']):continue
+        decision=None if frame['conditional']else frame['accepted']
+        events.append((frame['position'],decision,frame['evidence']))
+        if frame['accepted']:
+            extra_events.append({'position':frame['position'],'evidence':frame['date_evidence'],
+                'method':frame['method'],'immediate':frame['immediate'],
+                'day_of_month':frame['day_of_month'],'day_text':frame['day_text']})
     if not events:
         return {"accepted": False, "declined": False, "evidence": ""}
-    _, accepted, evidence = max(events, key=lambda e: e[0])
+    _, accepted, evidence = max(events, key=lambda e:(e[0],2 if e[1]is None else 1 if e[1]is False else 0))
     return {"accepted": accepted is True, "declined": accepted is False,
             "conditional": accepted is None, "evidence": evidence,
             "contextual_confirmation_events":extra_events}
@@ -617,7 +646,7 @@ def completed_payment(text, segments=()):
         followup = source[match.end():match.end()+180]
         past_question = re.search(
             r"\b(?:que dia lo (?:realice|realizo|hizo|pago)|cuando (?:lo )?(?:pago|realizo)|"
-            r"que cantidad (?:pago|deposito))\b", followup)
+            r"que cantidad (?:fue lo que pago|pago|deposito))\b", followup)
         if match['answer'].startswith('ya')and not past_question:
             continue
         if match["verb"] == "puedo" and not past_question:
@@ -733,7 +762,7 @@ def assess_recado(text, segments=()):
             families.append({'text':match.group(),'phrase':match['kin'],
                              'speaker_role':_role_at(text,segments,match.start('answer')),'start':None,'end':None})
     request = re.compile(
-        r"\b(?:puedo|puede|puedes|podre|podra|podria|pudiera|podemos|podriamos) (?:dejar(?:le)?|dar(?:le)?) "
+        r"\b(?:puedo|puede|puedes|podre|podra|podria|pudiera|podemos|podriamos) (?:dejar(?:me|le)?|dar(?:me|le)?) "
         r"(?:un |el |algun |algun tipo de )?(?:recado|mensaje|mensajito)[^?!.]{0,120}[?.]\s*"
         r"(?P<answer>si(?:[, ]+claro)?|(?:bien[, ]+)?claro|de acuerdo|ok(?:[, ]+si)?|esta bien|con gusto|a ver[, ]+digame)\b")
     for match in request.finditer(source):
@@ -845,6 +874,8 @@ def assess_recado(text, segments=()):
     acceptances.extend(callback_permission_evidence(text, segments))
     from app.services.message_workflow import receipt_events
     acceptances.extend(receipt_events(text,segments))
+    from app.services.message_exchange import exchange_receipts
+    acceptances.extend(exchange_receipts(text,segments))
     return {"family": families, "acceptance": acceptances,
             "refusal": refusals, "unknown_recipient": unknown,
             'directed_messages': directed_relay_message(text, segments),
@@ -937,7 +968,7 @@ def payment_places(text, segments, catalog):
     catalog_start = re.compile(r"^(?:" + "|".join(brand_pattern(v)
         for variants in catalog.values() for v in variants) + r")(?!\w)")
     positive_offer = re.compile(r"\b(?:puede pagar|puede aplicar pago|lo puede (?:hacer|realizar)|"
-                                r"puede realizar(?:lo|le)|pueden ir|pagar en|o en)\b")
+                                r"puede realizar(?:lo|le)|pueden ir|pagar en|si en|puede[ns]? contar con)\b")
     for index, unit in enumerate(units):
         s = normalize(unit["text"])
         new_context=bool(re.search(
@@ -951,14 +982,25 @@ def payment_places(text, segments, catalog):
         # Compras, retiros y consultas en una tienda no son ofertas de pago.
         other_action = bool(re.search(
             r"\b(?:compras?|comprar|retirar (?:dinero|efectivo)|retiro de (?:dinero|efectivo)|aclaracion|consulta)\b", s))
-        instruction=re.search(r"\b(?:puede pagar(?:lo|los)?|puede aplicar pago|podra pagar(?:lo|los)?|puede realizar|realizar (?:su |el )?pago|"
+        instruction_pattern=re.compile(r"\b(?:puede pagar(?:lo|los)?|puede aplicar pago|podra pagar(?:lo|los)?|puede realizar|realizar (?:su |el )?pago|"
                          r"(?:puede|puedes|puedo) (?:usted )?(?:aplicar|hacer|realizar) (?:lo que es |lo que eso )?(?:su |el |un |los )?pagos?|"
                          r"pago ya sea que se aplique|(?:realiza|realice|realizando|aplique|aplica|aplicando|efectuar|hacer) (?:su |el |un )?pago|"
                          r"pagos? (?:ya )?(?:se )?(?:lo )?(?:realizan|realiza|aplican|aplica|aplique|hacen|efectuan)\b|"
                          r"(?:el )?pago (?:lo )?(?:estaria|puede|podria) (?:aplicando|realizando|generar|efectuar|aplicar|hacer)|"
                          r"pagos? los? puede (?:estar )?(?:realizando|aplicando|hacer|realizar)|pueden aplicar(?: el pago)?|"
                          r"pague|pagar(?:lo|los)? en|pago en|pago de servicios?|deposite|depositar en|"
-                         r"lugares de pago|opciones de pago|convenio (?:numero )?\d)\b", s)
+                         r"lugares de pago|opciones de pago|convenio (?:numero )?\d)\b")
+        instructions=list(instruction_pattern.finditer(s))
+        instructions.extend(re.finditer(r"\b(?:pagos? (?:se |lo |los )?(?:puede[ns]?|podria[ns]?|debe[ns]?) (?:aplicar|realizar|hacer|efectuar)|"
+            r"(?:puedes|pueden) (?:hacer|realizar|aplicar) (?:tu |su |el |los )?pagos?|"
+            r"(?:para )?(?:pagar|depositar|abonar) (?:puede[ns]? )?acudir|aceptamos pagos? en|recibimos pagos? en)\b",s))
+        instructions.sort(key=lambda m:m.start())
+        instruction=instructions[0]if instructions else None
+        other_actions=list(re.finditer(r"\b(?:compras?|comprar|retirar (?:dinero|efectivo)|retiro de (?:dinero|efectivo)|aclaracion|consulta)\b",s))
+        verbatim=re.sub(r'\s+',' ',unicodedata.normalize('NFC',unit['text']).lower()).strip()
+        other_actions.extend(re.finditer(r'\b(?:pagué|deposité|aboné|realicé|efectué)\b',verbatim))
+        other_actions.sort(key=lambda m:m.start())
+        other_action=bool(other_actions and not instructions)
         # Pronombres/conjugaciones ASR del ofrecimiento, con destino de pago
         # explícito o marcas autorizadas; nunca se cuentan acciones ajenas.
         implicit = re.search(r"\b(?:lo puede (?:hacer|aplicar|realizar)|puede (?:hacerlo|aplicarlo|realizarlo|realizarle)|"
@@ -969,7 +1011,7 @@ def payment_places(text, segments, catalog):
         # Dos frases es el límite: no heredar el tema del inicio de la llamada.
         recent_payment = any(re.search(r"\b(?:pago|pagar|deposito|transferencia)\b", normalize(u['text']))
                              for u in units[max(0, index-2):index+1])
-        contextual_offer = re.search(r"\b(?:puede ser en|hay otros lugares)\b", s)
+        contextual_offer = re.search(r"\b(?:puede ser en|hay otros lugares|puede[ns]? contar con)\b", s)
         if contextual_offer and recent_payment and len({m[2] for m in matches}) >= 2 and not other_action:
             implicit = implicit or contextual_offer
         asr_payment = re.search(r"\blo puede ser el pago\b", s)
@@ -1000,7 +1042,11 @@ def payment_places(text, segments, catalog):
             if any(start < b and end > a for a, b in selected):
                 continue
             selected.append((start, end))
+            earlier_pay=[m.start()for m in instructions if m.start()<start]
+            earlier_other=[m.start()for m in other_actions if m.start()<start]
+            if earlier_other and(not earlier_pay or earlier_other[-1]>=earlier_pay[-1]):continue
             before = s[max(0, start-100):start]
+            if re.search(r'\b(?:me dijeron|me dijo|me indicaron|usted me dijo|en la llamada anterior)\b[^.!?]{0,160}$',s[:start]):continue
             if instruction and start < instruction.start() and re.search(r"\b(?:su|la) (?:tarjeta|producto) (?:es|de|va en relacion)\b|\b(?:tienda de origen|producto de)\b|\b(?:tarjeta|producto)(?: (?:tipo|visa|de|es|la|tienda|departamental)){0,5}\s*$",s[:start]):
                 continue
             # Negación de ESA opción; «no en Guadalajara, puede pagar en
@@ -1011,6 +1057,12 @@ def payment_places(text, segments, catalog):
                     and not re.search(r"\bno (?:se )?$",before[max(0,positive[-1].start()-12):positive[-1].start()])):
                 continue
             found[place] = dict(unit, phrase=phrase, place=place)
+    # La tienda de origen dicha de forma genérica y su marca explícita no
+    # son dos establecimientos distintos dentro de una misma enumeración.
+    origins={'C&A','CUIDADO CON EL PERRO','MALAYERBA','BODEGA AURRERA','MI BODEGA AURRERA',
+             'BODEGA AURRERA EXPRESS','PROMODA','SUBURBIA','WOOLWORTH','TIENDAS DEL SOL'}
+    if 'TIENDA DE ORIGEN'in found and origins.intersection(found):
+        found.pop('TIENDA DE ORIGEN')
     return list(found.values())
 
 

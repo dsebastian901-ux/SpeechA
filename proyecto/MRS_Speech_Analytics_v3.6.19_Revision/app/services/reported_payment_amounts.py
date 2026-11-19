@@ -108,7 +108,9 @@ def reported_amounts(text, completion):
     # Una pregunta puede quedar lejos de «ya pagué» cuando se comprueba antes
     # la fecha o el comprobante. La pregunta debe referirse al pago realizado.
     question=re.compile(
-        r'\b(?:que cantidad (?:pago|pagaron|cubrio|deposito|aplico(?: pago)?|realizo(?: (?:su|el) pago)?)|'
+        r'\b(?:que cantidad (?:fue lo que pago|pago|pagaron|cubrio|deposito|aplico(?: pago)?|realizo(?: (?:su|el) pago)?)|'
+        r'(?:la )?cantidad (?:de )?que pago|'
+        r'de cuanto dice que lo hizo|'
         r'(?:de|por) que cantidad(?: (?:fue|lo (?:hizo|realizo)|realizo(?: (?:su|el) pago)?))?|'
         r'cual fue la cantidad|sobre que cantidad se realizo)\b[^?!]{0,45}[?!.]\s*')
     for match in question.finditer(source):
@@ -116,7 +118,9 @@ def reported_amounts(text, completion):
         if not previous: continue
         anchor=previous[-1]['text_start']
         answer_end=min(len(source),match.end()+110)
-        add(match.end(),answer_end,'RESPUESTA_IMPORTE_PAGADO',anchor)
+        answer_start=match.end()
+        intro=re.match(r'(?:(?:ah|bueno|pues)[, ]+)?(?:de )?',source[answer_start:answer_end])
+        add(answer_start+intro.end(),answer_end,'RESPUESTA_IMPORTE_PAGADO',anchor)
     # ASR sin signos: «el día de ayer de qué cantidad fue disculpe de dos mil...».
     for match in re.finditer(r'\b(?:de que cantidad fue|que cantidad (?:pago|deposito))\s+(?:disculpe\s+)?(?:de\s+)?',source):
         previous=[u for u in anchors if 0<=match.start()-u['text_start']<=350]

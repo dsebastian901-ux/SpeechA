@@ -35,6 +35,9 @@ def main():
     # INICIAR APLICACIÓN
     # =========================================================
 
+    from app.ui.access_dialogs import authenticate_gui
+    if not authenticate_gui():
+        return
     app = SpeechAnalyticsApplication()
 
     app.run()

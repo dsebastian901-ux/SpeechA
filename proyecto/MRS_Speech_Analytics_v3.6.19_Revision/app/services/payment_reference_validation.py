@@ -29,6 +29,7 @@ STOP=re.compile(r"\b(?:whatsapp|comprobante|saldo|pesos|bancos|establecimientos|
 SEPARATOR=re.compile(r"^(?:[\W_]|\b(?:aja|si|correcto|ok|bien)\b)*$")
 CALLBACK_INTENT=re.compile(r'\b(?:regalar(?:me)?|regresar(?:me)?) (?:una? |la )?llamada\b|'
     r'\b(?:que|para que)\b[^.!?]{0,85}\b(?:se comuniquen?|se pueda comunicar|se contacte|se ponga en contacto|se pueda poner en contacto|se puede poner en contacto|me llame|nos llame|comunicarse|contactarse)\b|'
+    r'\b(?:nos contacte|nos contactara|nos pueda contactar|se pudiera comunicar|se podria comunicar)\b|'
     r'\bnumero (?:de contacto|telefonico|de telefono)\b|'
     r'\b(?:comuniquese|comunicarse|llame|llamar|marque|marcar) al numero\b|'
     r'\bnumero que viene (?:al|el|en el) reverso\b')

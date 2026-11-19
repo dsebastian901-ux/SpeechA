@@ -51,9 +51,15 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         (5,'account_source_validation','ACCOUNT_SOURCE','Datos de cuenta inconsistentes; revisar nombre de salida'),
         (12,'financial_review_validation','FINANCIAL_CONFIRMATION','Confirmación financiera pendiente de revisión'),
         (13,'call_end_validation','CALL_END','Silencio o finalización sin responsable confirmado; revisar audio'),
-        (9,'context_audio_validation','CONTEXT_AUDIO_RISK','Expresión ofensiva en relectura local pendiente de atribución.'),
     ]:
         pending(domain, field, code, message)
+    context_audio=m.get('context_audio_validation')or{}
+    if context_audio.get('review_required'):
+        risks=context_audio.get('risks')or[]
+        if any(r.get('type')=='INFORMACION_PROTEGIDA_SIN_VOZ_CONFIRMADA'for r in risks):
+            add(3,'CONTEXT_AUDIO_PRIVACY_RISK','Información protegida en relectura local sin voz confirmada; verificar el fragmento.','context_audio_validation')
+        if not risks or any(r.get('type')!='INFORMACION_PROTEGIDA_SIN_VOZ_CONFIRMADA'for r in risks):
+            add(9,'CONTEXT_AUDIO_RISK',context_audio.get('reason')or'Expresión ofensiva en relectura local pendiente de atribución.','context_audio_validation')
     additional = m.get('audio_block_evidence_validation') or {}
     if additional.get('review_required'):
         only_profanity = additional.get('valid') and additional.get('risks') and all(
@@ -71,7 +77,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     if (m.get('amount_recovery_validation') or {}).get('review_required'):
         add(12,'RECOVERED_AMOUNT_UNVERIFIED','Importe recuperado por lecturas adicionales de audio; conserva revisión de evidencia','amount_recovery_validation')
     if m.get('quality_contact_type') == 'CONTACTO NO DETERMINADO':
-        add(4,'UNIDENTIFIED_CONTACT','Interlocutor sin identificar; requiere revisión','quality_contact_type')
+        add(4,'UNIDENTIFIED_CONTACT',(m.get('contact_validation')or{}).get('reason')or
+            'Interlocutor sin identificar; requiere revisión','contact_validation')
     if any(isinstance(f,dict) and f.get('invalidates') is True for f in failures):
         add(13,'CONFIRMED_CRITICAL_FAILURE','Incumplimiento crítico confirmado','critical_failures','CRITICAL')
     critical_domains={'PEN003':3,'PEN004':12,'PEN005':12,'PEN012':8}

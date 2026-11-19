@@ -22,7 +22,7 @@ def transfers_only_reported_or_asked(text,segments=()):
         value=normalize(unit['text'])
         for match in re.finditer(r'\b(?:transferencia|transferir|transfiera)\b',value):
             prefix=value[max(0,match.start()-130):match.start()]
-            question=bool(re.search(r'\b(?:lo pago|realizo su pago|hizo su pago|pago por medio de)\b',prefix)
+            question=bool(re.search(r'\b(?:lo pago|realizo su pago|hizo su pago|pago por medio de|(?:usted )?(?:hace|realiza) (?:sus |los )?pagos (?:via|por))\b',prefix)
                 and ('?' in value or '¿' in value))
             reported=bool(re.search(r'\b(?:hice|realice|ya pague|ya deposite|vengo haciendo|vengo realizando|he realizado|fue por|fueron por)\b[^.!?]{0,100}$',prefix))
             mentions.append(question or reported)
@@ -39,6 +39,9 @@ def future_transfer_discussion(text, segments=()):
         for clause in clauses:
             s = normalize(clause)
             for match in pattern.finditer(s):
+                prefix=s[max(0,match.start()-130):match.start()]
+                reported=re.search(r'\b(?:me dijeron|le dije|les dije|yo dije|me indicaron|le comente)\b[^.!?]{0,115}$',prefix)
+                if reported and not re.search(r'\b(?:pero ahora|ahora bien|actualmente|a partir de ahora)\b',prefix[reported.start():]):continue
                 if not re.search(r"\bno\s*$", s[max(0,match.start()-8):match.start()]):
                     return True
     return False

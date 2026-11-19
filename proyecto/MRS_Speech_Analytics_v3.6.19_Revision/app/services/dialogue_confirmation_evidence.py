@@ -9,7 +9,11 @@ BAD=r'\b(?:si pudiera|si tuviera|si consigo|si me da tiempo|a lo mejor|yo creo|n
 
 def future_confirmation_events(text,segments=()):
     source=normalize(text);found=[];unbound_amounts=[]
-    patterns=[('IMPORTE_FINAL_CON_ACEPTACION',re.compile(
+    patterns=[('OFERTA_ACTUAL_CON_IMPORTE_FECHA_Y_RESPUESTA',re.compile(
+        r'\b(?P<offer>(?:puede|podria|requiere|necesita) (?:usted )?(?:realizar|aplicar|hacer|cubrir) (?:un |el |su )?pago '
+        r'(?:de|por) (?P<amount>'+NUMBER+r')[^.!?]{0,65}'+DATE+r'[^.!?]{0,65})[.!?]\s*'
+        r'(?P<answer>(?:(?:si|aja)[, ]+)?(?:asi es|esta bien|de acuerdo|correcto)|si|claro que si)\b')),
+      ('IMPORTE_FINAL_CON_ACEPTACION',re.compile(
         r'\bseria (?:por|de) (?P<amount>'+NUMBER+r')[.!?]\s*'
         r'(?P<answer>(?:aja[, ]+)?esta bien|si[, ]+esta bien|de acuerdo)\b')),
       ('AFIRMACION_PAGO_ACTUAL',re.compile(
@@ -45,6 +49,7 @@ def future_confirmation_events(text,segments=()):
                 verbatim=re.sub(r'\s+',' ',unicodedata.normalize('NFC',str(text)).lower()).strip()
                 if re.search(r'\brealizó\b',verbatim[match.start():match.end()]):continue
             before=source[max(0,match.start()-240):match.start()]
+            if re.search(r'\bno (?:le )?$',before):continue
             if method == 'DECLARACION_FECHA_ACTUAL' and re.search(
                     r'\b(?:no|nunca|jamas|si|cuando|para que|dijo que|usted dice que)\s*$', before):
                 continue

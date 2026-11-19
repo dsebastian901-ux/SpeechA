@@ -4,7 +4,7 @@ from app.services.conversation_evidence import normalize, sentence_evidence, _ro
 from app.services.message_contact_evidence import _outside_question
 
 QUOTED = re.compile(r'\b(?:dice que|dijo que|diga que|repita que|por ejemplo|si fuera|si fuese|si tuviera|no es cierto que)\b[^.!?]{0,55}$')
-RELATION = r'(?:con quien (?:tengo|tuve) (?:el )?gusto[^?!.]{0,80}|que (?:parentesco|parentezco|parantesco|aparentesco|relacion)\b[^?!.]{0,110}|que es (?:usted|de usted)\b[^?!.]{0,90}|(?:usted(?: es)?|es usted|conocid[oa])[^?!.]{0,55}\b(?:familiar|conocid[oa]|amig[oa]|familia)\b[^?!.]{0,60})'
+RELATION = r'(?:(?:lo |la )?conoce(?: a)? (?:usted )?[^?!.]{2,85}|con quien (?:tengo|tuve) (?:el )?gusto[^?!.]{0,80}|que (?:parentesco|parentezco|parantesco|aparentesco|relacion)\b[^?!.]{0,110}|que es (?:usted|de usted)\b[^?!.]{0,90}|(?:usted(?: es)?|es usted|conocid[oa])[^?!.]{0,55}\b(?:familiar|conocid[oa]|amig[oa]|familia)\b[^?!.]{0,60})'
 CONTACT = r'(?:amig[oa]|conocid[oa]|vecin[oa])'
 
 
@@ -27,6 +27,10 @@ def contact_dialogue_evidence(text, segments=()):
         if _recipient(source,text,segments,m.start('answer'),m.end('answer')):
             if re.search(r'\bno (?:soy|es|somos|era)\b',m['answer']):continue
             result['family'].append(_record(source,m,text,segments,'PARENTESCO_EN_RESPUESTA_LOCAL',phrase=m['kin']))
+    who=re.compile(r'\bquien es usted(?:[, ]+perdon)?\?\s*(?P<answer>(?:soy (?:su )?)?familiar)\b')
+    for m in who.finditer(source):
+        if _recipient(source,text,segments,m.start('answer'),m.end('answer')):
+            result['family'].append(_record(source,m,text,segments,'FAMILIAR_DECLARADO_AL_IDENTIFICAR_AL_RECEPTOR',phrase='familiar'))
     # Declaración de parentesco en respuesta personal, también tras preguntar
     # si es mayor de edad. No tomar una conjetura del gestor como respuesta.
     direct_answer=re.compile(r'\b(?P<answer>si[, ]+(?P<kin>'+KIN+r') (?:de (?:el|ella)|suy[oa]))\b')
@@ -157,6 +161,13 @@ def declared_intermediary(text,segments=()):
     prompt=r'(?:me (?:puede |podria |podre |pueden )?comunicar (?:por favor |de favor )?con|me comunico con|seria tan amable de comunicarme (?:por favor )?con|tengo(?: el)? (?:gusto|uso) con|hablo con|se encuentra|busco a|buenos dias[, ]+con|buenas tardes[, ]+con|buen dia[, ]+con)'
     pattern=re.compile(r'\b'+prompt+r'\s+(?P<identity>[^?!.]{2,105}?)[?.]\s*(?P<answer>(?:ah[, ]+|este[, ]+|no[, ]+){0,2}'
         r'(?:(?:el|ella) )?(?:no se encuentra(?:n)?|no esta(?: aqui| en casa)?|no ha llegado|esta trabajando|salio|se le olvido (?:el |su )?telefono))\b')
+    confirmed_absence=re.compile(r'\b(?P<question>no (?:esta|se encuentra)(?: aqui| en casa| en este momento)?)\?\s*(?P<answer>si|correcto|asi es)\b')
+    for m in confirmed_absence.finditer(source):
+        before=source[max(0,m.start()-200):m.start()]
+        if not re.search(r'\b(?:comunicar con|con el senor|con la senorita|con la senora|se encuentra)\b',before):continue
+        if not _recipient(source,text,segments,m.start('answer'),m.end('answer')):continue
+        if re.search(r'\b(?:soy yo|ella habla|el habla|se lo comunico|ya se lo paso)\b',source[m.end():]):continue
+        return {'confirmed':True,'method':'AUSENCIA_CONFIRMADA_TRAS_BUSQUEDA_NOMINAL','evidence':m.group(),'human_verified':False}
     negative_identity=re.compile(r'\bes usted(?: (?:el|la) titular)?\?\s*(?P<answer>no(?:[, ]+(?:pero )?digame)?)\b')
     for p in (pattern,negative_identity):
         for m in p.finditer(source):

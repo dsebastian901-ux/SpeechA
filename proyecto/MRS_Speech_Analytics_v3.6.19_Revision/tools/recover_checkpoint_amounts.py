@@ -36,4 +36,6 @@ def main():
 
 
 if __name__ == "__main__":
+    from app.services.access_service import require_admin_tool
+    require_admin_tool()
     main()

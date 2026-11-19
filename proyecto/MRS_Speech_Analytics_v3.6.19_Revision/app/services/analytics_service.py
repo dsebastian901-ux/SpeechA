@@ -906,7 +906,7 @@ class AnalyticsService:
 
         # «Confirmo el pago el día 24» es una fecha; no se exige que el
         # interlocutor repita el nombre del mes en cada confirmación.
-        for m in re.finditer(r"\b(?:el dia|para el dia|antes del dia|al dia|antes del)\s+([0-3]?\d)\b(?!\s*[/:-])", normalized):
+        for m in re.finditer(r"\b(?:el dia|para el dia|antes del dia|al dia|antes del|del dia|dia)\s+([0-3]?\d)\b(?!\s*[/:-])", normalized):
             if re.match(r"\s+de\s+(?:"+'|'.join(months)+r")\b", normalized[m.end():]):
                 continue  # La fecha completa ya se evaluó arriba.
             try:
@@ -1258,6 +1258,9 @@ class AnalyticsService:
 
         if death_followup_validation['valid'] and contact_type=='CONTACTO NO DETERMINADO':
             contact_type='TERCERO';third_party=True
+        if contact_type=='CONTACTO NO DETERMINADO':
+            from app.services.contact_evidence_graph import unresolved_contact_details
+            contact_confirmation.update(unresolved_contact_details(text,segments))
         relationship = ""
         if spouse:
             relationship = "ESPOSO/A"
@@ -1456,6 +1459,11 @@ class AnalyticsService:
         recado_callback = recado_callback or bool(recado_assessment.get('directed_messages'))
         from app.services.message_dialogue_evidence import callback_modal_instruction
         recado_callback = recado_callback or bool(callback_modal_instruction(text,segments))
+        from app.services.message_exchange import polite_return_request
+        polite_return=polite_return_request(text,segments)
+        if polite_return:
+            recado_callback=True;recado_transmitted=True
+            recado_assessment['polite_return_request']=polite_return
         from app.services.recado_receipt_resolution import expanded_return_instruction
         expanded_return=expanded_return_instruction(text,segments)
         recado_callback=recado_callback or bool(expanded_return)
@@ -1484,6 +1492,10 @@ class AnalyticsService:
             recado_assessment['directed_notification']=directed_notice
         from app.services.message_workflow import workflow_validation
         recovered_callback=(context.get('_context_audio_validation')or{})
+        if recovered_callback.get('valid')and recovered_callback.get('message_receipt')and not message_refusal_validation.get('confirmed'):
+            recado_assessment['acceptance'].append(recovered_callback['message_receipt'])
+            recado_recibido_explicito=True
+
         from app.services.message_dialogue_evidence import negated_return_only
         if (recovered_callback.get('valid')and recovered_callback.get('callback')
                 and recado_assessment['acceptance'] and (recado_transmitted or leaves_message)
@@ -1967,7 +1979,11 @@ class AnalyticsService:
                 promise_date_text=accepted_detail['text']
                 promise_date_evidence=commitment_confirmation['evidence']
             for event in sorted(commitment_confirmation.get('contextual_confirmation_events',[]),key=lambda v:v['position'],reverse=True):
-                detail=cls._extract_payment_promise_date_details('Confirmacion de pago: '+event['evidence'],call_date)
+                detail=({'date':parsed_call_date,'text':'respuesta de pago inmediato'} if event.get('immediate') else
+                    cls._extract_payment_promise_date_details('Confirmacion de pago: '+event['evidence'],call_date))
+                if event.get('day_of_month') and parsed_call_date:
+                    try:detail={'date':date(parsed_call_date.year,parsed_call_date.month,event['day_of_month']),'text':event['day_text']}
+                    except ValueError:detail={'date':None,'text':''}
                 if detail['date'] is not None:
                     promise_date=detail['date'];promise_date_text=detail['text'];promise_date_evidence=event['evidence']
                     break
@@ -1981,7 +1997,10 @@ class AnalyticsService:
             promise_date and promise_date_evidence and (promise_is_future or not prior_cue_in_promise)
             and commitment_confirmation["accepted"]
         )
-        payment_confirmation_case = bool(payment_already_made and not explicit_new_promise)
+        from app.services.payment_lifecycle import payment_decision_events, active_paid_followup
+        payment_lifecycle_events=payment_decision_events(text,segments)
+        payment_confirmation_case = bool(payment_already_made and not explicit_new_promise
+            and active_paid_followup(payment_lifecycle_events,completed_payment_confirmation))
         # Solo se elimina la fecha cuando la llamada es exclusivamente confirmación
         # de pago previo. Si después existe convenio/promesa explícita, se conserva.
         if payment_confirmation_case:
@@ -2246,7 +2265,7 @@ class AnalyticsService:
             "tonta", "tonto", "idiota", "estupida", "estupido",
             "pendeja", "pendejo", "chingando", "chingada", "chingado", "chingarazo", "chingadazo",
             "pinche vieja", "pinche viejo", "pinche", "cabron", "cabrona",
-            "mierda", "culero", "culera", "hijo de puta", "hija de puta", "vete a la chingada",
+            "mierda", "verga", "no mames", "no mamen", "culero", "culera", "hijo de puta", "hija de puta", "vete a la chingada",
             "puta", "puto", "chingar", "chinga tu madre", "jodete", "vete al carajo",
             "que poca madre",
             "quiero acostarme contigo", "quiero tener sexo contigo", "quiero cogerte",
@@ -2462,13 +2481,14 @@ class AnalyticsService:
             e['text'] for e in receipt_assessment['request_evidence'] + receipt_assessment['reported_sent_evidence'])) if requests_receipt_whatsapp else []
 
         authorized_payment_places = {
+            "TIENDA DE ORIGEN": ["en tienda", "en la tienda", "en su tienda", "en la misma tienda", "su misma tienda"],
             "FARMACIAS DEL AHORRO": ["farmacias del ahorro", "farmacia del ahorro", "farmacias de la oro", "farmacia de la oro", "farmacias de la ahorro", "farmacia de la ahorro", "farmacia de la horro", "farmacias de la horro", "farmacia de la orro", "farmacias de la orro", "formacia de la oro", "formacias de la oro"],
             "7-ELEVEN": ["7 eleven", "seven eleven", "7-11", "7/11", "7 y 11", "seven y leven", "7 11", "salvenileven", "sevenileven"],
             "CHEDRAUI": ["chedraui", "che dragui", "chedragui", "che draui", "chedrawi", "chedrague", "chedraguy"],
             "WOOLWORTH": ["woolworth", "bulbor", "bulbo", "bulvor", "hulbor", "hulvor", "ulbor", "wulbor", "wulvor", "wulworth", "bulboard"],
             "TIENDAS DEL SOL": ["tiendas del sol", "tienda del sol", "del sol"],
             "CIRCLE K": ["circle k", "circulo k", "circulo que", "circulquei", "circuloquei", "circuluka", "circulcay"],
-            "KIOSKO": ["kiosko", "kiosco", "kyosko", "quiosco", "quiosko", "qiosco"],
+            "KIOSKO": ["kiosko", "kiosco", "kiosk", "kyosko", "quiosco", "quiosko", "qiosco"],
             "TIENDAS NETO": ["tiendas neto", "tienda neto", "neto"],
             "ABARREY": ["abarrey", "abarray"],
             "7/24 MIX": ["7 24 mix", "7/24 mix", "724 mix"],
@@ -2920,6 +2940,14 @@ class AnalyticsService:
         requires_new_negotiation_validation = (
             is_convenio and not payment_confirmation_case and not pending_decision
         )
+        # En una decisión pendiente acreditada no se exige el comprobante de
+        # un convenio nuevo. Conservar la frase dudosa como observación, sin
+        # certificar que se pidió ni omitir los controles del pago reportado.
+        receipt_required_for_management=not bool(contact_type=='TITULAR' and pending_decision
+            and not payment_confirmation_case and not requires_new_negotiation_validation)
+        convenio_payment_validation['receipt_required_for_management']=receipt_required_for_management
+        convenio_payment_validation['receipt_request_review_required']=bool(
+            receipt_assessment['review_required']and receipt_required_for_management)
 
         # v3.5.8 · trabajo de cobranza: si se contacta al TITULAR debe existir
         # intento real de negociación, salvo reporte de pago ya realizado que
@@ -3869,7 +3897,7 @@ class AnalyticsService:
                 'method':accepted_schedule['method'],'evidence':[{'text':accepted_schedule['evidence']}],
                 'conflicts':[],'review_required':False}
         accepted_mentions = monetary_mentions(norm(commitment_confirmation["evidence"])) if confirms_commitment else []
-        accepted_amounts = {float(m[2]) for m in accepted_mentions}
+        accepted_amounts = (set(accepted_schedule['amounts']) if accepted_schedule['confirmed'] else {float(m[2]) for m in accepted_mentions})
         if plan["amounts"] and accepted_amounts and not accepted_amounts.issubset(set(plan["amounts"])):
             plan["review_required"] = True
             plan["conflicts"].append({"accepted_amounts": sorted(accepted_amounts), "plan_amounts": plan["amounts"]})
@@ -4124,6 +4152,7 @@ class AnalyticsService:
             "prohibited_visit_wording": prohibited_visit_wording,
             "payment_registration_detected": payment_registration,
             "payment_confirmation_case": payment_confirmation_case,
+            "payment_lifecycle_events": payment_lifecycle_events,
             "payment_followup_case": payment_followup_case,
             "prior_payment_with_current_decline": prior_payment_with_current_decline,
             "prior_payment_with_current_condition": prior_payment_with_current_condition,
@@ -4209,7 +4238,19 @@ class AnalyticsService:
             negotiation_validation["valid"] = False
             negotiation_validation["reasons"].append(amount_reason)
 
-        if (reported_amount_pending and not payment_followup_case) or prior_payment_binding["review_required"]:
+        from app.services.current_payment_amounts import instruction_amount_conflicts
+        instruction_conflicts=(instruction_amount_conflicts(current_amount_events)
+            if requires_new_negotiation_validation and not multi_payment_detected else [])
+        negotiation_validation['payment_instruction_amount_conflicts']=instruction_conflicts
+        if instruction_conflicts:
+            negotiation_validation['valid']=False
+            negotiation_validation['review_required']=True
+            conflict=instruction_conflicts[-1]
+            negotiation_validation['reasons'].append(
+                f"El importe que se indica ingresar ({conflict['instruction_amount']:g}) difiere del aceptado ({conflict['accepted_amount']:g}); confirmar la corrección en audio.")
+
+        if ((reported_amount_pending and not payment_followup_case)
+                or (payment_confirmation_case and prior_payment_binding["review_required"])):
             negotiation_validation["valid"] = False
             negotiation_validation["review_required"] = True
             negotiation_validation["reasons"].append(prior_payment_binding["reason"] or
@@ -4440,7 +4481,7 @@ class AnalyticsService:
             or warning_review.get('review_required',False)
             or abandonment_review
             or callback_proposed
-            or receipt_assessment["review_required"]
+            or (receipt_assessment["review_required"]and receipt_required_for_management)
             or contact_type == "CONTACTO NO DETERMINADO"
             or missing_collection_attempt
             or not status_validation["valid"]

@@ -11,7 +11,7 @@ from test_operational_script_r39 import analyze
     ('El pago lo puede hacer en una tienda del sol, chedragui, farmacias de la Oro, kiosco.',
      {'TIENDAS DEL SOL', 'CHEDRAUI', 'FARMACIAS DEL AHORRO', 'KIOSKO'}),
     ('Lo puede ser el pago directamente en tienda o chedragui, farmacias de la Oro, kiosco.',
-     {'CHEDRAUI', 'FARMACIAS DEL AHORRO', 'KIOSKO'}),
+     {'TIENDA DE ORIGEN', 'CHEDRAUI', 'FARMACIAS DEL AHORRO', 'KIOSKO'}),
     ('Lo puede aplicar en alguna tienda de conveniencia. Normalmente las tiendas de '
      'conveniencia son de 7-11, kiosco, farmacias de la Oro, Abarray.',
      {'7-ELEVEN', 'KIOSKO', 'FARMACIAS DEL AHORRO', 'ABARREY'}),
@@ -51,7 +51,7 @@ from test_operational_script_r39 import analyze
      {'FARMACIAS DEL AHORRO', 'FARMACIAS YZA', 'FARMACIAS ROMA'}),
     ('¿Algún familiar le ayuda a hacer su pago? ¿Lo puede realizar ahí en tienda? '
      '¿O también en un 7-11, farmacias de la Oro o CIRCULO-K?',
-     {'7-ELEVEN', 'FARMACIAS DEL AHORRO', 'CIRCLE K'}),
+     {'TIENDA DE ORIGEN','7-ELEVEN', 'FARMACIAS DEL AHORRO', 'CIRCLE K'}),
     ('¿Dónde para realizar su pago? No sé si vaya a sucursal. Puede ser en tiendas '
      '3B, tiendas Neto, farmacias del ahorro, 7-eleven.',
      {'TIENDAS 3B', 'TIENDAS NETO', 'FARMACIAS DEL AHORRO', '7-ELEVEN'}),

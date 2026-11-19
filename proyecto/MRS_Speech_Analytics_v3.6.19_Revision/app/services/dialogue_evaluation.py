@@ -30,7 +30,7 @@ PENDING = re.compile(
     r'(?:voy a|tengo que|necesito) (?:ver|checar|revisar) (?:si|cuanto|con cuanto)\b|'
     r'(?:hago|hacer|sacar|revisar) mis cuentas|'
     r'si (?:arreglo|resuelvo|consigo) (?:todo|el dinero|esto)|'
-    r'no me alcanza|(?:estoy|estaba) esperando (?:a que )?[^.!?]{0,65}\b(?:dinero|deposito|quincena)\b|'
+    r'no puedo (?:hacer|generar|formalizar) (?:un |algun )?convenio|no me alcanza|(?:estoy|estaba) esperando (?:a que )?[^.!?]{0,65}\b(?:dinero|deposito|quincena)\b|'
     r'(?:(?:el dia de )?hoy|ahorita)[, ]+no|'
     r'no me niego a pagar[^.!?]{0,110}(?:plazos|seman[aa]|pagos)|'
     r'(?:primero|antes de pagar)[^.!?]{0,90}(?:consultar|revisar|aclarar)|'
@@ -112,6 +112,24 @@ def scan_dialogue(text, segments=()):
                 'evidence':reply['evidence'],'phrase':reply['reply'],'speaker_role':reply['speaker_role'],
                 'start':None,'finish':None,'source':'ORIGINAL_TRANSCRIPT_LOCAL_PAYMENT_REPLY',
                 'human_verified':False,'id':f"{kind}:{reply['position']}:{reply['end']}"})
+    from app.services.payment_lifecycle import payment_decision_events
+    for event in payment_decision_events(text,segments):
+        if event['accepted']:continue
+        events.append({'kind':'PENDING_DECISION','position':event['position'],'end':event['end'],
+            'evidence':event['evidence'],'phrase':event['decision_phrase'],
+            'speaker_role':event['speaker_role'],'start':None,'finish':None,
+            'source':'ORIGINAL_TRANSCRIPT_PAYMENT_LIFECYCLE','human_verified':False,
+            'id':f"PENDING_DECISION:{event['position']}:{event['end']}"})
+    from app.services.payment_intent_frames import payment_frames
+    for frame in payment_frames(text,segments):
+        kinds=[]
+        if frame['own_financial_response']:kinds.append('OWN_FINANCES')
+        if not frame['history']and(frame['declined']or frame['conditional']):kinds.append('PENDING_DECISION')
+        for kind in kinds:
+            events.append({'kind':kind,'position':frame['position'],'end':frame['end'],
+                'evidence':frame['evidence'],'phrase':frame['reply'],'speaker_role':frame['speaker_role'],
+                'start':None,'finish':None,'source':'ORIGINAL_TRANSCRIPT_PAYMENT_OBJECT_FRAME',
+                'human_verified':False,'id':f"{kind}:{frame['position']}:{frame['end']}"})
     return {'source_sha256':hashlib.sha256(str(text).encode('utf-8')).hexdigest(),
             'events':events, 'units':units, 'human_verified':False}
 

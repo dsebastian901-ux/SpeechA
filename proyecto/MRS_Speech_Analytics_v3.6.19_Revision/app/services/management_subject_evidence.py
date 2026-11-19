@@ -27,9 +27,9 @@ def management_subject(text,segments=()):
             r'(?:(?:me|le|lo|la|a usted) )?(?:dejo|deja) '
             r'(?:este|el|su|un) numero (?:de usted )?como (?:numero de )?(?:referencia|contacto)\b')),
         ('OBJETO_EXPLICITO_DE_LA_LLAMADA',re.compile(
-            r'\b(?:el (?:motivo|fin) de (?:la|mi|esta) llamada es )'
-            r'(?:simplemente )?(?:confirmar(?:se)?|verificar) si (?:usted )?'
-            r'(?:conoce a|se encuentra)\s+(?P<person>(?:'+HONORIFIC+r')?'+NAME+r')[.?]')),
+            r'\b(?:(?:(?:el|al) )?(?:motivo|fin) de (?:la|mi|esta) llamada es |es para )'
+            r'(?:simplemente )?(?:confirmar(?:se)?|confirmase|verificar) si (?:usted )?'
+            r'(?:conoce a|se encuentran?)\s+(?P<person>(?:'+HONORIFIC+r')?'+NAME+r')[.?]')),
         ('PERSONA_QUE_DEJO_REFERENCIA',re.compile(
             r'\b(?:(?:el|la) (?:senor|senora|senorita) |que )'
             r'(?P<person>'+NAME+r')\s+(?:dejo|deja) (?:usted |a usted )?'

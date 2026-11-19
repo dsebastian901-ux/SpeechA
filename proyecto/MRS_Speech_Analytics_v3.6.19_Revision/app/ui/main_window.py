@@ -34,6 +34,8 @@ class MainWindow(ctk.CTk):
     """
 
     def __init__(self):
+        from app.services.access_service import require
+        require('batch')
         super().__init__()
 
         self.configure_window()

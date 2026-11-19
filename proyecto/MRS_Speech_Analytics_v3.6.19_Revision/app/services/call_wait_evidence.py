@@ -9,7 +9,13 @@ WAIT_LIMIT_SECONDS = 65.0  # Aclaración operativa del usuario, 6/nov/2026.
 CUSTOMER_ROLES = {'TITULAR', 'TERCERO', 'INTERLOCUTOR'}
 WAIT_REQUEST = re.compile(
     r'\b(?:un momento|un momentito|espere (?:un momento|en (?:la )?linea)|'
-    r'permanezca en (?:la )?linea|permitame (?:verificar|validar|revisar|consultar))\b')
+    r'permanezca en (?:la )?linea|permitame (?:verificar|validar|revisar|consultar)|'
+    r'no (?:me )?cuelg(?:a|ue)(?: la llamada)?[, ]+para que le (?:de|brinde|proporcione) (?:la )?informacion)\b')
+RESUMPTION = re.compile(
+    r'\b(?:gracias por (?:esperar|su espera|mantenerse)|sigo con usted|ya (?:regrese|volvi|estoy de vuelta)|'
+    r'continuamos|le (?:comento|confirmo|indico|informo|explico)|verificando (?:el |su )?sistema|'
+    r'(?:puede|podria|requiere|necesita|tiene que) (?:usted )?(?:realizar|aplicar|hacer|cubrir|enviar)|'
+    r'(?:su|el) (?:pago|importe|saldo) (?:es|seria|queda|se)|su (?:cuenta|tarjeta) (?:registra|presenta|se encuentra))\b')
 CHECKING_PROMPT = re.compile(
     r'(?:(?:bueno|hola|oiga|si|aja|ok|esta bien|aqui estoy|me escucha|sigue ahi|'
     r'me oye|alo|sigo aqui|aqui sigo|aqui espero|de acuerdo|gracias|por favor)[, .!?¿¡]*)+')
@@ -143,8 +149,8 @@ def assess_call_wait(text, segments=(), duration_seconds=None):
             # Un «¿bueno?, ¿me escucha?» del cliente no acredita regreso del
             # gestor. Con voz desconocida solo se toma una intervención plena.
             resumed = (unit['speaker_role'] == 'GESTOR' or
-                       (unit['speaker_role'] not in CUSTOMER_ROLES and
-                        not CHECKING_PROMPT.fullmatch(value.strip('¿¡?! .,'))))
+                       (unit['speaker_role'] not in CUSTOMER_ROLES and RESUMPTION.search(value)
+                        and not re.search(r'\b(?:diga que|dice que|dijo que|repita que|por ejemplo)\b',value)))
             if resumed or _closing(value, allow_brief=True):
                 record(pending['end'], unit['start'], 'ESPERA_ANUNCIADA_SIN_RETOMA', pending['text'], unit['text'])
                 pending = None
@@ -152,7 +158,8 @@ def assess_call_wait(text, segments=(), duration_seconds=None):
         if request and unit['speaker_role'] not in CUSTOMER_ROLES:
             prefix = value[max(0, request.start()-60):request.start()]
             if not re.search(r'\b(?:no|nunca|dijo que|me dijeron que|diga que|si dice)\s*$', prefix) and not _closing(value, allow_brief=True):
-                pending = unit
+                if pending is None or unit['speaker_role']=='GESTOR':
+                    pending = unit
     if pending and duration is not None:
         record(pending['end'], duration, 'ESPERA_ANUNCIADA_HASTA_EL_FINAL', pending['text'])
 

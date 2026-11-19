@@ -11,8 +11,8 @@ from app.services.conversation_evidence import holder_confirmation, payment_comm
     "¿Me puede comunicar, por favor, con Persona de Ejemplo? Sí, con ella habla.",
     "Estoy buscando a Persona de Ejemplo. Sí, con ella habla.",
     "¿Es usted el caballero Persona de Ejemplo? Sí, dígame.",
-    "¿Me puede comunicar con Persona de Ejemplo? Sí, qué tal. Buen día. Mucho gusto.",
-    "¿Me puede comunicar con Persona de Ejemplo? Sí, qué tal. Bueno día. Mucho gusto.",
+    "¿Me puede comunicar con Persona de Ejemplo? Sí, qué tal. Buen día. Mucho gusto. Mi tarjeta no la he usado y quiero revisar mi pago.",
+    "¿Me puede comunicar con Persona de Ejemplo? Sí, qué tal. Bueno día. Mucho gusto. Mi tarjeta no la he usado y quiero revisar mi pago.",
 ])
 def test_natural_identification_variants(opening):
     assert holder_confirmation(opening)["confirmed"]

@@ -300,7 +300,11 @@ def test_windows_entry_point_performs_reanalysis_copy_and_final_account_report(t
     i=item();p=tmp_path/'checkpoint.json';p.write_text(json.dumps({'items':[i]}),encoding='utf-8');before=p.read_bytes()
     audio=tmp_path/'audio';audio.mkdir();(audio/'source.ogg').write_bytes(b'OggS command bytes')
     app=Path(__file__).resolve().parents[1]
-    result=subprocess.run([sys.executable,str(app/'tools/reanalyze_checkpoint.py'),
+    bootstrap=("from app.services.access_service import AccessStore,activate; "
+        "from pathlib import Path; import sys,runpy; "
+        "a=AccessStore(Path(sys.argv.pop(1))); a.initialize('Contraseña sintética 123'); activate(a); "
+        "tool=sys.argv.pop(1); sys.argv[0]=tool; runpy.run_path(tool,run_name='__main__')")
+    result=subprocess.run([sys.executable,'-c',bootstrap,str(tmp_path/'auth'),str(app/'tools/reanalyze_checkpoint.py'),
         '--checkpoint',str(p),'--output-dir',str(tmp_path/'analysis'),
         '--copy-corrected-labels','--audio-dir',str(audio),'--labels-output-dir',str(tmp_path/'copies')],
         capture_output=True,text=True,cwd=app)

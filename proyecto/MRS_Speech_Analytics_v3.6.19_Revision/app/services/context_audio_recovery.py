@@ -67,11 +67,15 @@ def needs_recovery(metadata):
     wanted=set()
     if metadata.get('quality_contact_type')=='CONTACTO NO DETERMINADO':wanted.add('holder')
     workflow=metadata.get('message_workflow_validation')or{}
-    if (workflow.get('directed_body')and workflow.get('recipient_accepted')
+    if (metadata.get('quality_contact_type')!='TITULAR'and workflow.get('directed_body')and workflow.get('recipient_accepted')
             and not workflow.get('callback_available')and not workflow.get('final_refusal')):
         wanted.add('callback')
     if ((metadata.get('message_delivery_validation')or{}).get('review_required')
             and metadata.get('quality_contact_type')!='TITULAR'):
+        wanted.add('callback')
+    if (str(metadata.get('quality_contact_type')or'').startswith('TERCERO')
+            and workflow.get('directed_body') and not workflow.get('callback_available')
+            and not workflow.get('final_refusal')):
         wanted.add('callback')
     return wanted
 
@@ -122,7 +126,7 @@ def collect(audio_path,data,relation,metadata,read_window,model):
 
 def validate(record,data,relation,audio_path):
     result={'present':record is not None,'valid':False,'holder':False,'callback':None,
-            'evidence':[],'risks':[],'review_required':False,
+            'evidence':[],'risks':[],'review_required':False,'message_receipt':None,
             'human_verified':False,'method':'LOCAL_CONTEXT_ASR_CONSENSUS'}
     if record is None:return result
     try:
@@ -161,7 +165,8 @@ def validate(record,data,relation,audio_path):
                 from app.services.context_rules import unknown_debtor_statement
                 from app.services.conversation_evidence import assess_recado
                 raw_segments=data.get('segmentos')or[]
-                if (COUNTER.search(source)or proxy_account_evidence(data.get('texto'),raw_segments)
+                from app.services.contact_evidence_graph import nonholder_context
+                if (nonholder_context(data.get('texto'),raw_segments)or COUNTER.search(source)or proxy_account_evidence(data.get('texto'),raw_segments)
                     or declared_intermediary(data.get('texto'),raw_segments)['confirmed']
                     or unknown_debtor_statement(data.get('texto'),raw_segments)
                     or assess_recado(data.get('texto'),raw_segments)['family']):continue
@@ -188,12 +193,28 @@ def validate(record,data,relation,audio_path):
                     primary_numbers={p['digits']for p in callback_numbers(data.get('texto')or'')}
                     if primary_numbers and not(numbers[0]&primary_numbers):continue
                     result['callback']=next(iter(numbers[0]))
+                    from app.services.conversation_evidence import assess_recado,sensitive_financial_matches
+                    from app.services.definitive_rejection import explicit_message_refusal
+                    original_receipt=assess_recado(data.get('texto')or'',data.get('segmentos')or[])
+                    refused=explicit_message_refusal(data.get('texto')or'',data.get('segmentos')or[],original_receipt['acceptance'])
+                    receipts=[assess_recado(a['text'])for a in attempts]
+                    if not refused['confirmed']and all(r['acceptance']and not r['refusal']for r in receipts):
+                        result['message_receipt']={'text':' / '.join(a['text']for a in attempts),
+                            'source':'LOCAL_AUDIO_CONTEXT','method':'RECEPCION_Y_CONTACTO_CORROBORADOS_EN_DOS_LECTURAS',
+                            'speaker_role':'NO DETERMINADO','human_verified':False,
+                            'readings':[{'text':a['text'],'start':a['start'],'end':a['end']}for a in attempts]}
+                    if not result['holder']:
+                        for a in attempts:
+                            for candidate in sensitive_financial_matches(a['text']):
+                                result['risks'].append({'type':'INFORMACION_PROTEGIDA_SIN_VOZ_CONFIRMADA',
+                                    'text':a['text'],'phrase':candidate.group(),'start':a['start'],'end':a['end'],
+                                    'human_verified':False})
                     result['evidence'].append({'purpose':'callback','texts':[a['text']for a in attempts],
                         'method':'CALLBACK_MATCH_IN_TWO_LOCAL_READINGS','source':'LOCAL_AUDIO_CONTEXT',
                         'human_verified':False})
         if result['risks']:
             result.update(review_required=True,
-                reason='La relectura local detectó lenguaje ofensivo sin voz confirmada; verificar el fragmento.')
+                reason='La relectura local detectó lenguaje ofensivo o información protegida sin voz confirmada; verificar el fragmento.')
         elif not result['holder'] and not result['callback']:
             result['reason']='Las relecturas no aportaron coincidencia suficiente para resolver la duda; se conserva el dictamen del texto original.'
     except (ValueError,TypeError,KeyError,AttributeError,OSError):

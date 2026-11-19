@@ -12,7 +12,7 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
     pattern=re.compile(r'\b(?:no (?:quiero|puedo|voy a) (?:recibir|tomar|pasar|dar|transmitir) (?:el |un |su )?(?:recado|mensaje)|'
                        r'no (?:le |se lo )?(?:voy a|puedo|quiero) (?:pasar|dar|transmitir) (?:el |un |su )?(?:recado|mensaje)|'
                        r'no soy (?:su )?mensajer[oa]|no me interesa recibir (?:el |su )?recado|'
-                       r'no tengo (?:donde|con que) (?:anotar(?:lo)?|apuntar(?:lo)?)|no puedo (?:anotar|apuntar|anotarlo|apuntarlo)|'
+                       r'no tengo (?:donde|con que) (?:anotar(?:lo)?|apuntar(?:lo)?)|no puedo (?:anotar|apuntar|anotarlo|apuntarlo|notarlo)|'
                        r'no traigo (?:aqui )?(?:en que|con que|como) (?:anotar(?:lo)?|apuntar(?:lo)?))\b')
     from app.services.declarative_evidence import declarative_units
     for unit in declarative_units(text,segments):
@@ -39,6 +39,17 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
         events.append({'text':match.group(),'phrase':match['answer'],'position':match.start('answer'),
             'speaker_role':_role_at(text,segments,match.start('answer')),'human_verified':False,
             'method':'NEGATIVA_DIRECTA_A_OFERTA_POSITIVA_DE_RECADO'})
+    # Rechazo contextual del contacto ofrecido, sin inventar una omisión de
+    # un texto incompleto. No se usa el mero silencio ni el agradecimiento.
+    terminal=re.compile(r'\b(?P<answer>(?:no[, ]+){1,3}asi dejelo|entonces no me lo deje|mejor no me deje (?:el |un )?(?:recado|mensaje))\b')
+    for m in terminal.finditer(source):
+        before=source[max(0,m.start()-500):m.start()]
+        if not re.search(r'\b(?:recado|mensaje|numero telefonico|le dejo el numero)\b',before):continue
+        if _role_at(text,segments,m.start())in{'GESTOR','TITULAR'}:continue
+        if re.search(r'\b(?:dice que|dijo que|diga que|repita que|si|por ejemplo)\b[^.!?]{0,45}$',before[-100:]):continue
+        if re.match(r'\s*\?',source[m.end():]):continue
+        events.append({'text':source[max(0,m.start()-180):m.end()],'phrase':m['answer'],
+            'position':m.start(),'method':'RECHAZO_FINAL_DEL_CONTACTO_O_MENSAJE_OFRECIDO','human_verified':False})
     none={'confirmed':False,'evidence':[],'reason':''}
     if not events:
         # Imposibilidad de anotar seguida de cierre para llamar después. Una
@@ -83,6 +94,21 @@ def definitive_rejection(metadata,findings,duration_seconds):
     if any(f['severity']=='CRITICAL'for f in blocking):return None
     n=metadata.get('negotiation_validation')or{}
     policy=n.get('mora_payment_policy')or{}
+    # Importe aceptado y cotejado inválido: rechazo, no una extracción dudosa.
+    # Las dudas independientes permanecen como alertas del rechazo.
+    if (metadata.get('quality_contact_type')=='TITULAR'
+            and n.get('is_negotiation') and n.get('valid')is False
+            and n.get('amount_invalid') and n.get('hard_invalid')
+            and not n.get('review_required') and not n.get('datos_saldo_inconsistentes') and not n.get('monto_normalizado_asr')
+            and n.get('amount_confirmed') and n.get('payment_date_confirmed')
+            and n.get('commitment_confirmed') and not n.get('date_year_rollover_review')
+            and not n.get('payment_confirmation_case') and not n.get('multipago_detectado')
+            and n.get('evidencia_monto') and (n.get('commitment_evidence')or{}).get('accepted')
+            and not(n.get('installment_validation')or{}).get('review_required')):
+        return {'rule_group':12,'code':'CONFIRMED_INVALID_PAYMENT_AMOUNT',
+            'severity':'CONFIRMED_NONCRITICAL','source_field':'negotiation_validation',
+            'resolves_codes':['NEGOTIATION_INVALID_OR_UNCERTAIN'],
+            'reasons':[n.get('motivo_validacion_monto')or'El importe del compromiso confirmado incumple la política financiera.']}
     if (metadata.get('quality_contact_type')=='TITULAR'
             and n.get('financial_validation_applicable') and n.get('valid')is False
             and not n.get('review_required')

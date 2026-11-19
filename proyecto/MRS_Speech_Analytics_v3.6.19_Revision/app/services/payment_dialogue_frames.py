@@ -7,13 +7,14 @@ import re
 from app.services.conversation_evidence import normalize,_role_at
 
 DATE=r'(?:hoy|manana|(?:el |este |proximo )?(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)|(?:el )?dia \d{1,2})'
-OTHER_TOPIC=re.compile(r'\b(?:comprobante|ticket|recibo|whatsapp|telefono|numero|folio|anotar|apuntar|correo)\b')
+OTHER_TOPIC=re.compile(r'\b(?:comprobante|ticket|recibo|whatsapp|telefono|numero|folio|anotar|apuntar|correo|visita|diligencia|domicilio|cita|consulta medica)\b')
 FINANCIAL=re.compile(r'\b(?:pago|pagar|depositar|deposito|abonar|abono|monto|cantidad|pesos|convenio)\b')
 QUOTED=re.compile(r'\b(?:dice que|dijo que|diga que|usted dijo|usted dice|repita|por ejemplo|supongamos)\b[^.!?]{0,90}$')
 CONDITION=re.compile(r'\b(?:(?:yo )?creo|a lo mejor|tal vez|posiblemente|si consigo|si puedo|si arreglo|si resuelvo|si me (?:dan|prestan|depositan|liberan)|hare lo posible|voy a (?:ver|tratar)|no (?:puedo|podria|podre|sabria) (?:confirmar|prometer|decir|pagar|depositar|abonar)|no se (?:si|cuanto|cuando))\b')
 
 
 def payment_replies(text,segments=()):
+    from app.services.payment_intent_frames import negative_payment_question
     source=normalize(text);found=[];previous=0
     for end in re.finditer(r'\?',source):
         opening=source.rfind('¿',previous,end.start())
@@ -24,7 +25,9 @@ def payment_replies(text,segments=()):
         q_start=end.start()+1-len(question)
         previous=end.end()
         if len(question)>260:continue
-        if not re.search(r'\b(?:podemos|puedo|puede|puedes|podria|podrias|podriamos|confirm|contari|contamos|tendra|tendras|aplicaria|realizaria|pagaria|seria|lo realizara)\w*\b',question):continue
+        base_question=bool(re.search(r'\b(?:podemos|puedo|puede|puedes|podria|podrias|podriamos|confirm|contari|contamos|tendra|tendras|aplicaria|realizaria|pagaria|seria|lo realizara)\w*\b',question))
+        date_question=bool(DATE and re.search(DATE,question)and re.search(r'\b(?:indiqueme|indica|realiza|aplica)\w*\b',question))
+        if not(base_question or date_question):continue
         context=source[max(0,q_start-220):q_start]
         explicit=bool(FINANCIAL.search(question))
         temporal=bool(re.search(DATE,question))
@@ -34,7 +37,7 @@ def payment_replies(text,segments=()):
             topics=list(re.finditer(r'\b(?:pago|pagar|deposito|cantidad|monto|pesos|comprobante|ticket|recibo|whatsapp|telefono|numero|folio)\b',context))
             if not topics or OTHER_TOPIC.fullmatch(topics[-1].group()):continue
         if re.search(r'\b(?:ayer|realizado|efectuado|recibido|reportado|hizo|pudo realizar|ya realizo|ya pago)\b',question):continue
-        if re.match(r'no\b',question)or QUOTED.search(context[-100:]):continue
+        if re.match(r'no\b',question)or negative_payment_question(question)or QUOTED.search(context[-100:]):continue
         tail=source[end.end():end.end()+200]
         label=re.match(r'\s*(?:(?:titular|cliente|interlocutor|gestor|tercero|familiar)\s*:\s*)?',tail)
         start=end.end()+label.end();tail=source[start:start+180]
@@ -51,7 +54,7 @@ def payment_replies(text,segments=()):
             r'(?:seria|lo (?:realizo|aplico)|(?:el pago )?queda(?:ria)?) (?:el dia de |el dia |para )?'+DATE+r'\b)',reply))
         # La respuesta «mañana a las diez» a una alternativa explícita de
         # fecha se refiere al pago, sin exigir «sí, pagaré» literalmente.
-        date_prefix=r'(?:(?:seria|para) )?(?:el dia de |el dia )?'
+        date_prefix=r'(?:(?:seria|para|va a ser|lo estaria realizando|lo estaria haciendo|lo realizo) )?(?:el dia de |el dia )?'
         if re.match(date_prefix+DATE+r'[, ]+no\b',reply):declined=True
         if temporal and not(conditional or declined)and re.match(date_prefix+DATE+r'\b',reply):accepted=True
         if not(accepted or declined or conditional):continue

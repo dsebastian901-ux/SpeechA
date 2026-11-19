@@ -80,4 +80,7 @@ def main():
     return 0
 
 
-if __name__=='__main__':raise SystemExit(main())
+if __name__=='__main__':
+    from app.services.access_service import require_admin_tool
+    require_admin_tool()
+    raise SystemExit(main())

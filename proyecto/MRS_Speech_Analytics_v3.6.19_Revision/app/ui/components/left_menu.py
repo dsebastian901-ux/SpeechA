@@ -1,6 +1,7 @@
 from __future__ import annotations
 import customtkinter as ctk
 from app.ui.themes import Theme
+from app.services.access_service import allowed
 
 class LeftMenu(ctk.CTkFrame):
     def __init__(self,parent,on_home=None,on_new_project=None,on_open_project=None,on_audio=None,
@@ -25,7 +26,11 @@ class LeftMenu(ctk.CTkFrame):
                ('♫   Gestión de Audios',self.on_audio),('▤   Transcripciones',self.on_transcriptions),('▥   Analytics de Llamadas',self.on_analytics),
                ('◕   Dashboard',self.on_dashboard),('▶   Procesamiento por lotes',self.on_batch),('▧   Reportes',self.on_reports),
                ('⚙   Configuración',self.on_settings),('◷   Historial',self.on_history)]
-        for i,(text,cmd) in enumerate(items,3): self.create_menu_button(i,text,cmd,selected=(i==3))
+        permissions=['projects','projects','projects','reviews','reviews','reviews','dashboard','batch','reports','settings','reviews']
+        for i,((text,cmd),permission) in enumerate(zip(items,permissions),3):
+            if allowed(permission):self.create_menu_button(i,text,cmd,selected=(i==3))
+        if allowed('users'):
+            self.create_menu_button(14,'Usuarios y contraseñas',parent.work_area.show_users)
         self.grid_rowconfigure(14,weight=1)
         ctk.CTkLabel(self,text='⌁⌁⌁⌁⌁⌁⌁⌁⌁',text_color='#B77DD7',font=ctk.CTkFont('Segoe UI',18)).grid(row=15,column=0,pady=(4,2))
         ctk.CTkLabel(self,text='MRS CONSULTORES',text_color='#FFFFFF',font=ctk.CTkFont('Segoe UI',11,'bold')).grid(row=16,column=0)

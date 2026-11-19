@@ -8,6 +8,7 @@ Componente: Work Area
 import customtkinter as ctk
 from pathlib import Path
 from PIL import Image
+from app.services.access_service import view_permission, allowed
 
 from app.ui.themes import Theme
 
@@ -42,7 +43,7 @@ class WorkArea(ctk.CTkFrame):
 
         self.current_view = None
 
-        self.show_home()
+        self.show_home() if allowed('projects') else self.show_batch()
 
     # =========================================================
     # LIMPIAR
@@ -87,6 +88,7 @@ class WorkArea(ctk.CTkFrame):
     # INICIO
     # =========================================================
 
+    @view_permission('projects')
     def show_home(self):
         self.clear()
         root = ctk.CTkFrame(self, fg_color="#F6F3FA", corner_radius=0)
@@ -270,6 +272,7 @@ class WorkArea(ctk.CTkFrame):
     # NUEVO PROYECTO
     # =========================================================
 
+    @view_permission('projects')
     def show_new_project(self):
         self.mount_view(
             NewProjectView,
@@ -283,6 +286,7 @@ class WorkArea(ctk.CTkFrame):
     # ABRIR PROYECTO
     # =========================================================
 
+    @view_permission('projects')
     def show_open_project(self):
         self.mount_view(
             OpenProjectView,
@@ -296,11 +300,13 @@ class WorkArea(ctk.CTkFrame):
     # AUDIOS
     # =========================================================
 
+    @view_permission('reviews')
     def show_audio_view(self):
         self.mount_view(
             AudioView
         )
 
+    @view_permission('reviews')
     def show_audio(self):
         self.show_audio_view()
 
@@ -308,11 +314,13 @@ class WorkArea(ctk.CTkFrame):
     # TRANSCRIPCIONES
     # =========================================================
 
+    @view_permission('reviews')
     def show_transcriptions(self):
         self.mount_view(
             TranscriptionView
         )
 
+    @view_permission('reviews')
     def show_transcription_view(self):
         self.show_transcriptions()
 
@@ -320,11 +328,13 @@ class WorkArea(ctk.CTkFrame):
     # ANALYTICS
     # =========================================================
 
+    @view_permission('reviews')
     def show_analytics(self):
         self.mount_view(
             AnalyticsView
         )
 
+    @view_permission('reviews')
     def show_analytics_view(self):
         self.show_analytics()
 
@@ -332,14 +342,17 @@ class WorkArea(ctk.CTkFrame):
     # DASHBOARD
     # =========================================================
 
+    @view_permission('dashboard')
     def show_dashboard(self):
         self.mount_view(
             DashboardView
         )
 
+    @view_permission('dashboard')
     def show_dashboard_view(self):
         self.show_dashboard()
 
+    @view_permission('dashboard')
     def show_audio_player(self, records=None, title="Audios filtrados"):
         self.mount_view(AudioPlayerView, records=records or [], title=title)
 
@@ -347,6 +360,7 @@ class WorkArea(ctk.CTkFrame):
     # PROCESAMIENTO POR LOTES
     # =========================================================
 
+    @view_permission('batch')
     def show_batch(self):
         self.mount_view(
             BatchView
@@ -356,6 +370,7 @@ class WorkArea(ctk.CTkFrame):
     # REPORTES
     # =========================================================
 
+    @view_permission('reports')
     def show_reports(self):
         self.mount_view(
             ReportsView
@@ -365,6 +380,7 @@ class WorkArea(ctk.CTkFrame):
     # HISTORIAL
     # =========================================================
 
+    @view_permission('reviews')
     def show_history(self):
         self.mount_view(
             HistoryView
@@ -374,6 +390,7 @@ class WorkArea(ctk.CTkFrame):
     # CONFIGURACIÓN
     # =========================================================
 
+    @view_permission('settings')
     def show_settings(self):
         self.mount_view(
             SettingsView
@@ -383,18 +400,10 @@ class WorkArea(ctk.CTkFrame):
     # USUARIOS
     # =========================================================
 
+    @view_permission('users')
     def show_users(self):
-        self.show_placeholder(
-            title="Usuarios",
-            subtitle=(
-                "El módulo de usuarios "
-                "se encuentra en preparación."
-            ),
-        )
-
-    # =========================================================
-    # PLACEHOLDER
-    # =========================================================
+        from app.ui.access_dialogs import users_window
+        return users_window(self)
 
     def show_placeholder(
         self,

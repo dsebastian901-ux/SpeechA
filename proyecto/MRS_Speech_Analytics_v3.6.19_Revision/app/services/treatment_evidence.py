@@ -91,6 +91,12 @@ def mistreatment_reports(text, segments, phrases):
                 r'me (?:estan|han estado|estuvieron) (?:hostigando|acosando)|'
                 r'no me (?:sigan|siguieran) (?:molestando|hostigando|acosando)|'
                 r'nunca me han (?:contestado|atendido))\b', value))
+        # Denuncia de incumplimiento de un acuerdo por el despacho, no la
+        # mera frecuencia de llamadas ni una pregunta sobre intereses.
+        if re.search(r'\b(?:convenio|acuerdo|promesa|propuesta)\b',paid_source):
+            matches.extend(re.finditer(r'\bno (?:me |lo |nos |lo estan |me estan )?(?:estan )?respetando (?:el |mi |nuestro )?(?:convenio|acuerdo|promesa|propuesta)\b',value))
+            if re.search(r'\b(?:me (?:siguen|estan) (?:llamando|marcando|molestando)|todos los dias)\b',value):
+                matches.extend(re.finditer(r'\b(?:el (?:convenio|acuerdo)|no[, ]+no) (?:no )?esta respetado\b',value))
         complaint_context=bool(re.search(r'\b(?:aclaracion|reportar|reporte|investigar|investigacion|tarjeta|compras|companeros?|cobrar|cobranza|estado de cuenta|desglose|folio)\b',value+' '+previous))
         if complaint_context:
             # Queja expresa de capacidad/solución del servicio; no inferir
@@ -167,4 +173,4 @@ def offensive_asr_variants(text):
     """Variantes acotadas; no tomar «tarjetaunching» como insulto confirmado."""
     return [m.group() for m in re.finditer(
         r'\bching(?:uy|ui|ue)\s*(?:y\s*)?ching(?:uy|ui|ue)\b|'
-        r'\bcagando\b|\b(?:ah|a)[, ]+chingas\b|\b(?:una|la|su)chingada\b|\bmaldit[ao]s?[.!?¡¿ ]*$', normalize(text))]
+        r'\bjodi(?:[, ]+jodi){1,3}\b|\bcagando\b|\b(?:ah|a)[, ]+chingas\b|\b(?:una|la|su)chingada\b|\bmaldit[ao]s?[.!?¡¿ ]*$', normalize(text))]

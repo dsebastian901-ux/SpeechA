@@ -11,7 +11,7 @@ from threading import Thread
 from typing import Optional
 
 import customtkinter as ctk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, simpledialog
 
 from app.core import project_manager
 from app.services.batch_service import BatchService
@@ -55,6 +55,27 @@ class BatchView(ctk.CTkFrame):
     # =========================================================
     # HEADER
     # =========================================================
+
+    def select_batch_project(self,create=False):
+        from app.services.access_service import require
+        from app.services.project_service import ProjectService
+        try:
+            require('batch')
+            if self.is_processing:raise ValueError('Espere a que termine el lote para cambiar de proyecto.')
+            if create:
+                folder=filedialog.askdirectory(parent=self,title='Ubicación del nuevo proyecto de lote')
+                if not folder:return
+                name=simpledialog.askstring('Proyecto de lote','Nombre del proyecto:',parent=self)
+                if not name:return
+                project=ProjectService.create_project(folder,name,'Bradescard')
+            else:
+                file=filedialog.askopenfilename(parent=self,title='Abrir proyecto del lote',filetypes=[('Proyecto MRS','*.json')])
+                if not file:return
+                project=ProjectService.open_project(file)
+            project_manager.set_current_project(project)
+            self._resume_checked_project=None
+            self.project_label.configure(text='Proyecto: '+project['nombre'])
+        except Exception as error:messagebox.showerror('Proyecto de lote',str(error),parent=self)
 
     def _build_header(self):
         self.header = ctk.CTkFrame(
@@ -111,6 +132,11 @@ class BatchView(ctk.CTkFrame):
             pady=(0, 18),
             sticky="w",
         )
+
+        project_controls=ctk.CTkFrame(self.header,fg_color='transparent')
+        project_controls.grid(row=2,column=0,columnspan=4,padx=24,pady=(0,12),sticky='w')
+        ctk.CTkButton(project_controls,text='Nuevo proyecto de lote',width=170,command=lambda:self.select_batch_project(True)).pack(side='left',padx=(0,8))
+        ctk.CTkButton(project_controls,text='Abrir proyecto de lote',width=170,command=lambda:self.select_batch_project(False)).pack(side='left')
 
         self.select_button = ctk.CTkButton(
             self.header,

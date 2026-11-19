@@ -7,3 +7,6 @@ imageio-ffmpeg>=0.5,<1
 
 # Exportación Word local; se incluirá en el instalador sin conexión.
 python-docx>=1.2,<2
+
+# Catálogo local firmado y credenciales de usuarios.
+cryptography>=45,<47

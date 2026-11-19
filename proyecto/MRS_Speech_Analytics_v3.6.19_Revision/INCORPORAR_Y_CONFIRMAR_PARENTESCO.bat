@@ -8,6 +8,7 @@ echo Los originales se conservan. No se ejecuta Whisper.
 set "MRS_PYTHON=python"
 py -3.10 --version >nul 2>&1
 if not errorlevel 1 set "MRS_PYTHON=py -3.10"
+if exist "%~dp0..\..\runtime\python\python.exe" set MRS_PYTHON="%~dp0..\..\runtime\python\python.exe"
 %MRS_PYTHON% -X utf8 tools\import_audio_block_evidence.py --confirm-family
 if errorlevel 1 echo No se completo la incorporacion. Revise el mensaje anterior.
 pause

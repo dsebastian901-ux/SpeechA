@@ -27,6 +27,8 @@ OWN_ACCOUNT = re.compile(
     r'no me la (?:podian|podia|pudieron) desbloquear|'
     r'(?:yo )?di (?:el |mi |un )?pago(?: inicial)?|'
     r'yo (?:pago|pagaba|iba a pagar|estoy pagando|estaba pagando|estuve pagando)|'
+    r'(?:les|le) (?:depositaba|depositare|deposito|abonaba|abonare|abono|pagaba|pagare)|'
+    r'(?:yo )?(?:quiero|me quiero|quisiera) (?:ponerme al corriente|poner al corriente mi cuenta)|'
     r'me (?:estan|siguen|han estado) cobrando|'
     r'(?:yo )?(?:tenia|tengo) que pagar|yo (?:se que debo|les debo)|lo que yo les debo|'
     r'(?:yo )?no estoy negad[oa] a pagar|'
@@ -41,22 +43,40 @@ OWN_ACCOUNT = re.compile(
     r'no les voy a completar|me (?:atrase|he atrasado)|'
     r'no he (?:usado|utilizado) (?:mi |la |esa |esta )?tarjeta|'
     r'(?:yo )?(?:ya )?(?:voy a pagar|voy a depositar|voy a abonar)|'
+    r'(?:enseguida|ahorita|ahora(?: mismo)?) (?:hago|realizo) (?:el |mi )?pago|'
+    r'no (?:he podido|pude) (?:hacer|realizar) (?:el |mi |un )pago|'
+    r'(?:le|les) (?:voy a poder|puedo) (?:ahorita )?(?:dar|pagar|depositar|abonar) (?:los? |unos? )?(?:\d|mil|dos mil|tres mil|cuatro mil|cinco mil)|'
     r'(?:lo |le )?he podido realizar (?:el |mi )?pago|'
     r'no (?:lo |le )?he podido realizar(?:lo)?|'
     r'no lo he hecho|el contrato que (?:hicimos|hice|firme)|'
     r'(?:me gustaria|mi intencion es) (?:liquidar|pagar)|'
     r'no cuento con (?:esa|la) cantidad|no me niego a pagar|'
+    r'no puedo (?:hacer|generar|formalizar) (?:un |algun )?convenio|'
     r'lo puedo (?:pagar|abonar|depositar)|'
     r'no (?:he podido|puedo|pude) (?:ir a )?(?:pagar|depositar|abonar|realizar (?:mi|el) pago))\b')
 
 
 def valid_nominal_request(source, start, identity):
     """Una ausencia/ubicación no puede interpretarse como nombre solicitado."""
+    name=re.sub(r'\b(?:senorita|senora|senor|caballero|perdon|disculpe|disculpa|digame|diganme|dime|por favor)\b',' ',identity)
+    # La ruta histórica de confirmación directa «¿es usted?» valida su
+    # respuesta por separado; una cortesía no vacía jamás es un nombre.
+    if identity.strip() and not re.search(r'[a-z]{2,}',name):return False
     if re.search(r'\b'+KIN+r'\b',identity):return False
     if re.search(r'\b(?:aqui|ahi|alla|ahorita|actualmente|domicilio|casa|hospital|hospitalizado|internado|trabajando)\b',identity):
         return False
     prefix=source[max(0,start-80):start]
     return not re.search(r'\b(?:no|no se|ya no|dice que|dijo que|diga que|repita que)\s*$',prefix)
+
+
+def own_marker_is_instruction(value,marker):
+    """«Cuando lo realice» del gestor no es «yo lo realicé»."""
+    before=normalize(value)[:marker.start()]
+    if not re.search(r'\b(?:cuando|en cuanto|para que|si|que)(?: (?:usted|lo|le|se|ya)){0,3}\s*$',before):return False
+    personal=marker.group().startswith(('mi ','mis ','me estan cobrando','me siguen cobrando','me han estado cobrando'))
+    if personal:return False
+    verbatim=re.sub(r'\s+',' ',unicodedata.normalize('NFC',str(value)).lower()).strip()
+    return not re.search(r'\b(?:pagué|realicé|hice)\b',verbatim[marker.start():marker.end()])
 
 
 def proxy_account_evidence(text, segments=()):
@@ -81,7 +101,8 @@ def contextual_holder_confirmation(text, segments, identification):
     """
     source=normalize(text)
     none={'confirmed':False,'method':'SIN_CONTEXTO_NOMINAL_COMPLETO','evidence':''}
-    if COUNTER.search(source) or proxy_account_evidence(text,segments):return none
+    from app.services.contact_evidence_graph import nonholder_context
+    if proxy_account_evidence(text,segments) or nonholder_context(text,segments):return none
     explicit = re.search(r'\bcon (?:el senor|la senora|la senorita) (?P<identity>[a-z ]{3,85}?)\s*[,?.]?\s+(?P<answer>a sus ordenes|para servirle|su servidor|su servidora)\b',source)
     if explicit and valid_nominal_request(source,explicit.start(),explicit['identity']) and not BAD_IDENTITY.search(explicit['identity']) and _role_at(text,segments,explicit.start('answer')) not in {'GESTOR','TERCERO'}:
         return {'confirmed':True,'method':'IDENTIFICACION_NOMINAL_CON_RESPUESTA_DE_SERVICIO','evidence':explicit.group(),'speaker_role':'NO DETERMINADO','human_verified':False}
@@ -179,7 +200,10 @@ def contextual_holder_confirmation(text, segments, identification):
                         'event_id':event['id'],'policy_source':'CRITERIO_USUARIO_CONTEXTO_COMPLETO'}
             from app.services.conversation_evidence import payment_commitment
             commitment=payment_commitment(text,segments)
-            if (commitment['accepted'] and source.find(normalize(commitment['evidence'])) >= request.end()
+            commitment_text=normalize(commitment.get('evidence')or'')
+            bare_reply=bool(re.search(r'\?\s*(?:si|claro|correcto|de acuerdo|esta bien)[.!]?$',commitment_text))
+            substantive_commitment=not bare_reply or bool(re.search(r'\b(?:hoy|manana|lunes|martes|miercoles|jueves|viernes|sabado|domingo|dia \d{1,2}|\d{2,}|mil|pesos)\b',commitment_text))
+            if (commitment['accepted'] and substantive_commitment and source.find(normalize(commitment['evidence'])) >= request.end()
                     and re.search(r'\b(?:pago|pagar|deposito|monto)\b',commitment['evidence'])):
                 return {'confirmed':True,'method':'PREGUNTA_NOMINAL_Y_CONFIRMACION_DE_PAGO_PROPIO',
                         'evidence':request.group()+' / '+commitment['evidence'],

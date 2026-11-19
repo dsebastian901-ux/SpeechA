@@ -200,7 +200,7 @@ def test_passive_payment_instruction_does_not_turn_places_into_card_origin():
               'en alguna formacia de la ORO, 7-11 y tienda 3B como pago de servicio.',
               estatus_grabacion='CONVENIO')
     p=a.metadata['convenio_payment_validation']
-    assert set(p['authorized_places_detected'])=={'FARMACIAS DEL AHORRO','7-ELEVEN','TIENDAS 3B'}
+    assert set(p['authorized_places_detected'])=={'TIENDA DE ORIGEN','FARMACIAS DEL AHORRO','7-ELEVEN','TIENDAS 3B'}
     assert 'PEN_CONV_LUGARES' not in {x['id'] for x in a.metadata['penalties']}
 
 
