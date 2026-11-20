@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 import customtkinter as ctk
+from app.services.access_service import view_permission
 from tkinter import messagebox
 
 from app.core import project_manager
@@ -148,6 +149,7 @@ class ReportsView(ctk.CTkFrame):
             sticky="e",
         )
 
+    @view_permission('reports')
     def open_consolidated_reports(self):
         from app.ui.views.consolidated_reports_dialog import ConsolidatedReportsDialog
         existing = getattr(self, '_consolidated_dialog', None)
@@ -958,6 +960,7 @@ class ReportsView(ctk.CTkFrame):
     # EXPORTAR JSON
     # =========================================================
 
+    @view_permission('reports')
     def export_json(self):
         project_path = self._get_active_project_path()
 
@@ -1003,6 +1006,7 @@ class ReportsView(ctk.CTkFrame):
     # EXPORTAR CSV
     # =========================================================
 
+    @view_permission('reports')
     def export_csv(self):
         project_path = self._get_active_project_path()
 

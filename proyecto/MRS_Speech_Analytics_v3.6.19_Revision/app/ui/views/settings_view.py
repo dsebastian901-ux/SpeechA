@@ -6,6 +6,7 @@ Vista: Configuración
 """
 
 import customtkinter as ctk
+from app.services.access_service import view_permission
 from tkinter import messagebox
 
 from app.services.settings_service import SettingsService
@@ -637,6 +638,7 @@ class SettingsView(ctk.CTkFrame):
     # GUARDAR
     # =========================================================
 
+    @view_permission('settings')
     def save_settings(self):
         try:
             data = {
@@ -713,6 +715,7 @@ class SettingsView(ctk.CTkFrame):
     # RESTABLECER
     # =========================================================
 
+    @view_permission('settings')
     def reset_settings(self):
         confirmed = messagebox.askyesno(
             "Configuración",

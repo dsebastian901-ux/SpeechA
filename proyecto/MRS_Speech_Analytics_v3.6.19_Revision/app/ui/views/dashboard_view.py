@@ -20,6 +20,7 @@ from tkinter import messagebox
 
 from app.core import project_manager
 from app.services.dashboard_service import DashboardService
+from app.services.classification_policy import OPERATIONAL_LABELS, APPROVED_RESULTS, saved_result
 from app.ui.themes import Theme
 from app.ui.widgets.chart_card import ChartCard
 
@@ -332,7 +333,7 @@ class DashboardView(ctk.CTkFrame):
         specs = [
             ("Gestor", gestores, self.filter_gestor, "filter_gestor"),
             ("Supervisor", supervisores, self.filter_supervisor, "filter_supervisor"),
-            ("Resultado", ["TODOS", "APROBADO", "APROBADO SIN ETIQUETAR", "MENOR A 80%", "MAL DICTAMINADO", "NEGOCIACIÓN INVÁLIDA", "FALLA GRAVE", "REVISAR"], self.filter_resultado, "filter_resultado"),
+            ("Resultado", ["TODOS", *dict.fromkeys(OPERATIONAL_LABELS.values())], self.filter_resultado, "filter_resultado"),
             ("Auditoría", ["TODOS", "NEGOCIACIÓN INVÁLIDA", "CONVENIO INVÁLIDO", "MAL DICTAMINADO", "CONFRONTACIÓN", "FALLA GRAVE", "REFERENCIA DISTINTA"], self.filter_auditoria, "filter_auditoria"),
             ("Cumplimiento", ["TODOS", "80-100%", "60-79%", "0-59%"], self.filter_score, "filter_score"),
         ]
@@ -1332,7 +1333,8 @@ class DashboardView(ctk.CTkFrame):
                 status = "cumple" if score >= 80 else ("parcial" if score >= 60 else "no_cumple")
 
             relation = item.get("relation") if isinstance(item.get("relation"), dict) else {}
-            metadata = analytics.get("metadata") if isinstance(analytics.get("metadata"), dict) else {}
+            metadata = item.get('analytics_metadata') or analytics.get("metadata") or {}
+            if not isinstance(metadata,dict):metadata={}
             context = metadata.get("operational_context") if isinstance(metadata.get("operational_context"), dict) else {}
             gestor = str(relation.get("gestor") or context.get("gestor") or "SIN IDENTIFICAR").strip().upper()
             supervisor = str(relation.get("supervisor") or context.get("supervisor") or "SIN IDENTIFICAR").strip().upper()
@@ -1384,34 +1386,9 @@ class DashboardView(ctk.CTkFrame):
             ref_check = find_reference(transcription_text, expected_card)
             if ref_check["incorrect"] or "REFERENCIA DISTINTA" in str(card_info.get("result") or ""):
                 audit_flags.append("REFERENCIA DISTINTA")
-            checkpoint_classification = item.get("classification") if isinstance(item.get("classification"), dict) else {}
-            physical_class = str(checkpoint_classification.get("clasificacion") or "").strip().upper()
-            operational_label_map = {
-                "APROBADO": "APROBADO",
-                "APROBADOS": "APROBADO",
-                "APROBADO_ETIQUETA_CORREGIDA": "APROBADO CON ETIQUETA CORREGIDA",
-                "APROBADO_DURACION_MENOR": "APROBADO - DURACIÓN MENOR",
-                "APROBADO_SIN_ETIQUETAR": "APROBADO SIN ETIQUETAR",
-                "APROBADO_CON_EXCEPCION": "APROBADO CON EXCEPCIÓN",
-                "NO_APROBADO_MENOR_80": "MENOR A 80%",
-                "MAL_DICTAMINADO": "MAL DICTAMINADO",
-                "NEGOCIACION_INVALIDA": "NEGOCIACIÓN INVÁLIDA",
-                "FALLA_GRAVE": "FALLA GRAVE",
-                "REVISAR": "REVISAR",
-            }
-            if physical_class:
-                operational_class = operational_label_map.get(physical_class, "REVISAR")
-            elif grave:
-                operational_class = "FALLA GRAVE"
-            elif bad_dictation:
-                operational_class = "MAL DICTAMINADO"
-            elif negotiation_invalid:
-                operational_class = "NEGOCIACIÓN INVÁLIDA"
-            elif score < 80:
-                operational_class = "MENOR A 80%"
-            else:
-                operational_class = "REVISAR"
-            final_status = "mal_dictaminado" if bad_dictation else status
+            physical_class = saved_result(item)
+            operational_class = OPERATIONAL_LABELS[physical_class]
+            final_status = physical_class
             records.append({"gestor": gestor, "supervisor": supervisor, "score": score,
                             "status": status, "final_status": final_status, "operational_class": operational_class, "blocks": blocks, "penalties": penalties,
                             "audit_flags": audit_flags, "negotiation_invalid": negotiation_invalid,
@@ -1478,7 +1455,7 @@ class DashboardView(ctk.CTkFrame):
             metadata = data.get("metadata") or {}
             shared = metadata.get("shared_classification") or {}
             score = float(data.get("compliance_score") or 0)
-            classification = shared.get("clasificacion") or ("APROBADO" if score >= 80 else "REVISAR")
+            classification = saved_result({'analytics':data})
             transcription = ""
             transcript_path = data.get("transcription_file")
             if transcript_path:
@@ -1497,7 +1474,7 @@ class DashboardView(ctk.CTkFrame):
                 "gestor": str((metadata.get("operational_context") or {}).get("gestor") or "SIN IDENTIFICAR"),
                 "supervisor": str((metadata.get("operational_context") or {}).get("supervisor") or "SIN IDENTIFICAR"),
                 "score": score, "status": "cumple" if score >= 80 else "parcial" if score >= 60 else "no_cumple",
-                "final_status": classification, "operational_class": classification,
+                "final_status": classification, "operational_class": OPERATIONAL_LABELS[classification],
                 "blocks": metadata.get("quality_blocks") or {},
                 "penalties": metadata.get("penalties") or [], "audit_flags": [],
                 "file_name": data.get("audio_file") or path.stem,
@@ -1624,7 +1601,7 @@ class DashboardView(ctk.CTkFrame):
         for row_no,r in enumerate(rows[:100]):
             row_bg=Theme.colors.TABLE_ROW if row_no % 2 == 0 else Theme.colors.TABLE_ROW_ALT
             line=ctk.CTkFrame(card,fg_color=row_bg,corner_radius=4); line.pack(fill="x",padx=10,pady=1)
-            final={"cumple":"CUMPLIDO","parcial":"PARCIAL","no_cumple":"NO CUMPLIDO","mal_dictaminado":"MAL DICTAMINADO"}.get(r.get("final_status"),str(r.get("final_status","")))
+            final=OPERATIONAL_LABELS.get(r.get('final_status'),'SIN DICTAMEN')
             vals=[r.get("file_name",""),r.get("gestor",""),r.get("supervisor",""),r.get("excel_status",""),f'{float(r.get("score",0) or 0):.0f}%',final]
             for i,(val,(_,w)) in enumerate(zip(vals,headers)):
                 line.grid_columnconfigure(i,weight=1 if i==0 else 0,minsize=w)
@@ -1642,12 +1619,18 @@ class DashboardView(ctk.CTkFrame):
         records=self._audit_records()
         counts=Counter(r.get("final_status") for r in records)
         self._section_title(self.detail_content,"SALIDAS FINALES DE AUDITORÍA",
-                            "MAL DICTAMINADO tiene prioridad sobre el score cuando la validación de estatus detecta una discrepancia.")
+                            "Resultados guardados del motor. El puntaje y la discrepancia de estatus no sustituyen el dictamen de calidad.")
         self._metric_strip(self.detail_content,[
-            ("CUMPLIDO",counts.get("cumple",0),Theme.colors.CARD_GREEN),
-            ("PARCIAL",counts.get("parcial",0),Theme.colors.CARD_PURPLE),
-            ("NO CUMPLIDO",counts.get("no_cumple",0),Theme.colors.CARD_ORANGE),
-            ("MAL DICTAMINADO",counts.get("mal_dictaminado",0),Theme.colors.CARD_BLUE),
+            ("APROBADOS",sum(counts[c] for c in APPROVED_RESULTS),Theme.colors.CARD_GREEN),
+            ("REVISAR",counts['REVISAR'],Theme.colors.CARD_PURPLE),
+            ("NO APROBADOS",counts['NO_APROBADO']+counts['NO_APROBADO_MENOR_80'],Theme.colors.CARD_ORANGE),
+            ("FALLA GRAVE",counts['FALLA_GRAVE'],Theme.colors.CARD_BLUE),
+        ])
+        self._metric_strip(self.detail_content,[
+            ('SIN ETIQUETAR',counts['APROBADO_SIN_ETIQUETAR'],Theme.colors.CARD_PURPLE),
+            ('CON EXCEPCIÓN',counts['APROBADO_CON_EXCEPCION'],Theme.colors.CARD_GREEN),
+            ('ERROR TÉCNICO',counts['ERROR'],Theme.colors.CARD_ORANGE),
+            ('SIN DICTAMEN / EXCEL',counts['SIN_DICTAMEN']+counts['SIN_RELACION_EXCEL'],Theme.colors.CARD_BLUE),
         ])
         card=ctk.CTkFrame(self.detail_content,fg_color=Theme.colors.SURFACE,corner_radius=14,border_width=1,border_color=Theme.colors.BORDER_LIGHT)
         card.pack(fill="x",padx=5,pady=(0,12))
@@ -1656,7 +1639,7 @@ class DashboardView(ctk.CTkFrame):
         actions=ctk.CTkFrame(card,fg_color="transparent"); actions.pack(fill="x",padx=16,pady=(0,16))
         ctk.CTkButton(actions,text="Escuchar audios",height=38,width=130,fg_color=Theme.colors.CARD_BLUE,text_color=Theme.colors.PRIMARY,
                       command=lambda:self._open_audio_player(records,"Salidas finales")).pack(side="left",padx=(0,8))
-        ctk.CTkButton(actions,text="Generar CUMPLIDO / PARCIAL / NO CUMPLIDO / MAL DICTAMINADO",height=38,command=self._generate_final_folders).pack(side="left")
+        ctk.CTkButton(actions,text="Generar carpetas por resultado guardado",height=38,command=self._generate_final_folders).pack(side="left")
 
     def _open_audio_player(self, rows, title="Audios filtrados"):
         rows = list(rows or [])
@@ -1778,11 +1761,13 @@ class DashboardView(ctk.CTkFrame):
             if not reports or not rows:
                 messagebox.showwarning("MRS Speech Analytics", "No hay datos para generar las salidas o no se pudo localizar el proyecto activo.")
                 return
-            base = reports / "Auditoria_Final"
-            names = {"cumple": "CUMPLIDO", "parcial": "PARCIAL", "no_cumple": "NO_CUMPLIDO", "mal_dictaminado": "MAL_DICTAMINADO"}
+            import tempfile
+            base = Path(tempfile.mkdtemp(prefix='Auditoria_Final_',dir=reports))
+            names = {r.get('final_status','SIN_DICTAMEN') for r in rows}
             total_copied = total_missing = 0
             errors = []
-            for key, name in names.items():
+            for key in sorted(names):
+                name = key if key in OPERATIONAL_LABELS else 'SIN_DICTAMEN'
                 result = self._copy_rows_and_index([r for r in rows if r.get("final_status") == key], base / name, quiet=True, prefix="SALIDAS")
                 total_copied += result["copied"]
                 total_missing += result["missing"]
@@ -1822,6 +1807,8 @@ class DashboardView(ctk.CTkFrame):
                         fragment = text[max(0, pos-100):min(len(text), pos+len(query)+140)].replace("\n", " ")
                 row += [query, int(r.get("matches", 0) or 0), fragment]
             ws.append(row)
+            for cell in ws[ws.max_row]:
+                if isinstance(cell.value,str):cell.data_type='s'
         fill = PatternFill("solid", fgColor="EDE5FA")
         for cell in ws[1]:
             cell.font = Font(bold=True, color="3B1B5A")
@@ -1843,14 +1830,19 @@ class DashboardView(ctk.CTkFrame):
         copied = 0
         missing = 0
         errors = []
-        for r in rows:
+        for number, r in enumerate(rows,1):
             src = self._resolve_audio_source(r)
             if src is None:
                 missing += 1
                 errors.append(f"NO ENCONTRADO: {r.get('file_name','')}")
                 continue
             try:
-                shutil.copy2(str(src), str(out / src.name))
+                from app.utils.file_utils import copy_verified_audio
+                destination = out / src.name
+                if destination.exists():
+                    destination = out / ('duplicado_'+str(number)) / src.name
+                    destination.parent.mkdir(parents=True,exist_ok=True)
+                copy_verified_audio(src,destination)
                 copied += 1
             except OSError as exc:
                 missing += 1

@@ -133,7 +133,7 @@ class NonpaymentReportService:
             by_mora[(category, str(relation.get('asignacion') or relation.get('mora') or 'SIN_DATO'))] += 1
             evidence = '\n'.join(dict.fromkeys(e['text'] for e in detected['evidence']))
             windows = '; '.join(dict.fromkeys(f"{e['start']}–{e['end']}" for e in detected['evidence'] if e['start'] is not None and e['end'] is not None))
-            quality = 'ERROR' if i.get('status') == 'error' else (i.get('classification') or {}).get('clasificacion') or 'SIN_DICTAMEN'
+            quality = ((i.get('classification') or {}).get('clasificacion') or 'SIN_DICTAMEN') if i.get('copy_error') else 'ERROR' if i.get('status') == 'error' else (i.get('classification') or {}).get('clasificacion') or 'SIN_DICTAMEN'
             cls._append(detail, [file, category, '; '.join(detected['secondary']), detected['origin'], evidence,
                                 windows, detected['contact'], quality,
                                 i.get('status') or 'SIN_DATO'] + [relation.get(k) for k in relation_keys])

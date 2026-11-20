@@ -42,6 +42,17 @@ def negative_payment_question(question):
      r'logr\w*|efectu\w*|pag\w*|deposit\w*|abon\w*|hace|hara\w*|haria\w*|est[ae]\w*)\b',normalize(question)))
 
 
+def ambiguous_negative_reply(question, answer):
+ """La repetición o cortesía no desambigua un NO a una pregunta negativa.
+
+ «No, no tengo dinero» sí añade una explicación propia; «no, señora, no»
+ conserva las dos interpretaciones posibles y no crea un estatus de pago.
+ """
+ return bool(negative_payment_question(question) and re.fullmatch(
+     r'no(?:[\s,]+(?:no|senorita|senora|senor|caballero|joven|gracias))*[.! ]*',
+     normalize(answer)))
+
+
 def payment_frames(text,segments=()):
  cache=current_cache();key=(str(text or ''),id(segments))
  saved=cache.setdefault('payment_frames',{}).get(key)if cache is not None else None
@@ -96,7 +107,7 @@ def payment_frames(text,segments=()):
   negative_question=negative_payment_question(q)
   # «¿No aplica el pago aún? No» puede negar la pregunta o confirmar que
   # no se ha pagado. Sin aclaración personal no acredita una negativa nueva.
-  if negative_question and re.fullmatch(r'no(?:[, ]+(?:senorita|senora|senor|caballero|joven|gracias)){0,2}',answer):
+  if ambiguous_negative_reply(q,answer):
    declined=False
   action=ACTION.search(answer);own=bool(OWN.search(answer)or action)
   dated_reply=bool(re.match(r'(?:(?:seria|para|hasta|va a ser|lo estaria realizando|lo estaria haciendo) )?(?:el (?:dia(?: de)? )?)?'

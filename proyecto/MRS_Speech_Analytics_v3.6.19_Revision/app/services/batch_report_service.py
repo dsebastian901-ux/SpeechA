@@ -226,6 +226,8 @@ class BatchReportService:
     for _headers in (HEADERS, MODE_B_HEADERS):
         _index = _headers.index('MRS detectado') + 1
         _headers[_index:_index] = CONTEXT_HEADERS
+        _index = _headers.index('Ruta audio clasificado') + 1
+        _headers[_index:_index] = ['Estado de copia', 'Error de copia', 'Estado de procesamiento']
 
 
     @staticmethod
@@ -608,7 +610,7 @@ class BatchReportService:
         physical = str(classification.get("clasificacion") or "").strip().upper()
         motive = str(classification.get("motivo") or "").strip()
 
-        if item.get("status") == "error":
+        if item.get("status") == "error" and not item.get('copy_error'):
             result_ia = "ERROR"
             physical = "ERROR"
             motive = str(item.get("message") or "Error durante el procesamiento.")
@@ -666,6 +668,9 @@ class BatchReportService:
             dictamen = 'CORREGIDO EN COPIA'
             motivo_dictamen = output_label['original_status']+' → '+output_label['corrected_status']
         return {
+            'Estado de copia':item.get('copy_status') or '',
+            'Error de copia':item.get('copy_error') or '',
+            'Estado de procesamiento':item.get('status') or '',
             "Alertas pendientes":int(classification.get('pending_alert_count')or 0),
             "Revisión prioritaria pendiente":'SÍ'if classification.get('requires_alert_review')else'NO',
             "Nombre antes de reetiquetar": relation.get('nombre_final') or '',

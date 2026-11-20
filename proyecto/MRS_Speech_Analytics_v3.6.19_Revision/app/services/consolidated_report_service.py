@@ -15,6 +15,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from app.services.nonpayment_report_service import detect_nonpayment
+from app.services.classification_policy import APPROVED_RESULTS
 
 DAYS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
 MAX_INPUT = 128 * 1024 * 1024
@@ -33,7 +34,16 @@ MOTIVE_ADVICE = {
 CALL_HEADERS = ['Fecha llamada', 'Día', 'Tarjeta Excel', 'Gestor', 'Supervisor', 'Archivo audio',
                 'Clasificación reportada', 'Puntaje', 'Motivo no pago', 'Falla grave reportada', 'Lote origen']
 ERROR_HEADERS = CALL_HEADERS + ['Código error', 'Categoría error', 'Descripción error', 'Grave',
-                                'Evidencia localizada', 'Ventana ASR (s)', 'Contexto ASR (no prueba del error)']
+                                'Evidencia localizada', 'Ventana ASR (s)', 'Contexto ASR (no prueba del error)',
+                                'Estado de evidencia']
+# Estos códigos describen dudas de extracción/atribución, no errores probados.
+# Se conservan completos en ALERTAS_PENDIENTES sin computarlos en capacitación
+# como incumplimientos. Nunca se descarta un criterio que invalida explícitamente.
+UNCERTAIN_PENALTIES = frozenset({
+    'PEN_GROSERIA_SIN_ATRIBUCION','PEN_GROSERIA_CIERRE_REV','PEN_ARCO_REV',
+    'PEN_TRATO_DESPECTIVO_REV','PEN_TRATO_INTERRUPCION','PEN_ABANDONO_GESTOR',
+    'PEN_ESPERA_PROLONGADA','PEN_CONV_TRANSFER_REV','PEN_SIN_INTENTO_NEGOCIACION',
+})
 ADVICE = {
     'PEN003': 'Reforzar identificación del interlocutor y límites de divulgación a terceros. Validar voz y destinatario antes de atribuir la falta.',
     'PEN001': 'Reforzar presentación del despacho; contrastar variantes de MRS en el audio antes de confirmar omisión.',
@@ -123,10 +133,34 @@ def _record(item, source):
                     ('ERROR' if item.get('status') == 'error' else 'SIN DICTAMEN')).upper()
     failures = metadata.get('critical_failures') or []
     penalties = metadata.get('penalties') or []
+    findings = classification.get('decision_findings') or (metadata.get('shared_classification') or {}).get('decision_findings') or []
+    pending = {}
+    for f in findings:
+        if not isinstance(f,dict) or f.get('severity') not in {'REVIEW','PENDING_ALERT'}:
+            continue
+        code=str(f.get('code') or 'SIN_CODIGO')
+        pending[code]={'code':code, 'category':str(f.get('rule_group') or ''),
+            'reason':' | '.join(map(str,f.get('reasons') or [])),
+            'state':'CONFIRMACION_PENDIENTE', 'evidence':'', 'window':''}
     errors = {}
     for p in [*penalties, *failures]:
         if not isinstance(p, dict): continue
         code = str(p.get('id') or 'SIN_CODIGO')
+        # El código histórico de grosería se conserva incluso cuando la
+        # excepción ya fue validada. No volver a abrir esa misma duda al
+        # consolidar, ni presentar su descuento cero como error confirmado.
+        if code in {'PEN_GROSERIA_SIN_ATRIBUCION','PEN_GROSERIA_CIERRE_REV'} and p.get('invalidates') is not True:
+            offense = [f for f in findings if isinstance(f,dict) and f.get('code')=='OFFENSIVE_LANGUAGE']
+            if offense and all(f.get('severity')=='VALIDATED_EXCEPTION' for f in offense):
+                continue
+        if p.get('invalidates') is not True and (code in UNCERTAIN_PENALTIES or (
+                code=='PEN_QUEJA_MALTRATO' and not any(
+                    f.get('code')=='CONFIRMED_SERVICE_COMPLAINT' for f in findings if isinstance(f,dict)))):
+            evidence, window = _evidence(metadata,code)
+            pending[code]={'code':code,'category':str(p.get('category') or 'Sin categoría'),
+                'reason':str(p.get('reason') or 'Confirmación pendiente en origen'),
+                'state':'CONFIRMACION_PENDIENTE','evidence':evidence,'window':window}
+            continue
         e = errors.setdefault(code, {'code': code, 'category': str(p.get('category') or 'Sin categoría'),
                                     'reasons': [], 'grave': False})
         reason = str(p.get('reason') or 'Sin descripción en origen')
@@ -139,6 +173,7 @@ def _record(item, source):
     for e in errors.values():
         e['evidence'], e['window'] = _evidence(metadata, e['code'])
         e['reason'] = ' | '.join(e.pop('reasons'))
+        e['state'] = 'INCUMPLIMIENTO_CRITICO_REPORTADO' if e['grave'] else 'DESCUENTO_O_INCUMPLIMIENTO_REPORTADO'
     motive = detect_nonpayment(item)
     record = {'file': filename, 'card': card, 'gestor': str(relation.get('gestor') or 'SIN GESTOR'),
               'supervisor': str(relation.get('supervisor') or 'SIN SUPERVISOR'), 'date': actual_date,
@@ -146,6 +181,7 @@ def _record(item, source):
               'score': item.get('compliance_score', analytics.get('compliance_score')),
               'motive': motive['primary'], 'motive_evidence': ' | '.join(dict.fromkeys(e['text'] for e in motive['evidence'])),
               'motive_basis': motive['origin'], 'severe': severe, 'errors': list(errors.values()),
+              'pending_observations':list(pending.values()),
               'source': source['name'], 'source_hash': source['sha256'], 'updated': source['updated'],
               'context': str(result.get('texto') or '')[:500],
               'original_excel': relation.get('datos_excel_original') or relation,
@@ -172,7 +208,7 @@ def _error_rows(calls, severe_only=False):
         for e in r['errors']:
             if not severe_only or e['grave']:
                 yield r, e, _call_row(r) + [e['code'], e['category'], e['reason'], 'SI' if e['grave'] else 'NO',
-                                           e['evidence'], e['window'], r['context']]
+                                           e['evidence'], e['window'], r['context'], e['state']]
 
 
 def _groups(calls, keys):
@@ -182,12 +218,16 @@ def _groups(calls, keys):
 
 
 def _approved(category):
-    return category.startswith('APROBADO') or category == 'APROBADA'
+    # Mismo universo que copias y contador del lote. Calidad aprobada sin
+    # etiqueta y excepción validada conservan sus categorías independientes.
+    return category in APPROVED_RESULTS or category == 'APROBADA'
 
 
 def _summary(calls, keys):
     return [list(k) + [len(rows), sum(_approved(r['classification']) for r in rows),
-                       sum(r['classification'] == 'REVISAR' for r in rows), sum(r['severe'] for r in rows)]
+                       sum(r['classification'] == 'REVISAR' for r in rows), sum(r['severe'] for r in rows),
+                       sum(r['classification']=='APROBADO_SIN_ETIQUETAR' for r in rows),
+                       sum(r['classification']=='APROBADO_CON_EXCEPCION' for r in rows)]
             for k, rows in _groups(calls, keys)]
 
 
@@ -339,10 +379,11 @@ class ConsolidatedReportService:
             ['Lotes cargados', len(dataset['sources'])], ['Registros seleccionados', len(calls)],
             ['Llamadas con falla grave reportada', sum(r['severe'] for r in calls)],
             ['Duplicados excluidos del universo', len(dataset['duplicates'])], ['Deduplicación', 'SI' if dataset['deduplicate'] else 'NO']])
-        sheet('POR_GESTOR', ['Supervisor', 'Gestor', 'Llamadas', 'Aprobadas en origen', 'Revisar en origen', 'Con falla grave'], _summary(calls, ('supervisor','gestor')))
-        sheet('POR_LOTE_GESTOR', ['Lote','Supervisor','Gestor','Evaluaciones','Aprobadas en origen','Revisar en origen','Con falla grave'], _summary(calls, ('source','supervisor','gestor')))
-        sheet('POR_LOTE_SUPERVISOR', ['Lote','Supervisor','Evaluaciones','Aprobadas en origen','Revisar en origen','Con falla grave'], _summary(calls, ('source','supervisor')))
-        sheet('POR_SUPERVISOR', ['Supervisor','Llamadas','Aprobadas en origen','Revisar en origen','Con falla grave'], _summary(calls, ('supervisor',)))
+        independent = ['Calidad aprobada sin etiquetar','Excepción validada']
+        sheet('POR_GESTOR', ['Supervisor', 'Gestor', 'Llamadas', 'Aprobadas en origen', 'Revisar en origen', 'Con falla grave',*independent], _summary(calls, ('supervisor','gestor')))
+        sheet('POR_LOTE_GESTOR', ['Lote','Supervisor','Gestor','Evaluaciones','Aprobadas en origen','Revisar en origen','Con falla grave',*independent], _summary(calls, ('source','supervisor','gestor')))
+        sheet('POR_LOTE_SUPERVISOR', ['Lote','Supervisor','Evaluaciones','Aprobadas en origen','Revisar en origen','Con falla grave',*independent], _summary(calls, ('source','supervisor')))
+        sheet('POR_SUPERVISOR', ['Supervisor','Llamadas','Aprobadas en origen','Revisar en origen','Con falla grave',*independent], _summary(calls, ('supervisor',)))
         motive_counts = Counter(tuple(r[k] for k in keys) + (r['motive'],) for r in calls)
         sheet('MOTIVOS_NO_PAGO', [*keys, 'Motivo principal', 'Llamadas'], [list(k)+[v] for k,v in sorted(motive_counts.items(), key=lambda kv:(-kv[1],kv[0]))])
         motive_advice = [list(k)+[v, MOTIVE_ADVICE.get(k[-1], 'Conservar la categoría reportada; confirmar el motivo con el titular cuando sea posible sin atribuirle declaraciones de terceros.')]
@@ -358,6 +399,10 @@ class ConsolidatedReportService:
             sheet('EJEMPLOS_MOTIVOS', CALL_HEADERS+['Base motivo','Evidencia motivo'], motive_examples)
         sheet('ERRORES_COMUNES', [*keys,'Código error','Categoría','Llamadas','Con criterio grave','Descripción reportada'], _common(calls, keys))
         sheet('RECOMENDACIONES', [*keys,'Código error','Llamadas','Atención sugerida','Recomendación'], _recommendations(calls, keys))
+        sheet('ALERTAS_PENDIENTES', CALL_HEADERS+['Código observación','Grupo / categoría','Motivo pendiente',
+            'Estado de evidencia','Evidencia localizada','Ventana ASR (s)','Contexto ASR'],
+            [_call_row(r)+[e['code'],e['category'],e['reason'],e['state'],e['evidence'],e['window'],r['context']]
+             for r in calls for e in r.get('pending_observations',[])])
         examples = cls._examples(report)
         sheet('FALLAS_GRAVES' if family == 'GRAVES' else 'EJEMPLOS', ERROR_HEADERS, [row for r,e,row in examples])
         if report['level'] == 'DETALLADO':
@@ -374,6 +419,7 @@ class ConsolidatedReportService:
                  'Las recomendaciones son para revisión/capacitación; confirme evidencia y responsable en audio.',
                  'La falta de evidencia localizada no permite inventar una cita que pruebe una omisión.',
                  'El contexto ASR es solo referencia. No se certifica escucha humana.',
+                 'ALERTAS_PENDIENTES conserva dudas sin atribuirlas como incumplimientos en ERRORES_COMUNES. Los descuentos y fallas reportados tampoco certifican escucha humana.',
                  'Cada lote cuenta por separado por indicación de la usuaria. Una misma llamada puede aportar una evaluación en varios lotes.',
                  'Un motivo principal por evaluación; pago ya reportado, terceros y falta de evidencia se separan de causas de no pago.',
                  'Sin fecha de llamada no se usa la de procesamiento. Un filtro de fechas excluye registros sin fecha.',

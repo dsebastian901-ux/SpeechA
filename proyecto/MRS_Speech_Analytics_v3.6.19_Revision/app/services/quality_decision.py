@@ -3,6 +3,7 @@
 Un descuento, una duda y una falta crítica no son intercambiables. Esta puerta
 se usa tanto al procesar audio como al reanalizar y exportar resultados.
 """
+import math
 from app.services.approval_resolution import ordinary_score_rejection
 
 RULES = (
@@ -17,6 +18,8 @@ RULES = (
 def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
     m = metadata if isinstance(metadata, dict) else {}
     score = round(float(score or 0), 2)
+    if not math.isfinite(score) or not 0 <= score <= 100:
+        raise ValueError('Puntaje de calidad inválido; debe ser finito y estar entre 0 y 100.')
     checks = m.get('quality_checks') or {}
     penalties = m.get('penalties') or []
     failures = m.get('critical_failures') or []
@@ -38,6 +41,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         if value.get('review_required'):
             add(domain, code, value.get('reason') or value.get('reasons') or fallback, field)
 
+    if not m:
+        add(13,'QUALITY_EVIDENCE_MISSING','No existe evaluación de las reglas; un puntaje aislado no acredita calidad.','metadata')
     arco = m.get('arco_validation') or {}
     if arco.get('applies') and not arco.get('valid'):
         add(6, 'ARCO_INCOMPLETE', arco.get('reasons') or ['Procedimiento ARCO incompleto; requiere revisión.'], 'arco_validation')
@@ -133,8 +138,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         if treatment.get(field):
             add(10,code,reason,'treatment_validation')
     short_call=bool(duration_seconds is not None and 0<float(duration_seconds)<60)
-    if duration_seconds is not None and float(duration_seconds)<=0:
-        add(13,'INVALID_DURATION','La duración no es positiva; comprobar el archivo de audio.','duration_seconds')
+    if duration_seconds is not None and (not math.isfinite(float(duration_seconds)) or float(duration_seconds)<=0):
+        add(13,'INVALID_DURATION','La duración no es finita y positiva; comprobar el archivo de audio.','duration_seconds')
     duration = m.get('duration_validation') or {}
     if duration.get('valid') is False and not(short_call and duration.get('maximum_met',True)):
         add(13,'INVALID_DURATION',duration.get('reason') or 'Duración fuera del rango permitido','duration_validation')

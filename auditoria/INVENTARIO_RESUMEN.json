@@ -1,0 +1,15 @@
+{
+  "issues": 89,
+  "groups": 13,
+  "states": {
+    "CORREGIDO": 68,
+    "PARCIALMENTE CORREGIDO": 16,
+    "NO VERIFICABLE": 5
+  },
+  "python_modules": 178,
+  "entry_scripts": 18,
+  "app_modules": 165,
+  "ast_errors": 0,
+  "coverage_imported": true,
+  "customer_data_read": false
+}

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import customtkinter as ctk
+from app.services.access_service import view_permission
 from tkinter import messagebox
 
 from app.core import project_manager
@@ -1034,6 +1035,7 @@ class AnalyticsView(ctk.CTkFrame):
     # ANALIZAR Y GUARDAR
     # =========================================================
 
+    @view_permission('reviews')
     def validate_amount(self):
         transcription=self.selected_transcription
         if transcription is None or not transcription.json_path:
@@ -1061,6 +1063,7 @@ class AnalyticsView(ctk.CTkFrame):
             dialog.destroy();self.analyze_selected()
         ctk.CTkButton(dialog,text="Guardar y volver a analizar",command=save).pack(pady=16)
 
+    @view_permission('reviews')
     def validate_treatment(self):
         transcription = self.selected_transcription
         if transcription is None or not transcription.json_path:
@@ -1092,6 +1095,7 @@ class AnalyticsView(ctk.CTkFrame):
 
         ctk.CTkButton(dialog, text="Guardar y volver a analizar", command=save).pack(pady=16)
 
+    @view_permission('reviews')
     def analyze_selected(self):
         if self.selected_transcription is None:
 

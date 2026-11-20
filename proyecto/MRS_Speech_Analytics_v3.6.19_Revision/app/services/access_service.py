@@ -32,9 +32,12 @@ class AccessStore:
   self.registry=AccountRegistry(a.public_key,self.catalog);self.registry.import_bundle(bundle)
   self.login(ADMIN_NAME,password)
  def login(self,username,password):
+  # Un intento nuevo sustituye la sesión previa incluso si falla. No dejar
+  # desbloqueada la capacidad de administración de un acceso anterior.
+  if self.registry is not None:self.registry.logout(self.token)
+  self.token=None;self.authority=None
   if not self.configured:raise PermissionError('Configure el equipo o importe el catálogo por USB.')
   self.token=self.registry.login(username,password)
-  self.authority=None
   user=self.registry.require(self.token,'batch')
   if user['role']=='ADMIN'and self.private.exists():
    try:self.authority=CatalogueAuthority.restore(self.private.read_bytes(),password,self.catalog.read_bytes())

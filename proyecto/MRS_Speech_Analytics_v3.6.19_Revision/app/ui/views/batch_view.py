@@ -11,6 +11,7 @@ from threading import Thread
 from typing import Optional
 
 import customtkinter as ctk
+from app.services.access_service import view_permission
 from tkinter import filedialog, messagebox, simpledialog
 
 from app.core import project_manager
@@ -590,6 +591,7 @@ class BatchView(ctk.CTkFrame):
     # SELECCIONAR AUDIOS
     # =========================================================
 
+    @view_permission('batch')
     def select_audio_files(self):
         if self.is_processing:
             return
@@ -635,6 +637,7 @@ class BatchView(ctk.CTkFrame):
     # SELECCIONAR EXCEL DE RELACIÓN
     # =========================================================
 
+    @view_permission('batch')
     def select_relation_excel(self):
         if self.is_processing:
             return
@@ -827,6 +830,7 @@ class BatchView(ctk.CTkFrame):
     # INICIAR
     # =========================================================
 
+    @view_permission('batch')
     def start_processing(self):
         if self.is_processing:
             return
@@ -1083,6 +1087,7 @@ class BatchView(ctk.CTkFrame):
                 "Procesamiento terminado.\n\n"
                 f"Completados: {completed}\n"
                 f"Errores: {errors}\n"
+                f"Errores de copia (dictamen conservado): {classification_summary.get('errores_copia', 0)}\n"
                 f"Aprobados: {approved}\n"
                 f"Revisar: {review}\n"
                 f"No aprobados: {classification_summary.get('no_aprobados', 0)}\n"
@@ -1138,6 +1143,7 @@ class BatchView(ctk.CTkFrame):
     # REPORTE PARCIAL DE SEGURIDAD
     # =========================================================
 
+    @view_permission('batch')
     def generate_partial_report_now(self):
         output_directory = self._get_batch_output_directory()
         if output_directory is None:

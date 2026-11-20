@@ -1,0 +1,35 @@
+{
+  "base_branch": "feature/usuarios-permisos-r58-20261120",
+  "base_commit": "0ddd54b977c503f6d7f9814a69a409699f9451b9",
+  "audit_branch": "codex/auditoria-integral-r58-20261120",
+  "revision": "3.6.19-r58-auditoria",
+  "automated_tests": {
+    "collected_final": 3010,
+    "passed_unique": 3010,
+    "failed": 0,
+    "skipped_remaining": 0,
+    "full_suite_passed": 3010,
+    "exact_source_unchanged": true,
+    "display": "Xvfb Linux (4 pantallas virtuales)",
+    "final_source_test_inventory_covered": true,
+    "production_code_unchanged_during_verified_suite": true,
+    "source_manifest_sha256": "4640b9897a19dd1e98cceaf3e5298255c991b80a9a96c726707e2e38519f9ab8"
+  },
+  "new_regressions": {
+    "cases": 38,
+    "failed_on_original": 33,
+    "passed_on_original": 5,
+    "passed_on_audited_source": 38
+  },
+  "coverage": {
+    "kind": "Instrumentación exploratoria parcial, complementada con regresiones finales de GUI; no prueba todas las ramas.",
+    "covered_lines": 10705,
+    "statements": 16595,
+    "percent": 64.51,
+    "modules_with_executed_lines": 111,
+    "includes_module_imports": true
+  },
+  "physical_windows_tested": false,
+  "human_audio_listening": false,
+  "customer_files_in_deliverables": false
+}

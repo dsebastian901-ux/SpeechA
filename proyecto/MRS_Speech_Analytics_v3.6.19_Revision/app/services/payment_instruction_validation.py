@@ -3,6 +3,16 @@ import re
 from app.services.conversation_evidence import normalize, sentence_evidence
 
 
+def _reported_instruction(source, position):
+    """Ámbito del antecedente hasta una transición explícita a la instrucción actual."""
+    prefix = source[:position]
+    reports = list(re.finditer(r'\b(?:me dijeron|me indicaron|le dije|les dije|yo dije|le comente)\b', prefix))
+    if not reports:
+        return False
+    after_report = prefix[reports[-1].end():]
+    return not re.search(r'(?:[,;]\s*|\bpero\s+)(?:ahora(?: bien)?|actualmente|a partir de ahora)\b', after_report)
+
+
 def only_negated_transfers(text):
     source = normalize(text)
     mentions = list(re.finditer(r"\b(?:transferencia|transferir|transfiera)\b", source))
@@ -72,7 +82,7 @@ def transfer_instructions(text, segments=()):
                 if (re.search(r"\b(?:no|nunca|ya|yo|lo|ayer|hoy)\s*$", before)
                         or re.match(r"(?:pagué|deposité|realicé)\b", raw[match.start():], re.I)
                         or re.search(r"\bno (?:le recomiendo|es necesario)\b[^.!?]{0,30}$", before)
-                        or re.search(r"\b(?:me dijeron|me indicaron)\b", s)):
+                        or _reported_instruction(s, match.start())):
                     continue
                 if (re.search(r'\b(?:foto|fotografia|captura|screenshot|escrincho|comprobante)\b',match.group())
                         and not re.search(r'\b(?:clabe|cuenta bancaria|cuenta interbancaria|cuenta de destino|transfiera|transferir a)\b',s)):
@@ -109,9 +119,12 @@ def wrong_bank_instructions(text, segments, bank_variants, authorized_codes, tra
         if unit["speaker_role"] in {"TITULAR", "TERCERO", "INTERLOCUTOR"}:
             continue
         s = normalize(unit["text"])
-        if re.search(r"\b(?:me dijeron|me indicaron|ya deposite|ya pague|no deposite|no transfiera)\b", s):
-            continue
         for offer in instruction.finditer(s):
+            prefix = s[max(0, offer.start()-100):offer.start()]
+            if (_reported_instruction(s, offer.start())
+                    or re.search(r'\b(?:no|nunca|ya|yo|ayer|hoy)\s*$',prefix)
+                    or re.search(r'\b(?:ya deposite|ya pague)\b[^,;.!?]{0,70}$',prefix)):
+                continue
             details = offer["details"]
             if re.search(r"\b(?:tarjeta|referencia|telefono|whatsapp)\b", details):
                 continue

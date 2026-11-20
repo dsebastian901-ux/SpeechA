@@ -1,7 +1,22 @@
 from types import SimpleNamespace
 import queue
+import pytest
 from app.ui.views.consolidated_reports_dialog import ConsolidatedReportsDialog as D
 from app.ui.views import consolidated_reports_dialog as module
+
+
+@pytest.fixture(autouse=True)
+def operator_session(tmp_path):
+    """Las acciones de interfaz requieren una sesión, también en pruebas."""
+    from app.services.access_service import AccessStore,activate
+    store=AccessStore(tmp_path/'accounts')
+    password='Clave sintetica de controles 123'
+    store.initialize(password)
+    store.change_user('create','Operador ejemplo',password)
+    store.login('Operador ejemplo',password)
+    activate(store)
+    yield
+    activate(None)
 
 
 class Value:

@@ -1,0 +1,299 @@
+{
+  "rule_regression": {
+    "evaluations": 2327,
+    "deduplicated": false,
+    "batches": 6,
+    "fresh_asr": false,
+    "gold_human_labels": false,
+    "before": {
+      "SIN_RELACION_EXCEL": 116,
+      "NO_APROBADO_MENOR_80": 69,
+      "REVISAR": 1512,
+      "NO_APROBADO": 127,
+      "FALLA_GRAVE": 99,
+      "APROBADO": 277,
+      "APROBADO_DURACION_MENOR": 3,
+      "APROBADO_ETIQUETA_CORREGIDA": 124
+    },
+    "after": {
+      "SIN_RELACION_EXCEL": 116,
+      "NO_APROBADO_MENOR_80": 69,
+      "REVISAR": 1512,
+      "NO_APROBADO": 127,
+      "FALLA_GRAVE": 99,
+      "APROBADO": 277,
+      "APROBADO_DURACION_MENOR": 3,
+      "APROBADO_ETIQUETA_CORREGIDA": 124
+    },
+    "changed_decisions": 0,
+    "changed_scores": 0,
+    "samples": [
+      {
+        "sample": "Muestra 1",
+        "evaluations": 352,
+        "before": {
+          "SIN_RELACION_EXCEL": 116,
+          "NO_APROBADO_MENOR_80": 14,
+          "REVISAR": 145,
+          "NO_APROBADO": 16,
+          "FALLA_GRAVE": 13,
+          "APROBADO": 32,
+          "APROBADO_DURACION_MENOR": 2,
+          "APROBADO_ETIQUETA_CORREGIDA": 14
+        },
+        "after": {
+          "SIN_RELACION_EXCEL": 116,
+          "NO_APROBADO_MENOR_80": 14,
+          "REVISAR": 145,
+          "NO_APROBADO": 16,
+          "FALLA_GRAVE": 13,
+          "APROBADO": 32,
+          "APROBADO_DURACION_MENOR": 2,
+          "APROBADO_ETIQUETA_CORREGIDA": 14
+        },
+        "changed_decisions": 0,
+        "changed_scores": 0
+      },
+      {
+        "sample": "Muestra 2",
+        "evaluations": 362,
+        "before": {
+          "REVISAR": 254,
+          "APROBADO": 48,
+          "NO_APROBADO": 12,
+          "FALLA_GRAVE": 19,
+          "APROBADO_ETIQUETA_CORREGIDA": 26,
+          "NO_APROBADO_MENOR_80": 3
+        },
+        "after": {
+          "REVISAR": 254,
+          "APROBADO": 48,
+          "NO_APROBADO": 12,
+          "FALLA_GRAVE": 19,
+          "APROBADO_ETIQUETA_CORREGIDA": 26,
+          "NO_APROBADO_MENOR_80": 3
+        },
+        "changed_decisions": 0,
+        "changed_scores": 0
+      },
+      {
+        "sample": "Muestra 3",
+        "evaluations": 100,
+        "before": {
+          "APROBADO": 17,
+          "REVISAR": 41,
+          "NO_APROBADO": 21,
+          "NO_APROBADO_MENOR_80": 12,
+          "APROBADO_ETIQUETA_CORREGIDA": 5,
+          "FALLA_GRAVE": 3,
+          "APROBADO_DURACION_MENOR": 1
+        },
+        "after": {
+          "APROBADO": 17,
+          "REVISAR": 41,
+          "NO_APROBADO": 21,
+          "NO_APROBADO_MENOR_80": 12,
+          "APROBADO_ETIQUETA_CORREGIDA": 5,
+          "FALLA_GRAVE": 3,
+          "APROBADO_DURACION_MENOR": 1
+        },
+        "changed_decisions": 0,
+        "changed_scores": 0
+      },
+      {
+        "sample": "Muestra 4",
+        "evaluations": 1007,
+        "before": {
+          "NO_APROBADO": 65,
+          "REVISAR": 732,
+          "APROBADO": 103,
+          "APROBADO_ETIQUETA_CORREGIDA": 51,
+          "NO_APROBADO_MENOR_80": 36,
+          "FALLA_GRAVE": 20
+        },
+        "after": {
+          "NO_APROBADO": 65,
+          "REVISAR": 732,
+          "APROBADO": 103,
+          "APROBADO_ETIQUETA_CORREGIDA": 51,
+          "NO_APROBADO_MENOR_80": 36,
+          "FALLA_GRAVE": 20
+        },
+        "changed_decisions": 0,
+        "changed_scores": 0
+      },
+      {
+        "sample": "Muestra 5",
+        "evaluations": 103,
+        "before": {
+          "REVISAR": 74,
+          "FALLA_GRAVE": 8,
+          "APROBADO": 18,
+          "APROBADO_ETIQUETA_CORREGIDA": 2,
+          "NO_APROBADO_MENOR_80": 1
+        },
+        "after": {
+          "REVISAR": 74,
+          "FALLA_GRAVE": 8,
+          "APROBADO": 18,
+          "APROBADO_ETIQUETA_CORREGIDA": 2,
+          "NO_APROBADO_MENOR_80": 1
+        },
+        "changed_decisions": 0,
+        "changed_scores": 0
+      },
+      {
+        "sample": "Muestra 6",
+        "evaluations": 403,
+        "before": {
+          "REVISAR": 266,
+          "FALLA_GRAVE": 36,
+          "APROBADO": 59,
+          "NO_APROBADO": 13,
+          "APROBADO_ETIQUETA_CORREGIDA": 26,
+          "NO_APROBADO_MENOR_80": 3
+        },
+        "after": {
+          "REVISAR": 266,
+          "FALLA_GRAVE": 36,
+          "APROBADO": 59,
+          "NO_APROBADO": 13,
+          "APROBADO_ETIQUETA_CORREGIDA": 26,
+          "NO_APROBADO_MENOR_80": 3
+        },
+        "changed_decisions": 0,
+        "changed_scores": 0
+      }
+    ]
+  },
+  "normal_batch_original_audios_saved_asr": {
+    "calls": 175,
+    "received_prior_review_calls": 140,
+    "fresh_asr_executed": false,
+    "source": "saved ASR; local audio path adjusted in private copy",
+    "normal_batch_decisions_and_scores_match_rule_regression": true,
+    "original_audio_and_excel_and_checkpoint_unchanged": true,
+    "copied_audio_sha256_matches": true,
+    "quality_and_nonpayment_reports_verified": true,
+    "outcomes": {
+      "REVISAR": 123,
+      "FALLA_GRAVE": 2,
+      "NO_APROBADO": 10,
+      "APROBADO": 20,
+      "NO_APROBADO_MENOR_80": 8,
+      "APROBADO_DURACION_MENOR": 2,
+      "APROBADO_ETIQUETA_CORREGIDA": 10
+    },
+    "seconds": 379.38
+  },
+  "fresh_linux_asr": {
+    "revision": "3.6.19-r58-auditoria",
+    "cases": [
+      {
+        "outcome": "REVISAR",
+        "score": 100.0,
+        "fresh_primary_asr": true,
+        "recovery": false
+      },
+      {
+        "outcome": "REVISAR",
+        "score": 100.0,
+        "fresh_primary_asr": true,
+        "recovery": false
+      }
+    ],
+    "real_primary_faster_whisper": true,
+    "network_connections_allowed": false,
+    "original_audio_and_excel_unchanged": true,
+    "classified_audio_hashes_verified": true,
+    "quality_and_nonpayment_reports_generated": true,
+    "reanalysis_matches_normal_pipeline": true,
+    "seconds": 107.5909911770002,
+    "manual_listening": false,
+    "approval_rate_generalization": false
+  },
+  "windows_runtime_under_wine": {
+    "platform": "win32",
+    "fresh_whisper_windows_binary": true,
+    "local_model_loaded_through_normal_service": true,
+    "omp_num_threads": 1,
+    "network_forbidden": true,
+    "source_audio_and_excel_unchanged": true,
+    "classified_copy_hash_matches": true,
+    "quality_and_nonpayment_reports_generated": true,
+    "outcome": "REVISAR",
+    "score": 100.0,
+    "seconds": 32.42358130000002,
+    "manual_listening": false
+  },
+  "windows_gui_under_wine": {
+    "platform": "win32",
+    "wine": true,
+    "physical_windows": false,
+    "first_setup_gui_submitted": true,
+    "login_buttons_fit_window": true,
+    "admin_users_button_invoked": true,
+    "operator_users_button_absent": true,
+    "operator_admin_routes_blocked": true,
+    "batch_dashboard_reports_opened_for_both_roles": true,
+    "accounts": "synthetic only",
+    "manual_listening": false,
+    "dashboard_saved_outcomes_tab_opened": true
+  },
+  "dashboard_same_175_input_results": {
+    "before": {
+      "calls": 175,
+      "display_labels": {
+        "REVISAR": 133,
+        "FALLA GRAVE": 2,
+        "APROBADO": 20,
+        "MENOR A 80%": 8,
+        "APROBADO - DURACIÓN MENOR": 2,
+        "APROBADO CON ETIQUETA CORREGIDA": 10
+      },
+      "final_outputs": {
+        "mal_dictaminado": 133,
+        "no_cumple": 1,
+        "cumple": 40,
+        "parcial": 1
+      }
+    },
+    "after": {
+      "calls": 175,
+      "display_labels": {
+        "REVISAR": 123,
+        "FALLA GRAVE": 2,
+        "NO APROBADO": 10,
+        "APROBADO": 20,
+        "MENOR A 80%": 8,
+        "APROBADO - DURACIÓN MENOR": 2,
+        "APROBADO CON ETIQUETA CORREGIDA": 10
+      },
+      "final_outputs": {
+        "REVISAR": 123,
+        "FALLA_GRAVE": 2,
+        "NO_APROBADO": 10,
+        "APROBADO": 20,
+        "NO_APROBADO_MENOR_80": 8,
+        "APROBADO_DURACION_MENOR": 2,
+        "APROBADO_ETIQUETA_CORREGIDA": 10
+      }
+    }
+  },
+  "first_windows_default_thread_trial": {
+    "gui_exit_code": 0,
+    "fresh_batch_outcome": "TIMEOUT",
+    "timeout_seconds": 240,
+    "wine": true,
+    "physical_windows": false,
+    "parallel_load": "test suite, rule regression, real ASR and batch tests running concurrently",
+    "claim": "No classification or default Windows performance certified by this attempt"
+  },
+  "claims": {
+    "scores_and_penalties_not_reduced": true,
+    "per_call_overrides_added": false,
+    "all_remaining_reviews_human_validated": false,
+    "recovered_checkpoints_are_not_the_program_fix": true,
+    "audio_or_customer_data_published": false
+  }
+}

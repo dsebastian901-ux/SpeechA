@@ -5,6 +5,7 @@ import threading
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
+from app.services.access_service import view_permission
 
 from app.services.consolidated_report_service import ConsolidatedReportService as Reports
 from app.ui.themes import Theme
@@ -74,6 +75,7 @@ class ConsolidatedReportsDialog(ctk.CTkToplevel):
         self.format_menu.configure(values=allowed)
         if self.format.get() not in allowed: self.format.set('Excel')
 
+    @view_permission('reports')
     def _add(self):
         if self.busy: return
         files = filedialog.askopenfilenames(parent=self, title='Seleccionar checkpoints de los lotes',
@@ -90,6 +92,7 @@ class ConsolidatedReportsDialog(ctk.CTkToplevel):
             menu.configure(values=['Todos']); value.set('Todos')
         self.generate_button.configure(state='disabled'); self.summary.configure(text='Sin lotes cargados.')
 
+    @view_permission('reports')
     def _generate(self):
         if self.busy or not self.dataset: return
         directory = filedialog.askdirectory(parent=self, title='Carpeta para guardar los reportes nuevos')

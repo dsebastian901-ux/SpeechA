@@ -4,8 +4,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import shutil
-import tempfile
+from app.utils.file_utils import file_digest, copy_verified_audio
 
 from app.services.account_source_validation import apply_output_name_authority
 from app.services.analytics_service import AnalyticsService
@@ -15,14 +14,6 @@ from app.services.checkpoint_reanalysis import transcription_with_saved_reviews
 
 CATEGORY='APROBADO_ETIQUETA_CORREGIDA'
 FOLDER='APROBADOS_ETIQUETA_CORREGIDA'
-
-
-def file_digest(path):
-    digest=hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for block in iter(lambda:stream.read(1024*1024),b''):
-            digest.update(block)
-    return digest.hexdigest()
 
 
 def export_corrected_labels(checkpoint, audio_directory, output_directory=None):
@@ -101,18 +92,7 @@ def export_corrected_labels(checkpoint, audio_directory, output_directory=None):
         destination.parent.mkdir(parents=True,exist_ok=True)
         if destination.exists():
             raise ValueError('Ya existe una copia de salida; seleccione una carpeta nueva.')
-        digest=file_digest(entry['source'])
-        temporary=None
-        try:
-            with tempfile.NamedTemporaryFile(dir=destination.parent,prefix='.mrs_',suffix='.part',delete=False) as stream:
-                temporary=Path(stream.name)
-            shutil.copy2(entry['source'],temporary)
-            if file_digest(temporary)!=digest or file_digest(entry['source'])!=digest:
-                raise ValueError('El audio cambió durante la copia; no se publica una copia incompleta.')
-            temporary.replace(destination);temporary=None
-        finally:
-            if temporary is not None:
-                temporary.unlink(missing_ok=True)
+        digest=copy_verified_audio(entry['source'],destination)
         records.append({'file_name':entry['file_name'],'source':str(entry['source']),'destination':str(destination),
                         'audio_sha256':digest,'score':entry['score'],'label':entry['label']})
         manifest['copied']=len(records)

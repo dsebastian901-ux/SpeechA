@@ -617,12 +617,26 @@ class BatchService:
             filename,
         )
 
-        shutil.copy2(source, destination)
+        # Publicar únicamente una copia completa. Si el disco falla o cambia
+        # el original durante la copia no debe quedar un audio truncado en
+        # APROBADOS (ni en otra clasificación).
+        from app.utils.file_utils import copy_verified_audio
+        copy_verified_audio(source, destination)
 
         item["classified_audio_path"] = str(destination)
         item["copy_status"] = "copiado"
+        item.pop('copy_error', None)
 
         return str(destination)
+
+    @staticmethod
+    def _record_copy_error(item, error):
+        # El fallo de entrega es técnico. Conservar el dictamen completo,
+        # incluyendo FALLA_GRAVE y sus alertas; permitir reintento del lote.
+        item['copy_status'] = 'error'
+        item['copy_error'] = str(error)
+        item['classified_audio_path'] = None
+        item['status'] = 'error'
 
     # =========================================================
     # OBTENER ESTADO
@@ -657,8 +671,9 @@ class BatchService:
             self.items,
             start=1,
         ):
-            if item.get("status") in ("completado", "error"):
+            if item.get("status") == "completado" or (item.get("status") == "error" and not item.get('copy_error')):
                 continue
+            item.pop('copy_error', None)
             item["status"] = "procesando"
             item["message"] = ""
             item["elapsed_seconds"] = 0.0
@@ -850,17 +865,14 @@ class BatchService:
                         )
                         item["copy_seconds"] = max(0.0, perf_counter() - copy_started)
                     except Exception as copy_error:
-                        item["copy_status"] = "error"
-                        item["classified_audio_path"] = None
-                        classification["motivo"] = (
-                            f"{classification['motivo']} | "
-                            f"error al copiar audio clasificado: {copy_error}"
-                        )
+                        self._record_copy_error(item, copy_error)
 
                     item["message"] = (
                         f"Sin texto útil · REVISAR · "
                         f"{record.estatus_grabacion}"
                     )
+                    if item.get('copy_error'):
+                        item['message'] += ' · Error de copia: ' + item['copy_error']
 
                     results.append(
                         {
@@ -1127,13 +1139,7 @@ class BatchService:
                     )
                     item["copy_seconds"] = max(0.0, perf_counter() - copy_started)
                 except Exception as copy_error:
-                    item["copy_status"] = "error"
-                    item["classified_audio_path"] = None
-                    classification["aprobado"] = False
-                    classification["clasificacion"] = "REVISAR"
-                    classification["motivo"] = (
-                        f"error al copiar audio clasificado: {copy_error}"
-                    )
+                    self._record_copy_error(item, copy_error)
 
                 if self.has_relation_excel() and record is None:
                     item["message"] = (
@@ -1146,6 +1152,9 @@ class BatchService:
                         f"{classification['clasificacion']} · "
                         f"{classification['motivo']}"
                     )
+
+                if item.get('copy_error'):
+                    item['message'] += ' · Error de copia: ' + item['copy_error']
 
                 results.append(
                     {
@@ -1342,6 +1351,7 @@ class BatchService:
         return {'analizados':len(records),'aprobados':sum(bool(c.get('aprobado')) for c in records),
             'revisar':counts['REVISAR'],'no_aprobados':sum(n for c,n in counts.items() if c.startswith('NO_APROBADO')),
             'fallas_graves':counts['FALLA_GRAVE'],'errores':counts['ERROR'],
+            'errores_copia':sum(i.get('copy_status')=='error' for i in self.items),
             'aprobadas_duracion_menor':counts['APROBADO_DURACION_MENOR'],
             'llamadas_con_alertas_pendientes':sum(bool(c.get('requires_alert_review'))for c in records),
             'total_alertas_pendientes':sum(int(c.get('pending_alert_count')or 0)for c in records),

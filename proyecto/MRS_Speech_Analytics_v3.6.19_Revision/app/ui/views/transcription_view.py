@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import customtkinter as ctk
+from app.services.access_service import view_permission
 from tkinter import messagebox
 
 from app.core import project_manager
@@ -620,6 +621,7 @@ class TranscriptionView(ctk.CTkFrame):
     # GUARDADO
     # =========================================================
 
+    @view_permission('reviews')
     def save_current_transcription(self):
         if self.selected_transcription is None:
             return

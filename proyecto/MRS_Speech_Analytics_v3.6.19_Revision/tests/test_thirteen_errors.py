@@ -175,7 +175,10 @@ def test_e12_already_paid_does_not_require_new_convenio_or_whatsapp():
     ({"estatus_autorizado": True, "tiene_nombre_final": False}, "REVISAR"),
 ])
 def test_e01_e13_operational_categories_are_independent_of_score(base, expected):
-    decision = A.shared_quality_decision({}, 95, duration_seconds=90, base_classification=base)
+    # El caso compara categorías operativas después de evaluar la gestión.
+    # Un diccionario vacío ya no equivale a trece grupos sin hallazgos.
+    metadata = {'quality_contact_type':'TITULAR','status_validation':{'valid':True}}
+    decision = A.shared_quality_decision(metadata, 95, duration_seconds=90, base_classification=base)
     assert decision["clasificacion"] == expected
     assert decision["aprobado"] is (expected == "APROBADO")
 
