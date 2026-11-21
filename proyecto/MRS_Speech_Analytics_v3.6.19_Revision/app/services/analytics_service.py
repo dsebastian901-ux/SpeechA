@@ -2800,6 +2800,33 @@ class AnalyticsService:
         critical_failures: List[Dict] = []
         penalty_total = 0
 
+        # Criterios 59 y 68: descuentos específicos de 5 puntos.
+        # No se exige repetir diez dígitos si el tercero ya conoce el contacto,
+        # pero sí que el gestor confirme que el número es el correcto.
+        from app.services.operational_outcome_resolution import (
+            callback_number_reconfirmed, distinct_partial_alternative)
+        callback_number_validation={'applies':False,'confirmed':False,'evidence':''}
+        if (contact_type in {'TERCERO','TERCERO / FAMILIAR','TERCERO / TRABAJO'}
+                and message_workflow_validation.get('previous_contact_confirmed')
+                and message_workflow_validation.get('recipient_accepted')):
+            callback_number_validation=callback_number_reconfirmed(text,segments)
+            callback_number_validation['applies']=True
+            if not callback_number_validation.get('confirmed'):
+                add_penalty(
+                    'PEN_CONTACTO_CONOCIDO_SIN_VERIFICAR','Recado',
+                    'El tercero indicó tener el teléfono, pero el gestor no confirmó que fuera el correcto.',
+                    5, False, ['RECADO059'])
+        alternative_to_partial_validation={'applies':False,'confirmed':False,'evidence':''}
+        if (contact_type=='TITULAR' and partial_payment and partial_explanation
+                and confirms_commitment):
+            alternative_to_partial_validation=distinct_partial_alternative(text,segments)
+            alternative_to_partial_validation['applies']=True
+            if not alternative_to_partial_validation.get('confirmed'):
+                add_penalty(
+                    'PEN_PARCIAL_SIN_ALTERNATIVA_ADICIONAL','Negociación',
+                    'Se explicó correctamente el pago parcial, pero no se ofreció una alternativa adicional.',
+                    5, False, ['PAGO068'])
+
         if gestor_confrontation:
             add_penalty(
                 "PEN_TRATO_CONFRONTACION", "Trato",
@@ -4717,6 +4744,8 @@ class AnalyticsService:
                 {"confirmed":False,"evidence":[],"reason":"No corresponde rechazo de recado: conversación con titular."}),
             "message_delivery_validation": message_delivery_validation,
             "message_workflow_validation": message_workflow_validation,
+            "callback_number_validation": callback_number_validation,
+            "alternative_to_partial_validation": alternative_to_partial_validation,
             "contact_conflict_validation": contact_conflict_validation,
             "contact_validation": contact_confirmation,
             "dialogue_evaluation": {k:v for k,v in dialogue.items() if k!="units"},
