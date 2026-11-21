@@ -73,3 +73,30 @@ def test_special_output_keeps_underlying_quality_and_original(tmp_path,metadata,
     assert output.parent.name==subdir
     assert output.parent.parent.name=="LUGARES_NO_AUTORIZADOS"
     assert output.read_bytes()==source.read_bytes()
+
+
+@pytest.mark.parametrize('person,expected',[
+    ('Soy su hermana','MENSAJE CON FAMILIAR'),
+    ('Soy compañera de trabajo','MENSAJE EN TRABAJO'),
+    ('Soy su vecina','MENSAJE CON TERCERO'),
+])
+def test_recado_received_is_recado_even_when_recipient_cannot_contact_holder(person,expected):
+    text=('Gestor: Habla MRS. ¿Le puedo dejar un recado? '
+          f'Tercero: {person}. Sí, dígame. '
+          'Gestor: Por favor, dígale que se comunique con nosotros. '
+          'Tercero: Sí, recibí el recado, pero no tengo forma de contactarla.')
+    a=_analyze(text,expected)
+    sv=a.metadata['status_validation']
+    assert sv['detected_status']==expected
+    assert a.metadata['message_workflow_validation']['recado_aceptado_sin_poder_transmitir']
+    assert not a.metadata['message_workflow_validation']['callback_available']
+    assert sv['evidence_method']=='RECADO_RECIBIDO_SIN_POSIBILIDAD_DE_TRANSMITIR'
+
+
+def test_no_contact_without_recado_accepted_is_not_false_recado():
+    text=('Gestor: Habla MRS. ¿Le puedo dejar un recado? '
+          'Tercero: Soy su hermana. No quiero recibir el recado; '
+          'además, no tengo forma de contactarla.')
+    a=_analyze(text,'SE NIEGAN A TOMAR RECADO')
+    assert a.metadata['status_validation']['detected_status']!='MENSAJE CON FAMILIAR'
+    assert not a.metadata['message_workflow_validation']['recado_aceptado_sin_poder_transmitir']
