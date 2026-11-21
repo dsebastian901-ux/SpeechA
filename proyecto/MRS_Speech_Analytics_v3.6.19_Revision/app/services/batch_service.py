@@ -584,6 +584,16 @@ class BatchService:
             "REVISAR": "REVISAR",
         }
         destination_dir = classified_root / folder_map.get(category, "REVISAR")
+        # Separa lugar no autorizado o referencia distinta sin alterar calidad
+        # ni afirmar fraude por la sola mención/transcripción de una referencia.
+        metadata=item.get('analytics_metadata') or {}
+        venues=(metadata.get('convenio_payment_validation') or {}).get('prior_unauthorized_venue') or {}
+        card=metadata.get('card_validation') or {}
+        reference_mismatch=str(card.get('result') or '').startswith('REVISAR - REFERENCIA DISTINTA')
+        if venues.get('confirmed') or reference_mismatch:
+            subfolder=('REFERENCIA_POR_CONFIRMAR' if reference_mismatch and not venues.get('confirmed')
+                       else folder_map.get(category,'REVISAR'))
+            destination_dir=classified_root/'LUGARES_NO_AUTORIZADOS'/subfolder
 
         correction = classification.get('output_label_correction') or {}
         from app.services.classification_policy import corrected_label_exportable
