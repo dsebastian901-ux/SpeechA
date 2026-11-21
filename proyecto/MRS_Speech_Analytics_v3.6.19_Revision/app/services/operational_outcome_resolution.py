@@ -74,8 +74,10 @@ def offered_payment_alternatives(text,segments=(),before_hangup=False):
         r'(?:otra|una|dos|tres|varias) (?:alternativas?|opciones?) (?:de )?pago|'
         r'(?:podemos|podriamos) (?:hacer|generar|ofrecer|formalizar) (?:un |el |su )?(?:convenio|acuerdo|pago)|'
         r'(?:puede|podria|podriamos|podemos) (?:realizar|hacer|depositar|pagar|abonar|cubrir)\b[^.!?]{0,85}\b(?:pago|abono|pesos|manana|hoy|dia)|'
-        r'(?:cuanto|que cantidad|que monto) (?:puede|podria|podemos) (?:pagar|abonar|cubrir)|'
-        r'(?:cuando|que dia|para cuando) (?:puede|podria|podemos) (?:pagar|abonar|realizar)|'
+        # Preguntar cuánto o cuándo NO constituye una alternativa ofrecida.
+        # Mencionar el pago mínimo sí es una opción de cobranza.
+        r'(?:puede|podria|debe) (?:realizar|cubrir|pagar) (?:su |el |un )?pago minimo|'
+        r'(?:el |su )?pago minimo (?:es|seria|se puede realizar)|'
         r'(?:podemos contar con|contariamos con) (?:su |el )?pago)'
     )
     cursor=0
