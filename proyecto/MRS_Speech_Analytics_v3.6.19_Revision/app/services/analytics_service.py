@@ -1979,6 +1979,21 @@ class AnalyticsService:
         prior_payment_evidence = list(dict.fromkeys(u["text"] for u in completed_payment_confirmation["evidence"]))
         prior_payment_amounts = prior_payment_binding["amounts"]
         prior_payment_total = prior_payment_binding["total"]
+        from app.services.operational_outcome_resolution import reported_unauthorized_venue
+        prior_unauthorized_venue=reported_unauthorized_venue(text,segments)
+        # Criterio 69: «pagué en OXXO/Elektra» no es evidencia de un
+        # abono autorizado. Registrar la afirmación, NO sumar saldo cubierto.
+        # Si hubo otros pagos reportados, evitar borrar importes sin revisión.
+        other_reported_payment=any(
+            not re.search(r'\b(?:oxxo|elektra)\b',norm(u.get('text')or''))
+            for u in completed_payment_confirmation.get('evidence')or[])
+        unauthorized_only_claim=bool(prior_unauthorized_venue['confirmed']
+            and not other_reported_payment)
+        if unauthorized_only_claim:
+            prior_payment_binding['amounts_ignored_unauthorized_venue']=prior_payment_amounts
+            prior_payment_binding['reported_payment_not_accredited']=True
+            prior_payment_amounts=[]
+            prior_payment_total=None
 
         commitment_confirmation = payment_commitment(text, segments)
         from app.services.accepted_schedule_evidence import accepted_two_part_schedule
@@ -2018,7 +2033,8 @@ class AnalyticsService:
         prior_cue_in_promise = bool(re.search(
             r"\b(?:ya\s+(?:pague|page|hice|realice)|pague\s+(?:ayer|hoy)|(?:lo|el\s+pago)\s+hizo\s+el\s+dia|(?:realizo|hizo)\s+el\s+pago\s+el\s+dia|ya\s+se\s+(?:hizo|pago)|pago\s+(?:realizado|efectuado))\b",
             norm(promise_date_evidence)))
-        payment_already_made = completed_payment_confirmation["confirmed"]
+        payment_already_made = bool(completed_payment_confirmation["confirmed"]
+            and not unauthorized_only_claim)
         explicit_new_promise = bool(
             promise_date and promise_date_evidence and (promise_is_future or not prior_cue_in_promise)
             and commitment_confirmation["accepted"]
@@ -2624,9 +2640,6 @@ class AnalyticsService:
             (transfer_instruction_evidence and not authorized_transfer_instruction)
             or (transfer_wording and not authorized_transfer_account and payment_instruction_context
                 and not reported_transfer_only and not transfer_option_listing and not only_negated_transfers(text))))))
-
-        from app.services.operational_outcome_resolution import reported_unauthorized_venue
-        prior_unauthorized_venue=reported_unauthorized_venue(text,segments)
 
         convenio_payment_validation = {
             'bank_service_validation':service_payment,
