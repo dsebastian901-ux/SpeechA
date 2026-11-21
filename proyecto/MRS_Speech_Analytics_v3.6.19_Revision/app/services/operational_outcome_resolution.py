@@ -163,3 +163,25 @@ def distinct_partial_alternative(text,segments=()):
         if re.search(cue,phrase) and not re.search(r'\b(?:no |nunca |tampoco )\b[^.!?]{0,28}$',phrase):
             return {'confirmed':True,'evidence':u.get('text')}
     return {'confirmed':False,'evidence':''}
+
+
+def family_payment_without_own_name(text,segments=(),family=False):
+    """Criterio 85: compromiso propio de familiar sin identificarse por nombre.
+
+    No penaliza una simple recepción de recado ni una promesa del TITULAR.
+    """
+    if not family:
+        return {'applies':False,'confirmed':False,'evidence':''}
+    pledge=recipient_statement(text,segments,
+        r'\b(?:yo (?:lo )?(?:voy a pagar|pagare|pago|me comprometo a pagar|'
+        r'me hago responsable|me encargo del pago)|'
+        r'yo me voy a hacer cargo|yo respondo por (?:el |ese )?pago|'
+        r'yo cubro (?:el |ese )?pago|'
+        r'yo le pago)\b')
+    if not pledge:
+        return {'applies':False,'confirmed':False,'evidence':''}
+    named=recipient_statement(text,segments,
+        r'\b(?:(?:yo )?me llamo|mi nombre es|soy (?:el senor|la senora|'
+        r'la senorita|don|dona))\s+[a-z]{3,}(?:\s+[a-z]{3,}){0,3}\b')
+    return {'applies':True,'confirmed':not bool(named),
+        'evidence':pledge,'name_evidence':named or ''}
