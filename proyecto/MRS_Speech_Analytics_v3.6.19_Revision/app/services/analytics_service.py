@@ -2261,17 +2261,8 @@ class AnalyticsService:
         hostile_interlocutor_review = any(e["speaker_role"] in {"TITULAR", "TERCERO", "INTERLOCUTOR"} for e in confrontation_details)
         # Insultos/directivas hostiles explícitas: sin diarización no siempre es seguro
         # atribuir el hablante, pero nunca deben pasar silenciosamente como APROBADA.
-        insult_patterns = [
-            "tonta", "tonto", "idiota", "estupida", "estupido",
-            "pendeja", "pendejo", "chingando", "chingada", "chingado", "chingarazo", "chingadazo",
-            "pinche vieja", "pinche viejo", "pinche", "cabron", "cabrona",
-            "mierda", "verga", "no mames", "no mamen", "culero", "culera", "hijo de puta", "hija de puta", "vete a la chingada",
-            "puta", "puto", "chingar", "chinga tu madre", "jodete", "vete al carajo",
-            "que poca madre",
-            "quiero acostarme contigo", "quiero tener sexo contigo", "quiero cogerte",
-        ]
-        insult_evidence = [p for p in insult_patterns if re.search(r"(?<!\w)" + re.escape(norm(p)) + r"s?(?!\w)", normalized)]
-        insult_evidence.extend(offensive_asr_variants(text))
+        from app.services.treatment_evidence import offensive_language_phrases
+        insult_evidence = offensive_language_phrases(text)
         ambiguous_tail_insult = bool(re.search(r"(?<!\w)uta[.!?¡¿ ]*$",normalized)
             and re.search(r"\b(?:hasta luego|gracias|buen dia)\b",normalized[-260:]))
         offensive_language_evidence = [dict(unit, phrase=phrase)

@@ -1,6 +1,6 @@
 import customtkinter as ctk
 from app.config import app_info
-from app.services.access_service import allowed, require
+from app.services.access_service import allowed, current_user
 
 
 class TopBar(ctk.CTkFrame):
@@ -22,7 +22,11 @@ class TopBar(ctk.CTkFrame):
                 font=ctk.CTkFont("Segoe UI", 11, "bold"),
                 command=lambda: parent.work_area.show_users(),
             ).grid(row=0, column=1, padx=(3, 13), pady=8, sticky="e")
+        elif not allowed('batch') and (allowed('dashboard') or allowed('reports')):
+            ctk.CTkButton(self, text='Consultar proyecto', width=150, height=30,
+                command=lambda: parent.work_area.select_consultation_project()).grid(
+                    row=0, column=1, padx=(3,13), pady=8, sticky='e')
         ctk.CTkLabel(
-            self, text=require("batch")["username"], text_color="#DFF6E8",
+            self, text=current_user()["username"], text_color="#DFF6E8",
             font=ctk.CTkFont("Segoe UI", 11, "bold")
         ).grid(row=0, column=2, padx=(0, 18), pady=10, sticky="e")

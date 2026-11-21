@@ -2,14 +2,13 @@
   "issues": 89,
   "groups": 13,
   "states": {
-    "CORREGIDO": 68,
-    "PARCIALMENTE CORREGIDO": 16,
-    "NO VERIFICABLE": 5
+    "CORREGIDO": 85,
+    "NO VERIFICABLE": 4
   },
-  "python_modules": 178,
+  "python_modules": 179,
   "entry_scripts": 18,
-  "app_modules": 165,
+  "app_modules": 166,
   "ast_errors": 0,
-  "coverage_imported": true,
+  "coverage_imported": false,
   "customer_data_read": false
 }

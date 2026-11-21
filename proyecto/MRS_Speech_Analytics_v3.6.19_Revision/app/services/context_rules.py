@@ -66,6 +66,8 @@ def prohibited_threat(text, segments=(), mora=''):
             if '?' in clause or '¿' in clause:
                 continue
             for match in pattern.finditer(clause):
+                from app.services.speech_scope import nonassertive_prefix
+                if nonassertive_prefix(clause,match.start()):continue
                 prefix = clause[:match.start()]
                 if re.search(r'\b(?:no|nunca|jamas) (?:es|son|sera|seran) lo primero\b',match.group()):
                     continue

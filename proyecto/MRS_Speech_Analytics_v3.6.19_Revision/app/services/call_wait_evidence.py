@@ -67,6 +67,7 @@ def _closed_recording_tail(units):
 def _timed_units(text, segments, duration):
     source = normalize(text)
     units, speech, invalid = [], [], 0
+    cursor=0
     for segment in segments or ():
         if not isinstance(segment, dict):
             invalid += 1
@@ -80,6 +81,11 @@ def _timed_units(text, segments, duration):
                 (duration is not None and end > duration + 0.1) or normalize(fragment) not in source):
             invalid += 1
             continue
+        position=source.find(normalize(fragment),cursor)
+        if position<0:
+            invalid+=1
+            continue
+        cursor=position+len(normalize(fragment))
         role = role_of(segment.get('speaker_role') or segment.get('role') or segment.get('speaker'))
         label = re.match(r'^\s*(gestor|agente|asesor|titular|familiar|tercero|interlocutor|cliente)\s*:\s*', fragment, re.I)
         if label:

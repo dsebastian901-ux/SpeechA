@@ -1,35 +1,175 @@
 {
-  "base_branch": "feature/usuarios-permisos-r58-20261120",
-  "base_commit": "0ddd54b977c503f6d7f9814a69a409699f9451b9",
+  "base_commit": "b630ae90ea1d9ef40641dde2fa46cc047b1fe381",
   "audit_branch": "codex/auditoria-integral-r58-20261120",
-  "revision": "3.6.19-r58-auditoria",
   "automated_tests": {
-    "collected_final": 3010,
-    "passed_unique": 3010,
-    "failed": 0,
-    "skipped_remaining": 0,
-    "full_suite_passed": 3010,
-    "exact_source_unchanged": true,
-    "display": "Xvfb Linux (4 pantallas virtuales)",
-    "final_source_test_inventory_covered": true,
-    "production_code_unchanged_during_verified_suite": true,
-    "source_manifest_sha256": "4640b9897a19dd1e98cceaf3e5298255c991b80a9a96c726707e2e38519f9ab8"
+    "tests": 3104,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 3104
   },
+  "exact_source_unchanged_during_final_suite": true,
   "new_regressions": {
-    "cases": 38,
-    "failed_on_original": 33,
-    "passed_on_original": 5,
-    "passed_on_audited_source": 38
+    "tests": 94,
+    "failed_before": 64,
+    "passed_before": 30,
+    "passed_after": 94
   },
-  "coverage": {
-    "kind": "Instrumentación exploratoria parcial, complementada con regresiones finales de GUI; no prueba todas las ramas.",
-    "covered_lines": 10705,
-    "statements": 16595,
-    "percent": 64.51,
-    "modules_with_executed_lines": 111,
-    "includes_module_imports": true
+  "historical_corpus": {
+    "samples": [
+      {
+        "sample": 1,
+        "evaluations": 352,
+        "decision_changes": 0,
+        "score_changes": 0
+      },
+      {
+        "sample": 2,
+        "evaluations": 362,
+        "decision_changes": 0,
+        "score_changes": 0
+      },
+      {
+        "sample": 3,
+        "evaluations": 100,
+        "decision_changes": 0,
+        "score_changes": 0
+      },
+      {
+        "sample": 4,
+        "evaluations": 1007,
+        "decision_changes": 0,
+        "score_changes": 0
+      },
+      {
+        "sample": 5,
+        "evaluations": 103,
+        "decision_changes": 0,
+        "score_changes": 0
+      },
+      {
+        "sample": 6,
+        "evaluations": 403,
+        "decision_changes": 0,
+        "score_changes": 0
+      }
+    ],
+    "evaluations": 2327,
+    "decision_changes": 0,
+    "score_changes": 0,
+    "after_counts": {
+      "SIN_RELACION_EXCEL": 116,
+      "NO_APROBADO_MENOR_80": 69,
+      "REVISAR": 1512,
+      "NO_APROBADO": 127,
+      "FALLA_GRAVE": 99,
+      "APROBADO": 277,
+      "APROBADO_DURACION_MENOR": 3,
+      "APROBADO_ETIQUETA_CORREGIDA": 124
+    },
+    "fresh_asr": false,
+    "human_gold": false
   },
   "physical_windows_tested": false,
   "human_audio_listening": false,
-  "customer_files_in_deliverables": false
+  "protected_r57": {
+    "files": 780,
+    "changed": 0,
+    "preserved": true
+  },
+  "customer_files_in_deliverables": false,
+  "normal_batch_saved_asr": {
+    "calls": 175,
+    "received_prior_review_calls": 140,
+    "fresh_asr_executed": false,
+    "normal_batch_decisions_and_scores_match_rule_regression": true,
+    "original_audio_and_excel_and_checkpoint_unchanged": true,
+    "copied_audio_sha256_matches": true,
+    "quality_and_nonpayment_reports_verified": true,
+    "outcomes": {
+      "REVISAR": 123,
+      "FALLA_GRAVE": 2,
+      "NO_APROBADO": 10,
+      "APROBADO": 20,
+      "NO_APROBADO_MENOR_80": 8,
+      "APROBADO_DURACION_MENOR": 2,
+      "APROBADO_ETIQUETA_CORREGIDA": 10
+    },
+    "seconds": 146.589
+  },
+  "fresh_primary_asr": {
+    "revision": "3.6.19-r58-auditoria",
+    "real_primary_faster_whisper": true,
+    "network_connections_allowed": false,
+    "original_audio_and_excel_unchanged": true,
+    "classified_audio_hashes_verified": true,
+    "quality_and_nonpayment_reports_generated": true,
+    "reanalysis_matches_normal_pipeline": true,
+    "seconds": 58.30430484199951,
+    "manual_listening": false,
+    "approval_rate_generalization": false,
+    "cases": [
+      {
+        "outcome": "REVISAR",
+        "score": 100.0,
+        "fresh_primary_asr": true,
+        "recovery": false
+      },
+      {
+        "outcome": "REVISAR",
+        "score": 100.0,
+        "fresh_primary_asr": true,
+        "recovery": false
+      }
+    ]
+  },
+  "windows_wine_asr": {
+    "platform": "win32",
+    "fresh_whisper_windows_binary": true,
+    "local_model_loaded_through_normal_service": true,
+    "omp_num_threads": 1,
+    "network_forbidden": true,
+    "source_audio_and_excel_unchanged": true,
+    "classified_copy_hash_matches": true,
+    "quality_and_nonpayment_reports_generated": true,
+    "outcome": "REVISAR",
+    "score": 100.0,
+    "seconds": 30.29807919999803,
+    "manual_listening": false
+  },
+  "windows_wine_gui": {
+    "platform": "win32",
+    "wine": true,
+    "physical_windows": false,
+    "first_setup_gui_submitted": true,
+    "login_buttons_fit_window": true,
+    "admin_users_button_invoked": true,
+    "operator_users_button_absent": true,
+    "operator_admin_routes_blocked": true,
+    "batch_dashboard_reports_opened_for_both_roles": true,
+    "accounts": "synthetic only",
+    "manual_listening": false,
+    "individual_permissions_edited_through_gui": true,
+    "restricted_account_usb_import_tested": true,
+    "dashboard_saved_outcomes_tab_opened": true
+  },
+  "windows_wine_driver": {
+    "exit_codes": {
+      "windows_batch_serial": 0,
+      "windows_gui_complete": 0
+    },
+    "wine": true,
+    "physical_windows": false,
+    "source_revision": "3.6.19-r58-auditoria"
+  },
+  "limits": [
+    "Sin escucha humana",
+    "Sin Windows físico ni USB físico",
+    "Dos audios distintos con Whisper real; el audio Win32 repite uno de ellos, no constituye una tercera grabación distinta",
+    "OMP_NUM_THREADS=1 en prueba Win32; no certifica rendimiento por defecto",
+    "El arnés Wine al destruir varias raíces Tk emitió avisos Tcl de callbacks pendientes y terminó correctamente; no certifica ciclo de ventanas en Windows físico",
+    "No se demuestra reducción de REVISAR ni mejora de precisión acústica en el corpus histórico"
+  ],
+  "sealed_app_and_test_files": 266,
+  "sealed_manifest_sha256": "b44b5fb07635d310652833d891f897c1cd9b1689951162ee4c75696052dad3ab"
 }

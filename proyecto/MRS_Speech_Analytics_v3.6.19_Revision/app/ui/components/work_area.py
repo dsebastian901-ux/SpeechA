@@ -8,7 +8,7 @@ Componente: Work Area
 import customtkinter as ctk
 from pathlib import Path
 from PIL import Image
-from app.services.access_service import view_permission, allowed
+from app.services.access_service import view_permission, allowed, require_any
 
 from app.ui.themes import Theme
 
@@ -43,7 +43,35 @@ class WorkArea(ctk.CTkFrame):
 
         self.current_view = None
 
-        self.show_home() if allowed('projects') else self.show_batch()
+        self.show_initial_view()
+
+    def show_initial_view(self):
+        for permission, method in [('projects',self.show_home),('batch',self.show_batch),
+                                   ('dashboard',self.show_dashboard),('reports',self.show_reports)]:
+            if allowed(permission):
+                return method()
+        self.clear()
+        panel = ctk.CTkFrame(self,fg_color='transparent')
+        panel.grid(row=0,column=0,sticky='nsew')
+        ctk.CTkLabel(panel,text='No tienes funciones asignadas.',font=ctk.CTkFont(size=20)).pack(pady=(70,12))
+        ctk.CTkLabel(panel,text='Solicita a la administradora que habilite alguna función.').pack()
+        self.current_view = panel
+
+    def select_consultation_project(self):
+        from tkinter import filedialog,messagebox
+        from app.services.project_service import ProjectService
+        from app.core import project_manager
+        try:
+            require_any(('dashboard','reports'))
+            selected=filedialog.askopenfilename(parent=self,title='Consultar un proyecto existente',
+                filetypes=[('Proyecto MRS','proyecto.json'),('JSON','*.json')])
+            if not selected:return
+            require_any(('dashboard','reports'))
+            project=ProjectService.open_project(selected)
+            project_manager.set_current_project(project)
+            self.show_dashboard() if allowed('dashboard') else self.show_reports()
+        except (PermissionError,ValueError,OSError) as error:
+            messagebox.showerror('Consultar proyecto',str(error),parent=self)
 
     # =========================================================
     # LIMPIAR

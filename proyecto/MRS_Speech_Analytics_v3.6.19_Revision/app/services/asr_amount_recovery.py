@@ -154,7 +154,7 @@ def validated_entries(text, segments, audit):
         attempts = entry.get("attempts") or []
         if not candidate or not isinstance(attempts, list) or len(attempts) != 2 or entry.get("status") != "COINCIDENCIA_ASR":
             continue
-        if any(not isinstance(a, dict) for a in attempts):
+        if any(not isinstance(a, dict) or a.get("error") for a in attempts):
             continue
         if any(entry.get(k) != candidate[k] for k in ("anchor_end", "inicio", "fin", "texto_original")):
             continue
@@ -164,6 +164,8 @@ def validated_entries(text, segments, audit):
                for a, window in zip(attempts, expected)):
             continue
         amounts = [monetary_readings(a.get("texto", "")) for a in attempts]
+        if any(a.get("amounts") != sorted(values) for a,values in zip(attempts,amounts)):
+            continue
         if len(amounts[0]) == 1 and amounts[0] == amounts[1] == {entry.get("amount")}:
             result.append(entry)
     return result

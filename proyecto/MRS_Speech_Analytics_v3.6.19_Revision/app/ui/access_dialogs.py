@@ -144,38 +144,116 @@ def authenticate_gui(store=None):
     return accepted[0]
 
 
+OPERATOR_FUNCTIONS = (('batch','Procesamiento por lotes'),('dashboard','Dashboard'),('reports','Reportes'))
+
+
+class OperatorAccessDialog(tk.Toplevel):
+    """Alta y permisos de operador: no expone credenciales ni funciones de admin."""
+    def __init__(self,parent,store,on_saved,username=None):
+        store.require('users')
+        selected=next((u for u in store.users()if u['username']==username),None)if username else None
+        if username and (selected is None or selected['role']!='OPERADOR'):
+            raise ValueError('Seleccione un operador; la administradora conserva acceso total.')
+        super().__init__(parent)
+        self.store=store;self.on_saved=on_saved;self.editing=username
+        self.title('Permisos individuales'if username else'Nuevo operador')
+        self.transient(parent.winfo_toplevel())
+        width=min(560,self.winfo_screenwidth()-60);height=min(540,self.winfo_screenheight()-100)
+        self.geometry(f'{width}x{height}');self.minsize(min(470,width),min(430,height))
+        self.grid_columnconfigure(0,weight=1)
+        self.grid_rowconfigure(1,weight=1)
+        tk.Label(self,text='Permisos del operador'if username else'Alta de operador',
+            font=('Segoe UI',14,'bold'),anchor='w').grid(row=0,column=0,sticky='ew',padx=22,pady=(16,8))
+        form=tk.Frame(self);form.grid(row=1,column=0,sticky='nsew',padx=22,pady=6);form.grid_columnconfigure(0,weight=1)
+        tk.Label(form,text='Nombre de usuario',anchor='w').grid(row=0,column=0,sticky='ew')
+        self.username=tk.Entry(form);self.username.grid(row=1,column=0,sticky='ew',ipady=4,pady=(3,10))
+        if username:
+            self.username.insert(0,username);self.username.configure(state='readonly')
+        self.password=None;self.confirm=None
+        row=2
+        if not username:
+            for key,label in [('password','Contraseña inicial (mínimo 12 caracteres)'),('confirm','Confirmar contraseña')]:
+                tk.Label(form,text=label,anchor='w').grid(row=row,column=0,sticky='ew')
+                entry=tk.Entry(form,show='●');entry.grid(row=row+1,column=0,sticky='ew',ipady=4,pady=(3,10))
+                setattr(self,key,entry);row+=2
+        tk.Label(form,text='Funciones permitidas',font=('Segoe UI',10,'bold'),anchor='w').grid(row=row,column=0,sticky='ew',pady=(3,5));row+=1
+        initial=selected['permissions']if selected else [p for p,_ in OPERATOR_FUNCTIONS]
+        self.permissions={}
+        for permission,label in OPERATOR_FUNCTIONS:
+            value=tk.BooleanVar(self,value=permission in initial);self.permissions[permission]=value
+            ttk.Checkbutton(form,text=label,variable=value).grid(row=row,column=0,sticky='w',pady=3);row+=1
+        tk.Label(form,text='Sin funciones seleccionadas, podrá iniciar sesión pero no utilizar módulos.',
+            anchor='w',justify='left',wraplength=max(390,width-50)).grid(row=row,column=0,sticky='ew',pady=(10,5))
+        buttons=tk.Frame(self);buttons.grid(row=2,column=0,sticky='ew',padx=22,pady=(8,16))
+        ttk.Button(buttons,text='Cancelar',command=self.destroy).pack(side='right',padx=(8,0))
+        self.save_button=ttk.Button(buttons,text='Guardar permisos'if username else'Crear operador',command=self.save)
+        self.save_button.pack(side='right')
+        self.grab_set();self.username.focus_set()
+
+    def save(self):
+        try:
+            selected=[p for p,_ in OPERATOR_FUNCTIONS if self.permissions[p].get()]
+            if self.editing:
+                self.store.change_user('permissions',self.editing,selected)
+            else:
+                if self.password.get()!=self.confirm.get():raise ValueError('Las contraseñas no coinciden.')
+                self.store.create_operator(self.username.get(),self.password.get(),permissions=selected)
+            self.on_saved();self.destroy()
+        except (ValueError,PermissionError,OSError) as error:
+            messagebox.showerror('Usuarios',str(error),parent=self)
+
+
 def users_window(parent):
- require('users');store=current();window=tk.Toplevel(parent);window.title('Usuarios · Administración');window.geometry('740x450');window.transient(parent)
- columns=('usuario','rol','activo');tree=ttk.Treeview(window,columns=columns,show='headings',height=12)
- for name,label in zip(columns,['Usuario','Permiso','Estado']):tree.heading(name,text=label);tree.column(name,width=235 if name=='usuario'else 175)
- tree.pack(fill='both',expand=True,padx=12,pady=12)
- def refresh():
-  tree.delete(*tree.get_children())
-  for u in store.users():tree.insert('', 'end',values=[u['username'],u['role'],'ACTIVO'if u['active']else'INACTIVO'])
- def perform(action):
-  try:action();refresh()
-  except Exception as e:messagebox.showerror('Usuarios',str(e),parent=window)
- def create():
-  name=simpledialog.askstring('Nuevo operador','Nombre de usuario:',parent=window)
-  if not name:return
-  password=simpledialog.askstring('Contraseña local','Contraseña inicial (mínimo 12 caracteres):',show='•',parent=window)
-  if password is None:return
-  confirm=simpledialog.askstring('Confirmar contraseña','Repita la contraseña:',show='•',parent=window)
-  if password!=confirm:raise ValueError('Las contraseñas no coinciden.')
-  store.change_user('create',name,password)
- def selected():
-  rows=tree.selection()
-  if not rows:raise ValueError('Seleccione un usuario.')
-  return tree.item(rows[0],'values')
- def state():
-  name,_,active=selected();store.change_user('active',name,active!='ACTIVO')
- def password():
-  name,_,_=selected();value=simpledialog.askstring('Restablecer contraseña',f'Nueva contraseña de {name} (mínimo 12 caracteres):',show='•',parent=window)
-  if value is not None:store.change_user('password',name,value)
- def export():
-  name=filedialog.asksaveasfilename(parent=window,title='Exportar cuentas para los equipos operadores',defaultextension='.mrsusuarios',initialfile='Cuentas_MRS.mrsusuarios')
-  if name:
-   store.export_usb(name);messagebox.showinfo('USB','Paquete firmado generado. Cópielo por USB e impórtelo en cada equipo para aplicar altas y bajas.',parent=window)
- buttons=tk.Frame(window);buttons.pack(pady=7)
- for text,fn in [('Nuevo operador',create),('Activar / desactivar',state),('Contraseña',password),('Exportar USB',export)]:tk.Button(buttons,text=text,command=lambda f=fn:perform(f)).pack(side='left',padx=4)
- tk.Label(window,text='Operadores: lotes, dashboard y reportes. Revisiones y configuración: solo administradora.').pack(pady=(4,12));refresh()
+    require('users');store=current()
+    window=tk.Toplevel(parent);window.title('Usuarios y permisos · Administración');window.transient(parent.winfo_toplevel())
+    width=min(1040,window.winfo_screenwidth()-70);height=min(600,window.winfo_screenheight()-100)
+    window.geometry(f'{width}x{height}');window.minsize(min(860,width),min(480,height))
+    window.grid_columnconfigure(0,weight=1);window.grid_rowconfigure(1,weight=1)
+    tk.Label(window,text='Usuarios y permisos individuales',font=('Segoe UI',15,'bold'),anchor='w').grid(
+        row=0,column=0,sticky='ew',padx=16,pady=(14,8))
+    table=tk.Frame(window);table.grid(row=1,column=0,sticky='nsew',padx=16,pady=8)
+    table.grid_columnconfigure(0,weight=1);table.grid_rowconfigure(0,weight=1)
+    columns=('usuario','rol','activo','permisos')
+    tree=ttk.Treeview(table,columns=columns,show='headings',height=9)
+    for name,label,size in zip(columns,['Usuario','Rol','Estado','Funciones permitidas'],[210,120,95,460]):
+        tree.heading(name,text=label);tree.column(name,width=size,minwidth=75,stretch=name in {'usuario','permisos'})
+    tree.grid(row=0,column=0,sticky='nsew')
+    scroll=ttk.Scrollbar(table,orient='vertical',command=tree.yview);scroll.grid(row=0,column=1,sticky='ns')
+    horizontal=ttk.Scrollbar(table,orient='horizontal',command=tree.xview);horizontal.grid(row=1,column=0,sticky='ew')
+    tree.configure(yscrollcommand=scroll.set,xscrollcommand=horizontal.set)
+    def refresh():
+        tree.delete(*tree.get_children())
+        labels=dict(OPERATOR_FUNCTIONS)
+        for user in store.users():
+            functions='Acceso total (administradora)'if user['role']=='ADMIN'else ', '.join(labels[p]for p in user['permissions'])or'Sin funciones'
+            tree.insert('','end',values=[user['username'],user['role'],'ACTIVO'if user['active']else'INACTIVO',functions])
+    def selected():
+        rows=tree.selection()
+        if not rows:raise ValueError('Seleccione un operador.')
+        return tree.item(rows[0],'values')
+    def perform(action):
+        try:store.require('users');action()
+        except (ValueError,PermissionError,OSError) as error:messagebox.showerror('Usuarios',str(error),parent=window)
+    def create():return OperatorAccessDialog(window,store,refresh)
+    def permissions():return OperatorAccessDialog(window,store,refresh,selected()[0])
+    def state():
+        name,_,active,_=selected();store.change_user('active',name,active!='ACTIVO');refresh()
+    def password():
+        name=selected()[0]
+        value=simpledialog.askstring('Restablecer contraseña',f'Nueva contraseña de {name} (mínimo 12 caracteres):',show='●',parent=window)
+        if value is not None:store.change_user('password',name,value);refresh()
+    def export():
+        name=filedialog.asksaveasfilename(parent=window,title='Exportar cuentas y permisos para los operadores',
+            defaultextension='.mrsusuarios',initialfile='Cuentas_MRS.mrsusuarios')
+        if name:
+            store.export_usb(name);messagebox.showinfo('USB','Importe este catálogo firmado en cada equipo para aplicar las cuentas y sus permisos. No incluye la clave privada.',parent=window)
+    buttons=tk.Frame(window);buttons.grid(row=2,column=0,sticky='ew',padx=12,pady=8)
+    actions=[('Nuevo operador',create),('Permisos individuales',permissions),('Activar / desactivar',state),('Contraseña',password),('Exportar USB',export)]
+    for i,(label,fn) in enumerate(actions):
+        buttons.grid_columnconfigure(i%3,weight=1)
+        ttk.Button(buttons,text=label,command=lambda f=fn:perform(f)).grid(row=i//3,column=i%3,sticky='ew',padx=4,pady=4)
+    footer=tk.Label(window,text='La administradora conserva acceso total. Los cambios se aplican aquí; exporte e importe el catálogo por USB en los demás equipos.',justify='left',anchor='w',wraplength=width-40)
+    footer.grid(row=3,column=0,sticky='ew',padx=16,pady=(2,12))
+    window.bind('<Configure>',lambda event:footer.configure(wraplength=max(350,window.winfo_width()-40))if event.widget is window else None)
+    refresh()
+    return window

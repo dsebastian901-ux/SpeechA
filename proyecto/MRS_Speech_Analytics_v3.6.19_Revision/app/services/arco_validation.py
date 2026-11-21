@@ -5,7 +5,7 @@ from app.services.conversation_evidence import agent_statement, normalize, sente
 
 ID_DOCUMENT = r'(?:ine|identificacion oficial)'
 LINE_DOCUMENT = r'(?:(?:comprobante|recibo) (?:de (?:la |su )?)?(?:linea(?: telefonica)?|telefono|titularidad de (?:la |su )?linea|propiedad de (?:la |su )?linea))'
-REQUEST = r'\b(?:envie|enviar|enviarnos|mande|mandar|adjunte|adjuntar|adjuntando|juntar|juntando|anexar|anexando|ingresar|ingresarlo|ingresando|agregar|compartir|comparta|compartiendo|proporcione|proporcionar|presente|presentar|solicito|solicitamos|solicitare|pido|requiere|requerimos|necesito|necesitamos)\b'
+REQUEST = r'\b(?:envie|enviar|enviarnos|mande|mandar|adjunte|adjuntar|adjuntando|juntar|juntando|anexar|anexando|ingresar|ingresarlo|ingresando|agregar|compartir|comparta|compartiendo|proporcione|proporcionar|presente|presentar|solicito|solicitamos|solicitare|pido|pedir|pedire|requiere|requerimos|necesito|necesitamos)\b'
 
 
 def document_requests(text, segments=()):
@@ -25,7 +25,7 @@ def document_requests(text, segments=()):
                 if not re.search(REQUEST,prefix):continue
                 request_match=list(re.finditer(REQUEST,prefix))[-1]
                 request_prefix=prefix[max(0,request_match.start()-70):request_match.start()]
-                negative=bool(re.search(r'\b(?:no|nunca|jamas|tampoco|evite|evitar|prohibido)\s*$',request_prefix)
+                negative=bool(re.search(r'\b(?:no|nunca|jamas|tampoco|evite|evitar|prohibido)(?: (?:le|les))?(?: voy a| vamos a| debe| tiene que)?\s*$',request_prefix)
                     or re.search(r'\b(?:no es necesario|no se requiere|no hace falta|no (?:le )?(?:pido|pedimos|solicito|solicitamos))\b[^.!?]{0,40}$',request_prefix))
                 requested[key]=not negative;found[key]=not negative
                 evidence.append({'document':key,'requested':not negative,'text':unit['text'],

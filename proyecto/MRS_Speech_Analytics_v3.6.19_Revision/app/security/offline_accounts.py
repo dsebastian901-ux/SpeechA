@@ -25,6 +25,21 @@ PERMISSIONS = {
 }
 
 
+def _permission_selection(value, role='OPERADOR'):
+    if not isinstance(value, (list, tuple, set, frozenset)):
+        raise ValueError('Seleccione las funciones permitidas.')
+    if any(not isinstance(p, str) for p in value) or len(value) != len(set(value)):
+        raise ValueError('Los permisos deben ser nombres únicos de funciones.')
+    if not set(value) <= PERMISSIONS[role]:
+        raise ValueError('Un operador solo puede tener lotes, dashboard y reportes.')
+    return sorted(value)
+
+
+def effective_permissions(user):
+    """El catálogo antiguo conserva sus permisos originales, sin reinterpretarlo."""
+    return frozenset(user.get('permissions', PERMISSIONS[user['role']]))
+
+
 def _encode(value):
     return base64.b64encode(value).decode('ascii')
 
@@ -80,7 +95,7 @@ def _canonical(value):
 def _validate(catalog):
     if not isinstance(catalog, dict) or set(catalog) != {'schema', 'version', 'users'}:
         raise ValueError('Catálogo de usuarios inválido.')
-    if type(catalog['schema']) is not int or catalog['schema'] != 1:
+    if type(catalog['schema']) is not int or catalog['schema'] not in {1, 2}:
         raise ValueError('Versión de formato no soportada.')
     if type(catalog['version']) is not int or catalog['version'] < 1:
         raise ValueError('Versión de catálogo inválida.')
@@ -89,7 +104,10 @@ def _validate(catalog):
         raise ValueError('Catálogo de usuarios vacío o demasiado grande.')
     ids, names, admins = set(), set(), []
     for user in users:
-        if not isinstance(user, dict) or set(user) != {'id', 'username', 'role', 'active', 'credential'}:
+        fields = {'id', 'username', 'role', 'active', 'credential'}
+        if catalog['schema'] == 2:
+            fields.add('permissions')
+        if not isinstance(user, dict) or set(user) != fields:
             raise ValueError('Registro de usuario inválido.')
         if not isinstance(user['id'], str) or str(uuid.UUID(user['id'])) != user['id']:
             raise ValueError('Identificador de usuario inválido.')
@@ -99,6 +117,12 @@ def _validate(catalog):
         names.add(key); ids.add(user['id'])
         if user['role'] not in PERMISSIONS or type(user['active']) is not bool:
             raise ValueError('Rol o estado inválido.')
+        if catalog['schema'] == 2:
+            assigned = user['permissions']
+            if not isinstance(assigned, list) or _permission_selection(assigned, user['role']) != assigned:
+                raise ValueError('Los permisos firmados no tienen un formato canónico.')
+            if user['role'] == 'ADMIN' and set(assigned) != PERMISSIONS['ADMIN']:
+                raise ValueError('La única administradora debe conservar todas sus funciones.')
         credential = user['credential']
         if not isinstance(credential, dict) or set(credential) != {'algorithm', 'iterations', 'salt', 'digest'}:
             raise ValueError('Credencial inválida.')
@@ -167,13 +191,36 @@ class CatalogueAuthority:
         _validate(catalog)
         self._catalog = catalog
 
-    def create_operator(self, username, password):
+    def fork(self):
+        """Preparar un cambio sin alterar la autoridad hasta persistir la firma."""
+        return CatalogueAuthority(self._key, self._catalog)
+
+    def _individual_catalog(self):
+        catalog = deepcopy(self._catalog)
+        catalog['schema'] = 2
+        for user in catalog['users']:
+            user.setdefault('permissions', sorted(PERMISSIONS[user['role']]))
+        return catalog
+
+    def create_operator(self, username, password, permissions=None):
         name, normalized = _username(username)
         if any(_username(u['username'])[1] == normalized for u in self._catalog['users']):
             raise ValueError('El usuario ya existe.')
-        catalog = deepcopy(self._catalog)
+        assigned = _permission_selection(permissions) if permissions is not None else None
+        catalog = self._individual_catalog() if assigned is not None else deepcopy(self._catalog)
         catalog['users'].append({'id': str(uuid.uuid4()), 'username': name, 'role': 'OPERADOR',
                                  'active': True, 'credential': _credential(password)})
+        if catalog['schema'] == 2:
+            catalog['users'][-1]['permissions'] = assigned if assigned is not None else sorted(PERMISSIONS['OPERADOR'])
+        self._commit(catalog)
+
+    def set_permissions(self, username, permissions):
+        user = self._find(username)
+        if user['role'] == 'ADMIN':
+            raise ValueError('Los permisos de la única administradora no se pueden restringir.')
+        assigned = _permission_selection(permissions)
+        catalog = self._individual_catalog()
+        next(u for u in catalog['users'] if u['id'] == user['id'])['permissions'] = assigned
         self._commit(catalog)
 
     def set_active(self, username, active):
@@ -206,6 +253,7 @@ class AccountRegistry:
     def __init__(self, trusted_public_key, store_path=None, clock=time.monotonic):
         self._public_key = Ed25519PublicKey.from_public_bytes(trusted_public_key)
         self._catalog = None
+        self._bundle_digest = None
         self._sessions = {}
         self._failures = {}
         self._clock = clock
@@ -230,11 +278,15 @@ class AccountRegistry:
             current_owner = _validate(self._catalog)
             if owner['id'] != current_owner['id'] or owner['username'] != current_owner['username']:
                 raise ValueError('No se puede sustituir la identidad de la administradora.')
+            if catalog['schema'] < self._catalog['schema']:
+                raise ValueError('No se puede volver a un catálogo sin permisos individuales.')
             if catalog['version'] < self._catalog['version']:
                 raise ValueError('No se permite importar una versión anterior.')
             if catalog['version'] == self._catalog['version']:
                 if catalog != self._catalog:
                     raise ValueError('La versión coincide pero el contenido es distinto.')
+                if not persist:
+                    self._bundle_digest = hashlib.sha256(data).hexdigest()
                 return False
         if persist and self._store is not None:
             self._store.parent.mkdir(parents=True, exist_ok=True)
@@ -247,6 +299,7 @@ class AccountRegistry:
                 if os.path.exists(temporary):
                     os.unlink(temporary)
         self._catalog = deepcopy(catalog)
+        self._bundle_digest = hashlib.sha256(data).hexdigest()
         self._sessions.clear()
         self._failures.clear()
         return True
@@ -273,15 +326,23 @@ class AccountRegistry:
         self._sessions[token] = (user['id'], now + 8 * 3600)
         return token
 
-    def require(self, token, permission):
+    def identity(self, token):
+        """Autenticar la sesión no exige permiso para un módulo concreto."""
         session = self._sessions.get(token)
         if session is None or session[1] <= self._clock():
             self._sessions.pop(token, None)
             raise PermissionError('Inicie sesión de nuevo.')
         user = next(u for u in self._catalog['users'] if u['id'] == session[0])
-        if not user['active'] or permission not in PERMISSIONS[user['role']]:
+        if not user['active']:
             raise PermissionError('Acceso no autorizado.')
         return {key: user[key] for key in ('id', 'username', 'role')}
+
+    def require(self, token, permission):
+        identity = self.identity(token)
+        user = next(u for u in self._catalog['users'] if u['id'] == identity['id'])
+        if permission not in effective_permissions(user):
+            raise PermissionError('Acceso no autorizado.')
+        return identity
 
     def logout(self, token):
         self._sessions.pop(token, None)

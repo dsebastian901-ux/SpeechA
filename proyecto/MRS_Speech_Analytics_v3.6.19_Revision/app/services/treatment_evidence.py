@@ -154,6 +154,7 @@ def mistreatment_reports(text, segments, phrases):
 def dismissive_message_evidence(text, segments=()):
     evidence = []
     pattern = re.compile(
+        r'\bse interpreta como (?:un )?chisme\b|'
         r'\b(?:nada mas|solo) (?:seria|es|va a ser) (?:como )?(?:un )?chisme\b|'
         r'\b(?:que falta de educacion|(?:es |ese es )?(?:el )?problema de usted|'
         r'que responsable senor[, ]+pero bueno|ni le puse una pistola)\b')
@@ -162,6 +163,9 @@ def dismissive_message_evidence(text, segments=()):
             continue
         value = normalize(unit['text'])
         for match in pattern.finditer(value):
+            from app.services.speech_scope import nonassertive_prefix
+            from app.services.declarative_evidence import is_statement
+            if nonassertive_prefix(value,match.start()) or not is_statement(value,match.start(),match.end()):continue
             prefix = value[max(0, match.start()-65):match.start()]
             if re.search(r'\b(?:no|nunca|dice que|dijo que|me dijeron que|usted dijo que)\s*$', prefix):
                 continue
@@ -173,4 +177,14 @@ def offensive_asr_variants(text):
     """Variantes acotadas; no tomar «tarjetaunching» como insulto confirmado."""
     return [m.group() for m in re.finditer(
         r'\bching(?:uy|ui|ue)\s*(?:y\s*)?ching(?:uy|ui|ue)\b|'
-        r'\bjodi(?:[, ]+jodi){1,3}\b|\bcagando\b|\b(?:ah|a)[, ]+chingas\b|\b(?:una|la|su)chingada\b|\bmaldit[ao]s?[.!?¡¿ ]*$', normalize(text))]
+        r'\bcon\s*(?:una|la|su)\s*chingada\b|\bjodi(?:[, ]+jodi){1,3}\b|\bcagando\b|\b(?:ah|a)[, ]+chingas\b|\b(?:una|la|su)chingada\b|\bmaldit[ao]s?[.!?¡¿ ]*$', normalize(text))]
+
+
+OFFENSIVE_PHRASES = ('tonta', 'tonto', 'idiota', 'estupida', 'estupido', 'pendeja', 'pendejo', 'chingando', 'chingada', 'chingado', 'chingarazo', 'chingadazo', 'pinche vieja', 'pinche viejo', 'pinche', 'cabron', 'cabrona', 'mierda', 'verga', 'no mames', 'no mamen', 'culero', 'culera', 'hijo de puta', 'hija de puta', 'vete a la chingada', 'puta', 'puto', 'chingar', 'chinga tu madre', 'jodete', 'vete al carajo', 'que poca madre', 'quiero acostarme contigo', 'quiero tener sexo contigo', 'quiero cogerte')
+
+def offensive_language_phrases(text):
+    """Mismo catálogo para ASR primaria y lecturas adicionales; sin atribuir voz."""
+    source=normalize(text)
+    found=[phrase for phrase in OFFENSIVE_PHRASES
+           if re.search(r"(?<!\w)"+re.escape(normalize(phrase))+r"s?(?!\w)",source)]
+    return list(dict.fromkeys(found+offensive_asr_variants(text)))

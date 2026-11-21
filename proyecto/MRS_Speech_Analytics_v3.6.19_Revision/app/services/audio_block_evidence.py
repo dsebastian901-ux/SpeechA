@@ -67,6 +67,10 @@ def validate_evidence(record,result,relation,contact_type,positive_evaluator=Non
                     risks.append({'type':'RESPUESTA_IMPORTE_SIN_HABLANTE_CONFIRMADO','source':mode,
                                   'evidence':answer['question_text']+' '+answer['text']})
             offensive=re.search(r'\b(?:que poca madre|pendej[oa]|cabron[a]?|mierda|pinche|puta|puto)\b|(?<!\w)uta[.!?¡¿\s]*$',s)
+            from app.services.treatment_evidence import offensive_language_phrases
+            variants=offensive_language_phrases(text)
+            for variant in variants:
+                risks.append({'type':'EXPRESION_OFENSIVA_SIN_HABLANTE_CONFIRMADO','source':mode,'evidence':variant})
             if offensive:risks.append({'type':'EXPRESION_OFENSIVA_SIN_HABLANTE_CONFIRMADO','source':mode,'evidence':offensive.group()})
             if positive_evaluator is not None:
                 detected=positive_evaluator(text,dict(relation))

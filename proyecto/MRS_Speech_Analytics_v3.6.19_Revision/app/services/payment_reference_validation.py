@@ -70,6 +70,8 @@ def callback_numbers(text):
         parts=[_digits(t.group()) for t in group]
         if any(p is None for p in parts):continue
         digits=''.join(parts)
+        if len(parts)==2 and all(len(p)==10 for p in parts) and parts[0]==parts[1]:
+            digits=parts[0]  # Dos dictados completos iguales; nunca completar fragmentos.
         if len(digits)!=10:continue
         before=source[max(0,context.start()-250):context.end()+tokens[0].start()]
         if not CALLBACK_INTENT.search(before+' '+source[context.end()+group[-1].end():context.end()+group[-1].end()+200]):continue

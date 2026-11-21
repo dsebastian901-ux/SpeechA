@@ -32,17 +32,34 @@ def role_of(value):
     return "NO DETERMINADO"
 
 
+TURN_LABEL = re.compile(r"(?<!\w)(gestor|agente|asesor|titular|familiar|tercero|interlocutor|cliente)\s*:\s*", re.I)
+
+
 def _text_units(text, role="NO DETERMINADO", start=None, end=None):
     for line in str(text or "").splitlines():
-        line_role = role
-        for sentence in re.split(r"(?<=[.!?])\s+", line):
-            label = re.match(r"^\s*(gestor|agente|asesor|titular|familiar|tercero|interlocutor|cliente)\s*:\s*", sentence, re.I)
-            if label:
-                line_role = role_of(label[1])
-                sentence = sentence[label.end():]
-            if sentence.strip():
-                yield {"text": sentence.strip(), "speaker_role": line_role,
-                       "start": start, "end": end}
+        # Una etiqueta explícita delimita turno incluso sin puntuación ASR.
+        # No interpretar como etiqueta un rótulo citado entre comillas.
+        labels=[]
+        for match in TURN_LABEL.finditer(line):
+            prefix=line[:match.start()]
+            if prefix.count('"') % 2 or prefix.count('“') > prefix.count('”') or prefix.count('«') > prefix.count('»'):
+                continue
+            labels.append(match)
+        cursor=0;line_role=role;conflict=False
+        chunks=[]
+        for label in labels:
+            chunks.append((line[cursor:label.start()],line_role,conflict))
+            declared=role_of(label[1])
+            conflict=role!="NO DETERMINADO" and declared!=role
+            line_role="NO DETERMINADO" if conflict else declared
+            cursor=label.end()
+        chunks.append((line[cursor:],line_role,conflict))
+        for chunk,speaker,conflict in chunks:
+            for sentence in re.split(r"(?<=[.!?])\s+",chunk):
+                if sentence.strip():
+                    unit={"text":sentence.strip(),"speaker_role":speaker,"start":start,"end":end}
+                    if conflict:unit['role_conflict']=True
+                    yield unit
 
 
 def evidence_units(text, segments=()):
@@ -112,8 +129,19 @@ def _sentence_evidence(text, segments=()):
         end = position+len(folded)
         overlaps = [u for a, b, u in spans if a < end and b > position]
         roles = {u["speaker_role"] for u in overlaps}
-        if unit["speaker_role"] == "NO DETERMINADO" and len(roles) == 1:
+        conflict=any(u.get('role_conflict') for u in overlaps)
+        if conflict:
+            unit=dict(unit,speaker_role="NO DETERMINADO",role_conflict=True)
+        elif unit["speaker_role"] == "NO DETERMINADO" and len(roles) == 1:
             unit = dict(unit, speaker_role=next(iter(roles)))
+        # Con roles semánticos explícitos distintos, conservar sus límites.
+        # Los cortes sin rol siguen reuniéndose como una sola oración ASR.
+        if not conflict and len(roles-{"NO DETERMINADO"})>1:
+            for lo,hi,part in spans:
+                if lo<end and hi>position:
+                    result.append(dict(part,text=source[max(lo,position):min(hi,end)]))
+            cursor=end
+            continue
         if overlaps and all(isinstance(u["start"], (int, float)) and isinstance(u["end"], (int, float)) for u in overlaps):
             unit = dict(unit, start=min(u["start"] for u in overlaps), end=max(u["end"] for u in overlaps))
         result.append(unit)
@@ -1030,7 +1058,7 @@ def payment_places(text, segments, catalog):
             r"\bno (?:se |lo )?$", s[max(0, instruction.start()-12):instruction.start()]))
         alternative = bool(negated_instruction and any(m.start() > instruction.start()
             and not re.search(r"\bno (?:se |lo )?$", s[max(0, m.start()-12):m.start()])
-            for m in positive_offer.finditer(s)))
+            for m in instructions))
         payment_context=bool(not other_action and (not negated_instruction or alternative) and (new_context or instruction or continuation
             or (payment_context and re.fullmatch(r"(?:si[, ]+)?(?:directamente en )?tienda[.!?]*", s))))
         if (not instruction and not continuation) or other_action:
@@ -1045,8 +1073,10 @@ def payment_places(text, segments, catalog):
             earlier_pay=[m.start()for m in instructions if m.start()<start]
             earlier_other=[m.start()for m in other_actions if m.start()<start]
             if earlier_other and(not earlier_pay or earlier_other[-1]>=earlier_pay[-1]):continue
-            before = s[max(0, start-100):start]
-            if re.search(r'\b(?:me dijeron|me dijo|me indicaron|usted me dijo|en la llamada anterior)\b[^.!?]{0,160}$',s[:start]):continue
+            from app.services.speech_scope import local_prefix
+            before = local_prefix(s,start)[-100:]
+            from app.services.speech_scope import nonassertive_prefix, local_prefix
+            if nonassertive_prefix(s,start):continue
             if instruction and start < instruction.start() and re.search(r"\b(?:su|la) (?:tarjeta|producto) (?:es|de|va en relacion)\b|\b(?:tienda de origen|producto de)\b|\b(?:tarjeta|producto)(?: (?:tipo|visa|de|es|la|tienda|departamental)){0,5}\s*$",s[:start]):
                 continue
             # Negación de ESA opción; «no en Guadalajara, puede pagar en
@@ -1279,9 +1309,11 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
         for match in matches:
             prefix = s[max(0, match.start()-30):match.start()]
             from app.services.declarative_evidence import is_statement
-            hypothetical = bool(not is_statement(s,match.start(),match.end()) or re.search(r"\b(?:si|no|nunca)\s*$", prefix)
-                                or re.search(r"\b(?:no tiene|sin (?:deuda|adeudo|atraso)|si tuviera|en caso de)\b", s))
-            protected = third_party_confirmed and last_recipient != "TITULAR"
+            from app.services.speech_scope import nonassertive_prefix
+            hypothetical = bool(not is_statement(s,match.start(),match.end())
+                or nonassertive_prefix(s,match.start())
+                or re.search(r"\b(?:si|no|nunca|no tiene|sin)\s*(?:una? |la |su )?$",prefix))
+            protected = last_recipient == "TERCERO" or (third_party_confirmed and last_recipient != "TITULAR")
             asr_uncertainty=bool(re.fullmatch(r"por la trazo de su tarjeta|deudo con su tarjeta|la deudo que presenta|el adebro|mes(?:es)? de atras o|(?:tiene|presenta) solidades vencidas|nacionalidades vencidas",match.group()))
             scoped_role=None
             if role=="NO DETERMINADO" and protected and not hypothetical and not asr_uncertainty:
@@ -1291,7 +1323,7 @@ def assess_privacy(text, segments=(), *, third_party_confirmed=False,
             confirmed = effective_role == "GESTOR" and protected and not hypothetical and not asr_uncertainty
             uncertain = (effective_role == "NO DETERMINADO" or hypothetical or asr_uncertainty
                          or (role == "GESTOR" and not titular and last_recipient != "TITULAR" and not protected))
-            relevant = third_party_confirmed or expected_third_party or not titular
+            relevant = unit.get('role_conflict') or protected or third_party_confirmed or expected_third_party or not titular
             evidence.append(dict(unit, phrase=match.group(), confirmed=confirmed, role_evidence=scoped_role,
                                  review_required=bool(relevant and uncertain)))
     # Conserva los bloqueos previos que aún no tienen un extractor específico.

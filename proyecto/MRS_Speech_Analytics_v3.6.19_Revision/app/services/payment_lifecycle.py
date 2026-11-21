@@ -106,6 +106,8 @@ def payment_decision_events(text, segments=()):
             r'me comprometo a (?:ir )?(?:estar )?pagando\b[^.!?]{0,110}\b(?:quincenalmente|semanalmente))\b',value))
         for accepted,found in [(True,positives),(False,negatives),(None,conditions)]:
             for match in found:
+                from app.services.speech_scope import nonassertive_prefix
+                if nonassertive_prefix(value,match.start()):continue
                 pos=at+match.start();before=value[max(0,match.start()-100):match.start()]
                 if _role_at(text,segments,pos)in{'GESTOR','TERCERO'}:continue
                 if re.search(r'\b(?:usted dice|usted dijo|tu dices|usted menciona|usted comento|diga que|repita que|por ejemplo|supongamos que)\b[^.!?;]{0,65}$',before):continue

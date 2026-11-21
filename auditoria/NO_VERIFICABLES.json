@@ -1,0 +1,32 @@
+[
+  {
+    "id": "05.03",
+    "estado": "NO VERIFICABLE",
+    "pruebas_adicionales": "Extracción y discordancia de referencia de 16 dígitos cubiertas por regresión sintética; no equivalen al caso histórico concreto.",
+    "requiere": "Vincular inequívocamente el audio original a esa referencia histórica y validar los 16 dígitos mediante escucha humana."
+  },
+  {
+    "id": "09.04",
+    "estado": "NO VERIFICABLE",
+    "pruebas_adicionales": "Catálogo común y variantes de cierre probados en ASR primaria/adicional. Se ejecutó Whisper real en dos audios; no son gold de todos los insultos históricos.",
+    "requiere": "Audio original completo, incluido el cierre, y validación humana del contenido y emisor en los casos históricos."
+  },
+  {
+    "id": "10.04",
+    "estado": "NO VERIFICABLE",
+    "pruebas_adicionales": "Vinculación por hash a audio disponible para nuevas revisiones y compatibilidad con revisiones antiguas; rechazo al reemplazar audio.",
+    "requiere": "Escucha humana del tono y profesionalismo. No hay clasificador acústico validado que lo sustituya."
+  },
+  {
+    "id": "S.05",
+    "estado": "NO VERIFICABLE",
+    "pruebas_adicionales": "Runtime Windows y GUI bajo Wine; no certifican Windows físico.",
+    "requiere": "Instalación y arranque en Windows físico, usuario local real de prueba, controladores/DPI y traslado USB físico."
+  },
+  {
+    "id": "S.12",
+    "estado": "CORREGIDO",
+    "pruebas_adicionales": "Identidad de clases e importaciones, servicio canónico offline, inventario de módulos vacíos y eliminación de implementación de respaldo alternativa en favor de compatibilidad.",
+    "requiere": "Ninguna escucha para este cierre arquitectónico. Los módulos vacíos permanecen identificados como no implementados."
+  }
+]

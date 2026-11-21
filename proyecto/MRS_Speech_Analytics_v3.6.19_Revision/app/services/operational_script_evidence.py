@@ -35,7 +35,7 @@ def company_alias_evidence(text, segments=()):
     return found
 
 
-RECEIPT = r'(?:comprobantes?(?!\s+de\s+(?:(?:la|su|el)\s+)?(?:domicilio|linea|telefono))|tickets?|tickers?|tiquet[ea]?s?|tiques?|capturas?|fichas? de pago|recibos? de (?:su )?pago|(?:fotos?|fotografias?) de (?:su |el )?pago)'
+RECEIPT = r'(?:comprobantes?(?!\s+de\s+(?:(?:la|su|el)\s+)?(?:domicilio|linea|telefono|titularidad|propiedad))|tickets?|tickers?|tiquet[ea]?s?|tiques?|capturas?|fichas? de pago|recibos? de (?:su )?pago|(?:fotos?|fotografias?) de (?:su |el )?pago)'
 
 
 def receipt_request_evidence(text, segments=()):
@@ -106,6 +106,28 @@ def receipt_request_evidence(text, segments=()):
             if re.search(r'\b(?:no|nunca|diga que|repita que)\s*$',value[:match.start()]):continue
             if re.search(r'\bhace (?:dos|tres|cuatro|cinco|\d+) anos\b',value):continue
             received.append(dict(unit,phrase=match.group(),method='ENVIO_REPORTADO_EN_CONVERSACION'))
+    # La instrucción vigente prevalece sobre una petición retirada después.
+    # Conservar las peticiones retiradas para auditoría, sin darles puntos.
+    withdrawals=[];cursor=0
+    for unit in units:
+        value=normalize(unit['text']);position=source.find(value,cursor)
+        if position<0:continue
+        cursor=position+len(value)
+        if unit['speaker_role'] in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+        for match in re.finditer(r'\b(?:no hace falta|no es necesario|no se requiere|no (?:le |les )?(?:voy a |vamos a )?(?:pedir|pido|pedimos)|no (?:me |nos )?(?:mande|envie))\b[^.!?;]{0,90}\b'+RECEIPT+r'\b',value):
+            from app.services.speech_scope import nonassertive_prefix
+            if not nonassertive_prefix(value,match.start()):
+                withdrawals.append(dict(unit,phrase=match.group(),position=position+match.end()))
+    withdrawn=[]
+    if withdrawals:
+        explicit_refusal=True;last=max(e['position'] for e in withdrawals)
+        active=[]
+        for request in requests:
+            unit_start=source.find(normalize(request['text']))
+            phrase_start=normalize(request['text']).find(normalize(request['phrase']))
+            if unit_start+max(0,phrase_start)<last:withdrawn.append(request)
+            else:active.append(request)
+        requests=active
     # Consultar si ya lo envió y recibir una respuesta afirmativa es seguimiento,
     # no una solicitud deformada. No certifica recepción bancaria del documento.
     past_question=re.compile(r'\b(?:ya )?(?:mando|envio|mandaste|enviaste) (?:el |su )?'+RECEIPT+r'[^?!.]{0,90}\?\s*(?P<answer>si|ya lo mande|ya lo envie)\b')
@@ -125,7 +147,7 @@ def receipt_request_evidence(text, segments=()):
                 break
     return {'requested':bool(requests),'reported_sent':bool(received),
             'channel':'WHATSAPP' if channels else 'NO CONFIRMADO',
-            'request_evidence':requests,'reported_sent_evidence':received,'channel_evidence':channels,
+            'request_evidence':requests,'withdrawn_request_evidence':withdrawn,'withdrawal_evidence':withdrawals,'reported_sent_evidence':received,'channel_evidence':channels,
             'review_required':bool(pending) and not requests and not received,'uncertain_request_evidence':pending}
 
 
