@@ -26,8 +26,10 @@ def export_corrected_labels(checkpoint, audio_directory, output_directory=None):
     if not root.is_dir():
         raise ValueError('Seleccione la carpeta de los audios originales.')
     from app.services.classification_policy import corrected_label_exportable,SHORT_APPROVAL_FOLDER
-    eligible_categories={'APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR','NO_APROBADO_MENOR_80'}
-    candidates=[i for i in payload['items'] if (i.get('classification')or{}).get('clasificacion') in eligible_categories and (i.get('classification')or{}).get('output_label_correction',{}).get('valid')]
+    candidates=[i for i in payload['items'] if
+        (i.get('classification')or{}).get('clasificacion')=='APROBADO_ETIQUETA_CORREGIDA' or
+        ((i.get('classification')or{}).get('clasificacion') in {'APROBADO_DURACION_MENOR','NO_APROBADO_MENOR_80'}
+         and (i.get('classification')or{}).get('output_label_correction',{}).get('valid'))]
     plan=[];destinations=set()
     # Validar todos los candidatos antes de copiar un solo archivo. No confiar
     # solo en una etiqueta almacenada: repetir las reglas con la evidencia.
