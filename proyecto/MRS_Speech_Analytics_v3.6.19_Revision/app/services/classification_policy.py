@@ -31,3 +31,20 @@ def saved_result(item):
 def corrected_approval(decision):
     return (decision.get('clasificacion')in{'APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR'}
             and decision.get('aprobado')is True and (decision.get('output_label_correction')or{}).get('valid')is True)
+
+
+def corrected_label_exportable(decision):
+    """Corregir el estatus es independiente de aprobar la calidad.
+
+    Una llamada menor a 80 mantiene su carpeta de rechazo, pero la copia y
+    los reportes deben mostrar el estatus realmente acreditado en el audio.
+    Nunca usar este permiso de renombrado para revisar, fallas graves ni para
+    eludir requisitos de evidencia del corrector de estatus.
+    """
+    classification=str(decision.get('clasificacion')or'').upper()
+    correction=decision.get('output_label_correction')or{}
+    if not correction.get('valid') or not correction.get('corrected_name'):
+        return False
+    return bool(corrected_approval(decision) or (
+        classification=='NO_APROBADO_MENOR_80' and decision.get('aprobado')is False
+        and float(decision.get('score')or 0)<float(decision.get('puntaje_minimo')or 80)))
