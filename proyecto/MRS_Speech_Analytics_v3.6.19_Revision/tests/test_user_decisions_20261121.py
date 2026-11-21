@@ -130,12 +130,25 @@ def test_paid_followup_is_not_an_aclaracion():
     text = ("Gestor: Habla MRS. Titular: Soy yo. Ya pagué 1000 pesos ayer. "
             "Gestor: Envíe su comprobante de pago por WhatsApp.")
     status = _analyze(text).metadata["status_validation"]
-    assert status["detected_status"] == "NO DEFINE FECHA DE PAGO"
+    assert status["detected_status"] == "CONVENIO"
     assert status["detected_status"] != "ACLARACION"
     assert status["detected_status"] != "PAGO REPORTADO / ACLARACION"
 
 
-def test_paid_followup_preserves_convenio_only_if_it_was_the_prior_operational_status():
+def test_followup_relabels_no_define_to_convenio_without_changing_quality():
+    text = ("Gestor: Habla MRS. Titular: Soy yo. Ya pagué 1000 pesos ayer. "
+            "Gestor: Envíe su comprobante de pago por WhatsApp.")
+    analysis = _analyze(text, "NO DEFINE FECHA DE PAGO")
+    status = analysis.metadata["status_validation"]
+    assert status["detected_status"] == "CONVENIO"
+    assert status["excel_status"] == "NO DEFINE FECHA DE PAGO"
+    assert status["matches"] is False
+    assert status["detection_confidence"] == "ALTA"
+    assert not status.get("review_required", False)
+    assert status["evidence_method"] == "SEGUIMIENTO_PAGO_REPORTADO_CON_COMPROBANTE_SIN_ACREDITACION"
+
+
+def test_paid_followup_with_prior_convenio_remains_convenio():
     text = ("Gestor: Habla MRS. Titular: Soy yo. Ya pagué 1000 pesos ayer. "
             "Gestor: Envíe su comprobante de pago por WhatsApp.")
     status = _analyze(text, "CONVENIO").metadata["status_validation"]
@@ -147,8 +160,10 @@ def test_reported_payment_does_not_relabel_itself_as_an_aclaracion():
     text = ("Gestor: Habla MRS. Titular: Soy yo. Ya pagué 1000 pesos ayer. "
             "Gestor: Envíe su comprobante de pago por WhatsApp.")
     status = _analyze(text, "ACLARACION").metadata["status_validation"]
-    assert status["detected_status"] != "ACLARACION"
-    assert status["review_required"]
+    assert status["detected_status"] == "CONVENIO"
+    assert status["matches"] is False
+    assert status["detection_confidence"] == "ALTA"
+    assert status.get("review_required") is False
 
 
 def test_second_listening_of_recado_callback_even_if_score_below_80():
