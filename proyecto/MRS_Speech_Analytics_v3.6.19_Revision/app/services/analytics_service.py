@@ -441,6 +441,7 @@ class AnalyticsService:
         analysis.metadata["explicit_message_refusal"] = compliance.get("explicit_message_refusal", {})
         analysis.metadata["message_delivery_validation"] = compliance.get("message_delivery_validation", {})
         analysis.metadata["message_workflow_validation"] = compliance.get("message_workflow_validation", {})
+        analysis.metadata["family_payer_name_validation"] = compliance.get("family_payer_name_validation", {})
         analysis.metadata["contact_conflict_validation"] = compliance.get("contact_conflict_validation", {})
         analysis.metadata["contact_validation"] = compliance.get("contact_validation", {})
         analysis.metadata['associate_contact_validation'] = compliance.get('associate_contact_validation', {})
