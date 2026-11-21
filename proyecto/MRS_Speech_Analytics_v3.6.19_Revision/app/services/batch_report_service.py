@@ -1130,6 +1130,11 @@ class BatchReportService:
         summary_ws.append(["Procesados sin relación Excel", sum(r.get('Clasificación física')=='SIN_RELACION_EXCEL' for r in rows)])
         summary_ws.append(["Aprobados", approved])
         summary_ws.append(["De ellos, etiqueta corregida", sum(corrected_approval(i.get('classification')or{})for i in source_items)])
+        from app.services.classification_policy import corrected_label_exportable
+        summary_ws.append(["No aprobadas <80 con estatus corregido", sum(
+            corrected_label_exportable(i.get('classification')or{})
+            and (i.get('classification')or{}).get('clasificacion')=='NO_APROBADO_MENOR_80'
+            for i in source_items)])
         summary_ws.append(["Aprobadas de duración menor",sum(r.get('Clasificación física')=='APROBADO_DURACION_MENOR'for r in rows)])
         summary_ws.append(["Llamadas rechazadas con alertas pendientes",sum(bool((i.get('classification')or{}).get('requires_alert_review'))for i in source_items)])
         summary_ws.append(["Aprobados sin etiquetar", approved_untagged])
