@@ -5,7 +5,7 @@ aprobaciones de calidad ni cifras no reconocidas por el titular.
 """
 import re
 
-from app.services.conversation_evidence import normalize, recipient_statement
+from app.services.conversation_evidence import normalize, recipient_statement, sentence_evidence
 from app.services.current_payment_amounts import explicit_current_amounts
 from app.services.reported_payment_amounts import NUMBER, money_value
 
@@ -58,3 +58,38 @@ def recipient_has_contact(text,segments=()):
     """El tercero afirma poseer el contacto vigente, sin inventar diez dígitos."""
     from app.services.message_dialogue_evidence import existing_callback_confirmation
     return bool(existing_callback_confirmation(text,segments))
+
+
+def offered_payment_alternatives(text,segments=(),before_hangup=False):
+    """Ofertas del gestor realmente expresadas, no la palabra «convenio».
+
+    No cuenta el saldo, el simple relato de un convenio incumplido o una
+    pregunta del titular. Ante cuelgue solo cuentan ofertas anteriores.
+    """
+    source=normalize(text)
+    marker=re.search(r'\b(?:voy a colgar|ya le voy a colgar|te voy a colgar|yo le cuelgo)\b',source)
+    limit=marker.start() if before_hangup and marker else len(source)
+    patterns=(
+        r'\b(?:le (?:ofrezco|ofrecemos|propongo|proponemos)\b[^.!?]{0,80}\b(?:pago|abono|convenio|alternativa)|'
+        r'(?:otra|una|dos|tres|varias) (?:alternativas?|opciones?) (?:de )?pago|'
+        r'(?:podemos|podriamos) (?:hacer|generar|ofrecer|formalizar) (?:un |el |su )?(?:convenio|acuerdo|pago)|'
+        r'(?:puede|podria|podriamos|podemos) (?:realizar|hacer|depositar|pagar|abonar|cubrir)\b[^.!?]{0,85}\b(?:pago|abono|pesos|manana|hoy|dia)|'
+        r'(?:cuanto|que cantidad|que monto) (?:puede|podria|podemos) (?:pagar|abonar|cubrir)|'
+        r'(?:cuando|que dia|para cuando) (?:puede|podria|podemos) (?:pagar|abonar|realizar)|'
+        r'(?:podemos contar con|contariamos con) (?:su |el )?pago)'
+    )
+    cursor=0
+    for unit in sentence_evidence(text,segments):
+        fragment=normalize(unit.get('text')or'')
+        position=source.find(fragment,cursor)
+        if position<0:continue
+        cursor=position+len(fragment)
+        if position>=limit or unit.get('speaker_role') in {'TITULAR','TERCERO','INTERLOCUTOR'}:
+            continue
+        for match in re.finditer(patterns,fragment):
+            if position+match.start()>=limit:continue
+            before=fragment[max(0,match.start()-75):match.start()]
+            if re.search(r'\b(?:no|nunca|dijo que|dice que|por ejemplo|supongamos que)\s*$',before):
+                continue
+            return {'confirmed':True,'evidence':unit['text'],'position':position+match.start()}
+    return {'confirmed':False,'evidence':'','position':None}
