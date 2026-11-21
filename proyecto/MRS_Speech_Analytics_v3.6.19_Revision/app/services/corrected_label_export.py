@@ -1,4 +1,4 @@
-"""Copiar aprobadas con etiqueta corregida, sin mover originales ni ejecutar ASR."""
+"""Copiar audios con estatus corregido, sin alterar originales ni ejecutar ASR."""
 from copy import deepcopy
 import hashlib
 import json
@@ -25,8 +25,9 @@ def export_corrected_labels(checkpoint, audio_directory, output_directory=None):
     root=Path(audio_directory).expanduser().resolve()
     if not root.is_dir():
         raise ValueError('Seleccione la carpeta de los audios originales.')
-    from app.services.classification_policy import corrected_approval,SHORT_APPROVAL_FOLDER
-    candidates=[i for i in payload['items'] if (i.get('classification')or{}).get('clasificacion')=='APROBADO_ETIQUETA_CORREGIDA' or ((i.get('classification')or{}).get('clasificacion')=='APROBADO_DURACION_MENOR' and (i.get('classification')or{}).get('output_label_correction',{}).get('valid'))]
+    from app.services.classification_policy import corrected_label_exportable,SHORT_APPROVAL_FOLDER
+    eligible_categories={'APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR','NO_APROBADO_MENOR_80'}
+    candidates=[i for i in payload['items'] if (i.get('classification')or{}).get('clasificacion') in eligible_categories and (i.get('classification')or{}).get('output_label_correction',{}).get('valid')]
     plan=[];destinations=set()
     # Validar todos los candidatos antes de copiar un solo archivo. No confiar
     # solo en una etiqueta almacenada: repetir las reglas con la evidencia.
@@ -41,8 +42,10 @@ def export_corrected_labels(checkpoint, audio_directory, output_directory=None):
             old.get('puntaje_minimo') or 80,t.duration_seconds,
             {'estatus_autorizado':old.get('estatus_autorizado'),'tiene_nombre_final':bool(relation.get('nombre_final'))})
         label=decision.get('output_label_correction') or {}
-        if not corrected_approval(decision):
+        if not corrected_label_exportable(decision):
             raise ValueError('La llamada ya no cumple los filtros para corregir su etiqueta: '+str(item.get('file_name')))
+        if old.get('clasificacion')=='NO_APROBADO_MENOR_80' and decision.get('clasificacion')!='NO_APROBADO_MENOR_80':
+            raise ValueError('Cambió la clasificación de calidad; vuelva a dictaminar antes de exportar la etiqueta.')
         saved=old.get('output_label_correction') or {}
         if saved.get('corrected_name')!=label['corrected_name']:
             raise ValueError('La etiqueta guardada difiere de la recalculada. Reanalice el checkpoint.')
@@ -63,7 +66,8 @@ def export_corrected_labels(checkpoint, audio_directory, output_directory=None):
             raise ValueError('La entrada no es un archivo de audio admitido.')
         from app.services.status_output_label import audio_output_filename
         filename=audio_output_filename(label['corrected_name'],audio.suffix)
-        folder=SHORT_APPROVAL_FOLDER if decision.get('short_duration_approval') else FOLDER
+        folder=('NO_APROBADOS_MENOR_80' if decision.get('clasificacion')=='NO_APROBADO_MENOR_80' else
+                SHORT_APPROVAL_FOLDER if decision.get('short_duration_approval') else FOLDER)
         relative=Path(filename)
         if filename.casefold() in destinations:
             # Preservar todos los componentes del nombre, incluso si dos
@@ -73,7 +77,8 @@ def export_corrected_labels(checkpoint, audio_directory, output_directory=None):
         if key in destinations:
             raise ValueError('Dos registros intentan copiar la misma llamada; no se sobrescribe.')
         destinations.add(filename.casefold());destinations.add(key)
-        plan.append({'source':audio,'relative':relative,'folder':folder,'file_name':name,'label':label,'score':analysis.compliance_score})
+        plan.append({'source':audio,'relative':relative,'folder':folder,'file_name':name,'label':label,
+                     'score':analysis.compliance_score,'clasificacion':decision['clasificacion']})
     target=create_checkpoint_output(output_directory,'Etiquetas_MRS_r45_')
     if os.name=='nt' and any(len(str(target/p['folder']/p['relative']).encode('utf-16-le'))//2>=WINDOWS_PATH_BUDGET for p in plan):
         raise ValueError('Ruta demasiado larga para Windows; elija una carpeta de salida más corta.')
@@ -94,11 +99,14 @@ def export_corrected_labels(checkpoint, audio_directory, output_directory=None):
             raise ValueError('Ya existe una copia de salida; seleccione una carpeta nueva.')
         digest=copy_verified_audio(entry['source'],destination)
         records.append({'file_name':entry['file_name'],'source':str(entry['source']),'destination':str(destination),
-                        'audio_sha256':digest,'score':entry['score'],'label':entry['label']})
+                        'audio_sha256':digest,'score':entry['score'],'label':entry['label'],
+                        'clasificacion':entry['clasificacion']})
         manifest['copied']=len(records)
         write_manifest()
     manifest['completed']=True
     write_manifest()
     assert source_checkpoint.read_bytes()==raw
-    return {'copied':len(records),'output_directory':str(target),'folder':str(target/FOLDER),
-            'manifest':str(manifest_path),'whisper_executed':False}
+    folders=sorted({entry['folder'] for entry in plan})
+    return {'copied':len(records),'output_directory':str(target),
+            'folder':str(target/folders[0]) if len(folders)==1 else str(target),
+            'folders':folders,'manifest':str(manifest_path),'whisper_executed':False}
