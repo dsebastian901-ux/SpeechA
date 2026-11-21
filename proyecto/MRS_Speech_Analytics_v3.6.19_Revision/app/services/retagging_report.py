@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from openpyxl import load_workbook
-from app.services.classification_policy import corrected_approval
+from app.services.classification_policy import corrected_label_exportable
 
 HEADERS=['Llamada','Cuenta / tarjeta','Archivo original','Gestor','Supervisor','Fecha llamada',
          'Estatus Excel anterior','Estatus correcto','Código anterior','Código correcto',
@@ -18,7 +18,7 @@ def add_retagging_sheets(workbook,items):
     for number,item in enumerate(items,1):
         decision=item.get('classification') or {}
         correction=decision.get('output_label_correction') or {}
-        if not corrected_approval(decision):
+        if not corrected_label_exportable(decision):
             continue
         r=item.get('relation') or {}
         path=str(item.get('classified_audio_path') or '')
