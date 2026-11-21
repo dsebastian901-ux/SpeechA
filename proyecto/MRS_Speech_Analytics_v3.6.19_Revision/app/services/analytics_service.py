@@ -3169,14 +3169,15 @@ class AnalyticsService:
                 status_evidence = commitment_confirmation["evidence"]
                 status_evidence_method = "SIN_COMPROMISO_FIRME_RESPUESTA_EXPLICITA"
             elif payment_confirmation_case and not confirms_commitment and not (negotiation_attempt and not payment_followup_case):
-                # Un pago anterior reportado NO constituye una aclaración.
-                # Si la gestión solo da seguimiento, conservar el estatus
-                # operativo de origen cuando sea CONVENIO o NO DEFINE.
-                # Sin estatus acreditado, no inventar una etiqueta nueva.
-                detected_status = (canonical_excel_status if payment_followup_case
-                    and canonical_excel_status in {"CONVENIO", "NO DEFINE FECHA DE PAGO"} else "")
-                status_detection_confidence = "MEDIA" if detected_status else ""
-                status_evidence_method = "SEGUIMIENTO_PAGO_REPORTADO_ESTATUS_ORIGINAL" if detected_status else "PAGO_REPORTADO_SIN_ESTATUS_ACREDITADO"
+                # Regla operativa confirmada 21/nov/2026: al titular que ya
+                # reporta un pago y el gestor verifica/solicita comprobante
+                # corresponde CONVENIO, aunque Excel diga NO DEFINE.
+                # Es estatus de gestión, NO acreditación bancaria ni promesa
+                # futura; el puntaje y las alertas se calculan por separado.
+                detected_status = "CONVENIO" if payment_followup_case else ""
+                status_detection_confidence = "ALTA" if payment_followup_case else "NO DETERMINADA"
+                status_evidence_method = ("SEGUIMIENTO_PAGO_REPORTADO_CON_COMPROBANTE_SIN_ACREDITACION"
+                    if payment_followup_case else "PAGO_REPORTADO_SIN_ESTATUS_ACREDITADO")
                 status_evidence = " / ".join(u["text"] for u in completed_payment_confirmation["evidence"][:3])
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
@@ -3219,17 +3220,7 @@ class AnalyticsService:
             status_validation["reasons"].append(
                 "Pago anterior reportado: no equivale a ACLARACION; no existe estatus operativo confirmado.")
         if excel_status:
-            if (contact_type == "TITULAR" and payment_followup_case
-                    and excel_status in {"CONVENIO", "NO DEFINE FECHA DE PAGO"}):
-                # Regla operativa aclarada por el usuario el 28/oct/2026:
-                # conservar el estatus original al verificar pago/comprobante.
-                # No constituye una promesa futura ni exime otras validaciones.
-                status_validation.update(matches=True, valid=True, review_required=False,
-                    evidence_method="SEGUIMIENTO_PAGO_REPORTADO_ESTATUS_ORIGINAL",
-                    policy_source="ACLARACION_USUARIO_20261028",
-                    payment_followup_case=True,
-                    evidence=" / ".join(u['text'] for u in completed_payment_confirmation['evidence'][:2]))
-            elif excel_status == "NO CONOCEN A DEUDOR" and arco_validation["applies"]:
+            if excel_status == "NO CONOCEN A DEUDOR" and arco_validation["applies"]:
                 status_validation["matches"] = detected_status == "NO CONOCEN A DEUDOR"
 
                 if not unknown_debtor:
