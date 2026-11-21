@@ -8,11 +8,11 @@
 | 82 | Si confirma el nombre pero luego dice ser homónimo/otra persona, invalidar identificación inicial. |
 | 83 | Titular desconoce tarjeta: ACLARACIÓN solo si se informa que debe tramitar aclaración con el banco; registrar evidencia de orientación. |
 | 84 | Si intervienen dos supuestos titulares, detener negociación hasta aclarar identidad. |
-| 85 | Familiar acepta pago sin dar su nombre: se penaliza identificación incompleta (monto de descuento NO informado). |
+| 85 | Familiar acepta hacerse responsable del pago pero no proporciona su nombre: **descuento de 10 puntos**, conservando controles de autorización y protección de datos. |
 | 86 | Titular autoriza verbalmente que un familiar continúe negociación: SÍ para dictaminación operativa; verificar alcance del consentimiento, privacidad y restricciones legales antes de habilitar información sensible. |
 | 87 | Persona dice tener poder legal pero no acredita representación: RECADO CON TERCERO. |
 | 88 | Titular negocia y familiar confirma monto/fecha al final: CONVENIO; conservar evidencia de intervención y autorización. |
-| 89 | Solo timbrado, sin voz: DEBE DICTAMINARSE; no se proporcionó literal de estatus/carpeta. No evaluar ausencia de habla como falta de gestor. |
+| 89 | Llamada solo con timbrado y sin voz: dictaminar como **SIN VOZ**, sin inventar incumplimientos del gestor. Un ASR vacío es una señal, no prueba acústica de timbrado; auditar origen de esta clasificación. |
 | 90 | Buzón contesta, gestor no deja mensaje: permanece BUZÓN, con incumplimiento de calidad. |
 | 91 | Dejar saldo/mora en buzón: FALLA GRAVE. |
 | 92 | Grabación de número inexistente/fuera de servicio: carpeta especial separada; esas llamadas no deberían ingresar al lote de gestión. |
@@ -64,8 +64,8 @@
 | 138 | Uso de «jurídico» o «última oportunidad» sin amenaza expresa: NO penalizar según criterio más reciente; manténgase supervisión normativa/política externa. |
 | 139 | Interrupciones reiteradas del gestor sin insultos o amenazas: DESCUENTO de 5 puntos. |
 | 140 | Gestor levanta la voz de forma agresiva sin insultar: ALERTA PENDIENTE, confirmar audio. |
-| 141 | SIN RESPUESTA en mensaje: titular acusa a gestor actual de maltrato, audio no lo confirma. No asignar resultado por inferencia. |
-| 142 | Interlocutor insulta/amenaza y gestor termina profesionalmente: APROBADO CON EXCEPCIÓN (verificación acústica y condiciones de excepción). |
+| 141 | Titular acusa al gestor actual de maltrato, pero el audio no confirma esa conducta: **APROBADA CON ALERTA** cuando cumple las demás reglas; registrar denuncia sin atribuir falta probada. |
+| 142 | **Confirmado nuevamente:** interlocutor insulta/amenaza y gestor finaliza profesionalmente: **APROBADO CON EXCEPCIÓN**, acreditando hostilidad externa, profesionalismo y efecto en el script. |
 | 143 | Amenaza con contactar al empleador para presionar pago: FALLA GRAVE. |
 | 144 | Maltrato denunciado de un empleado bancario externo (no MRS): llamada actual NO APROBADA según criterio de monitoreo; conservar atribución a empleado externo. |
 | 145 | Dos faltas independientes de 5 puntos: acumular descuentos y restar 10. |
@@ -88,10 +88,10 @@
 ## Respuestas faltantes o ambiguas
 
 - **132:** la cadena `132 sin133no` no determina con seguridad la respuesta de 132; la de 133 sí se registra como NO.
-- **141:** no se recibió respuesta explícita.
+- **141:** resuelto: **APROBADA CON ALERTA** si el maltrato del gestor actual no queda corroborado y no existe otra falta bloqueante.
 - **160:** la última respuesta escrita `169 evaluarse parcialmente` se interpreta provisionalmente como 160 por la secuencia 81–160.
-- **85:** consta que se penaliza al familiar sin nombre, pero no la cuantía del descuento.
-- **89:** se requiere dictaminar las llamadas sin voz; falta código literal de estatus/carpeta.
+- **85:** resuelto: **10 puntos** por familiar responsable del pago que no proporciona su nombre.
+- **89:** resuelto: estatus/carpeta **SIN VOZ**; separar audio sin conversación de fallos técnicos de ASR.
 - **122:** respuesta «sí» a contar banco sin referencia; no autoriza publicar datos bancarios insuficientes o inseguros.
 
 ## Resguardos de cumplimiento
