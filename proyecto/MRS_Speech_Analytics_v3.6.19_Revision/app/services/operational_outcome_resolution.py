@@ -95,3 +95,24 @@ def offered_payment_alternatives(text,segments=(),before_hangup=False):
                 continue
             return {'confirmed':True,'evidence':unit['text'],'position':position+match.start()}
     return {'confirmed':False,'evidence':'','position':None}
+
+
+def reported_unauthorized_venue(text, segments=()):
+    """Pago previo narrado por titular en establecimiento expresamente excluido.
+
+    No atribuye al gestor la instrucción ni altera la validez bancaria del pago.
+    """
+    patterns=r'\b(?:ya pague|pague|hice el pago|realice el pago|deposite)\b'
+    venues=r'\b(?:oxxo|elektra)\b'
+    evidence=[]
+    for unit in sentence_evidence(text,segments):
+        if unit.get('speaker_role') not in {'TITULAR','INTERLOCUTOR','NO DETERMINADO'}:
+            continue
+        value=normalize(unit.get('text')or'')
+        if re.search(patterns,value) and re.search(venues,value):
+            if re.search(r'\b(?:no pague|no hice el pago|no deposite|dijeron que|por ejemplo|si hubiera pagado)\b',value):
+                continue
+            evidence.append({'text':unit['text'],'venue':re.search(venues,value).group(),
+                             'speaker_role':unit.get('speaker_role')})
+    return {'confirmed':bool(evidence),'evidence':evidence,
+            'reason':'Pago anterior reportado en lugar expresamente no autorizado.' if evidence else ''}
