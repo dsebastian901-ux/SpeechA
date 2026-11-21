@@ -130,8 +130,25 @@ def test_paid_followup_is_not_an_aclaracion():
     text = ("Gestor: Habla MRS. Titular: Soy yo. Ya pagué 1000 pesos ayer. "
             "Gestor: Envíe su comprobante de pago por WhatsApp.")
     status = _analyze(text).metadata["status_validation"]
+    assert status["detected_status"] == "NO DEFINE FECHA DE PAGO"
     assert status["detected_status"] != "ACLARACION"
     assert status["detected_status"] != "PAGO REPORTADO / ACLARACION"
+
+
+def test_paid_followup_preserves_convenio_only_if_it_was_the_prior_operational_status():
+    text = ("Gestor: Habla MRS. Titular: Soy yo. Ya pagué 1000 pesos ayer. "
+            "Gestor: Envíe su comprobante de pago por WhatsApp.")
+    status = _analyze(text, "CONVENIO").metadata["status_validation"]
+    assert status["detected_status"] == "CONVENIO"
+    assert status["matches"] is True
+
+
+def test_reported_payment_does_not_relabel_itself_as_an_aclaracion():
+    text = ("Gestor: Habla MRS. Titular: Soy yo. Ya pagué 1000 pesos ayer. "
+            "Gestor: Envíe su comprobante de pago por WhatsApp.")
+    status = _analyze(text, "ACLARACION").metadata["status_validation"]
+    assert status["detected_status"] != "ACLARACION"
+    assert status["review_required"]
 
 
 def test_second_listening_of_recado_callback_even_if_score_below_80():
