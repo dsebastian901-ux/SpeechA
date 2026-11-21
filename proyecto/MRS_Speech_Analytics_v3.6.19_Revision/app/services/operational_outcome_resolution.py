@@ -116,3 +116,50 @@ def reported_unauthorized_venue(text, segments=()):
                              'speaker_role':unit.get('speaker_role')})
     return {'confirmed':bool(evidence),'evidence':evidence,
             'reason':'Pago anterior reportado en lugar expresamente no autorizado.' if evidence else ''}
+
+
+def callback_number_reconfirmed(text,segments=()):
+    """Validación expresa por el gestor de un contacto que el tercero ya conoce.
+
+    La disponibilidad del teléfono no equivale a verificar si sigue siendo el
+    correcto. No atribuir un «sí» a un tercero cuando el rol sea GESTOR.
+    """
+    units=sentence_evidence(text,segments)
+    prompt=(r'\b(?:es (?:el |ese |su )?numero correcto|'
+        r'(?:me |nos )?confirma (?:si |que )?(?:ese |el |su )?numero (?:es )?correcto|'
+        r'(?:sigue siendo|tiene|tienen) (?:el |ese |su )?numero (?:correcto|vigente)|'
+        r'(?:esta bien|es correcto) (?:el |ese |su )?numero)\b')
+    answer=r'^(?:si|claro|correcto|asi es|exacto|ese es|lo tengo bien|de acuerdo)\b'
+    for i,unit in enumerate(units):
+        role=unit.get('speaker_role')
+        if role in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+        phrase=normalize(unit.get('text')or'')
+        if not re.search(prompt,phrase):continue
+        for other in units[i+1:i+3]:
+            if other.get('speaker_role')=='GESTOR':continue
+            reply=normalize(other.get('text')or'')
+            if re.search(r'^no\b',reply):break
+            if re.search(answer,reply):
+                return {'confirmed':True,'evidence':unit.get('text','')+' / '+other.get('text','')}
+    return {'confirmed':False,'evidence':''}
+
+
+def distinct_partial_alternative(text,segments=()):
+    """Alternativa adicional distinta del abono parcial ya explicado.
+
+    Repetir «es pago parcial» o el monto no es ofrecer otra alternativa.
+    """
+    cue=(r'\b(?:otra alternativa|otra opcion|tambien (?:le |podemos |puede )?'
+        r'(?:ofrecer|proponer|pagar|hacer|realizar)|'
+        r'(?:de otra manera|como otra opcion)|'
+        r'(?:por otro lado podemos)|'
+        r'(?:en lugar de (?:ese |el )?(?:abono|pago parcial))|'
+        r'(?:puede completar (?:el |su )?minimo)|'
+        r'(?:podemos reestructurar)|'
+        r'(?:pago minimo completo))\b')
+    for u in sentence_evidence(text,segments):
+        if u.get('speaker_role') in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+        phrase=normalize(u.get('text')or'')
+        if re.search(cue,phrase) and not re.search(r'\b(?:no |nunca |tampoco )\b[^.!?]{0,28}$',phrase):
+            return {'confirmed':True,'evidence':u.get('text')}
+    return {'confirmed':False,'evidence':''}
