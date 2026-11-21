@@ -2610,6 +2610,9 @@ class AnalyticsService:
             or (transfer_wording and not authorized_transfer_account and payment_instruction_context
                 and not reported_transfer_only and not transfer_option_listing and not only_negated_transfers(text))))))
 
+        from app.services.operational_outcome_resolution import reported_unauthorized_venue
+        prior_unauthorized_venue=reported_unauthorized_venue(text,segments)
+
         convenio_payment_validation = {
             'bank_service_validation':service_payment,
             "applies": is_convenio,
@@ -2632,6 +2635,9 @@ class AnalyticsService:
             "minimum_places_met": len(set(detected_payment_places)) >= 2,
             "unauthorized_payment_method": unauthorized_payment_method,
             "unauthorized_evidence": unauthorized_payment_evidence,
+            "prior_unauthorized_venue": prior_unauthorized_venue,
+            "authorized_redirection_after_prior_venue": bool(
+                prior_unauthorized_venue['confirmed'] and detected_payment_places),
             "wrong_bank_data": wrong_bank_data,
             "bank_mentioned": bank_mentioned,
             "possible_fraud": unauthorized_payment_method,
