@@ -2877,10 +2877,18 @@ class AnalyticsService:
                 'Expresión despectiva al gestionar un mensaje («chisme»); bloquea aprobación y requiere cotejo de emisor y contexto.',
                 0, False, ['TRATO_REV'])
         if repeated_interruption_review:
+            # Criterio 139: la interrupción reiterada imputable al gestor
+            # descuenta 5; si el hablante es ambiguo, conservar alerta sin
+            # atribuir automáticamente una falta de cinco puntos.
+            interruption_confirmed=bool(recipient_statement(text,segments,
+                r'\b(?:usted no me deja hablar|usted me interrumpe|no me interrumpa|'
+                r'usted no me permite terminar|no me deje sin hablar)\b'))
             add_penalty(
                 "PEN_TRATO_INTERRUPCION", "Trato",
-                "Se detectan posibles interrupciones reiteradas; sin diarización se envía a revisión y no se atribuye automáticamente agresión al gestor.",
-                25, False, ["TRATO002"],
+                ("Interrupciones reiteradas del gestor, denunciadas directamente por el interlocutor."
+                    if interruption_confirmed else
+                    "Posibles interrupciones reiteradas, emisor no corroborado; conservar alerta de escucha."),
+                5 if interruption_confirmed else 0, False, ["TRATO002"],
             )
         if explicit_agent_hangup:
             add_penalty(
@@ -2896,14 +2904,31 @@ class AnalyticsService:
             )
 
         if not identifies_mrs:
+            # Criterio 147: el titular que cuelga antes de cerrar la
+            # identificación no dispensa su omisión; 25 puntos.
+            early_holder_hangup=bool(contact_type=="TITULAR" and explicit_holder_hangup)
             add_penalty(
                 "PEN001",
                 "Identificación",
-                "No se detectó identificación como MRS.",
-                20,
+                ("Titular cuelga con identificación MRS incompleta."
+                    if early_holder_hangup else "No se detectó identificación como MRS."),
+                25 if early_holder_hangup else 20,
                 False,
-                ["LEG001", "FRA001", "RN001"],
+                ["LEG001", "FRA001", "RN001", "CUELGUE147"] if early_holder_hangup
+                    else ["LEG001", "FRA001", "RN001"],
             )
+
+        # Criterio 146: recado aceptado y dirigido, sin número hablado ni
+        # confirmado como ya conocido, debe descontar 15 por omisión de contacto.
+        # El estatus recado y la calificación se mantienen independientes.
+        if (contact_type in {'TERCERO','TERCERO / FAMILIAR','TERCERO / TRABAJO'}
+                and message_workflow_validation.get('recipient_accepted')
+                and message_workflow_validation.get('directed_body')
+                and not message_workflow_validation.get('callback_available')
+                and not message_workflow_validation.get('final_refusal')):
+            add_penalty('PEN_RECADO_SIN_CONTACTO_RETORNO','Recado',
+                'El tercero aceptó el recado, pero el gestor omitió un teléfono de retorno acreditado.',
+                15,False,['RECADO146'])
 
         if false_bradescard_identity:
             add_penalty(
