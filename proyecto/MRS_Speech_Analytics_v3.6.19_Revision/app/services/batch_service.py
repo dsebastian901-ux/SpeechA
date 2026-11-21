@@ -586,11 +586,11 @@ class BatchService:
         destination_dir = classified_root / folder_map.get(category, "REVISAR")
 
         correction = classification.get('output_label_correction') or {}
-        from app.services.classification_policy import corrected_approval
-        corrected=corrected_approval(classification)
+        from app.services.classification_policy import corrected_label_exportable
+        corrected=corrected_label_exportable(classification)
         if category == 'APROBADO_ETIQUETA_CORREGIDA' or corrected:
-            if not approved or not correction.get('valid') or not correction.get('corrected_name'):
-                raise ValueError('La etiqueta corregida no cuenta con una aprobación válida.')
+            if not corrected or not correction.get('valid') or not correction.get('corrected_name'):
+                raise ValueError('No existe evidencia suficiente para corregir el estatus de la copia.')
             from app.services.status_output_label import audio_output_filename
             filename = audio_output_filename(correction['corrected_name'],source.suffix)
         elif approved:
@@ -603,7 +603,7 @@ class BatchService:
             else:
                 filename = source.name
         else:
-            # Los no aprobados conservan el nombre original para auditoría.
+            # Los no aprobados sin una corrección sustentada conservan el nombre original.
             filename = source.name
 
         if corrected and (destination_dir/filename).exists():
