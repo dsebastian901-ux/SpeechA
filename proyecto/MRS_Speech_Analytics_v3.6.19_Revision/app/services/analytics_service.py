@@ -2357,9 +2357,9 @@ class AnalyticsService:
         # ALERTA cuando el audio NO acredita conducta ofensiva del gestor.
         # No exime una queja anterior ni otra falta corroborada.
         current_agent_mistreatment_unverified=bool(
-            mistreatment_details and not gestor_confrontation
+            contact_type=='TITULAR' and mistreatment_details and not gestor_confrontation
             and not any(e['speaker_role']=='GESTOR' for e in offensive_language_evidence)
-            and all(re.search(
+            and all(e.get('speaker_role') in {'TITULAR','INTERLOCUTOR'} and re.search(
                 r'\b(?:usted me (?:esta|esta) (?:insultando|gritando|maltratando|tratando mal)|'
                 r'me esta hablando muy fuerte|no me hable como me habla|'
                 r'me esta insultando|usted me trata mal)\b',
