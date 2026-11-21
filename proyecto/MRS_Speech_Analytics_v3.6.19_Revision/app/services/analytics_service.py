@@ -3159,7 +3159,26 @@ class AnalyticsService:
                 r"\b(?:no\s+se\s+cuando\s+(?:pueda|voy\s+a)\s+pagar|"
                 r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
                 r"no\s+tengo\s+fecha|lo\s+voy\s+a\s+revisar)\b")
-            if promise_date is not None and confirms_commitment and confirmed_agreement_amount and not payment_confirmation_case:
+            if explicit_holder_hangup:
+                # Decisión 16: aun si aceptó monto y fecha, el cuelgue del
+                # titular impide cerrar el convenio. Negativa expresa prevalece.
+                if refusal_evidence:
+                    detected_status="NEGATIVA DE PAGO"
+                    status_evidence=commitment_confirmation["evidence"]
+                    status_evidence_method="NEGATIVA_EXPRESA_ANTES_DE_COLGAR"
+                elif alternatives_before_hangup.get('confirmed') or (
+                        confirms_commitment and promise_date is not None):
+                    detected_status="NO DEFINE FECHA DE PAGO"
+                    status_evidence_method="ALTERNATIVAS_O_ACUERDO_INTERRUMPIDO_POR_CUELGUE"
+                    status_evidence=(alternatives_before_hangup.get('evidence')
+                        or commitment_confirmation.get('evidence') or
+                        "El titular terminó la llamada antes de cerrar el compromiso.")
+                else:
+                    detected_status="TITULAR CUELGA"
+                    status_evidence_method="CUELGUE_EXPRESO_SIN_ALTERNATIVAS"
+                    status_evidence="El titular anunció que terminaría la llamada antes de recibir alternativas."
+                status_detection_confidence="ALTA"
+            elif promise_date is not None and confirms_commitment and confirmed_agreement_amount and not payment_confirmation_case:
                 detected_status = "CONVENIO"
                 status_detection_confidence = "ALTA"
                 status_evidence = commitment_confirmation["evidence"]
@@ -3169,22 +3188,6 @@ class AnalyticsService:
                 status_detection_confidence = "ALTA"
                 status_evidence = commitment_confirmation["evidence"]
                 status_evidence_method = "FECHA_O_INTENCION_SIN_MONTO_CONFIRMADO"
-            elif explicit_holder_hangup:
-                # Si el titular anuncia que cuelga, solo se evalúa lo que
-                # alcanzó a gestionar el asesor antes de la interrupción.
-                if refusal_evidence:
-                    detected_status="NEGATIVA DE PAGO"
-                    status_evidence=commitment_confirmation["evidence"]
-                    status_evidence_method="NEGATIVA_EXPRESA_ANTES_DE_COLGAR"
-                elif alternatives_before_hangup.get('confirmed'):
-                    detected_status="NO DEFINE FECHA DE PAGO"
-                    status_evidence_method="ALTERNATIVAS_OFRECIDAS_ANTES_DE_CUELGUE"
-                    status_evidence=alternatives_before_hangup['evidence']
-                else:
-                    detected_status="TITULAR CUELGA"
-                    status_evidence_method="CUELGUE_EXPRESO_SIN_ALTERNATIVAS"
-                    status_evidence="El titular anunció que terminaría la llamada antes de que se ofrecieran alternativas."
-                status_detection_confidence="ALTA"
             elif refusal_evidence and not confirms_commitment:
                 detected_status="NEGATIVA DE PAGO"
                 status_detection_confidence="ALTA"
