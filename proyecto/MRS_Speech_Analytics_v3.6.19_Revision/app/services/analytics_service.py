@@ -3169,9 +3169,14 @@ class AnalyticsService:
                 status_evidence = commitment_confirmation["evidence"]
                 status_evidence_method = "SIN_COMPROMISO_FIRME_RESPUESTA_EXPLICITA"
             elif payment_confirmation_case and not confirms_commitment and not (negotiation_attempt and not payment_followup_case):
-                detected_status = "ACLARACION" if payment_followup_case else "PAGO REPORTADO / ACLARACION"
-                status_detection_confidence = "ALTA" if payment_followup_case else "MEDIA"
-                status_evidence_method = "SEGUIMIENTO_DE_PAGO_REPORTADO_SIN_ACREDITACION_BANCARIA" if payment_followup_case else "PAGO_ANTERIOR_REPORTADO"
+                # Un pago anterior reportado NO constituye una aclaración.
+                # Si la gestión solo da seguimiento, conservar el estatus
+                # operativo de origen cuando sea CONVENIO o NO DEFINE.
+                # Sin estatus acreditado, no inventar una etiqueta nueva.
+                detected_status = (canonical_excel_status if payment_followup_case
+                    and canonical_excel_status in {"CONVENIO", "NO DEFINE FECHA DE PAGO"} else "")
+                status_detection_confidence = "MEDIA" if detected_status else ""
+                status_evidence_method = "SEGUIMIENTO_PAGO_REPORTADO_ESTATUS_ORIGINAL" if detected_status else "PAGO_REPORTADO_SIN_ESTATUS_ACREDITADO"
                 status_evidence = " / ".join(u["text"] for u in completed_payment_confirmation["evidence"][:3])
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
@@ -3208,6 +3213,11 @@ class AnalyticsService:
             "evidence": status_evidence,
         }
 
+        if payment_confirmation_case and not detected_status and not confirms_commitment:
+            status_validation["valid"] = False
+            status_validation["review_required"] = True
+            status_validation["reasons"].append(
+                "Pago anterior reportado: no equivale a ACLARACION; no existe estatus operativo confirmado.")
         if excel_status:
             if (contact_type == "TITULAR" and payment_followup_case
                     and excel_status in {"CONVENIO", "NO DEFINE FECHA DE PAGO"}):
