@@ -9,8 +9,8 @@ ORDINARY_REVIEW_CODES={'STATUS_INVALID','STATUS_NOT_CONFIRMED','UNIDENTIFIED_CON
 
 def explicit_message_refusal(text,segments=(),acceptance=()):
     source=normalize(text);events=[];cursor=0
-    pattern=re.compile(r'\b(?:no (?:quiero|puedo|voy a) (?:recibir|tomar|pasar|dar|transmitir) (?:el |un |su )?(?:recado|mensaje)|'
-                       r'no (?:le |se lo )?(?:voy a|puedo|quiero) (?:pasar|dar|transmitir) (?:el |un |su )?(?:recado|mensaje)|'
+    pattern=re.compile(r'\b(?:no (?:quiero|puedo|voy a) (?:recibir|tomar|pasar|dar|transmitir) (?:el |un |su |ningun |ninguno |ninguna )?(?:recado|mensaje)|'
+                       r'no (?:le |se lo )?(?:voy a|puedo|quiero) (?:pasar|dar|transmitir) (?:el |un |su |ningun )?(?:recado|mensaje)|'
                        r'no soy (?:su )?mensajer[oa]|no me interesa recibir (?:el |su )?recado|'
                        r'no tengo (?:donde|con que) (?:anotar(?:lo)?|apuntar(?:lo)?)|no puedo (?:anotar|apuntar|anotarlo|apuntarlo|notarlo)|'
                        r'no traigo (?:aqui )?(?:en que|con que|como) (?:anotar(?:lo)?|apuntar(?:lo)?))\b')
