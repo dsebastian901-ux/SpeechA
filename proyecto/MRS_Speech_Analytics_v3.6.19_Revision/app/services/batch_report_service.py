@@ -661,11 +661,12 @@ class BatchReportService:
         final_operational = final_operational_map.get(physical, "REVISAR MANUALMENTE")
 
         output_label = classification.get('output_label_correction') or {}
-        from app.services.classification_policy import corrected_approval
-        label_applied = corrected_approval(classification)
+        from app.services.classification_policy import corrected_label_exportable
+        label_applied = corrected_label_exportable(classification)
         output_name = output_label['corrected_name'] if label_applied else relation.get('nombre_final') or ''
         if label_applied:
-            dictamen = 'CORREGIDO EN COPIA'
+            # El dictamen de calidad permanece intacto, en particular si <80.
+            dictamen = 'CORREGIDO EN COPIA (NO APROBADO)' if physical=='NO_APROBADO_MENOR_80' else 'CORREGIDO EN COPIA'
             motivo_dictamen = output_label['original_status']+' → '+output_label['corrected_status']
         return {
             'Estado de copia':item.get('copy_status') or '',
@@ -676,7 +677,7 @@ class BatchReportService:
             "Nombre antes de reetiquetar": relation.get('nombre_final') or '',
             "Estatus de salida": output_label.get('corrected_status') if label_applied else relation.get('estatus_grabacion') or '',
             "Código de salida": output_label.get('corrected_code') if label_applied else '',
-            "Carpeta de etiqueta corregida": ('APROBADAS_DURACION_MENOR' if classification.get('clasificacion')=='APROBADO_DURACION_MENOR' else output_label.get('folder')) if label_applied else '',
+            "Carpeta de etiqueta corregida": ('NO_APROBADOS_MENOR_80' if physical=='NO_APROBADO_MENOR_80' else 'APROBADAS_DURACION_MENOR' if physical=='APROBADO_DURACION_MENOR' else output_label.get('folder')) if label_applied else '',
             "Archivo original": item.get("file_name") or Path(str(item.get("path") or "")).name,
             "Nombre final": output_name,
             "Gestor": relation.get("gestor") or "",
