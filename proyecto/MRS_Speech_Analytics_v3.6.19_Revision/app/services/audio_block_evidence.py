@@ -97,7 +97,15 @@ def validate_evidence(record,result,relation,contact_type,positive_evaluator=Non
                               'evidence':'El texto original y la lectura adicional difieren en la negación del recado.'})
     risks=[dict(t) for t in {tuple(sorted(r.items())) for r in risks}]
     risks.sort(key=lambda r:(r['type'],r['source'],r['evidence']))
+    # La lectura adicional y la del cierre son dos ventanas del ASR local.
+    # Solo habilitan APROBADO_CON_ALERTA cuando ambas contienen evidencia
+    # utilizable y el único riesgo es lenguaje sin hablante identificado.
+    double_listening_complete=bool(
+        primary and tail and not quality['degraded']
+        and any(str(s.get('text')or'').strip() for s in primary)
+        and any(str(s.get('text')or'').strip() for s in tail))
     return {'present':True,'valid':True,'review_required':bool(risks),'quality':quality,'risks':risks,
+            'second_listening_complete':double_listening_complete,
             'human_verified':False,'reason':('Lectura adicional con señales contradictorias o de cumplimiento pendientes de confirmar; revisar audio.' if risks else '')}
 
 

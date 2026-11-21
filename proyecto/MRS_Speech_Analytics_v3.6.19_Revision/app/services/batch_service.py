@@ -576,6 +576,7 @@ class BatchService:
             "APROBADOS": "APROBADOS",
             "APROBADO_SIN_ETIQUETAR": "APROBADO_SIN_ETIQUETAR",
             "APROBADO_CON_EXCEPCION": "APROBADO_CON_EXCEPCION",
+            "APROBADO_CON_ALERTA": "APROBADO_CON_ALERTA",
             "NO_APROBADO": "NO_APROBADOS",
             "NO_APROBADO_MENOR_80": "NO_APROBADOS_MENOR_80",
             "MAL_DICTAMINADO": "MAL_DICTAMINADO",
@@ -584,13 +585,23 @@ class BatchService:
             "REVISAR": "REVISAR",
         }
         destination_dir = classified_root / folder_map.get(category, "REVISAR")
+        # Separa lugar no autorizado o referencia distinta sin alterar calidad
+        # ni afirmar fraude por la sola mención/transcripción de una referencia.
+        metadata=item.get('analytics_metadata') or {}
+        venues=(metadata.get('convenio_payment_validation') or {}).get('prior_unauthorized_venue') or {}
+        card=metadata.get('card_validation') or {}
+        reference_mismatch=str(card.get('result') or '').startswith('REVISAR - REFERENCIA DISTINTA')
+        if venues.get('confirmed') or reference_mismatch:
+            subfolder=('REFERENCIA_POR_CONFIRMAR' if reference_mismatch and not venues.get('confirmed')
+                       else folder_map.get(category,'REVISAR'))
+            destination_dir=classified_root/'LUGARES_NO_AUTORIZADOS'/subfolder
 
         correction = classification.get('output_label_correction') or {}
-        from app.services.classification_policy import corrected_approval
-        corrected=corrected_approval(classification)
+        from app.services.classification_policy import corrected_label_exportable
+        corrected=corrected_label_exportable(classification)
         if category == 'APROBADO_ETIQUETA_CORREGIDA' or corrected:
-            if not approved or not correction.get('valid') or not correction.get('corrected_name'):
-                raise ValueError('La etiqueta corregida no cuenta con una aprobación válida.')
+            if not corrected or not correction.get('valid') or not correction.get('corrected_name'):
+                raise ValueError('No existe evidencia suficiente para corregir el estatus de la copia.')
             from app.services.status_output_label import audio_output_filename
             filename = audio_output_filename(correction['corrected_name'],source.suffix)
         elif approved:
@@ -603,7 +614,7 @@ class BatchService:
             else:
                 filename = source.name
         else:
-            # Los no aprobados conservan el nombre original para auditoría.
+            # Los no aprobados sin una corrección sustentada conservan el nombre original.
             filename = source.name
 
         if corrected and (destination_dir/filename).exists():

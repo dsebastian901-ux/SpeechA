@@ -1510,7 +1510,29 @@ class AnalyticsService:
         # La imposibilidad temporal o un aviso condicionado a encontrar al
         # titular no sustituyen el resultado final de recepción.
         recado_refusal=recado_declines=message_refusal_validation.get('confirmed',False)
+        if recado_refusal:
+            # Un tercero no está obligado a recibir un mensaje; no cobrar al
+            # gestor una etapa que el interlocutor rechazó expresamente.
+            # La negativa no dispensa identificación, trato ni privacidad.
+            message_delivery_validation={'review_required':False,
+                'reason':'El tercero rechazó expresamente el recado; el contacto no es exigible.',
+                'evidence':message_refusal_validation.get('evidence')or[]}
         recado_real=message_workflow_validation['complete']
+        # Criterio 8: el tercero recibe el recado, pero manifiesta que no
+        # puede contactar al titular. El estatus sigue siendo RECADO, sin
+        # inventar un número de retorno ni la transmisión efectiva.
+        no_puede_transmitir_recado=bool(
+            not recado_real and message_workflow_validation['recipient_accepted']
+            and message_workflow_validation['directed_body']
+            and not message_workflow_validation['final_refusal']
+            and recipient_statement(text,segments,
+                r'\b(?:no (?:tengo|tenemos) (?:como|forma|manera|modo) de '
+                r'(?:contactarl[oa]|contactar|avisarl[oa]|avisar|localizarl[oa]|localizar|'
+                r'comunicarme|comunicarnos|comunicarme con|comunicarnos con)|'
+                r'no (?:puedo|podemos) (?:contactarl[oa]|contactar|avisarl[oa]|avisar|'
+                r'localizarl[oa]|localizar|comunicarme|comunicarnos))\b'))
+        recado_estatus_acreditado=bool(recado_real or no_puede_transmitir_recado)
+        message_workflow_validation['recado_aceptado_sin_poder_transmitir']=no_puede_transmitir_recado
         if (not recado_real and message_workflow_validation['recipient_accepted']
                 and message_workflow_validation['directed_body'] and not message_workflow_validation['callback_available']
                 and not message_workflow_validation['final_refusal']):
@@ -1519,7 +1541,7 @@ class AnalyticsService:
                 'evidence':[u for u in sentence_evidence(text,segments) if re.search(r'\b(?:numero|telefono|anot\w*|\d{2})\b',norm(u['text']))][-8:]}
         if recado_real:
             message_delivery_validation={'review_required':False,'reason':'Recepción y contacto acreditados en el diálogo.','evidence':message_workflow_validation['events']}
-        if recado_real:
+        if recado_estatus_acreditado:
             if contact_type=='CONTACTO NO DETERMINADO' and agent_statement(text,segments,
                     r'\b(?:dejo|deja|proporciono) (?:este |su |el )?(?:numero|telefono) (?:como )?(?:numero de )?referencia\b'):
                 contact_type='TERCERO';third_party=True
@@ -1528,8 +1550,8 @@ class AnalyticsService:
                                "TERCERO": "MENSAJE CON TERCERO"}.get(contact_type, detected_status)
         own_finance_proof = titular and any(e['kind']=='OWN_FINANCES' for e in dialogue['events'])
         recado_applies = bool((recado_expected and not unknown_debtor and not own_finance_proof
-                              and not (recado_real and contact_type in {'TERCERO','TERCERO / TRABAJO'}))
-                             or (family and recado_real) or (not excel_status and family))
+                              and not (recado_estatus_acreditado and contact_type in {'TERCERO','TERCERO / TRABAJO'}))
+                             or (family and recado_estatus_acreditado) or (not excel_status and family))
         if recado_applies:
             # La relación familiar explícita prevalece sobre "soy yo" (identidad del referente).
             if recado_family_evidence and not recado_unknown_explicit:
@@ -1537,11 +1559,15 @@ class AnalyticsService:
                 spouse = spouse or any('espos' in x or 'marido' in x for x in recado_family_evidence)
                 contact_type = "TERCERO / FAMILIAR"
                 relationship = "ESPOSO/A" if spouse else "FAMILIAR"
-                detected_status = "MENSAJE CON FAMILIAR" if recado_real else ""
+                detected_status = "MENSAJE CON FAMILIAR" if recado_estatus_acreditado else ""
             elif contact_type == "TITULAR" and re.search(r"\b(?:referencia|numero de referencia|dejo (?:su|el) numero)\b", normalized):
                 contact_type = "CONTACTO NO DETERMINADO"
                 detected_status = ""
                 relationship = ""
+
+        if (contact_type in {'TERCERO','TERCERO / FAMILIAR','TERCERO / TRABAJO'}
+                and message_refusal_validation.get('confirmed')):
+            detected_status='SE NIEGAN A TOMAR RECADO'
 
         # ---------------------------------------------------------
         # PROTECCIÓN DE DATOS: INFORMACIÓN FINANCIERA A TERCEROS
@@ -1953,6 +1979,21 @@ class AnalyticsService:
         prior_payment_evidence = list(dict.fromkeys(u["text"] for u in completed_payment_confirmation["evidence"]))
         prior_payment_amounts = prior_payment_binding["amounts"]
         prior_payment_total = prior_payment_binding["total"]
+        from app.services.operational_outcome_resolution import reported_unauthorized_venue
+        prior_unauthorized_venue=reported_unauthorized_venue(text,segments)
+        # Criterio 69: «pagué en OXXO/Elektra» no es evidencia de un
+        # abono autorizado. Registrar la afirmación, NO sumar saldo cubierto.
+        # Si hubo otros pagos reportados, evitar borrar importes sin revisión.
+        other_reported_payment=any(
+            not re.search(r'\b(?:oxxo|elektra)\b',norm(u.get('text')or''))
+            for u in completed_payment_confirmation.get('evidence')or[])
+        unauthorized_only_claim=bool(prior_unauthorized_venue['confirmed']
+            and not other_reported_payment)
+        if unauthorized_only_claim:
+            prior_payment_binding['amounts_ignored_unauthorized_venue']=prior_payment_amounts
+            prior_payment_binding['reported_payment_not_accredited']=True
+            prior_payment_amounts=[]
+            prior_payment_total=None
 
         commitment_confirmation = payment_commitment(text, segments)
         from app.services.accepted_schedule_evidence import accepted_two_part_schedule
@@ -1992,7 +2033,8 @@ class AnalyticsService:
         prior_cue_in_promise = bool(re.search(
             r"\b(?:ya\s+(?:pague|page|hice|realice)|pague\s+(?:ayer|hoy)|(?:lo|el\s+pago)\s+hizo\s+el\s+dia|(?:realizo|hizo)\s+el\s+pago\s+el\s+dia|ya\s+se\s+(?:hizo|pago)|pago\s+(?:realizado|efectuado))\b",
             norm(promise_date_evidence)))
-        payment_already_made = completed_payment_confirmation["confirmed"]
+        payment_already_made = bool(completed_payment_confirmation["confirmed"]
+            and not unauthorized_only_claim)
         explicit_new_promise = bool(
             promise_date and promise_date_evidence and (promise_is_future or not prior_cue_in_promise)
             and commitment_confirmation["accepted"]
@@ -2458,8 +2500,11 @@ class AnalyticsService:
         # la fila original. Ofertas prohibidas y fraude se validan aparte.
         named_agreement=bool(agent_statement(text,segments,
             r'\b(?:genero|generamos|confirmo|confirmamos) (?:su |el |un )?convenio\b'))
+        from app.services.operational_outcome_resolution import amount_confirmed_for_agreement
+        confirmed_agreement_amount=amount_confirmed_for_agreement(
+            text,segments,commitment_confirmation,accepted_schedule)
         is_convenio = bool(not non_holder_scenario and contact_type=='TITULAR'
-            and confirms_commitment and (promise_date is not None or named_agreement)
+            and confirms_commitment and promise_date is not None and confirmed_agreement_amount
             and not payment_confirmation_case and not pending_decision and not explicit_decline)
         # Los lugares de pago también se revisan en llamadas de cobranza donde
         # el gestor instruye o solicita realizar un pago, aunque el estatus Excel
@@ -2618,6 +2663,9 @@ class AnalyticsService:
             "minimum_places_met": len(set(detected_payment_places)) >= 2,
             "unauthorized_payment_method": unauthorized_payment_method,
             "unauthorized_evidence": unauthorized_payment_evidence,
+            "prior_unauthorized_venue": prior_unauthorized_venue,
+            "authorized_redirection_after_prior_venue": bool(
+                prior_unauthorized_venue['confirmed'] and detected_payment_places),
             "wrong_bank_data": wrong_bank_data,
             "bank_mentioned": bank_mentioned,
             "possible_fraud": unauthorized_payment_method,
@@ -2764,6 +2812,33 @@ class AnalyticsService:
         penalties: List[Dict] = []
         critical_failures: List[Dict] = []
         penalty_total = 0
+
+        # Criterios 59 y 68: descuentos específicos de 5 puntos.
+        # No se exige repetir diez dígitos si el tercero ya conoce el contacto,
+        # pero sí que el gestor confirme que el número es el correcto.
+        from app.services.operational_outcome_resolution import (
+            callback_number_reconfirmed, distinct_partial_alternative)
+        callback_number_validation={'applies':False,'confirmed':False,'evidence':''}
+        if (contact_type in {'TERCERO','TERCERO / FAMILIAR','TERCERO / TRABAJO'}
+                and message_workflow_validation.get('previous_contact_confirmed')
+                and message_workflow_validation.get('recipient_accepted')):
+            callback_number_validation=callback_number_reconfirmed(text,segments)
+            callback_number_validation['applies']=True
+            if not callback_number_validation.get('confirmed'):
+                add_penalty(
+                    'PEN_CONTACTO_CONOCIDO_SIN_VERIFICAR','Recado',
+                    'El tercero indicó tener el teléfono, pero el gestor no confirmó que fuera el correcto.',
+                    5, False, ['RECADO059'])
+        alternative_to_partial_validation={'applies':False,'confirmed':False,'evidence':''}
+        if (contact_type=='TITULAR' and partial_payment and partial_explanation
+                and confirms_commitment):
+            alternative_to_partial_validation=distinct_partial_alternative(text,segments)
+            alternative_to_partial_validation['applies']=True
+            if not alternative_to_partial_validation.get('confirmed'):
+                add_penalty(
+                    'PEN_PARCIAL_SIN_ALTERNATIVA_ADICIONAL','Negociación',
+                    'Se explicó correctamente el pago parcial, pero no se ofreció una alternativa adicional.',
+                    5, False, ['PAGO068'])
 
         if gestor_confrontation:
             add_penalty(
@@ -2996,6 +3071,7 @@ class AnalyticsService:
             and canonical_excel_status != 'ACLARACION'
             and not dispute_guidance
             and not negotiation_attempt
+            and not explicit_holder_hangup
             and not prior_payment_covers_minimum
             and not reported_amount_pending
         )
@@ -3128,6 +3204,12 @@ class AnalyticsService:
                 or (prior_payment_total is not None and minimum_for_attempt is not None
                     and not prior_payment_covers_minimum and negotiation_attempt)))
         if contact_type == "TITULAR" and not detected_status:
+            from app.services.operational_outcome_resolution import (
+                prior_agreement_breached, offered_payment_alternatives)
+            breach_evidence=prior_agreement_breached(text,segments)
+            alternatives_before_hangup=offered_payment_alternatives(
+                text,segments,before_hangup=True) if explicit_holder_hangup else {'confirmed':False}
+            alternatives_after_breach=offered_payment_alternatives(text,segments) if breach_evidence else {'confirmed':False}
             agreement_evidence = bool(re.search(
                 r"\b(?:gener(?:o|amos|are|amos)\s+(?:su\s+|el\s+)?convenio|"
                 r"su\s+convenio\s+quedaria|quedamos\s+en\s+(?:tres|dos|3|2)\s+pagos|"
@@ -3138,11 +3220,67 @@ class AnalyticsService:
                 r"\b(?:no\s+se\s+cuando\s+(?:pueda|voy\s+a)\s+pagar|"
                 r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
                 r"no\s+tengo\s+fecha|lo\s+voy\s+a\s+revisar)\b")
-            if (agreement_evidence or promise_date is not None) and confirms_commitment and not payment_confirmation_case:
+            # Criterio 65: NEGATIVA es el resultado OPERATIVO de una fecha
+            # fuera de mora, sin falsear la respuesta real del titular.
+            outside_due=bool(promise_date and parsed_due_date and promise_date>parsed_due_date)
+            outside_month=bool(promise_date and parsed_call_date
+                and mora_policy['mode']=='MES_DE_LLAMADA'
+                and (promise_date.year,promise_date.month)!=(parsed_call_date.year,parsed_call_date.month))
+            outside_three_days=bool(promise_date and parsed_call_date
+                and mora_policy['mode']=='CORTE_Y_VENCIMIENTO'
+                and not accepted_schedule.get('confirmed')
+                and promise_date>parsed_call_date+timedelta(days=3))
+            date_outside_operational_policy=bool(
+                confirms_commitment and confirmed_agreement_amount
+                and not payment_confirmation_case
+                and (outside_due or outside_month or outside_three_days))
+            if explicit_holder_hangup:
+                # Decisión 16: aun si aceptó monto y fecha, el cuelgue del
+                # titular impide cerrar el convenio. Negativa expresa prevalece.
+                if refusal_evidence:
+                    detected_status="NEGATIVA DE PAGO"
+                    status_evidence=commitment_confirmation["evidence"]
+                    status_evidence_method="NEGATIVA_EXPRESA_ANTES_DE_COLGAR"
+                elif alternatives_before_hangup.get('confirmed') or (
+                        confirms_commitment and promise_date is not None):
+                    detected_status="NO DEFINE FECHA DE PAGO"
+                    status_evidence_method="ALTERNATIVAS_O_ACUERDO_INTERRUMPIDO_POR_CUELGUE"
+                    status_evidence=(alternatives_before_hangup.get('evidence')
+                        or commitment_confirmation.get('evidence') or
+                        "El titular terminó la llamada antes de cerrar el compromiso.")
+                else:
+                    detected_status="TITULAR CUELGA"
+                    status_evidence_method="CUELGUE_EXPRESO_SIN_ALTERNATIVAS"
+                    status_evidence="El titular anunció que terminaría la llamada antes de recibir alternativas."
+                status_detection_confidence="ALTA"
+            elif date_outside_operational_policy:
+                detected_status="NEGATIVA DE PAGO"
+                status_detection_confidence="ALTA"
+                status_evidence=commitment_confirmation.get("evidence") or promise_date_evidence
+                status_evidence_method="NEGATIVA_OPERATIVA_POR_FECHA_FUERA_DE_MORA"
+            elif promise_date is not None and confirms_commitment and confirmed_agreement_amount and not payment_confirmation_case:
                 detected_status = "CONVENIO"
                 status_detection_confidence = "ALTA"
                 status_evidence = commitment_confirmation["evidence"]
-                status_evidence_method = "COMPROMISO_ACEPTADO_CON_FECHA"
+                status_evidence_method = "COMPROMISO_ACEPTADO_CON_FECHA_Y_MONTO"
+            elif confirms_commitment and (promise_date is not None or agreement_evidence) and not confirmed_agreement_amount:
+                detected_status = "NO DEFINE FECHA DE PAGO"
+                status_detection_confidence = "ALTA"
+                status_evidence = commitment_confirmation["evidence"]
+                status_evidence_method = "FECHA_O_INTENCION_SIN_MONTO_CONFIRMADO"
+            elif refusal_evidence and not confirms_commitment:
+                detected_status="NEGATIVA DE PAGO"
+                status_detection_confidence="ALTA"
+                status_evidence=commitment_confirmation["evidence"]
+                status_evidence_method="NEGATIVA_EXPLICITA_DEL_INTERLOCUTOR"
+            elif breach_evidence and not confirms_commitment:
+                options=bool(alternatives_after_breach.get('confirmed'))
+                detected_status="NO DEFINE FECHA DE PAGO" if options else "CONVENIO INCUMPLIDO"
+                status_detection_confidence="ALTA"
+                status_evidence=(str(breach_evidence)+' / '+alternatives_after_breach['evidence']
+                    if options else str(breach_evidence))
+                status_evidence_method=("INCUMPLIMIENTO_CON_ALTERNATIVAS_SIN_ACUERDO" if options
+                    else "INCUMPLIMIENTO_PREVIO_SIN_ALTERNATIVAS")
             elif (clarification_validation['confirmed'] and not confirms_commitment and not negotiation_attempt
                   and not(clarification_validation.get('active_dispute_followup') and payment_confirmation_case)):
                 detected_status='ACLARACION'
@@ -3158,27 +3296,43 @@ class AnalyticsService:
                 status_detection_confidence=pending_decision['confidence']
                 status_evidence=pending_decision['evidence']
                 status_evidence_method=pending_decision['method']
-            elif refusal_evidence and not confirms_commitment:
-                detected_status = "NEGATIVA DE PAGO"
-                status_detection_confidence = "ALTA"
-                status_evidence = commitment_confirmation["evidence"]
-                status_evidence_method = "NEGATIVA_EXPLICITA_DEL_INTERLOCUTOR"
             elif (no_date_evidence or commitment_confirmation["declined"] or commitment_confirmation.get("conditional")) and (not payment_confirmation_case or prior_payment_with_current_decline or prior_payment_with_current_condition) and not confirms_commitment:
                 detected_status = "NO DEFINE FECHA DE PAGO"
                 status_detection_confidence = "ALTA"
                 status_evidence = commitment_confirmation["evidence"]
                 status_evidence_method = "SIN_COMPROMISO_FIRME_RESPUESTA_EXPLICITA"
             elif payment_confirmation_case and not confirms_commitment and not (negotiation_attempt and not payment_followup_case):
-                detected_status = "ACLARACION" if payment_followup_case else "PAGO REPORTADO / ACLARACION"
-                status_detection_confidence = "ALTA" if payment_followup_case else "MEDIA"
-                status_evidence_method = "SEGUIMIENTO_DE_PAGO_REPORTADO_SIN_ACREDITACION_BANCARIA" if payment_followup_case else "PAGO_ANTERIOR_REPORTADO"
+                # Regla operativa confirmada 21/nov/2026: al titular que ya
+                # reporta un pago y el gestor verifica/solicita comprobante
+                # corresponde CONVENIO, aunque Excel diga NO DEFINE.
+                # Es estatus de gestión, NO acreditación bancaria ni promesa
+                # futura; el puntaje y las alertas se calculan por separado.
+                # Excepción 33: un pago inferior al mínimo y rechazo de
+                # completar la diferencia NO es nuevo convenio.
+                unable_to_complete=recipient_statement(text,segments,
+                    r'\b(?:no (?:puedo|voy a|quiero) (?:pagar|cubrir|completar|depositar)'
+                    r'[^.!?]{0,55}\b(?:diferencia|resto|restante|faltante|mas)|'
+                    r'no (?:tengo|cuento con) (?:el |lo |la )?(?:resto|diferencia|faltante))\b')
+                declined_difference=bool(prior_payment_total is not None
+                    and minimum_for_attempt is not None
+                    and prior_payment_total + .009 < minimum_for_attempt
+                    and (prior_payment_with_current_decline or unable_to_complete)
+                    and not confirms_commitment)
+                detected_status = ("NO DEFINE FECHA DE PAGO" if declined_difference else
+                    "CONVENIO" if payment_followup_case else "")
+                status_detection_confidence = "ALTA" if detected_status else "NO DETERMINADA"
+                status_evidence_method = ("PAGO_PARCIAL_SIN_COMPLEMENTO_ACEPTADO"
+                    if declined_difference else
+                    "SEGUIMIENTO_PAGO_REPORTADO_CON_COMPROBANTE_SIN_ACREDITACION"
+                    if payment_followup_case else "PAGO_REPORTADO_SIN_ESTATUS_ACREDITADO")
                 status_evidence = " / ".join(u["text"] for u in completed_payment_confirmation["evidence"][:3])
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
-            if recado_real and detected_status.startswith('MENSAJE '):
+            if recado_estatus_acreditado and detected_status.startswith('MENSAJE '):
                 status_detection_confidence = 'ALTA'
                 status_evidence=' / '.join(u['text'] for u in recado_assessment['acceptance'])
-                status_evidence_method='RECADO_ACEPTADO_CON_CONTACTO'
+                status_evidence_method=('RECADO_RECIBIDO_SIN_POSIBILIDAD_DE_TRANSMITIR'
+                    if no_puede_transmitir_recado else 'RECADO_ACEPTADO_CON_CONTACTO')
                 if confirmed_family.get('valid'):
                     status_evidence='Parentesco confirmado por usuario: '+confirmed_family['relationship']+'. '+status_evidence
                     status_evidence_method='RECADO_ACEPTADO_Y_PARENTESCO_CONFIRMADO_POR_USUARIO'
@@ -3208,18 +3362,13 @@ class AnalyticsService:
             "evidence": status_evidence,
         }
 
+        if payment_confirmation_case and not detected_status and not confirms_commitment:
+            status_validation["valid"] = False
+            status_validation["review_required"] = True
+            status_validation["reasons"].append(
+                "Pago anterior reportado: no equivale a ACLARACION; no existe estatus operativo confirmado.")
         if excel_status:
-            if (contact_type == "TITULAR" and payment_followup_case
-                    and excel_status in {"CONVENIO", "NO DEFINE FECHA DE PAGO"}):
-                # Regla operativa aclarada por el usuario el 28/oct/2026:
-                # conservar el estatus original al verificar pago/comprobante.
-                # No constituye una promesa futura ni exime otras validaciones.
-                status_validation.update(matches=True, valid=True, review_required=False,
-                    evidence_method="SEGUIMIENTO_PAGO_REPORTADO_ESTATUS_ORIGINAL",
-                    policy_source="ACLARACION_USUARIO_20261028",
-                    payment_followup_case=True,
-                    evidence=" / ".join(u['text'] for u in completed_payment_confirmation['evidence'][:2]))
-            elif excel_status == "NO CONOCEN A DEUDOR" and arco_validation["applies"]:
+            if excel_status == "NO CONOCEN A DEUDOR" and arco_validation["applies"]:
                 status_validation["matches"] = detected_status == "NO CONOCEN A DEUDOR"
 
                 if not unknown_debtor:
@@ -3283,7 +3432,7 @@ class AnalyticsService:
                 # RECADO REF1/REF2 exige familiar identificado Y recado real.
                 # La sola relación familiar no prueba que se dejó el mensaje.
                 if canonical_excel_status == "MENSAJE CON FAMILIAR" and status_validation["matches"]:
-                    if not (recado_family_evidence and recado_real):
+                    if not (recado_family_evidence and recado_estatus_acreditado):
                         status_validation["valid"] = False
                         status_validation["review_required"] = True
                         status_validation["reasons"].append(
@@ -3307,16 +3456,16 @@ class AnalyticsService:
                 "recipient_declines": bool(recado_declines or recado_refusal),
                 "recipient_acceptance_evidence": recado_recibido_explicito,
                 "evidence": recado_assessment,
-                "confirmed_recado": bool(recado_family_evidence and recado_real and not recado_unknown_explicit),
+                "confirmed_recado": bool(recado_family_evidence and recado_estatus_acreditado and not recado_unknown_explicit),
             }
-            if recado_applies and (not recado_family_evidence or not recado_real):
+            if recado_applies and not message_refusal_validation.get('confirmed') and (not recado_family_evidence or not recado_estatus_acreditado):
                 status_validation["valid"] = False
                 status_validation["review_required"] = True
                 if not recado_family_evidence:
                     status_validation["reasons"].append("No se confirmó parentesco con el titular; verificar audio.")
-                if not recado_real:
-                    status_validation["reasons"].append("No se confirmó transmisión efectiva del recado; verificar audio.")
-            if recado_family_evidence and recado_real and not recado_unknown_explicit:
+                if not recado_estatus_acreditado:
+                    status_validation["reasons"].append("No se confirmó recepción efectiva del recado; verificar audio.")
+            if recado_family_evidence and recado_estatus_acreditado and not recado_unknown_explicit:
                 matching = not excel_status or canonical_excel_status == "MENSAJE CON FAMILIAR"
                 status_validation["matches"] = matching
                 status_validation["valid"] = matching
@@ -3330,7 +3479,8 @@ class AnalyticsService:
 
         # No interpretar falta de evidencia como coincidencia válida.
         # Con Excel y estatus no detectable: revisión, nunca mal dictaminado automático.
-        if contact_type in {"TERCERO", "TERCERO / FAMILIAR", "TERCERO / TRABAJO"} and not recado_real:
+        if (contact_type in {"TERCERO", "TERCERO / FAMILIAR", "TERCERO / TRABAJO"}
+                and not recado_estatus_acreditado and not message_refusal_validation.get('confirmed')):
             status_validation["valid"] = False
             status_validation["review_required"] = True
             status_validation["evidence_method"] = "TERCERO_SIN_RECADO_CONFIRMADO"
@@ -4626,6 +4776,8 @@ class AnalyticsService:
                 {"confirmed":False,"evidence":[],"reason":"No corresponde rechazo de recado: conversación con titular."}),
             "message_delivery_validation": message_delivery_validation,
             "message_workflow_validation": message_workflow_validation,
+            "callback_number_validation": callback_number_validation,
+            "alternative_to_partial_validation": alternative_to_partial_validation,
             "contact_conflict_validation": contact_conflict_validation,
             "contact_validation": contact_confirmation,
             "dialogue_evaluation": {k:v for k,v in dialogue.items() if k!="units"},

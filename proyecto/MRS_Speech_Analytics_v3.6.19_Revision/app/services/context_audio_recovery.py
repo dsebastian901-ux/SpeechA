@@ -63,9 +63,12 @@ def nominal_words(text):
 
 def needs_recovery(metadata):
     decision=metadata.get('shared_classification')or{}
-    if decision.get('clasificacion')!='REVISAR':return set()
+    category=str(decision.get('clasificacion')or'')
+    # La segunda escucha del contacto también aplica a llamadas por debajo
+    # de 80; resolver el teléfono nunca cambia por sí mismo la nota de calidad.
+    if category not in {'REVISAR','NO_APROBADO_MENOR_80'}:return set()
     wanted=set()
-    if metadata.get('quality_contact_type')=='CONTACTO NO DETERMINADO':wanted.add('holder')
+    if category=='REVISAR' and metadata.get('quality_contact_type')=='CONTACTO NO DETERMINADO':wanted.add('holder')
     workflow=metadata.get('message_workflow_validation')or{}
     if (metadata.get('quality_contact_type')!='TITULAR'and workflow.get('directed_body')and workflow.get('recipient_accepted')
             and not workflow.get('callback_available')and not workflow.get('final_refusal')):
