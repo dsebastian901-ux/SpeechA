@@ -11,7 +11,7 @@
 | 5 | Si primero niega conocer y después confirma parentesco, prevalece declaración final verificable; conservar contradicción como evidencia. |
 | 6 | Contestador/grabadora: estatus BUZÓN. |
 | 7 | No puede anotar pero acepta recibir y transmitir: recado válido si se acredita mensaje. |
-| 8 | Acepta recado pero declara no tener cómo contactar al titular: respuesta 'sí' no especifica cuál estatus; PENDIENTE definición sin inferir aceptación final. |
+| 8 | Si recibe y acepta el recado aunque después indique que no tiene forma de localizar al titular, **se conserva estatus de RECADO** según tipo de tercero (MENSAJE CON FAMILIAR / MENSAJE CON TERCERO / MENSAJE EN TRABAJO). La imposibilidad de transmitirlo debe constar en la evidencia y no se acredita contacto de retorno inexistente; calidad se evalúa por separado. |
 | 9 | Recibe mensaje completo sin prometer retransmisión: válido, siempre que recepción y contenido estén acreditados. |
 | 10 | Falta instrucción dirigida al titular para contactar MRS: recado INCOMPLETO. |
 | 11 | Compañero de trabajo que acepta mensaje: MENSAJE EN TRABAJO. |
@@ -57,7 +57,7 @@
 
 ## Límites y validación
 
-- 8: respuesta no determina el estatus solicitado. Requiere evidencia o una aclaración puntual, no inferir.
+- 8: aclarado expresamente: se conserva RECADO cuando el tercero acepta recibirlo, aun si luego no puede contactar al titular. No equivale a confirmar retransmisión ni número de retorno.
 - 12/13: la respuesta dictada saltó de 11 a «13 mensaje tercero, si»; se interpreta provisionalmente **12 = MENSAJE CON TERCERO; 13 = sí**, sin borrar la literalidad.
 - 14: no se asigna puntaje inventado; dependerá de la matriz de calidad.
 - 39: no eliminar una divulgación real a un tercero por identificar posteriormente al titular. La respuesta aplica solo cuando se prueba que el receptor era el propio titular.
