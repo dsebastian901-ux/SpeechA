@@ -3143,8 +3143,12 @@ class AnalyticsService:
                 or (prior_payment_total is not None and minimum_for_attempt is not None
                     and not prior_payment_covers_minimum and negotiation_attempt)))
         if contact_type == "TITULAR" and not detected_status:
-            from app.services.operational_outcome_resolution import prior_agreement_breached
+            from app.services.operational_outcome_resolution import (
+                prior_agreement_breached, offered_payment_alternatives)
             breach_evidence=prior_agreement_breached(text,segments)
+            alternatives_before_hangup=offered_payment_alternatives(
+                text,segments,before_hangup=True) if explicit_holder_hangup else {'confirmed':False}
+            alternatives_after_breach=offered_payment_alternatives(text,segments) if breach_evidence else {'confirmed':False}
             agreement_evidence = bool(re.search(
                 r"\b(?:gener(?:o|amos|are|amos)\s+(?:su\s+|el\s+)?convenio|"
                 r"su\s+convenio\s+quedaria|quedamos\s+en\s+(?:tres|dos|3|2)\s+pagos|"
@@ -3172,10 +3176,10 @@ class AnalyticsService:
                     detected_status="NEGATIVA DE PAGO"
                     status_evidence=commitment_confirmation["evidence"]
                     status_evidence_method="NEGATIVA_EXPRESA_ANTES_DE_COLGAR"
-                elif negotiation_attempt:
+                elif alternatives_before_hangup.get('confirmed'):
                     detected_status="NO DEFINE FECHA DE PAGO"
                     status_evidence_method="ALTERNATIVAS_OFRECIDAS_ANTES_DE_CUELGUE"
-                    status_evidence="El gestor ofreció alternativas antes de que el titular terminara la llamada."
+                    status_evidence=alternatives_before_hangup['evidence']
                 else:
                     detected_status="TITULAR CUELGA"
                     status_evidence_method="CUELGUE_EXPRESO_SIN_ALTERNATIVAS"
@@ -3187,10 +3191,12 @@ class AnalyticsService:
                 status_evidence=commitment_confirmation["evidence"]
                 status_evidence_method="NEGATIVA_EXPLICITA_DEL_INTERLOCUTOR"
             elif breach_evidence and not confirms_commitment:
-                detected_status="NO DEFINE FECHA DE PAGO" if negotiation_attempt else "CONVENIO INCUMPLIDO"
+                options=bool(alternatives_after_breach.get('confirmed'))
+                detected_status="NO DEFINE FECHA DE PAGO" if options else "CONVENIO INCUMPLIDO"
                 status_detection_confidence="ALTA"
-                status_evidence=str(breach_evidence)
-                status_evidence_method=("INCUMPLIMIENTO_CON_ALTERNATIVAS_SIN_ACUERDO" if negotiation_attempt
+                status_evidence=(str(breach_evidence)+' / '+alternatives_after_breach['evidence']
+                    if options else str(breach_evidence))
+                status_evidence_method=("INCUMPLIMIENTO_CON_ALTERNATIVAS_SIN_ACUERDO" if options
                     else "INCUMPLIMIENTO_PREVIO_SIN_ALTERNATIVAS")
             elif (clarification_validation['confirmed'] and not confirms_commitment and not negotiation_attempt
                   and not(clarification_validation.get('active_dispute_followup') and payment_confirmation_case)):
