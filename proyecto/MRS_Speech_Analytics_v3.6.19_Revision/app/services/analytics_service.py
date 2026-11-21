@@ -3207,6 +3207,20 @@ class AnalyticsService:
                 r"\b(?:no\s+se\s+cuando\s+(?:pueda|voy\s+a)\s+pagar|"
                 r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
                 r"no\s+tengo\s+fecha|lo\s+voy\s+a\s+revisar)\b")
+            # Criterio 65: NEGATIVA es el resultado OPERATIVO de una fecha
+            # fuera de mora, sin falsear la respuesta real del titular.
+            outside_due=bool(promise_date and parsed_due_date and promise_date>parsed_due_date)
+            outside_month=bool(promise_date and parsed_call_date
+                and mora_policy['mode']=='MES_DE_LLAMADA'
+                and (promise_date.year,promise_date.month)!=(parsed_call_date.year,parsed_call_date.month))
+            outside_three_days=bool(promise_date and parsed_call_date
+                and mora_policy['mode']=='CORTE_Y_VENCIMIENTO'
+                and not accepted_schedule.get('confirmed')
+                and promise_date>parsed_call_date+timedelta(days=3))
+            date_outside_operational_policy=bool(
+                confirms_commitment and confirmed_agreement_amount
+                and not payment_confirmation_case
+                and (outside_due or outside_month or outside_three_days))
             if explicit_holder_hangup:
                 # Decisión 16: aun si aceptó monto y fecha, el cuelgue del
                 # titular impide cerrar el convenio. Negativa expresa prevalece.
@@ -3226,6 +3240,11 @@ class AnalyticsService:
                     status_evidence_method="CUELGUE_EXPRESO_SIN_ALTERNATIVAS"
                     status_evidence="El titular anunció que terminaría la llamada antes de recibir alternativas."
                 status_detection_confidence="ALTA"
+            elif date_outside_operational_policy:
+                detected_status="NEGATIVA DE PAGO"
+                status_detection_confidence="ALTA"
+                status_evidence=commitment_confirmation.get("evidence") or promise_date_evidence
+                status_evidence_method="NEGATIVA_OPERATIVA_POR_FECHA_FUERA_DE_MORA"
             elif promise_date is not None and confirms_commitment and confirmed_agreement_amount and not payment_confirmation_case:
                 detected_status = "CONVENIO"
                 status_detection_confidence = "ALTA"
