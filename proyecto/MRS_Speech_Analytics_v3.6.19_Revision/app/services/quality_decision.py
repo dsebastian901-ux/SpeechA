@@ -167,6 +167,25 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         for finding in findings:
             if finding['code'] in exception_codes or (finding['code']=='ADDITIONAL_AUDIO_EVIDENCE' and finding['rule_group']==9):
                 finding['severity'] = 'VALIDATED_EXCEPTION'
+    # Criterio 78: tras dos ventanas ASR usables y con riesgo EXCLUSIVAMENTE
+    # ofensivo sin emisor confirmado, no convertir incertidumbre en infracción.
+    # El dictamen aprobado lleva ALERTA visible. No exime privacidad, maltrato,
+    # amenazas, importe ni otras alertas independientes.
+    audio_quality=additional.get('quality')or{}
+    risks=additional.get('risks')or[]
+    second_listening_offensive_only=bool(
+        additional.get('valid') and additional.get('second_listening_complete')
+        and not audio_quality.get('degraded') and risks
+        and all(r.get('type')=='EXPRESION_OFENSIVA_SIN_HABLANTE_CONFIRMADO' for r in risks)
+        and score>=float(minimum_score))
+    if second_listening_offensive_only:
+        allowed={'OFFENSIVE_LANGUAGE','ADDITIONAL_AUDIO_EVIDENCE'}
+        context_risks=(m.get('context_audio_validation')or{}).get('risks')or[]
+        if context_risks and all(r.get('type')=='EXPRESION_OFENSIVA_SIN_VOZ_CONFIRMADA' for r in context_risks):
+            allowed.add('CONTEXT_AUDIO_RISK')
+        for finding in findings:
+            if finding['code'] in allowed and finding['severity']=='REVIEW':
+                finding['severity']='ALERTA_INFORMATIVA'
     blocking = [f for f in findings if f['severity'] in {'REVIEW','CRITICAL'}]
     critical = any(f['severity']=='CRITICAL' for f in blocking)
     score_ok = score >= float(minimum_score)
@@ -204,6 +223,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         category = 'REVISAR'
     elif not score_ok:
         category = 'NO_APROBADO_MENOR_80'
+    elif second_listening_offensive_only and any(f['severity']=='ALERTA_INFORMATIVA' for f in findings):
+        category = 'APROBADO_CON_ALERTA'
     elif output_label['valid']:
         category = 'APROBADO_ETIQUETA_CORREGIDA'
     elif base.get('estatus_autorizado') is False:
@@ -214,9 +235,14 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         category = 'REVISAR'
     else:
         category = 'APROBADO'
-    if short_call and category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA'}:
+    approved_with_alert=bool(category=='APROBADO_CON_ALERTA')
+    if short_call and category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_CON_ALERTA'}:
         category='APROBADO_DURACION_MENOR'
     reasons = list(dict.fromkeys(r for f in blocking for r in f['reasons']))
+    if approved_with_alert:
+        reasons.extend('[ALERTA SIN EMISOR CONFIRMADO] '+reason
+            for finding in findings if finding['severity']=='ALERTA_INFORMATIVA'
+            for reason in finding['reasons'] if '[ALERTA SIN EMISOR CONFIRMADO] '+reason not in reasons)
     if category == 'SIN_RELACION_EXCEL':
         reasons.insert(0,'Falta el registro de esta llamada en el Excel de cuentas; corregir la relación de origen. No requiere retranscribir para relacionarla.')
     if category in {'NO_APROBADO','NO_APROBADO_MENOR_80'}:
@@ -245,12 +271,14 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
                  'OBSERVACION_CONSERVADA' if any(f['severity']=='OBSERVATION' for f in relevant) else
                  'EXCEPCION_VALIDADA' if any(f['severity']=='VALIDATED_EXCEPTION' for f in relevant) else
                  'ETIQUETA_CORREGIDA' if any(f['severity']=='CORRECTED_STATUS' for f in relevant) else
+                 'ALERTA_INFORMATIVA' if any(f['severity']=='ALERTA_INFORMATIVA' for f in relevant) else
                  'DESCUENTO_APLICADO' if relevant else
                  'NO_APLICA' if applicability.get(number) is False else
                  'SIN_HALLAZGOS' if m else 'NO_EVALUADO')
         evaluations.append({'id':number,'rule':label,'state':state,'finding_codes':[f['code'] for f in relevant]})
-    return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR'},
+    return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR','APROBADO_CON_ALERTA'},
             'calidad_aprobada':category.startswith('APROBADO'), 'score':score,'puntaje_minimo':minimum_score,
+            'aprobado_con_alerta':approved_with_alert,
             'cumple_puntaje':score_ok,'rechazo_automatico_por_puntaje':category=='NO_APROBADO_MENOR_80',
             'rechazo_automatico_por_reglas':category=='NO_APROBADO',
             'observaciones_conservadas':reasons,
