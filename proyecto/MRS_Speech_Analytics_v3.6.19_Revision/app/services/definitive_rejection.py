@@ -136,8 +136,7 @@ def definitive_rejection(metadata,findings,duration_seconds):
         return {'rule_group':11,'code':'CONFIRMED_SERVICE_COMPLAINT','severity':'CONFIRMED_NONCRITICAL',
             'resolves_codes':['MISTREATMENT_REPORT'],
             'source_field':'treatment_validation','reasons':['Queja de atención previa expresada en la conversación; bloquea aprobación por criterio operativo.']}
-    refused=metadata.get('explicit_message_refusal')or{}
-    if refused.get('confirmed'):
-        return {'rule_group':4,'code':'EXPLICIT_MESSAGE_REFUSAL','severity':'CONFIRMED_NONCRITICAL',
-            'source_field':'explicit_message_refusal','reasons':[refused['reason']]}
+    # La negativa del TERCERO a tomar un recado NO es una falta del gestor.
+    # Se dictamina como SE NIEGAN A TOMAR RECADO; la calidad debe seguir
+    # evaluando identificación, privacidad, trato y demás controles reales.
     return None
