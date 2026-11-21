@@ -1518,6 +1518,21 @@ class AnalyticsService:
                 'reason':'El tercero rechazó expresamente el recado; el contacto no es exigible.',
                 'evidence':message_refusal_validation.get('evidence')or[]}
         recado_real=message_workflow_validation['complete']
+        # Criterio 8: el tercero recibe el recado, pero manifiesta que no
+        # puede contactar al titular. El estatus sigue siendo RECADO, sin
+        # inventar un número de retorno ni la transmisión efectiva.
+        no_puede_transmitir_recado=bool(
+            not recado_real and message_workflow_validation['recipient_accepted']
+            and message_workflow_validation['directed_body']
+            and not message_workflow_validation['final_refusal']
+            and recipient_statement(text,segments,
+                r'\b(?:no (?:tengo|tenemos) (?:como|forma|manera|modo) de '
+                r'(?:contactarl[oa]|contactar|avisarl[oa]|avisar|localizarl[oa]|localizar|'
+                r'comunicarme|comunicarnos|comunicarme con|comunicarnos con)|'
+                r'no (?:puedo|podemos) (?:contactarl[oa]|contactar|avisarl[oa]|avisar|'
+                r'localizarl[oa]|localizar|comunicarme|comunicarnos))\b'))
+        recado_estatus_acreditado=bool(recado_real or no_puede_transmitir_recado)
+        message_workflow_validation['recado_aceptado_sin_poder_transmitir']=no_puede_transmitir_recado
         if (not recado_real and message_workflow_validation['recipient_accepted']
                 and message_workflow_validation['directed_body'] and not message_workflow_validation['callback_available']
                 and not message_workflow_validation['final_refusal']):
@@ -1526,7 +1541,7 @@ class AnalyticsService:
                 'evidence':[u for u in sentence_evidence(text,segments) if re.search(r'\b(?:numero|telefono|anot\w*|\d{2})\b',norm(u['text']))][-8:]}
         if recado_real:
             message_delivery_validation={'review_required':False,'reason':'Recepción y contacto acreditados en el diálogo.','evidence':message_workflow_validation['events']}
-        if recado_real:
+        if recado_estatus_acreditado:
             if contact_type=='CONTACTO NO DETERMINADO' and agent_statement(text,segments,
                     r'\b(?:dejo|deja|proporciono) (?:este |su |el )?(?:numero|telefono) (?:como )?(?:numero de )?referencia\b'):
                 contact_type='TERCERO';third_party=True
@@ -1535,8 +1550,8 @@ class AnalyticsService:
                                "TERCERO": "MENSAJE CON TERCERO"}.get(contact_type, detected_status)
         own_finance_proof = titular and any(e['kind']=='OWN_FINANCES' for e in dialogue['events'])
         recado_applies = bool((recado_expected and not unknown_debtor and not own_finance_proof
-                              and not (recado_real and contact_type in {'TERCERO','TERCERO / TRABAJO'}))
-                             or (family and recado_real) or (not excel_status and family))
+                              and not (recado_estatus_acreditado and contact_type in {'TERCERO','TERCERO / TRABAJO'}))
+                             or (family and recado_estatus_acreditado) or (not excel_status and family))
         if recado_applies:
             # La relación familiar explícita prevalece sobre "soy yo" (identidad del referente).
             if recado_family_evidence and not recado_unknown_explicit:
@@ -1544,7 +1559,7 @@ class AnalyticsService:
                 spouse = spouse or any('espos' in x or 'marido' in x for x in recado_family_evidence)
                 contact_type = "TERCERO / FAMILIAR"
                 relationship = "ESPOSO/A" if spouse else "FAMILIAR"
-                detected_status = "MENSAJE CON FAMILIAR" if recado_real else ""
+                detected_status = "MENSAJE CON FAMILIAR" if recado_estatus_acreditado else ""
             elif contact_type == "TITULAR" and re.search(r"\b(?:referencia|numero de referencia|dejo (?:su|el) numero)\b", normalized):
                 contact_type = "CONTACTO NO DETERMINADO"
                 detected_status = ""
@@ -3254,10 +3269,11 @@ class AnalyticsService:
                 status_evidence = " / ".join(u["text"] for u in completed_payment_confirmation["evidence"][:3])
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
-            if recado_real and detected_status.startswith('MENSAJE '):
+            if recado_estatus_acreditado and detected_status.startswith('MENSAJE '):
                 status_detection_confidence = 'ALTA'
                 status_evidence=' / '.join(u['text'] for u in recado_assessment['acceptance'])
-                status_evidence_method='RECADO_ACEPTADO_CON_CONTACTO'
+                status_evidence_method=('RECADO_RECIBIDO_SIN_POSIBILIDAD_DE_TRANSMITIR'
+                    if no_puede_transmitir_recado else 'RECADO_ACEPTADO_CON_CONTACTO')
                 if confirmed_family.get('valid'):
                     status_evidence='Parentesco confirmado por usuario: '+confirmed_family['relationship']+'. '+status_evidence
                     status_evidence_method='RECADO_ACEPTADO_Y_PARENTESCO_CONFIRMADO_POR_USUARIO'
@@ -3357,7 +3373,7 @@ class AnalyticsService:
                 # RECADO REF1/REF2 exige familiar identificado Y recado real.
                 # La sola relación familiar no prueba que se dejó el mensaje.
                 if canonical_excel_status == "MENSAJE CON FAMILIAR" and status_validation["matches"]:
-                    if not (recado_family_evidence and recado_real):
+                    if not (recado_family_evidence and recado_estatus_acreditado):
                         status_validation["valid"] = False
                         status_validation["review_required"] = True
                         status_validation["reasons"].append(
@@ -3381,16 +3397,16 @@ class AnalyticsService:
                 "recipient_declines": bool(recado_declines or recado_refusal),
                 "recipient_acceptance_evidence": recado_recibido_explicito,
                 "evidence": recado_assessment,
-                "confirmed_recado": bool(recado_family_evidence and recado_real and not recado_unknown_explicit),
+                "confirmed_recado": bool(recado_family_evidence and recado_estatus_acreditado and not recado_unknown_explicit),
             }
-            if recado_applies and not message_refusal_validation.get('confirmed') and (not recado_family_evidence or not recado_real):
+            if recado_applies and not message_refusal_validation.get('confirmed') and (not recado_family_evidence or not recado_estatus_acreditado):
                 status_validation["valid"] = False
                 status_validation["review_required"] = True
                 if not recado_family_evidence:
                     status_validation["reasons"].append("No se confirmó parentesco con el titular; verificar audio.")
-                if not recado_real:
-                    status_validation["reasons"].append("No se confirmó transmisión efectiva del recado; verificar audio.")
-            if recado_family_evidence and recado_real and not recado_unknown_explicit:
+                if not recado_estatus_acreditado:
+                    status_validation["reasons"].append("No se confirmó recepción efectiva del recado; verificar audio.")
+            if recado_family_evidence and recado_estatus_acreditado and not recado_unknown_explicit:
                 matching = not excel_status or canonical_excel_status == "MENSAJE CON FAMILIAR"
                 status_validation["matches"] = matching
                 status_validation["valid"] = matching
@@ -3405,7 +3421,7 @@ class AnalyticsService:
         # No interpretar falta de evidencia como coincidencia válida.
         # Con Excel y estatus no detectable: revisión, nunca mal dictaminado automático.
         if (contact_type in {"TERCERO", "TERCERO / FAMILIAR", "TERCERO / TRABAJO"}
-                and not recado_real and not message_refusal_validation.get('confirmed')):
+                and not recado_estatus_acreditado and not message_refusal_validation.get('confirmed')):
             status_validation["valid"] = False
             status_validation["review_required"] = True
             status_validation["evidence_method"] = "TERCERO_SIN_RECADO_CONFIRMADO"
