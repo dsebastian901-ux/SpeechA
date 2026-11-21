@@ -2328,6 +2328,17 @@ class AnalyticsService:
         mistreatment_report_evidence = list(dict.fromkeys(e['phrase'] for e in mistreatment_details))
         dismissive_evidence = dismissive_message_evidence(text, segments)
         gestor_confrontation = any(e["speaker_role"] == "GESTOR" for e in confrontation_details)
+        # Criterio 141: la denuncia dirigida al asesor actual se conserva como
+        # ALERTA cuando el audio NO acredita conducta ofensiva del gestor.
+        # No exime una queja anterior ni otra falta corroborada.
+        current_agent_mistreatment_unverified=bool(
+            mistreatment_details and not gestor_confrontation
+            and not any(e['speaker_role']=='GESTOR' for e in offensive_language_evidence)
+            and all(re.search(
+                r'\b(?:usted me (?:esta|esta) (?:insultando|gritando|maltratando|tratando mal)|'
+                r'me esta hablando muy fuerte|no me hable como me habla|'
+                r'me esta insultando|usted me trata mal)\b',
+                norm(e.get('text')or'')) for e in mistreatment_details))
         confrontation_evidence = list(dict.fromkeys(confrontation_evidence + insult_evidence))
 
         # Confrontación contextual: una llamada puede ser confrontativa aun sin
@@ -2453,6 +2464,7 @@ class AnalyticsService:
             "dismissive_evidence": dismissive_evidence,
             "dismissive_review_required": bool(dismissive_evidence),
             "mistreatment_report_evidence": mistreatment_details,
+            "current_agent_mistreatment_unverified": current_agent_mistreatment_unverified,
             "confrontation_review_required": confrontation_review,
             "hostile_interlocutor_review_required": hostile_interlocutor_review,
             "confrontation_evidence": confrontation_evidence,
@@ -2829,6 +2841,14 @@ class AnalyticsService:
                     'PEN_CONTACTO_CONOCIDO_SIN_VERIFICAR','Recado',
                     'El tercero indicó tener el teléfono, pero el gestor no confirmó que fuera el correcto.',
                     5, False, ['RECADO059'])
+        from app.services.operational_outcome_resolution import family_payment_without_own_name
+        family_payer_name_validation=family_payment_without_own_name(
+            text,segments,family=(contact_type=='TERCERO / FAMILIAR'))
+        if family_payer_name_validation['confirmed']:
+            add_penalty('PEN_FAMILIAR_PAGADOR_SIN_NOMBRE','Identificación',
+                'El familiar asume el pago, pero no proporciona su propio nombre.',
+                10,False,['FAMILIAR085'])
+
         alternative_to_partial_validation={'applies':False,'confirmed':False,'evidence':''}
         if (contact_type=='TITULAR' and partial_payment and partial_explanation
                 and confirms_commitment):
@@ -4803,6 +4823,7 @@ class AnalyticsService:
             "message_workflow_validation": message_workflow_validation,
             "callback_number_validation": callback_number_validation,
             "alternative_to_partial_validation": alternative_to_partial_validation,
+            "family_payer_name_validation": family_payer_name_validation,
             "contact_conflict_validation": contact_conflict_validation,
             "contact_validation": contact_confirmation,
             "dialogue_evaluation": {k:v for k,v in dialogue.items() if k!="units"},
