@@ -3233,9 +3233,23 @@ class AnalyticsService:
                 # corresponde CONVENIO, aunque Excel diga NO DEFINE.
                 # Es estatus de gestión, NO acreditación bancaria ni promesa
                 # futura; el puntaje y las alertas se calculan por separado.
-                detected_status = "CONVENIO" if payment_followup_case else ""
-                status_detection_confidence = "ALTA" if payment_followup_case else "NO DETERMINADA"
-                status_evidence_method = ("SEGUIMIENTO_PAGO_REPORTADO_CON_COMPROBANTE_SIN_ACREDITACION"
+                # Excepción 33: un pago inferior al mínimo y rechazo de
+                # completar la diferencia NO es nuevo convenio.
+                unable_to_complete=recipient_statement(text,segments,
+                    r'\b(?:no (?:puedo|voy a|quiero) (?:pagar|cubrir|completar|depositar)'
+                    r'[^.!?]{0,55}\b(?:diferencia|resto|restante|faltante|mas)|'
+                    r'no (?:tengo|cuento con) (?:el |lo |la )?(?:resto|diferencia|faltante))\b')
+                declined_difference=bool(prior_payment_total is not None
+                    and minimum_for_attempt is not None
+                    and prior_payment_total + .009 < minimum_for_attempt
+                    and (prior_payment_with_current_decline or unable_to_complete)
+                    and not confirms_commitment)
+                detected_status = ("NO DEFINE FECHA DE PAGO" if declined_difference else
+                    "CONVENIO" if payment_followup_case else "")
+                status_detection_confidence = "ALTA" if detected_status else "NO DETERMINADA"
+                status_evidence_method = ("PAGO_PARCIAL_SIN_COMPLEMENTO_ACEPTADO"
+                    if declined_difference else
+                    "SEGUIMIENTO_PAGO_REPORTADO_CON_COMPROBANTE_SIN_ACREDITACION"
                     if payment_followup_case else "PAGO_REPORTADO_SIN_ESTATUS_ACREDITADO")
                 status_evidence = " / ".join(u["text"] for u in completed_payment_confirmation["evidence"][:3])
         elif detected_status:
