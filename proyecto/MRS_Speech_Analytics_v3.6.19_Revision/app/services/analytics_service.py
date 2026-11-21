@@ -507,6 +507,30 @@ class AnalyticsService:
         analysis.metadata["final_result"] = compliance.get(
             "final_result", "REVISAR"
         )
+        # Criterio 89: sin texto ni segmentos con palabras reconocibles.
+        # SIN VOZ es una clase de llamada, nunca una falta del asesor.
+        # Un ASR vacío por sí solo no prueba acústicamente que nadie habló;
+        # el registro exige corroborar el audio antes de asegurar el origen.
+        asr_no_voice_candidate=bool(
+            enriched_context["_duration_seconds"]>0
+            and not str(text or '').strip()
+            and not any(str((unit or {}).get('text')or'').strip()
+                        for unit in (getattr(transcription,'segments',None)or[])
+                        if isinstance(unit,dict)))
+        analysis.metadata['no_voice_validation']={
+            'candidate':asr_no_voice_candidate,'audio_verified':False,
+            'requires_audio_confirmation':asr_no_voice_candidate,
+            'source':'ASR_SIN_TEXTO_NI_SEGMENTOS_HABLADOS' if asr_no_voice_candidate else ''}
+        if asr_no_voice_candidate:
+            analysis.set_compliance_score(0)
+            analysis.metadata['penalties']=[]
+            analysis.metadata['critical_failures']=[]
+            analysis.metadata['quality_checks']={}
+            analysis.metadata['quality_blocks']={}
+            analysis.metadata['status_validation']={
+                'detected_status':'SIN VOZ','detection_confidence':'MEDIA',
+                'valid':True,'evidence_method':'ASR_SIN_VOZ_REQUIERE_AUDIO',
+                'evidence':'Transcripción sin texto ni segmentos hablados; audio no corroborado'}
         decision = cls.shared_quality_decision(analysis.metadata, analysis.compliance_score,
                                                duration_seconds=enriched_context["_duration_seconds"])
         analysis.metadata["shared_classification"] = decision
