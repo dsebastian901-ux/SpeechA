@@ -132,7 +132,9 @@ def definitive_rejection(metadata,findings,duration_seconds):
     if coverage.get('confirmed_failure'):
         return {'rule_group':12,'code':'CONFIRMED_INSUFFICIENT_FOLLOWUP','severity':'CONFIRMED_NONCRITICAL',
             'source_field':'negotiation_validation','reasons':[coverage['reason']]}
-    if confirmed_complaint:
+    # La acusación al gestor actual que NO se corroboró es alerta (141);
+    # no aplicar automáticamente rechazo por queja de maltrato previa.
+    if confirmed_complaint and not treatment.get('current_agent_mistreatment_unverified'):
         return {'rule_group':11,'code':'CONFIRMED_SERVICE_COMPLAINT','severity':'CONFIRMED_NONCRITICAL',
             'resolves_codes':['MISTREATMENT_REPORT'],
             'source_field':'treatment_validation','reasons':['Queja de atención previa expresada en la conversación; bloquea aprobación por criterio operativo.']}
