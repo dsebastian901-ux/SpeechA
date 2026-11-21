@@ -582,6 +582,7 @@ class BatchService:
             "MAL_DICTAMINADO": "MAL_DICTAMINADO",
             "NEGOCIACION_INVALIDA": "NEGOCIACION_INVALIDA",
             "FALLA_GRAVE": "FALLA_GRAVE",
+            "SIN_VOZ": "SIN_VOZ",
             "REVISAR": "REVISAR",
         }
         destination_dir = classified_root / folder_map.get(category, "REVISAR")
