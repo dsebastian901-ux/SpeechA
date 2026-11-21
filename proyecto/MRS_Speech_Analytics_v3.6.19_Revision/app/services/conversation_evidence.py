@@ -437,7 +437,7 @@ def payment_commitment(text, segments=()):
             r"\b(?:si me da tiempo|si consigo (?:el )?dinero|si tengo dinero|si puedo juntar|"
             r"lo podria(?: hacer)?|(?:yo )?pagaria|"
             r"hare lo posible|a lo mejor|yo creo|no sabria decir(?:le|te)? (?:si|cuanto|cuando)|no se cuanto (?:voy a|vaya a|pueda) (?:pagar|depositar)|"
-            r"no se cuando (?:pueda|voy a) pagar)\b", s)
+            r"(?:aun |todavia )?no se cuando(?: (?:pueda|voy a) pagar)?|no puedo (?:dar|confirmar) (?:una? )?fecha)\b", s)
         conditional = conditional or _payment_review_condition(s) or (not positive and _payment_review_deferral(s))
         if positive and re.search(r'\bsi (?:yo )?(?:tuviera|tuviese|pudiera|pudiese)\b[^.!?]{0,90}$',s[:positive.start()]):
             conditional=re.search(r'\bsi (?:yo )?(?:tuviera|tuviese|pudiera|pudiese)\b',s)
