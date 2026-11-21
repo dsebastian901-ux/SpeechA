@@ -193,7 +193,11 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     elif rejection:
         category = 'NO_APROBADO'
     elif verified_exception and score_ok and not blocking:
-        category = 'APROBADO_ETIQUETA_CORREGIDA' if output_label['valid'] else 'APROBADO_CON_EXCEPCION'
+        # Una excepción validada permanece separada incluso si la llamada es
+        # breve o también existe evidencia para corregir la etiqueta.
+        # Su causa (hostilidad/lascivia de un tercero) no debe desaparecer del
+        # dictamen ni terminar en APROBADAS_DURACION_MENOR.
+        category = 'APROBADO_CON_EXCEPCION'
     elif score_rejection:
         category = 'NO_APROBADO_MENOR_80'
     elif blocking:
@@ -210,7 +214,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         category = 'REVISAR'
     else:
         category = 'APROBADO'
-    if short_call and category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_CON_EXCEPCION'}:
+    if short_call and category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA'}:
         category='APROBADO_DURACION_MENOR'
     reasons = list(dict.fromkeys(r for f in blocking for r in f['reasons']))
     if category == 'SIN_RELACION_EXCEL':
