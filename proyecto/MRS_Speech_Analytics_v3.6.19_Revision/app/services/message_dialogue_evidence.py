@@ -163,13 +163,16 @@ def recipient_relay_with_callback(text,segments,acceptance):
 def existing_callback_confirmation(text,segments=()):
     """Contacto ya anotado o recibido y reconocido; no reconstruye su número."""
     source=normalize(text);found=[]
-    possession=re.compile(r'\b(?P<answer>ya (?:lo |le )?(?:tengo|tenemos) anotado(?: aqui)?|ya (?:tengo|tenemos) (?:anotado )?(?:el |ese )numero)\b')
+    possession=re.compile(r'\b(?P<answer>(?:yo |nosotros )?ya (?:lo |le )?(?:tengo|tenemos) anotado(?: aqui)?|(?:yo |nosotros )?ya (?:tengo|tenemos|cuento con|contamos con) (?:anotado )?(?:el |ese |su |el mismo )?(?:numero|telefono)(?: (?:de ustedes|de contacto))?)\b')
     for match in possession.finditer(source):
         before=source[max(0,match.start()-700):match.start()]
         if (_role_at(text,segments,match.start('answer'))in{'GESTOR','TITULAR'}
                 or BAD_PREFIX.search(before[-70:])or not _outside_question(source,match.start(),match.end())):continue
         topics=list(re.finditer(r'\b(?:numero|telefono|saldo|monto|pesos|tarjeta|referencia)\b',before))
-        if not topics or topics[-1].group()not in{'numero','telefono'}:continue
+        # «Ya tengo su número» acredita que el tercero tiene el contacto,
+        # sin exigir volver a dictarlo ni inventar dígitos.
+        if ((not topics or topics[-1].group()not in{'numero','telefono'})
+                and not re.search(r'\b(?:numero|telefono)\b',match['answer'])):continue
         if not MESSAGE.search(before):continue
         found.append(_item(source,match,'CONTACTO_PREVIAMENTE_ANOTADO_POR_RECEPTOR',text,segments,'answer'))
     recognised=re.compile(r'\b(?:es|a) (?:el |ese )numero que (?:a )?usted me dio\?\s*(?P<answer>asi es|si|correcto)\b')
