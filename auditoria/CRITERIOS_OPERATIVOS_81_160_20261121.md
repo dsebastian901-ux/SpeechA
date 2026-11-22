@@ -69,7 +69,7 @@
 | 143 | Amenaza con contactar al empleador para presionar pago: FALLA GRAVE. |
 | 144 | Maltrato denunciado de un empleado bancario externo (no MRS): llamada actual NO APROBADA según criterio de monitoreo; conservar atribución a empleado externo. |
 | 145 | Dos faltas independientes de 5 puntos: acumular descuentos y restar 10. |
-| 146 | Recado aceptado sin teléfono de retorno: descuento de 15 puntos. |
+| 146 | **Confirmado 21/11/2026:** recado recibido y con mensaje dirigido, sin teléfono de retorno, descuenta **15 puntos** y puede **APROBAR con al menos 80** si no existen faltas o alertas bloqueantes independientes; no clasificar REVISAR únicamente por omisión confirmada. |
 | 147 | Titular cuelga antes de identificación total: descuento de 25 puntos. |
 | 148 | Queja confirmada de maltrato en llamada anterior: carpeta especial QUEJAS, sin confundir responsabilidad entre gestores. |
 | 149 | Primera escucha posible grosería, segunda no corrobora voz/expresión: APROBADO CON ALERTA; documentar discrepancia. |
@@ -106,3 +106,6 @@
 ## Estado de implementación
 
 Estas son reglas DOCUMENTADAS para análisis y pruebas de regresión. No declarar ninguna de las 80 implementada hasta verificar el comportamiento del motor y compararlo con audios reales; PR #5 permanece en borrador.
+## Confirmación final de calidad de recados
+
+**Respuesta a la aclaración de 58/146:** falta de teléfono de retorno en un recado aceptado = **-15 puntos**. Se aprueba con score >=80 y demás requisitos correctos; no es rechazo automático. Una entrega del teléfono *incierta* por ASR se distingue de la omisión *acreditada* y puede conservar REVISAR por evidencia.
