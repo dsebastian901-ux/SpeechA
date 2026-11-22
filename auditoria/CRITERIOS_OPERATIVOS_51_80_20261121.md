@@ -12,7 +12,7 @@
 | 55 | Tercero conoce al titular pero indica «ya no vive aquí»: MENSAJE CON TERCERO; anotar situación real de contacto sin inferir recepción de recado. |
 | 56 | En trabajo, titular ya no labora allí: el estatus depende de si la persona acepta o rechaza el recado. |
 | 57 | BUZÓN: dejar únicamente motivo de contacto no sensible y teléfono de retorno, sin revelar saldos ni mora. |
-| 58 | Tercero acepta mensaje pero gestor omite teléfono de retorno y no queda acreditado como conocido: gestión incorrecta del gestor, evaluar omisión. |
+| 58 | Recado aceptado y con mensaje dirigido, pero gestor omite teléfono de retorno: gestión incorrecta por **deducción ordinaria de 15 puntos**, no rechazo automático. Puede APROBAR con puntuación ≥80 y sin otros bloqueos. Si ofreció teléfono pero ASR no permite verificar entrega, conservar revisión de evidencia. |
 | 59 | Tercero conoce número de MRS pero gestor no verifica su corrección: recado válido con descuento de 5 puntos. |
 | 60 | Recado aceptado sigue válido si tercero pide no volver a llamar; solicitud no puede registrarse en el flujo actual, pero debe canalizarse por un mecanismo de privacidad/operaciones para evitar contacto indebido. |
 | 61 | Decir «asunto personal» ante pregunta de tercero por motivo de llamada: respuesta correcta. |
