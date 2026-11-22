@@ -55,7 +55,7 @@
 | 129 | Familiar reporta fallecimiento sin documentación: MENSAJE CON FAMILIAR, con gestión de validación de defunción pendiente. |
 | 130 | Titular desconoce tarjeta: ACLARACIÓN solo si confirma que realizará trámite bancario. |
 | 131 | Número antes asociado al titular ahora pertenece a tercero: RECADO según estatus operativo; no autoriza compartir saldo ni suprimir corrección de datos. |
-| 132 | Respuesta literal «sin» en mensaje («132 sin133no») no permite confirmar si era SÍ, SIN o NO; pendiente de respuesta. |
+| 132 | **Sí:** si un tercero pregunta qué empresa llama, el gestor puede responder **«MRS Consultores»**. Es identificación del despacho, no autorización para comunicar saldo, mora, cuenta o deuda. |
 | 133 | Tercero menciona saldo y gestor lo repite confirmándolo: el usuario responde NO a considerar divulgación indebida; NO desactivar evaluación de privacidad hasta validación de Compliance. |
 | 134 | Titular pide ARCO durante negociación sin convenio: NO DEFINE para estatus de cobranza, tramitar derechos por separado. |
 | 135 | Titular solicita no llamar al trabajo, sí al móvil: gestión puede APROBAR; conservar/canalizar restricción de contacto. |
@@ -87,7 +87,7 @@
 
 ## Respuestas faltantes o ambiguas
 
-- **132:** la cadena `132 sin133no` no determina con seguridad la respuesta de 132; la de 133 sí se registra como NO.
+- **132:** aclarado por la usuaria: **sí puede identificarse como MRS Consultores ante un tercero**, sin divulgar información financiera personal.
 - **141:** resuelto: **APROBADA CON ALERTA** si el maltrato del gestor actual no queda corroborado y no existe otra falta bloqueante.
 - **160:** la última respuesta escrita `169 evaluarse parcialmente` se interpreta provisionalmente como 160 por la secuencia 81–160.
 - **85:** resuelto: **10 puntos** por familiar responsable del pago que no proporciona su nombre.
