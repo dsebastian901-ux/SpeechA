@@ -94,3 +94,22 @@ def test_unverified_accusation_does_not_overrule_confirmed_critical_failure():
     result=evaluate_quality(report,95,duration_seconds=90)
     assert result['clasificacion']=='FALLA_GRAVE'
     assert not result['aprobado']
+
+
+
+def test_132_company_name_is_allowed_to_third_party_without_financial_disclosure():
+    from app.services.conversation_evidence import assess_privacy
+    text=('Tercero: ¿Qué empresa está llamando? '
+          'Gestor: Soy de MRS Consultores. '
+          'Tercero: Gracias.')
+    result=assess_privacy(text, third_party_confirmed=True)
+    assert result['confirmed_disclosure'] is False
+    assert result['review_required'] is False
+
+
+def test_132_company_name_does_not_exempt_financial_disclosure():
+    from app.services.conversation_evidence import assess_privacy
+    text=('Tercero: ¿Qué empresa está llamando? '
+          'Gestor: Soy de MRS Consultores. Su familiar debe 2000 pesos.')
+    result=assess_privacy(text, third_party_confirmed=True)
+    assert result['confirmed_disclosure'] is True or result['review_required'] is True
