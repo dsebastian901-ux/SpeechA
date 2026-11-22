@@ -1556,13 +1556,43 @@ class AnalyticsService:
                 r'comunicarme|comunicarnos|comunicarme con|comunicarnos con)|'
                 r'no (?:puedo|podemos) (?:contactarl[oa]|contactar|avisarl[oa]|avisar|'
                 r'localizarl[oa]|localizar|comunicarme|comunicarnos))\b'))
-        recado_estatus_acreditado=bool(recado_real or no_puede_transmitir_recado)
+        # Regla 146 confirmada: un RECADO aceptado y dirigido no se invalida
+        # por omisión del teléfono de retorno; se descuentan 15 puntos.
+        # Distinto caso: el gestor SÍ ofrece/dicta un número, pero el ASR
+        # no permite corroborarlo. Esa ambigüedad conserva revisión.
+        callback_offer_unverified=bool(
+            (message_delivery_validation or {}).get('review_required')
+            and any(re.search(
+                r'\b(?:(?:le |se lo )?(?:voy a |puedo |podria |pudiera )?'
+                r'(?:dejar|dictar|proporcionar|indicar)(?:le)?|'
+                r'le (?:dejo|dicto|proporciono)|anote|apunte)\b'
+                r'[^.!?]{0,80}\b(?:numero|telefono|contacto|digitos)\b',
+                norm(u['text']))
+                for u in sentence_evidence(text,segments)
+                if u.get('speaker_role') not in {'TERCERO','TITULAR','INTERLOCUTOR'}))
+        recado_sin_contacto_confirmado=bool(
+            message_workflow_validation['recipient_accepted']
+            and message_workflow_validation['directed_body']
+            and not message_workflow_validation['callback_available']
+            and not message_workflow_validation['final_refusal']
+            and not callback_offer_unverified)
+        recado_estatus_acreditado=bool(
+            recado_real or no_puede_transmitir_recado or recado_sin_contacto_confirmado)
         message_workflow_validation['recado_aceptado_sin_poder_transmitir']=no_puede_transmitir_recado
-        if (not recado_real and message_workflow_validation['recipient_accepted']
+        message_workflow_validation['recado_sin_contacto_confirmado']=recado_sin_contacto_confirmado
+        message_workflow_validation['contacto_ofrecido_no_verificable']=callback_offer_unverified
+        if recado_sin_contacto_confirmado:
+            message_delivery_validation={
+                'review_required':False,
+                'reason':'Recado aceptado sin teléfono de retorno: falta acreditada; deducir 15 puntos, no bloquear aprobación.',
+                'evidence':message_workflow_validation['events'],
+                'deduction_code':'PEN_RECADO_SIN_CONTACTO_RETORNO'}
+        elif (not recado_real and message_workflow_validation['recipient_accepted']
                 and message_workflow_validation['directed_body'] and not message_workflow_validation['callback_available']
                 and not message_workflow_validation['final_refusal']):
-            message_delivery_validation={'review_required':True,
-                'reason':'La recepción del recado consta, pero el contacto de retorno no quedó completo ni fue confirmado expresamente como correcto; cotejar el dictado, sin completar dígitos.',
+            message_delivery_validation={
+                'review_required':True,
+                'reason':'El gestor ofreció datos de contacto, pero la transcripción no permite comprobar su entrega: revisar audio sin inferir omisión.',
                 'evidence':[u for u in sentence_evidence(text,segments) if re.search(r'\b(?:numero|telefono|anot\w*|\d{2})\b',norm(u['text']))][-8:]}
         if recado_real:
             message_delivery_validation={'review_required':False,'reason':'Recepción y contacto acreditados en el diálogo.','evidence':message_workflow_validation['events']}
@@ -2967,12 +2997,9 @@ class AnalyticsService:
         # confirmado como ya conocido, debe descontar 15 por omisión de contacto.
         # El estatus recado y la calificación se mantienen independientes.
         if (contact_type in {'TERCERO','TERCERO / FAMILIAR','TERCERO / TRABAJO'}
-                and message_workflow_validation.get('recipient_accepted')
-                and message_workflow_validation.get('directed_body')
-                and not message_workflow_validation.get('callback_available')
-                and not message_workflow_validation.get('final_refusal')):
+                and message_workflow_validation.get('recado_sin_contacto_confirmado')):
             add_penalty('PEN_RECADO_SIN_CONTACTO_RETORNO','Recado',
-                'El tercero aceptó el recado, pero el gestor omitió un teléfono de retorno acreditado.',
+                'El tercero aceptó el recado; el gestor omitió el teléfono de retorno. Descuento ordinario, no rechazo automático.',
                 15,False,['RECADO146'])
 
         if false_bradescard_identity:
@@ -3402,7 +3429,10 @@ class AnalyticsService:
                 status_detection_confidence = 'ALTA'
                 status_evidence=' / '.join(u['text'] for u in recado_assessment['acceptance'])
                 status_evidence_method=('RECADO_RECIBIDO_SIN_POSIBILIDAD_DE_TRANSMITIR'
-                    if no_puede_transmitir_recado else 'RECADO_ACEPTADO_CON_CONTACTO')
+                    if no_puede_transmitir_recado else
+                    'RECADO_ACEPTADO_SIN_CONTACTO_PENALIZADO'
+                    if recado_sin_contacto_confirmado else
+                    'RECADO_ACEPTADO_CON_CONTACTO')
                 if confirmed_family.get('valid'):
                     status_evidence='Parentesco confirmado por usuario: '+confirmed_family['relationship']+'. '+status_evidence
                     status_evidence_method='RECADO_ACEPTADO_Y_PARENTESCO_CONFIRMADO_POR_USUARIO'
