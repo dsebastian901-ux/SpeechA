@@ -9,8 +9,8 @@ ORDINARY_REVIEW_CODES={'STATUS_INVALID','STATUS_NOT_CONFIRMED','UNIDENTIFIED_CON
 
 def explicit_message_refusal(text,segments=(),acceptance=()):
     source=normalize(text);events=[];cursor=0
-    pattern=re.compile(r'\b(?:no (?:quiero|puedo|voy a) (?:recibir|tomar|pasar|dar|transmitir) (?:el |un |su )?(?:recado|mensaje)|'
-                       r'no (?:le |se lo )?(?:voy a|puedo|quiero) (?:pasar|dar|transmitir) (?:el |un |su )?(?:recado|mensaje)|'
+    pattern=re.compile(r'\b(?:no (?:quiero|puedo|voy a) (?:recibir|tomar|pasar|dar|transmitir) (?:el |un |su |ningun |ninguno |ninguna )?(?:recado|mensaje)|'
+                       r'no (?:le |se lo )?(?:voy a|puedo|quiero) (?:pasar|dar|transmitir) (?:el |un |su |ningun )?(?:recado|mensaje)|'
                        r'no soy (?:su )?mensajer[oa]|no me interesa recibir (?:el |su )?recado|'
                        r'no tengo (?:donde|con que) (?:anotar(?:lo)?|apuntar(?:lo)?)|no puedo (?:anotar|apuntar|anotarlo|apuntarlo|notarlo)|'
                        r'no traigo (?:aqui )?(?:en que|con que|como) (?:anotar(?:lo)?|apuntar(?:lo)?))\b')
@@ -132,12 +132,13 @@ def definitive_rejection(metadata,findings,duration_seconds):
     if coverage.get('confirmed_failure'):
         return {'rule_group':12,'code':'CONFIRMED_INSUFFICIENT_FOLLOWUP','severity':'CONFIRMED_NONCRITICAL',
             'source_field':'negotiation_validation','reasons':[coverage['reason']]}
-    if confirmed_complaint:
+    # La acusación al gestor actual que NO se corroboró es alerta (141);
+    # no aplicar automáticamente rechazo por queja de maltrato previa.
+    if confirmed_complaint and not treatment.get('current_agent_mistreatment_unverified'):
         return {'rule_group':11,'code':'CONFIRMED_SERVICE_COMPLAINT','severity':'CONFIRMED_NONCRITICAL',
             'resolves_codes':['MISTREATMENT_REPORT'],
             'source_field':'treatment_validation','reasons':['Queja de atención previa expresada en la conversación; bloquea aprobación por criterio operativo.']}
-    refused=metadata.get('explicit_message_refusal')or{}
-    if refused.get('confirmed'):
-        return {'rule_group':4,'code':'EXPLICIT_MESSAGE_REFUSAL','severity':'CONFIRMED_NONCRITICAL',
-            'source_field':'explicit_message_refusal','reasons':[refused['reason']]}
+    # La negativa del TERCERO a tomar un recado NO es una falta del gestor.
+    # Se dictamina como SE NIEGAN A TOMAR RECADO; la calidad debe seguir
+    # evaluando identificación, privacidad, trato y demás controles reales.
     return None

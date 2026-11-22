@@ -649,11 +649,13 @@ class BatchReportService:
             "APROBADOS": "APROBADO",
             "APROBADO_SIN_ETIQUETAR": "APROBADO SIN ETIQUETAR",
             "APROBADO_CON_EXCEPCION": "APROBADO CON EXCEPCIÓN",
+            "APROBADO_CON_ALERTA": "APROBADO CON ALERTA",
             "NO_APROBADO": "NO APROBADO - INCUMPLIMIENTO CONFIRMADO",
             "NO_APROBADO_MENOR_80": "NO APROBADO - MENOR A 80%",
             "MAL_DICTAMINADO": "NO APROBADO - MAL DICTAMINADO",
             "NEGOCIACION_INVALIDA": "NO APROBADO - NEGOCIACION INVALIDA",
             "FALLA_GRAVE": "NO APROBADO - FALLA GRAVE",
+            "SIN_VOZ": "SIN VOZ - SIN GESTIÓN EVALUABLE",
             "REVISAR": "REVISAR MANUALMENTE",
             "ERROR": "ERROR DE PROCESAMIENTO",
             "SIN_RELACION_EXCEL": "CORREGIR RELACIÓN CON EXCEL",
@@ -661,11 +663,12 @@ class BatchReportService:
         final_operational = final_operational_map.get(physical, "REVISAR MANUALMENTE")
 
         output_label = classification.get('output_label_correction') or {}
-        from app.services.classification_policy import corrected_approval
-        label_applied = corrected_approval(classification)
+        from app.services.classification_policy import corrected_label_exportable
+        label_applied = corrected_label_exportable(classification)
         output_name = output_label['corrected_name'] if label_applied else relation.get('nombre_final') or ''
         if label_applied:
-            dictamen = 'CORREGIDO EN COPIA'
+            # El dictamen de calidad permanece intacto, en particular si <80.
+            dictamen = 'CORREGIDO EN COPIA (NO APROBADO)' if physical=='NO_APROBADO_MENOR_80' else 'CORREGIDO EN COPIA'
             motivo_dictamen = output_label['original_status']+' → '+output_label['corrected_status']
         return {
             'Estado de copia':item.get('copy_status') or '',
@@ -676,7 +679,7 @@ class BatchReportService:
             "Nombre antes de reetiquetar": relation.get('nombre_final') or '',
             "Estatus de salida": output_label.get('corrected_status') if label_applied else relation.get('estatus_grabacion') or '',
             "Código de salida": output_label.get('corrected_code') if label_applied else '',
-            "Carpeta de etiqueta corregida": ('APROBADAS_DURACION_MENOR' if classification.get('clasificacion')=='APROBADO_DURACION_MENOR' else output_label.get('folder')) if label_applied else '',
+            "Carpeta de etiqueta corregida": ('NO_APROBADOS_MENOR_80' if physical=='NO_APROBADO_MENOR_80' else 'APROBADAS_DURACION_MENOR' if physical=='APROBADO_DURACION_MENOR' else output_label.get('folder')) if label_applied else '',
             "Archivo original": item.get("file_name") or Path(str(item.get("path") or "")).name,
             "Nombre final": output_name,
             "Gestor": relation.get("gestor") or "",
@@ -1129,6 +1132,11 @@ class BatchReportService:
         summary_ws.append(["Procesados sin relación Excel", sum(r.get('Clasificación física')=='SIN_RELACION_EXCEL' for r in rows)])
         summary_ws.append(["Aprobados", approved])
         summary_ws.append(["De ellos, etiqueta corregida", sum(corrected_approval(i.get('classification')or{})for i in source_items)])
+        from app.services.classification_policy import corrected_label_exportable
+        summary_ws.append(["No aprobadas <80 con estatus corregido", sum(
+            corrected_label_exportable(i.get('classification')or{})
+            and (i.get('classification')or{}).get('clasificacion')=='NO_APROBADO_MENOR_80'
+            for i in source_items)])
         summary_ws.append(["Aprobadas de duración menor",sum(r.get('Clasificación física')=='APROBADO_DURACION_MENOR'for r in rows)])
         summary_ws.append(["Llamadas rechazadas con alertas pendientes",sum(bool((i.get('classification')or{}).get('requires_alert_review'))for i in source_items)])
         summary_ws.append(["Aprobados sin etiquetar", approved_untagged])

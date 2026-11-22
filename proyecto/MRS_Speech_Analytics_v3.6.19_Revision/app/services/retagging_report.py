@@ -4,12 +4,12 @@ import json
 from pathlib import Path
 
 from openpyxl import load_workbook
-from app.services.classification_policy import corrected_approval
+from app.services.classification_policy import corrected_label_exportable
 
 HEADERS=['Llamada','Cuenta / tarjeta','Archivo original','Gestor','Supervisor','Fecha llamada',
          'Estatus Excel anterior','Estatus correcto','Código anterior','Código correcto',
          'Nombre antes de reetiquetar','Nombre de salida correcto','Puntaje','Motivo de corrección',
-         'Corrección a realizar por el gestor','Estado de copia','Ruta de copia']
+         'Corrección a realizar por el gestor','Estado de copia','Ruta de copia','Resultado de calidad']
 
 
 def add_retagging_sheets(workbook,items):
@@ -18,7 +18,7 @@ def add_retagging_sheets(workbook,items):
     for number,item in enumerate(items,1):
         decision=item.get('classification') or {}
         correction=decision.get('output_label_correction') or {}
-        if not corrected_approval(decision):
+        if not corrected_label_exportable(decision):
             continue
         r=item.get('relation') or {}
         path=str(item.get('classified_audio_path') or '')
@@ -29,7 +29,8 @@ def add_retagging_sheets(workbook,items):
             correction['original_name'],correction['corrected_name'],decision.get('score'),
             (item.get('analytics_metadata') or {}).get('status_validation',{}).get('evidence') or correction['reason'],
             'Corregir estatus_grabacion a '+correction['corrected_status']+' y usar código '+correction['corrected_code']+'.',
-            'COPIA GENERADA' if copied else 'ETIQUETA CALCULADA; COPIA PENDIENTE',path if copied else ''])
+            'COPIA GENERADA' if copied else 'ETIQUETA CALCULADA; COPIA PENDIENTE',path if copied else '',
+            decision.get('clasificacion') or ''])
         groups[r.get('gestor') or '',r.get('supervisor') or '',correction['original_status'],correction['corrected_status']].append(str(r.get('numero_de_tarjeta') or ''))
     summary=workbook.create_sheet('RESUMEN_REETIQUETADO')
     summary.append(['Gestor','Supervisor','Estatus anterior','Estatus correcto','Llamadas reetiquetadas','Cuentas distintas'])
@@ -41,7 +42,7 @@ def add_retagging_sheets(workbook,items):
             for cell in row:
                 if isinstance(cell.value,str):cell.data_type='s'
         for column,width in [('A',12),('B',25),('C',65),('D',25),('E',25),('F',24),('G',32),('H',32),
-                             ('K',75),('L',75),('N',90),('O',80),('P',42),('Q',95)]:
+                             ('K',75),('L',75),('N',90),('O',80),('P',42),('Q',95),('R',34)]:
             ws.column_dimensions[column].width=width
     return sheet,summary
 

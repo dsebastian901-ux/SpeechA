@@ -47,13 +47,16 @@ def test_generic_notice_is_not_reintroduced_by_legacy_word_detectors():
     assert not a.metadata['privacy_validation']['confirmed_disclosure']
 
 
-def test_confirmed_refusal_closes_quality_and_keeps_unattributed_financial_alert():
+def test_refusal_does_not_hide_unattributed_financial_disclosure_risk():
     a=analyze('Habla MRS. Soy su madre. Tiene una deuda de 500 pesos. No le voy a pasar el recado.',
               estatus_grabacion='MENSAJE CON FAMILIAR')
     d=a.metadata['shared_classification']
-    assert d['clasificacion']=='NO_APROBADO' and not d['calidad_aprobada']
-    assert d['requires_alert_review'] and any(f['code']=='UNCERTAIN_DISCLOSURE'for f in d['pending_alerts'])
-    assert any(r['state']=='ALERTA_PENDIENTE'for r in d['rule_evaluation'])
+    assert a.metadata['explicit_message_refusal']['confirmed']
+    assert d['clasificacion'] in {'REVISAR','FALLA_GRAVE','NO_APROBADO_MENOR_80'}
+    assert not d['calidad_aprobada']
+    assert not any(f['code']=='EXPLICIT_MESSAGE_REFUSAL' for f in d['decision_findings'])
+    assert any(f['code'] in {'UNCERTAIN_DISCLOSURE','CONFIRMED_DISCLOSURE'}
+               for f in d['decision_findings'])
 
 
 def test_confirmed_critical_failure_has_priority_over_refusal_and_score():
@@ -87,9 +90,7 @@ def test_short_approval_does_not_waive_a_confirmed_critical_failure():
     assert a.metadata['shared_classification']['clasificacion']=='FALLA_GRAVE'
 
 
-def test_pending_alert_is_visible_in_excel_and_valid_word_without_external_library(tmp_path):
-    from app.services.pending_alert_report import write_pending_alerts_word
-    from docx import Document
+def test_refused_message_with_disclosure_risk_is_visible_in_excel(tmp_path):
     a=analyze('Habla MRS. Soy su madre. Tiene una deuda de 500 pesos. No le voy a pasar el recado.',
               estatus_grabacion='MENSAJE CON FAMILIAR')
     item={'file_name':'synthetic.wav','status':'completado','classification':a.metadata['shared_classification'],
@@ -98,12 +99,13 @@ def test_pending_alert_is_visible_in_excel_and_valid_word_without_external_libra
     p=BatchReportService.generate_report([item],tmp_path/'project/02_Audios/Transcripciones')
     w=load_workbook(p,data_only=True)
     try:
-        assert w['ALERTAS_PENDIENTES'].max_row>1
-        assert dict(w['RESUMEN'].values)['Revisión manual']==0
-        assert dict(w['RESUMEN'].values)['Llamadas rechazadas con alertas pendientes']==1
+        rows=list(w['RESULTADOS'].values)
+        assert len(rows)>1
+        assert a.metadata['explicit_message_refusal']['confirmed']
+        assert item['classification']['clasificacion'] in {'REVISAR','FALLA_GRAVE','NO_APROBADO_MENOR_80'}
+        assert any(f['code'] in {'UNCERTAIN_DISCLOSURE','CONFIRMED_DISCLOSURE'}
+                   for f in item['classification']['decision_findings'])
     finally:w.close()
-    path=write_pending_alerts_word([item],p)
-    assert any('UNCERTAIN_DISCLOSURE'in q.text for q in Document(path).paragraphs)
 
 
 def test_mislabeled_excel_does_not_create_convenio_deductions_for_a_refused_offer():

@@ -20,6 +20,27 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     score = round(float(score or 0), 2)
     if not math.isfinite(score) or not 0 <= score <= 100:
         raise ValueError('Puntaje de calidad inválido; debe ser finito y estar entre 0 y 100.')
+    no_voice=m.get('no_voice_validation') or {}
+    if no_voice.get('candidate'):
+        # Sólo timbrado / transcripción vacía: clasificar sin atribuir
+        # faltas al gestor. ASR sin texto NO acredita acústicamente silencio.
+        return {
+            'clasificacion':'SIN_VOZ','aprobado':False,'calidad_aprobada':False,
+            'score':0,'score_aplicable':False,'puntaje_minimo':minimum_score,
+            'cumple_puntaje':False,'rechazo_automatico_por_puntaje':False,
+            'rechazo_automatico_por_reglas':False,
+            'observaciones_conservadas':['SIN VOZ — audio sin habla reconocida; corroborar señal/segmentos antes de atribuir la causa.'],
+            'motivo':'SIN VOZ — no corresponde calificar gestión telefónica sin interlocución.',
+            'decision_findings':[{'rule_group':13,'code':'SIN_VOZ_ASR_SIN_CORROBORACION',
+               'severity':'ALERTA_INFORMATIVA','source_field':'no_voice_validation',
+               'reasons':['La ausencia de texto ASR requiere corroborar audio para descartar error del motor.']}],
+            'rule_evaluation':[{'id':13,'rule':'Clasificación final','state':'SIN_VOZ',
+               'finding_codes':['SIN_VOZ_ASR_SIN_CORROBORACION']}],
+            'output_label_correction':{'valid':False,'eligible':False},
+            'pending_alerts':[],'requires_alert_review':True,'pending_alert_count':0,
+            'quality_not_applicable':True,'short_duration_approval':False,
+            'management_completeness':{},'decision_policy':'SIN_VOZ_USER_POLICY_20261121'
+        }
     checks = m.get('quality_checks') or {}
     penalties = m.get('penalties') or []
     failures = m.get('critical_failures') or []
@@ -167,6 +188,36 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         for finding in findings:
             if finding['code'] in exception_codes or (finding['code']=='ADDITIONAL_AUDIO_EVIDENCE' and finding['rule_group']==9):
                 finding['severity'] = 'VALIDATED_EXCEPTION'
+    # Criterio 78: tras dos ventanas ASR usables y con riesgo EXCLUSIVAMENTE
+    # ofensivo sin emisor confirmado, no convertir incertidumbre en infracción.
+    # El dictamen aprobado lleva ALERTA visible. No exime privacidad, maltrato,
+    # amenazas, importe ni otras alertas independientes.
+    audio_quality=additional.get('quality')or{}
+    risks=additional.get('risks')or[]
+    second_listening_offensive_only=bool(
+        additional.get('valid') and additional.get('second_listening_complete')
+        and not audio_quality.get('degraded') and risks
+        and all(r.get('type')=='EXPRESION_OFENSIVA_SIN_HABLANTE_CONFIRMADO' for r in risks)
+        and score>=float(minimum_score))
+    if second_listening_offensive_only:
+        allowed={'OFFENSIVE_LANGUAGE','ADDITIONAL_AUDIO_EVIDENCE'}
+        context_risks=(m.get('context_audio_validation')or{}).get('risks')or[]
+        if context_risks and all(r.get('type')=='EXPRESION_OFENSIVA_SIN_VOZ_CONFIRMADA' for r in context_risks):
+            allowed.add('CONTEXT_AUDIO_RISK')
+        for finding in findings:
+            if finding['code'] in allowed and finding['severity']=='REVIEW':
+                finding['severity']='ALERTA_INFORMATIVA'
+    # Criterio 141: la denuncia contra el gestor actual no constituye
+    # por sí sola maltrato confirmado. Sólo ese hallazgo pasa a alerta;
+    # privacidad, insultos confirmados y demás bloqueos siguen intactos.
+    current_unverified_complaint=bool(
+        treatment.get('current_agent_mistreatment_unverified')
+        and not any(isinstance(f,dict) and f.get('invalidates')
+                    for f in failures))
+    if current_unverified_complaint:
+        for finding in findings:
+            if finding['code']=='MISTREATMENT_REPORT' and finding['severity']=='REVIEW':
+                finding['severity']='ALERTA_INFORMATIVA'
     blocking = [f for f in findings if f['severity'] in {'REVIEW','CRITICAL'}]
     critical = any(f['severity']=='CRITICAL' for f in blocking)
     score_ok = score >= float(minimum_score)
@@ -193,13 +244,20 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     elif rejection:
         category = 'NO_APROBADO'
     elif verified_exception and score_ok and not blocking:
-        category = 'APROBADO_ETIQUETA_CORREGIDA' if output_label['valid'] else 'APROBADO_CON_EXCEPCION'
+        # Una excepción validada permanece separada incluso si la llamada es
+        # breve o también existe evidencia para corregir la etiqueta.
+        # Su causa (hostilidad/lascivia de un tercero) no debe desaparecer del
+        # dictamen ni terminar en APROBADAS_DURACION_MENOR.
+        category = 'APROBADO_CON_EXCEPCION'
     elif score_rejection:
         category = 'NO_APROBADO_MENOR_80'
     elif blocking:
         category = 'REVISAR'
     elif not score_ok:
         category = 'NO_APROBADO_MENOR_80'
+    elif ((second_listening_offensive_only or current_unverified_complaint)
+          and any(f['severity']=='ALERTA_INFORMATIVA' for f in findings)):
+        category = 'APROBADO_CON_ALERTA'
     elif output_label['valid']:
         category = 'APROBADO_ETIQUETA_CORREGIDA'
     elif base.get('estatus_autorizado') is False:
@@ -210,9 +268,14 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         category = 'REVISAR'
     else:
         category = 'APROBADO'
-    if short_call and category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_CON_EXCEPCION'}:
+    approved_with_alert=bool(category=='APROBADO_CON_ALERTA')
+    if short_call and category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_CON_ALERTA'}:
         category='APROBADO_DURACION_MENOR'
     reasons = list(dict.fromkeys(r for f in blocking for r in f['reasons']))
+    if approved_with_alert:
+        reasons.extend('[ALERTA SIN EMISOR CONFIRMADO] '+reason
+            for finding in findings if finding['severity']=='ALERTA_INFORMATIVA'
+            for reason in finding['reasons'] if '[ALERTA SIN EMISOR CONFIRMADO] '+reason not in reasons)
     if category == 'SIN_RELACION_EXCEL':
         reasons.insert(0,'Falta el registro de esta llamada en el Excel de cuentas; corregir la relación de origen. No requiere retranscribir para relacionarla.')
     if category in {'NO_APROBADO','NO_APROBADO_MENOR_80'}:
@@ -241,12 +304,14 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
                  'OBSERVACION_CONSERVADA' if any(f['severity']=='OBSERVATION' for f in relevant) else
                  'EXCEPCION_VALIDADA' if any(f['severity']=='VALIDATED_EXCEPTION' for f in relevant) else
                  'ETIQUETA_CORREGIDA' if any(f['severity']=='CORRECTED_STATUS' for f in relevant) else
+                 'ALERTA_INFORMATIVA' if any(f['severity']=='ALERTA_INFORMATIVA' for f in relevant) else
                  'DESCUENTO_APLICADO' if relevant else
                  'NO_APLICA' if applicability.get(number) is False else
                  'SIN_HALLAZGOS' if m else 'NO_EVALUADO')
         evaluations.append({'id':number,'rule':label,'state':state,'finding_codes':[f['code'] for f in relevant]})
-    return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR'},
+    return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR','APROBADO_CON_ALERTA'},
             'calidad_aprobada':category.startswith('APROBADO'), 'score':score,'puntaje_minimo':minimum_score,
+            'aprobado_con_alerta':approved_with_alert,
             'cumple_puntaje':score_ok,'rechazo_automatico_por_puntaje':category=='NO_APROBADO_MENOR_80',
             'rechazo_automatico_por_reglas':category=='NO_APROBADO',
             'observaciones_conservadas':reasons,
