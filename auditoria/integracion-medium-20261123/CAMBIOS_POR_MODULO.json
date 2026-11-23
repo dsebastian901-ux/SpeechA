@@ -1,0 +1,122 @@
+[
+  {
+    "id": "M01",
+    "problema": "Importación offline de modelos en GUI y servicio con permiso settings",
+    "archivo_funcion": "app/services/local_model_catalog.py:install_local_model",
+    "regresion": "tests/test_medium_integration.py::test_offline_medium_import_loads_and_publishes_hash_manifest",
+    "alcance": "Función nueva; la base solo seleccionaba Medium y buscaba modelos locales/caché.",
+    "casos_primarios_pasan": 1,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 96
+  },
+  {
+    "id": "M02",
+    "problema": "Validar arquitectura para no renombrar Small como Medium",
+    "archivo_funcion": "app/services/local_model_catalog.py:inspect_model",
+    "regresion": "tests/test_medium_integration.py::test_small_cannot_be_mislabeled_as_medium",
+    "alcance": "La importación rechaza 12 capas/768 como Medium y exige 24/1024; formato CT2 v6.",
+    "casos_primarios_pasan": 1,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 61
+  },
+  {
+    "id": "M03",
+    "problema": "No publicar copias incompletas ni reemplazar modelos existentes",
+    "archivo_funcion": "app/services/local_model_catalog.py:install_local_model",
+    "regresion": "tests/test_medium_integration.py::test_failed_backend_validation_cleans_stage_without_overwriting_existing_models",
+    "alcance": "Staging, SHA-256, carga local real antes de publicar, nueva comprobación de permiso y limpieza ante fallo.",
+    "casos_primarios_pasan": 1,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 96
+  },
+  {
+    "id": "M04",
+    "problema": "ASR de modelo desconocido no acredita ejecución de Medium",
+    "archivo_funcion": "app/services/batch_runtime_state.py:compatible_transcription",
+    "regresion": "tests/test_medium_integration.py::test_medium_does_not_reuse_asr_with_an_unknown_model",
+    "alcance": "Al seleccionar Medium no se reutiliza una transcripción sin modelo; la compatibilidad antigua de Small se conserva.",
+    "casos_primarios_pasan": 1,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 64
+  },
+  {
+    "id": "M05",
+    "problema": "Modelo y procedencia de una llamada pueden cambiar durante reintento",
+    "archivo_funcion": "app/services/whisper_service.py:WhisperService.transcribe_audio",
+    "regresion": "tests/test_medium_integration.py::test_transcription_and_vad_retry_keep_the_same_model_snapshot",
+    "alcance": "Captura protegida del objeto y procedencia, utilizada en primaria, reintento VAD y recuperación de importes.",
+    "casos_primarios_pasan": 2,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 309
+  },
+  {
+    "id": "M06",
+    "problema": "Relectura de contexto puede usar un modelo distinto al de la primaria",
+    "archivo_funcion": "app/services/whisper_service.py:WhisperService.recover_context",
+    "regresion": "tests/test_medium_integration.py::test_context_reread_resolves_the_primary_model_before_collecting_evidence",
+    "alcance": "Si el modelo cargado cambió, se resuelve el de la transcripción antes de releer el contexto. No se asigna Medium a otra inferencia.",
+    "casos_primarios_pasan": 1,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 267
+  },
+  {
+    "id": "D01",
+    "problema": "SIN VOZ inaccesible por excepción previa ante ASR vacío",
+    "archivo_funcion": "app/services/analytics_service.py:AnalyticsService.analyze_transcription",
+    "regresion": "tests/test_integration_decision_safety.py::test_positive_duration_empty_asr_reaches_no_voice_without_agent_penalties",
+    "alcance": "Duración positiva y ausencia de texto/segmentos permiten aplicar SIN VOZ; segmentos con texto y consolidado vacío se separan como inconsistencia técnica.",
+    "casos_primarios_pasan": 1,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 219
+  },
+  {
+    "id": "D02",
+    "problema": "SIN VOZ eclipsa hechos críticos independientes confirmados",
+    "archivo_funcion": "app/services/quality_decision.py:evaluate_quality",
+    "regresion": "tests/test_integration_decision_safety.py::test_no_voice_candidate_cannot_erase_independent_confirmed_critical_evidence",
+    "alcance": "Las faltas invalidantes y la divulgación confirmada conservan FALLA_GRAVE antes de SIN VOZ. No inferir infracción solo de puntaje o de ausencia de ASR.",
+    "casos_primarios_pasan": 3,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 18
+  },
+  {
+    "id": "D03",
+    "problema": "Contacto ofrecido pero incompleto se convierte en omisión de 15 puntos",
+    "archivo_funcion": "app/services/analytics_service.py:AnalyticsService.calculate_basic_compliance",
+    "regresion": "tests/test_integration_decision_safety.py::test_offered_but_unverified_callback_is_not_credited_as_an_ordinary_omission",
+    "alcance": "Se conserva REVISAR cuando hay oferta/dictado sin entrega corroborada; la omisión acreditada mantiene la regla 58/146 de -15.",
+    "casos_primarios_pasan": 3,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 1047
+  },
+  {
+    "id": "D04",
+    "problema": "Recepción expresa del recado perdida cuando no puede transmitirlo después",
+    "archivo_funcion": "app/services/message_contact_evidence.py:message_contact_evidence",
+    "regresion": "tests/test_integration_decision_safety.py::test_explicit_receipt_keeps_receipt_status_when_recipient_cannot_deliver_later",
+    "alcance": "La recepción explícita atribuible al interlocutor no depende del teléfono; se conserva la imposibilidad posterior y se evalúa calidad aparte.",
+    "casos_primarios_pasan": 1,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 32
+  },
+  {
+    "id": "D05",
+    "problema": "Descuentos por términos incompletos dependen de que esos términos ya estén completos",
+    "archivo_funcion": "app/services/analytics_service.py:AnalyticsService.calculate_basic_compliance",
+    "regresion": "tests/test_integration_decision_safety.py::test_missing_terms_of_agent_declared_agreement_keep_existing_deductions",
+    "alcance": "La etapa de calidad se separa del convenio confirmado. PEN007/PEN008/PEN_CONV_LUGARES conservan 20 puntos cada uno; Excel solo no activa una etapa inexistente. La dictaminación sigue exigiendo monto/fecha.",
+    "casos_primarios_pasan": 1,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 1047
+  },
+  {
+    "id": "D06",
+    "problema": "Oferta le puedo ofrecer no detectada antes de cuelgue",
+    "archivo_funcion": "app/services/operational_outcome_resolution.py:offered_payment_alternatives",
+    "regresion": "tests/test_user_decisions_round2_20261121.py::test_alternatives_are_extracted_before_holder_hangup_only",
+    "alcance": "Se reconoce esa conjugación manteniendo emisor, objeto de pago y límite previo al cuelgue; preguntas vacías no cuentan como alternativa.",
+    "casos_primarios_pasan": 1,
+    "estado": "IMPLEMENTADO Y PROBADO EN SU ALCANCE",
+    "linea": 63
+  }
+]

@@ -1,0 +1,151 @@
+{
+  "base_commit": "cddfd0fc33839a1cec8be34119d7c7460dd1ee86",
+  "branch": "codex/integracion-medium-dictaminacion-20261123",
+  "baseline_suite": {
+    "tests": 3172,
+    "failures": 58,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 3114
+  },
+  "final_suite": {
+    "tests": 3206,
+    "failures": 34,
+    "errors": 0,
+    "skipped": 2,
+    "passed": 3170
+  },
+  "final_source_unchanged_during_run": true,
+  "existing_tests_resolved": 24,
+  "existing_passing_tests_regressed": 0,
+  "new_automated_tests": {
+    "total": 34,
+    "passed": 32,
+    "skipped": 2,
+    "failed": 0
+  },
+  "red_green_regressions": {
+    "cases_run_on_base": 17,
+    "failed_on_base": 9,
+    "passed_on_base": 8,
+    "all_corresponding_new_tests_pass_final": true
+  },
+  "windows_gui_under_wine": {
+    "platform": "win32",
+    "tk_version": "8.6.15",
+    "wine": true,
+    "physical_windows": false,
+    "gui_cases_passed": 2,
+    "selected_medium_import_invoked": true,
+    "settings_unchanged_until_save": true,
+    "expired_permission_after_dialog_blocked": true,
+    "accounts": "synthetic",
+    "actual_model_copy_in_gui_test": false
+  },
+  "numerical_medium_comparison": {
+    "model": "medium",
+    "encoder_layers": 24,
+    "decoder_layers": 24,
+    "hidden_size": 1024,
+    "source": "Whisper Medium int8 ONNX público existente, reconstrucción CT2 experimental solo para pruebas.",
+    "onnx_first_token": 542,
+    "ct2_first_token": 542,
+    "mean_logit_error": 0.8133609890937805,
+    "rms_relative_error": 0.25304892659187317,
+    "seconds": 14.104252374999987,
+    "limit": "One synthetic acoustic input and one decoder prompt. Not universal numerical equivalence, human listening or word accuracy.",
+    "passed": false
+  },
+  "real_runtime_integration_samples": {
+    "runtime": {
+      "small": {
+        "calls": [
+          {
+            "outcome": "REVISAR",
+            "score": 100.0,
+            "text_chars": 896
+          },
+          {
+            "outcome": "REVISAR",
+            "score": 100.0,
+            "text_chars": 959
+          }
+        ],
+        "seconds": 27.567592771999898,
+        "fresh_asr": true,
+        "network_used": false,
+        "source_and_copies_verified": true,
+        "reports_generated": true
+      },
+      "medium": {
+        "calls": [
+          {
+            "outcome": "REVISAR",
+            "score": 100.0,
+            "text_chars": 906
+          },
+          {
+            "outcome": "REVISAR",
+            "score": 80.0,
+            "text_chars": 990
+          }
+        ],
+        "seconds": 219.52352164700005,
+        "fresh_asr": true,
+        "network_used": false,
+        "source_and_copies_verified": true,
+        "reports_generated": true
+      }
+    },
+    "private_medium_weights": "Reconstructed from existing public int8 ONNX. Numerical comparison failed its threshold; these weights are development-only, not a validated production package.",
+    "physical_windows": false,
+    "human_listening": false,
+    "accuracy_improvement_claimed": false
+  },
+  "real_runtime_later_single_audio_samples": {
+    "runtime": {
+      "small": {
+        "calls": [
+          {
+            "outcome": "REVISAR",
+            "score": 100.0,
+            "text_chars": 896
+          }
+        ],
+        "seconds": 46.14361921699992,
+        "fresh_asr": true,
+        "network_used": false,
+        "source_and_copies_verified": true,
+        "reports_generated": true
+      },
+      "medium": {
+        "calls": [
+          {
+            "outcome": "REVISAR",
+            "score": 100.0,
+            "text_chars": 906
+          }
+        ],
+        "seconds": 68.92143453099993,
+        "fresh_asr": true,
+        "network_used": false,
+        "source_and_copies_verified": true,
+        "reports_generated": true
+      }
+    },
+    "engine_fingerprint": "632f08f09cf1fb408bd4178ed4f13da65ab6d3e1db9f6c4db1be6e252e7ddb37",
+    "source_unchanged": true,
+    "private_medium_weights": "Reconstructed from existing public int8 ONNX. Numerical comparison failed its threshold; these weights are development-only, not a validated production package.",
+    "physical_windows": false,
+    "human_listening": false,
+    "accuracy_improvement_claimed": false
+  },
+  "physical_windows": false,
+  "human_listening": false,
+  "compile_exe_executed": false,
+  "ready_to_compile": false,
+  "customer_files_in_report": false,
+  "old_tests_modified": false,
+  "r57_protected_files_unchanged": 780,
+  "r58_audit_worktree_unchanged": true
+}

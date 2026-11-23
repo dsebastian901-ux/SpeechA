@@ -73,6 +73,8 @@ def compatible_transcription(data, item, runtime):
         normalized = lambda p: str(p).replace('\\', '/').rstrip('/').casefold()
         if normalized(old_path) != normalized(item['path']):
             return False
+    if runtime.get('model')=='medium' and not data.get('modelo'):
+        return False  # No certificar Medium reutilizando ASR legado sin modelo.
     fields = {'model': 'modelo', 'language': 'idioma_solicitado',
               'device': 'dispositivo', 'compute_type': 'tipo_calculo',
               'beam_size': 'beam_size', 'vad_filter': 'vad_filter',

@@ -21,26 +21,6 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     if not math.isfinite(score) or not 0 <= score <= 100:
         raise ValueError('Puntaje de calidad inválido; debe ser finito y estar entre 0 y 100.')
     no_voice=m.get('no_voice_validation') or {}
-    if no_voice.get('candidate'):
-        # Sólo timbrado / transcripción vacía: clasificar sin atribuir
-        # faltas al gestor. ASR sin texto NO acredita acústicamente silencio.
-        return {
-            'clasificacion':'SIN_VOZ','aprobado':False,'calidad_aprobada':False,
-            'score':0,'score_aplicable':False,'puntaje_minimo':minimum_score,
-            'cumple_puntaje':False,'rechazo_automatico_por_puntaje':False,
-            'rechazo_automatico_por_reglas':False,
-            'observaciones_conservadas':['SIN VOZ — audio sin habla reconocida; corroborar señal/segmentos antes de atribuir la causa.'],
-            'motivo':'SIN VOZ — no corresponde calificar gestión telefónica sin interlocución.',
-            'decision_findings':[{'rule_group':13,'code':'SIN_VOZ_ASR_SIN_CORROBORACION',
-               'severity':'ALERTA_INFORMATIVA','source_field':'no_voice_validation',
-               'reasons':['La ausencia de texto ASR requiere corroborar audio para descartar error del motor.']}],
-            'rule_evaluation':[{'id':13,'rule':'Clasificación final','state':'SIN_VOZ',
-               'finding_codes':['SIN_VOZ_ASR_SIN_CORROBORACION']}],
-            'output_label_correction':{'valid':False,'eligible':False},
-            'pending_alerts':[],'requires_alert_review':True,'pending_alert_count':0,
-            'quality_not_applicable':True,'short_duration_approval':False,
-            'management_completeness':{},'decision_policy':'SIN_VOZ_USER_POLICY_20261121'
-        }
     checks = m.get('quality_checks') or {}
     penalties = m.get('penalties') or []
     failures = m.get('critical_failures') or []
@@ -107,6 +87,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
             'Interlocutor sin identificar; requiere revisión','contact_validation')
     if any(isinstance(f,dict) and f.get('invalidates') is True for f in failures):
         add(13,'CONFIRMED_CRITICAL_FAILURE','Incumplimiento crítico confirmado','critical_failures','CRITICAL')
+    if any(isinstance(p,dict) and p.get('invalidates') is True for p in penalties):
+        add(13,'CONFIRMED_INVALIDATING_PENALTY','Penalización invalidante expresamente acreditada','penalties','CRITICAL')
     critical_domains={'PEN003':3,'PEN004':12,'PEN005':12,'PEN012':8}
     for failure in failures:
         if isinstance(failure,dict) and failure.get('invalidates') is True and failure.get('id') in critical_domains:
@@ -220,6 +202,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
                 finding['severity']='ALERTA_INFORMATIVA'
     blocking = [f for f in findings if f['severity'] in {'REVIEW','CRITICAL'}]
     critical = any(f['severity']=='CRITICAL' for f in blocking)
+    if no_voice.get('candidate') and not critical:
+        return _no_voice_result(minimum_score)
     score_ok = score >= float(minimum_score)
     base = base_classification or {}
     from app.services.definitive_rejection import definitive_rejection
@@ -322,3 +306,23 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
             'requires_alert_review':bool(pending_alerts),'pending_alert_count':len(pending_alerts),
             'short_duration_approval':category=='APROBADO_DURACION_MENOR','management_completeness':completeness,
             'decision_policy':'INTEGRATED_USER_POLICY_20261115'}
+
+
+def _no_voice_result(minimum_score):
+    return {
+        'clasificacion':'SIN_VOZ','aprobado':False,'calidad_aprobada':False,
+        'score':0,'score_aplicable':False,'puntaje_minimo':minimum_score,
+        'cumple_puntaje':False,'rechazo_automatico_por_puntaje':False,
+        'rechazo_automatico_por_reglas':False,
+        'observaciones_conservadas':['SIN VOZ — audio sin habla reconocida; corroborar señal/segmentos antes de atribuir la causa.'],
+        'motivo':'SIN VOZ — no corresponde calificar gestión telefónica sin interlocución.',
+        'decision_findings':[{'rule_group':13,'code':'SIN_VOZ_ASR_SIN_CORROBORACION',
+           'severity':'ALERTA_INFORMATIVA','source_field':'no_voice_validation',
+           'reasons':['La ausencia de texto ASR requiere corroborar audio para descartar error del motor.']}],
+        'rule_evaluation':[{'id':13,'rule':'Clasificación final','state':'SIN_VOZ',
+           'finding_codes':['SIN_VOZ_ASR_SIN_CORROBORACION']}],
+        'output_label_correction':{'valid':False,'eligible':False},
+        'pending_alerts':[],'requires_alert_review':True,'pending_alert_count':0,
+        'quality_not_applicable':True,'short_duration_approval':False,
+        'management_completeness':{},'decision_policy':'SIN_VOZ_USER_POLICY_20261121'
+    }

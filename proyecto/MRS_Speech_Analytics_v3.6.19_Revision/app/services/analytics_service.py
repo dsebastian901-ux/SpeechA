@@ -234,9 +234,11 @@ class AnalyticsService:
         text = str(getattr(transcription, "text", "") or "").strip()
 
         if not text:
-            raise ValueError(
-                "La transcripción no contiene texto para analizar."
-            )
+            duration=float(getattr(transcription,'duration_seconds',0)or 0)
+            segments=getattr(transcription,'segments',None)or[]
+            has_segment_text=any(isinstance(u,dict)and str(u.get('text')or u.get('texto')or'').strip()for u in segments)
+            if not duration>0 or has_segment_text:
+                raise ValueError("La transcripción no contiene texto consolidado válido para analizar.")
 
         analysis = AnalyticsModel()
 
@@ -1561,13 +1563,13 @@ class AnalyticsService:
         # Distinto caso: el gestor SÍ ofrece/dicta un número, pero el ASR
         # no permite corroborarlo. Esa ambigüedad conserva revisión.
         callback_offer_unverified=bool(
-            (message_delivery_validation or {}).get('review_required')
-            and any(re.search(
+            any(re.search(
                 r'\b(?:(?:le |se lo )?(?:voy a |puedo |podria |pudiera )?'
                 r'(?:dejar|dictar|proporcionar|indicar)(?:le)?|'
-                r'le (?:dejo|dicto|proporciono)|anote|apunte)\b'
+                r'le (?:dejo|dejare|dejaremos|dicto|dictare|proporciono|proporcionare)|anote|apunte)\b'
                 r'[^.!?]{0,80}\b(?:numero|telefono|contacto|digitos)\b',
-                norm(u['text']))
+                norm(u['text'])) or re.search(
+                    r'\b(?:el |su |este )?(?:numero(?: telefonico| de contacto)?|telefono) (?:es|seria)\b',norm(u['text']))
                 for u in sentence_evidence(text,segments)
                 if u.get('speaker_role') not in {'TERCERO','TITULAR','INTERLOCUTOR'}))
         recado_sin_contacto_confirmado=bool(
@@ -1575,7 +1577,9 @@ class AnalyticsService:
             and message_workflow_validation['directed_body']
             and not message_workflow_validation['callback_available']
             and not message_workflow_validation['final_refusal']
-            and not callback_offer_unverified)
+            and not (confirmed_recado.get('valid') and confirmed_recado.get('callback_delivered'))
+            and not callback_offer_unverified
+            and not re.search(r'\b(?:numero|telefono|contacto)\b[^.!?]{0,40}\d{3,}',normalized))
         recado_estatus_acreditado=bool(
             recado_real or no_puede_transmitir_recado or recado_sin_contacto_confirmado)
         message_workflow_validation['recado_aceptado_sin_poder_transmitir']=no_puede_transmitir_recado
@@ -1592,7 +1596,7 @@ class AnalyticsService:
                 and not message_workflow_validation['final_refusal']):
             message_delivery_validation={
                 'review_required':True,
-                'reason':'El gestor ofreció datos de contacto, pero la transcripción no permite comprobar su entrega: revisar audio sin inferir omisión.',
+                'reason':'Recepción del recado detectada; el contacto ofrecido no quedó completo en ASR. Revisar su entrega sin inferir omisión.',
                 'evidence':[u for u in sentence_evidence(text,segments) if re.search(r'\b(?:numero|telefono|anot\w*|\d{2})\b',norm(u['text']))][-8:]}
         if recado_real:
             message_delivery_validation={'review_required':False,'reason':'Recepción y contacto acreditados en el diálogo.','evidence':message_workflow_validation['events']}
@@ -2571,7 +2575,7 @@ class AnalyticsService:
         confirmed_agreement_amount=amount_confirmed_for_agreement(
             text,segments,commitment_confirmation,accepted_schedule)
         is_convenio = bool(not non_holder_scenario and contact_type=='TITULAR'
-            and confirms_commitment and promise_date is not None and confirmed_agreement_amount
+            and (confirms_commitment or named_agreement)
             and not payment_confirmation_case and not pending_decision and not explicit_decline)
         # Los lugares de pago también se revisan en llamadas de cobranza donde
         # el gestor instruye o solicita realizar un pago, aunque el estatus Excel
@@ -4374,7 +4378,9 @@ class AnalyticsService:
             "financial_review": financial_review,
             "date_rule": None,
             "date_effect": None,
-            "is_negotiation": requires_new_negotiation_validation,
+            "is_negotiation": bool(requires_new_negotiation_validation and confirms_commitment
+                and promise_date is not None and confirmed_agreement_amount),
+            "quality_stage_applicable": requires_new_negotiation_validation,
             "financial_validation_applicable": bool(requires_new_negotiation_validation or payment_confirmation_case or detected_claim_amount is not None or detected_balance_amount is not None or amount_review),
             "dispute_guidance": dispute_guidance,
             "pending_decision": pending_decision,

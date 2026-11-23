@@ -70,7 +70,7 @@ def offered_payment_alternatives(text,segments=(),before_hangup=False):
     marker=re.search(r'\b(?:voy a colgar|ya le voy a colgar|te voy a colgar|yo le cuelgo)\b',source)
     limit=marker.start() if before_hangup and marker else len(source)
     patterns=(
-        r'\b(?:le (?:ofrezco|ofrecemos|propongo|proponemos)\b[^.!?]{0,80}\b(?:pago|abono|convenio|alternativa)|'
+        r'\b(?:le (?:(?:puedo|podria|podemos) )?(?:ofrezco|ofrecemos|propongo|proponemos|ofrecer)\b[^.!?]{0,80}\b(?:pago|abono|convenio|alternativa)|'
         r'(?:otra|una|dos|tres|varias) (?:alternativas?|opciones?) (?:de )?pago|'
         r'(?:podemos|podriamos) (?:hacer|generar|ofrecer|formalizar) (?:un |el |su )?(?:convenio|acuerdo|pago)|'
         r'(?:puede|podria|podriamos|podemos) (?:realizar|hacer|depositar|pagar|abonar|cubrir)\b[^.!?]{0,85}\b(?:pago|abono|pesos|manana|hoy|dia)|'

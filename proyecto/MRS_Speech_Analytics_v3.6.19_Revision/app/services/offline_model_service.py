@@ -22,4 +22,18 @@ def local_model_source(name):
     missing = [f for f in required if not (model/f).is_file() or (model/f).stat().st_size == 0]
     if missing:
         raise FileNotFoundError('Modelo local incompleto: '+', '.join(missing)+'. Importe los archivos faltantes por USB; no se realizarán descargas.')
+    from app.services.local_model_catalog import imported_model_info
+    imported_model_info(model,verify=True)
     return str(model.resolve())
+
+
+def local_model_identity(name):
+    """Token local barato para detectar una importación sin descargar ni cargar pesos."""
+    selected=Path(str(name)).expanduser()
+    candidates=[selected]if selected.is_dir()else[]
+    if selected.name==str(name):candidates += [DATA_DIR/'models'/str(name),Path(__file__).resolve().parents[1]/'resources/models'/str(name)]
+    for folder in candidates:
+        if folder.is_dir():
+            return tuple((file,(folder/file).stat().st_size,(folder/file).stat().st_mtime_ns)
+                         for file in ['model.bin','config.json','tokenizer.json','mrs_model_manifest.json']if(folder/file).is_file())
+    return None

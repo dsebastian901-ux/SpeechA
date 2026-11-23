@@ -167,6 +167,15 @@ def message_contact_evidence(text,segments=()):
                 and not re.match(r'\s*\?',source[match.end():])
                 and not BAD_PREFIX.search(source[max(0,match.start()-60):match.start()])):
             result['work_relationships'].append(_item(source,match,'CONFIRMA_CONTACTO_DE_TRABAJO',text,segments,'answer'))
+    # Recibir el mensaje es un hecho propio; no requiere teléfono para
+    # acreditar recepción. La calidad del contacto se califica por separado.
+    receipt=re.compile(r'\b(?:si[, ]+)?(?:ya )?(?:recibi|tome|tomo|recibo) (?:el |su |ese )?(?:recado|mensaje)\b')
+    from app.services.speech_scope import nonassertive_prefix
+    for match in receipt.finditer(source):
+        if (_recipient(text,segments,match.start())
+                and _outside_question(source,match.start(),match.end())
+                and not nonassertive_prefix(source,match.start())):
+            result['acceptance'].append(_item(source,match,'RECEPCION_EXPRESA_DEL_MENSAJE',text,segments))
     return result
 
 

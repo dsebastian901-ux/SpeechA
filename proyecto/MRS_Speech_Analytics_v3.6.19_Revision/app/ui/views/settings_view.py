@@ -7,7 +7,9 @@ Vista: Configuración
 
 import customtkinter as ctk
 from app.services.access_service import view_permission
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
+import queue
+import threading
 
 from app.services.settings_service import SettingsService
 from app.ui.themes import Theme
@@ -273,6 +275,39 @@ class SettingsView(ctk.CTkFrame):
             row=8,
             label="Word timestamps",
         )
+
+        self.model_import_button=ctk.CTkButton(panel,text="Importar modelo seleccionado desde USB / carpeta",command=self.import_local_model)
+        self.model_import_button.grid(row=9,column=0,columnspan=2,sticky="ew",padx=24,pady=(10,6))
+        self.model_import_status=ctk.CTkLabel(panel,text="Importe el modelo completo en formato Faster-Whisper/CTranslate2. No usa internet.",wraplength=620,justify="left")
+        self.model_import_status.grid(row=10,column=0,columnspan=2,sticky="ew",padx=24,pady=(0,12))
+
+    @view_permission('settings')
+    def import_local_model(self):
+        from app.services.access_service import require
+        from app.services.local_model_catalog import install_local_model
+        if getattr(self,'_model_import_running',False):return
+        selected=filedialog.askdirectory(parent=self,title='Seleccione la carpeta completa del modelo local')
+        if not selected:return
+        try:require('settings')
+        except PermissionError as error:
+            messagebox.showerror('Importar modelo',str(error),parent=self);return
+        name=self.whisper_model_combo.get()
+        self._model_import_running=True;self.model_import_button.configure(state='disabled')
+        self.model_import_status.configure(text='Copiando y validando '+name+' sin internet…')
+        results=queue.SimpleQueue()
+        def work():
+            try:results.put((True,install_local_model(selected,name)))
+            except Exception as error:results.put((False,str(error)))
+        def poll():
+            try:ok,result=results.get_nowait()
+            except queue.Empty:
+                self.after(100,poll);return
+            self._model_import_running=False;self.model_import_button.configure(state='normal')
+            if ok:self.model_import_status.configure(text=name+' importado y validado. Use Guardar para seleccionarlo en los próximos lotes.')
+            else:
+                self.model_import_status.configure(text='No se importó el modelo. Se conservan los modelos y ajustes anteriores.')
+                messagebox.showerror('Importar modelo',str(result),parent=self)
+        threading.Thread(target=work,daemon=True).start();self.after(100,poll)
 
     # =========================================================
     # PANEL PROCESAMIENTO

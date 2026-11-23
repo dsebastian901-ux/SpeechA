@@ -1,0 +1,65 @@
+﻿rama,commit,fecha,asunto
+origin/fix/dictaminacion-excepciones-prioridad-20261121,cddfd0fc33839a1cec8be34119d7c7460dd1ee86,2026-11-21 20:36:38 -0600,Regresiones regla 58/146: recado aceptado -15 permite aprobar >=80 sin bloqueos
+origin/codex/auditoria-integral-r58-20261120,68f87a173ccffff8f2bd01048c8b0b53aabe879e,2026-11-21 14:48:32 +0000,Corrige contratos parciales r58 y completa permisos individuales locales
+origin/feature/usuarios-permisos-r58-20261120,0ddd54b977c503f6d7f9814a69a409699f9451b9,2026-11-20 16:08:16 -0600,UI: dejar accesible administración de usuarios desde barra superior
+origin/codex/correccion-revisar-r57,daed8a7f3053c0a2877016f01373315082e0b2d3,2026-11-19 21:21:17 +0000,Corregir la revisión de lotes e integrar el programa r57 completo
+origin/codex/descarga-r56,cb3927eef2a16edbcc97f914bd0e3e066656ac60,2026-11-18 15:07:04 +0000,Publicar instalador r56 y ZIP portable para descarga
+origin/build/r55-login-installer,708f00791613df8669b2e661ca39fd4e382da138,2026-11-17 21:09:21 -0600,Validar compilador Inno Setup y archivo instalador producido en Windows
+origin/build/r55-windows-exe,05c33450d03d6b67d9dbf0746bac8ba337b42c36,2026-11-17 20:51:38 -0600,Configurar compilación real EXE Windows para R55
+origin/test/r53-gpt6-correctiva-20261115,2ca33507d1ff3554c90cc1477ddba7e0664c0c18,2026-11-17 16:13:42 -0600,[Revisión Codex] Corregir estatus sin evidencia y distinguir resultados r51 heredados (#4)
+origin/codex/entrega-r55,e465a865ddbe8b5a9bdb240667a35e81b0999691,2026-11-17 20:46:36 +0000,"Corregir decisiones de pago, sujeto de gestión y recuperación local de lotes en r55"
+origin/codex/entrega-r54,0eaf8e1d4f794b5260196cad502eacf89557976b,2026-11-17 18:41:50 +0000,Corregir procesamiento de lotes y recuperación local de contexto en r54
+origin/review/quality-r53-evidence-20261116,be363f6bb2a224779153bceda7faea08f6209dbf,2026-11-16 00:53:54 -0600,Force UTF-8 on Windows workflow for checkpoint regression tests
+origin/test/r53-gpt6-integrada-test2-20261115,69c31b8aca9b56ee2838496d46c8e9cfcdb31431,2026-11-15 20:33:12 -0600,Document test2 recovery of 40 saved transcriptions and safe no-Whisper 767-call comparison
+origin/test/r53-gpt6-integrada-20261115,c50351e670dd8fd3f7a6f3c4ca7a125a32fa5ba3,2026-11-15 20:29:44 -0600,Restore clean Codex r53 dialogue module; preserve payment-deferral safeguard without damaged or duplicate code
+origin/review/gpt6-r53-fixes-20261115,e294741f7e77b086f27ba4f23d290a8f83a5d48b,2026-11-15 20:29:41 -0600,Restore clean Codex r53 dialogue module; preserve payment-deferral safeguard without damaged or duplicate code
+origin/codex/entrega-r53,cdc729e493ccff0ccc49c45be6d04b53e59c94ce,2026-11-15 20:08:44 +0000,Aplicar criterios de evaluación y justificar pendientes en r53
+origin/codex/entrega-r52,cdb193f3132d119cd7e01cc739620672b905357a,2026-11-15 06:58:37 +0000,Corregir conversación y separar pendientes de revisión en r52
+origin/feature/r51-local-user-access,ee79f5437ac874f687bf05b287fd2da30c70fedb,2026-11-14 12:27:00 -0600,"Regression tests: payment-deferral evidence versus agent remarks, historical payments and firm agreements"
+origin/codex/entrega-r51,4531372b921d9fb733b8167283ce594bb36dc0e5,2026-11-08 23:15:37 +0000,Resolver etiquetas corregibles y preservar quejas previas en r51
+origin/codex/entrega-r50,9d33ee6847b8046809d1aacc40d9a515c388e31a,2026-11-08 21:35:13 +0000,Corregir causas de revisión y reportes del programa r50
+origin/codex/entrega-r49,8ef439a350a6111378501f078f1c2c0f5f98121c,2026-11-08 16:55:13 +0000,r49: separate definitive rejection and improve message evidence
+origin/codex/entrega-r48,225feee99c0ebbc6d716cd6549797330372e87a7,2026-11-08 07:41:48 +0000,Correct message context and privacy gates in r48 batch program
+origin/codex/entrega-r47,c073435e7daafbccb2fe28b5e1023aa8237f0770,2026-11-07 20:58:01 +0000,Deliver r47 application with verified fresh-batch corrections and visible revision
+origin/codex/entrega-r46,911668435b8c13a8815fbc567efdfb1386c1d750,2026-11-07 20:15:26 +0000,Complete individual review of 59 pending calls and correct interpretation (r46)
+origin/codex/entrega-r45,5ddfa14a9045292ce10c1e4633956fd081e3da29,2026-11-07 16:16:11 +0000,Complete rule evaluation and corrected-label manager report (r45)
+origin/codex/entrega-r44,02985d42e6fe689b4a1b794223bd43d4dedc5a6c,2026-11-07 08:43:45 +0000,"Corrige interpretación de pagos, fechas e identidad en r44"
+origin/codex/entrega-r43,bac38854538a3fce6ed4841cc8316c4f4942f2d7,2026-11-07 04:03:16 +0000,Correct three false review blocks after the 46-call r42 audit
+origin/codex/entrega-r42,9923c54b4d4b2b669d4bb53289c89edbdfed37c7,2026-11-07 03:08:17 +0000,Correct contextual identity and payment-place scoring in r42 pilot
+origin/codex/preparacion-offline-reportes-14nov,35a370afe9a7ded9db00e35443709cb793f3ef56,2026-11-06 22:44:50 +0000,Prepare offline November delivery with consolidated reports and isolated USB account core
+origin/codex/entrega-r41,765ca6569ed6e3e0c7806bc03a24c8ce957f134f,2026-11-06 21:47:19 +0000,Add r41 package blocking prior mistreatment complaints and 65-second unattended waits
+origin/codex/entrega-r40,bf6a4a53e008753f03162070f6b7488ab11aa261,2026-11-06 17:06:00 +0000,Add r40 package correcting payment offer lists and verifying final batch reports
+origin/codex/entrega-r39,d331d20f9f7bd4cc25c0d66db83fea1e2a9dee20,2026-11-06 02:11:39 +0000,Add r39 package with corrected company and payment script evidence
+origin/codex/entrega-r38-20261105,c31bfeceeb82cad3532b7efc731233ead581610e,2026-11-05 19:43:28 +0000,Add verified r38 program download package
+origin/entrega/revision-36,4837ac2b2fbe0bc87b02a573416a8c2bd2e20d8a,2026-11-05 16:42:59 +0000,Confirm multiple recados in one responsive workflow and produce one final report
+origin/entrega/revision-35,d43f4f106036a27cfdd92290cb81d42fcfdd1a2a,2026-11-03 05:05:30 +0000,Preserve scoped user confirmation of delivered message and callback contact
+origin/entrega/revision-34,43c5b0d66978e797ab3d9d359c80b0adcc268d67,2026-11-03 04:36:19 +0000,Recognize delivered callback content with scoped user acceptance and actual dictation
+origin/entrega/revision-33,e3299b83f470a349df7c7f698ddcdcab1d7e00ce,2026-11-02 20:15:23 +0000,Preserve scoped user confirmation of message acceptance through reanalysis
+origin/entrega/revision-32,8c820439c1abdf1ff112f0a571605e9bdf3ed789,2026-11-02 18:51:05 +0000,Audit second audio block and preserve confirmed financial and home warnings in r32
+origin/entrega/revision-31,7f796537b1a9ec493f65077d8370c9e625b1b8af,2026-11-02 17:17:25 +0000,Verify returned native r31 checkpoint and preserved confirmations
+origin/entrega/revision-30,3f8b4b5c3363472c8ce4c5ab1d17c99f74405784,2026-11-02 16:48:06 +0000,Verify returned native r30 privacy registration and Excel results
+origin/entrega/revision-29,c8c7e1282f9f45e394fb1a1e14c8b4d46db70277,2026-11-02 15:13:08 +0000,Verify returned native r29 checkpoints and Excel export
+origin/entrega/revision-28,24314086dfaa5f3fc2e48f348919bd3da018a30a,2026-11-02 07:33:15 +0000,Expose audio block review launcher at package root
+origin/entrega/revision-27,ba4b1ce2b2ccfa591e2e19703367d5171e817ace,2026-10-31 21:04:11 +0000,Fix contextual recado approvals and callback reference detection in r27
+origin/entrega/revision-26,6b894943e13c67ce324ae103c720768ce8a7a6c1,2026-10-31 02:50:09 +0000,Require explicit ARCO rights and the complete document procedure in r26
+origin/entrega/recuperar-base-r25,7eb876f31a0ef0b49e1d5bb77f43213aae4f1968,2026-10-31 02:26:56 +0000,Record verification of returned native Windows r25 checkpoint and Excel
+origin/entrega/revision-25,71c838853df465cec46c4dde0fe1db7467aa7c92,2026-10-29 19:30:32 +0000,Correct conditional payment status and separate current offers from prior payments
+origin/entrega/revision-24,6c154f7d2c703aa4e973965e00dd77be14450027,2026-10-29 09:15:15 +0000,Preserve original call evidence when incorporating returned ASR readings
+origin/entrega/revision-23,0ffdaab427be9cf26a155ae1e665d29c894b41ea,2026-10-29 02:10:52 +0000,Corrige revisión de bloques y conserva lecturas ASR separadas en r23
+origin/entrega/revision-22,9854fee47bb3247ba6cc91c29e80c46b9ae1c5e3,2026-10-28 23:23:32 +0000,Corrige atribución de pagos y bloqueos de revisión en r22
+origin/entrega/revision-21,54643d4c5e973323176bc1ada8f7a5d5ff37019b,2026-10-28 16:28:24 +0000,Corrige bloqueos de aprobación y seguimiento de pagos en r21
+origin/entrega/revision-20,022251bb967a60fc37e2039dce2ea31bd180cd02,2026-10-28 01:04:21 +0000,Recognize named identity replies and prevent unconfirmed liquidation penalties
+origin/entrega/revision-19,861e6267f0295d14246fc0e6e963e443f3b31f06,2026-10-27 16:14:22 +0000,Import evidence-bound call reviews into the complete batch without retranscription
+origin/entrega/revision-18,bfd886758b65a6778f0e2618ca09cf37502f757d,2026-10-27 14:43:29 +0000,Persist reviewed balances and final installment agreements without rewriting ASR evidence
+origin/entrega/revision-17,3817070c81b73ad0e512f8bf34687ba9d9d43fbe,2026-10-26 23:11:30 +0000,Fix accumulated output paths during checkpoint validation on Windows
+origin/entrega/revision-16,9ab7a2592f37a0ef9e418847276bfbf4af042cd5,2026-10-26 22:33:02 +0000,Persist scoped human amount confirmations and correct account output names in copies
+origin/entrega/revision-15,6b4656eb94757c0c6500187230d5b603f52ec398,2026-10-26 21:48:09 +0000,Apply manual mora rules and confirmed first-payment installment windows
+origin/entrega/revision-14,1e1e57febe01e6f87940b58ba19b4b6103df9591,2026-10-26 20:24:08 +0000,Preserve automatic language selection during amount recovery
+origin/entrega/revision-13,ddeb648ef74094141ec00f734340df2dd58c7c0d,2026-10-26 18:32:36 +0000,Review settlement discounts and conditional promises after pending audio audit
+origin/entrega/revision-12,0d808e93dc9a81ff09d575c4f064b9df1f63bdac,2026-10-26 18:01:40 +0000,Fix reported-payment and recado evidence after original audio checks
+origin/entrega/revision-11,75802b48e83c20c6b9ed516d23c03f6b47287c63,2026-10-24 19:06:35 +0000,Fix dialogue-based contact and status validation and Excel status reporting
+origin/entrega/revision-10,89dd16acd618782155842a82e00c0187a1773a1c,2026-10-24 17:43:35 +0000,Fix future-payment false positives and fictitious installment totals
+origin/entrega/revision-09,8b43a61252e24b9ee53445f3dcb89a6b4fbe0cf3,2026-10-24 16:52:29 +0000,Fix reported false critical failures and add checkpoint reanalysis
+origin,0034173b1a351457eb16a01df36ae76b6896ffa0,2026-10-24 14:46:32 +0000,Add MRS Speech Analytics revision 08 candidate
+origin/entrega/revision-08,0034173b1a351457eb16a01df36ae76b6896ffa0,2026-10-24 14:46:32 +0000,Add MRS Speech Analytics revision 08 candidate
+origin/feature/local-user-access,0034173b1a351457eb16a01df36ae76b6896ffa0,2026-10-24 14:46:32 +0000,Add MRS Speech Analytics revision 08 candidate

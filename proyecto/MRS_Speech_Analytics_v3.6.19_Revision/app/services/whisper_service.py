@@ -171,6 +171,8 @@ class WhisperService:
             or runtime["compute_type"]
         )
 
+        from app.services.offline_model_service import local_model_identity
+        model_identity=local_model_identity(selected_model)
         requested_config = (
             selected_model,
             selected_device,
@@ -185,6 +187,7 @@ class WhisperService:
             self._model is not None
             and self._loaded_model_config
             == requested_config
+            and getattr(self,"_loaded_model_identity",None)==model_identity
         ):
             return
 
@@ -198,6 +201,7 @@ class WhisperService:
                 self._model is not None
                 and self._loaded_model_config
                 == requested_config
+                and getattr(self,"_loaded_model_identity",None)==model_identity
             ):
                 return
 
@@ -223,7 +227,11 @@ class WhisperService:
                     local_files_only=True,
                 )
 
+                from app.services.local_model_catalog import imported_model_info
+                provenance=imported_model_info(local_source)
                 self._model = new_model
+                self._loaded_model_identity=model_identity
+                self._model_provenance=provenance
 
                 self._loaded_model_config = (
                     requested_config
@@ -258,9 +266,15 @@ class WhisperService:
 
     def recover_context(self, audio_path, data, relation, metadata):
         """Dos lecturas locales con el modelo actual; no descarga ni sustituye ASR."""
-        model = self._model
-        if model is None:
-            return None
+        with self._model_lock:
+            model=self._model
+            if model is None:return None
+            loaded=self._loaded_model_config
+            selected=str(data.get('modelo')or'')
+            if selected and loaded and loaded[0]!=selected:
+                self.load_model(model_name=selected,device=data.get('dispositivo')or loaded[1],
+                                compute_type=data.get('tipo_calculo')or loaded[2])
+                model=self._model
         from faster_whisper.audio import decode_audio
         from app.services.context_audio_recovery import collect
         samples = decode_audio(str(audio_path), sampling_rate=16000)
@@ -442,11 +456,13 @@ class WhisperService:
         # CARGAR MODELO
         # -----------------------------------------------------
 
-        self.load_model(
-            model_name=selected_model,
-            device=selected_device,
-            compute_type=selected_compute_type,
-        )
+        # Fijar el objeto y su procedencia para toda la llamada, incluidos
+        # reintentos y ventanas. Un cambio de configuración no cambia el audio
+        # que ya se estaba transcribiendo ni su nombre de modelo registrado.
+        with self._model_lock:
+            self.load_model(model_name=selected_model,device=selected_device,compute_type=selected_compute_type)
+            active_model=self._model
+            active_provenance=getattr(self,'_model_provenance',None)
 
         # -----------------------------------------------------
         # TRANSCRIPCIÓN
@@ -461,6 +477,7 @@ class WhisperService:
             segments, information = (
                 self._run_transcription(
                     path=path,
+                    model=active_model,
                     language=selected_language,
                     beam_size=selected_beam_size,
                     vad_filter=selected_vad_filter,
@@ -487,6 +504,7 @@ class WhisperService:
                     segments, information = (
                         self._run_transcription(
                             path=path,
+                            model=active_model,
                             language=selected_language,
                             beam_size=(
                                 selected_beam_size
@@ -578,6 +596,7 @@ class WhisperService:
             ),
 
             "modelo": selected_model,
+            "modelo_identidad": active_provenance,
 
             "dispositivo": selected_device,
 
@@ -679,7 +698,7 @@ class WhisperService:
 
         recovery_started = perf_counter()
         data["recuperacion_importes"] = self.recover_missing_amounts(
-            path, complete_text, normalized_segments, selected_language)
+            path, complete_text, normalized_segments, selected_language, model=active_model)
         data["tiempo_recuperacion_importes_segundos"] = round(perf_counter()-recovery_started, 3)
         transcription_seconds = max(0.0, perf_counter()-transcription_started)
         data.update({
@@ -704,7 +723,7 @@ class WhisperService:
     # EJECUTAR FASTER-WHISPER
     # =========================================================
 
-    def recover_missing_amounts(self, audio_path, text, segments, language="es"):
+    def recover_missing_amounts(self, audio_path, text, segments, language="es", *, model=None):
         """Releer únicamente ofertas incompletas; conservar el texto original."""
         if str(language or "").lower() == "auto":
             language = None
@@ -713,9 +732,11 @@ class WhisperService:
         audio = None
 
         def read_window(start, end, beam):
-            nonlocal audio
-            if self._model is None:
-                self.load_model()
+            nonlocal audio,model
+            if model is None:
+                with self._model_lock:
+                    if self._model is None:self.load_model()
+                    model=self._model
             if audio is None:
                 from faster_whisper.audio import decode_audio
                 audio = decode_audio(str(audio_path), sampling_rate=16000)
@@ -723,7 +744,7 @@ class WhisperService:
             if len(clip) == 0:
                 raise ValueError("Ventana de audio vacía")
             with self._transcription_lock:
-                generated, _ = self._model.transcribe(
+                generated, _ = model.transcribe(
                     clip, language=language, task="transcribe", beam_size=beam,
                     vad_filter=False, word_timestamps=True,
                     condition_on_previous_text=False, temperature=0)
@@ -749,8 +770,10 @@ class WhisperService:
         beam_size: int,
         vad_filter: bool,
         word_timestamps: bool,
+        model=None,
     ):
-        if self._model is None:
+        selected_model=self._model if model is None else model
+        if selected_model is None:
             raise WhisperServiceError(
                 "El modelo Whisper no está cargado."
             )
@@ -758,7 +781,7 @@ class WhisperService:
         with self._transcription_lock:
 
             segment_generator, information = (
-                self._model.transcribe(
+                selected_model.transcribe(
                     str(path),
                     language=language,
                     task="transcribe",

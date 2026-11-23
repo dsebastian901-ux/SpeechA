@@ -1,0 +1,14 @@
+{
+  "fecha": "2026-11-23",
+  "rama_funcional_mas_reciente": "fix/dictaminacion-excepciones-prioridad-20261121",
+  "commit_base": "cddfd0fc33839a1cec8be34119d7c7460dd1ee86",
+  "rama_integracion": "codex/integracion-medium-dictaminacion-20261123",
+  "base_contiene_auditoria_r58": true,
+  "commits_posteriores_a_68f87a1": 72,
+  "cambios_pendientes_al_iniciar": "",
+  "ramas_remotas_actualizadas": true,
+  "criterio_de_seleccion": "Fecha de commit y cambios en código de producción; la rama seleccionada desciende de la auditoría r58 y conserva sus permisos.",
+  "compilacion_exe_ejecutada": false,
+  "politicas_sustituidas": false,
+  "datos_privados_publicados": false
+}
