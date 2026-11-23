@@ -1,13 +1,7 @@
 @echo off
+setlocal
 cd /d "%~dp0"
-where py >nul 2>&1
-if %errorlevel%==0 (
-  py -3.10 --version >nul 2>&1
-  if %errorlevel%==0 (
-    py -3.10 main.py
-    goto :end
-  )
-)
-python main.py
-:end
-if not %errorlevel%==0 pause
+call "%~dp0ENTORNO_MRS.bat" iniciar
+set "MRS_EXIT_CODE=%errorlevel%"
+if not "%MRS_EXIT_CODE%"=="0" if not defined MRS_NO_PAUSE pause
+exit /b %MRS_EXIT_CODE%

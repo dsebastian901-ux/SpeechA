@@ -1,14 +1,39 @@
-MRS SPEECH ANALYTICS PROFESSIONAL v3.5.7
+MRS SPEECH ANALYTICS - ARRANQUE LOCAL DESDE VISUAL STUDIO CODE
 
-INSTALACION EN OTRA PC
-1. Descomprima el ZIP completo en una carpeta local.
-2. Debe tener Python 3.10 de 64 bits instalado.
-3. Ejecute INSTALAR.bat.
-4. Espere a que aparezca "INSTALACION COMPLETADA CORRECTAMENTE".
-5. Abra el programa con INICIAR_MRS.bat.
+El repositorio contiene el codigo. Descargarlo desde GitHub no instala Python,
+sus dependencias ni los modelos de Whisper en una computadora nueva.
 
-IMPORTANTE
-- No ejecute el programa directamente dentro del ZIP.
-- Mantenga todos los archivos y carpetas juntos.
-- La primera instalacion requiere Internet para descargar dependencias.
-- Esta copia corresponde al codigo activo v3.5.7 del paquete proporcionado.
+PRIMERA PREPARACION CON CONEXION (terminal en la raiz de SpeechA)
+1. Verifique que tenga Python 3.10 de 64 bits: py -3.10 --version
+2. Cree el entorno local: py -3.10 -m venv .venv
+3. Instale las dependencias completas del proyecto:
+   .\.venv\Scripts\python.exe -m pip install -r .\proyecto\MRS_Speech_Analytics_v3.6.19_Revision\requirements.txt
+4. Ejecute proyecto\MRS_Speech_Analytics_v3.6.19_Revision\INSTALAR.bat.
+   Este archivo COMPRUEBA los componentes locales; no ejecuta pip ni descarga.
+5. Abra INICIAR_PROGRAMA.bat desde la raiz. Conserva el inicio de sesion local.
+
+PREPARACION SIN CONEXION
+Use un entorno local completo o el runtime del paquete portable, con las
+dependencias ya presentes. Otra opcion es instalar desde una carpeta USB con
+TODAS las ruedas .whl compatibles y sus dependencias. Para esa opcion, use:
+   .\.venv\Scripts\python.exe -m pip install --no-index --find-links C:\MRS_Ruedas -r .\proyecto\MRS_Speech_Analytics_v3.6.19_Revision\requirements.txt
+La carpeta C:\MRS_Ruedas debe existir y contener esos paquetes; no la crea MRS.
+
+SELECCION DEL PYTHON
+El arranque comprueba el Python indicado por MRS_PYTHON, el entorno activado,
+.venv/venv del repositorio y de la aplicacion, el runtime portable y los Python
+disponibles en PATH/py. Abre con el primer entorno que tiene los componentes.
+Si falta alguno o falla una DLL, muestra el detalle y no anuncia instalacion lista.
+En VS Code puede seleccionar .venv\Scripts\python.exe como interprete.
+No hace falta activar scripts de PowerShell ni cambiar ExecutionPolicy.
+
+WHISPER SIN INTERNET
+Antes de procesar audios debe existir un modelo local completo. Puede copiar
+Small por USB a proyecto\MRS_Speech_Analytics_v3.6.19_Revision\data\models\small.
+Debe contener config.json, model.bin y tokenizer.json, ademas de los archivos
+del paquete original. El arranque no descarga pesos y no activa Medium.
+
+DATOS Y USUARIOS
+Las comprobaciones no borran ni sustituyen cuentas, contrasenas, modelos,
+proyectos o audios. Trabaje fuera del ZIP y conserve las carpetas completas.
+Las pruebas bajo Wine no sustituyen la validacion en Windows fisico.

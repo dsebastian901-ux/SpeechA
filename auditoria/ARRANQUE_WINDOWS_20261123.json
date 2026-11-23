@@ -1,0 +1,51 @@
+{
+  "base_commit": "bc7f834",
+  "regresion_focal": {
+    "tests": 72,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 72
+  },
+  "windows_cmd_wine": {
+    "antes": {
+      "tests": 2,
+      "failures": 2
+    },
+    "despues": {
+      "tests": 8,
+      "passed": 8,
+      "failures": 0
+    }
+  },
+  "comprobaciones_windows": [
+    "entorno activado",
+    "entorno local del repositorio frente a global incompleto",
+    "entorno local de aplicacion",
+    "Python indicado explicitamente",
+    "entorno activado incompleto con alternativa valida",
+    "runtime incompleto no se anuncia instalado",
+    "runtime completo tiene prioridad sobre global incompleto",
+    "conservacion del codigo de salida de la aplicacion"
+  ],
+  "r57_hashes_sin_cambios": 780,
+  "windows_fisico": false,
+  "gui_real_arrancada_en_estas_pruebas": false,
+  "instalacion_en_equipo_usuario": false,
+  "descargas_automaticas": false,
+  "modelo_medium_activado": false,
+  "fuentes_sha256": {
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/INICIAR_MRS.bat": "6b1b5dfaf107dc3d8b6f6b198b98a0a2e4b43458450b916560474fab3e2d0431",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/INSTALAR.bat": "8df4c9f342ba571c1f51fa4589f6dfa9f0b7b13f6f4aec53d7502724b2b82e6e",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/ENTORNO_MRS.bat": "35a902e2b916faf4b7cd3dc7877712a6f3cf1e5eed40c9cf7bd20f8127b56c1a",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tools/check_startup_environment.py": "a896b0692ef19aaf21082414018049d7d95a0452d5c9bb13aebec6f97893d030",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_startup_environment.py": "1640d9b7c8e98017cc941ec906cbfc5a557e139693a5f7accd864bcc34f3d39e",
+    "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_startup_windows.py": "d9fd465e1e0f12959cc4e83e537d1b17461befa892623615c60d48304a3d76b1"
+  },
+  "logs_privados_sha256": {
+    "before-windows-tests.log": "49a6fd6602163143ffd675d75f4f7ca1d2cb03c69d8afa38c7bbb30e6e2d3bed",
+    "after-windows-tests.log": "285902d2720a009dc36456d786e14ee07196d5ebe4c12871a34cf564f19dc4fc",
+    "regression.xml": "0c23a244f8649b06f9f7802c8557318306bd0f3cf13bb430ce642648a66f7068"
+  },
+  "codigo_app_sin_cambios": true
+}
