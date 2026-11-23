@@ -56,8 +56,10 @@ def test_reported_payment_status_carries_original_evidence_for_output_correction
  a=AnalyticsService.analyze_transcription(TranscriptionModel.from_dict({'archivo':'synthetic.ogg','texto':text,'duracion_segundos':130}),
    {'estatus_grabacion':'NO CONOCEN A DEUDOR','pago_minimo':1000,'numero_de_tarjeta':'1234567890123456','asignacion':'C3',
     'nombre_final':'0001234567890123456_C3_300_NC_AGENTE_MRS_20261108'})
- s=a.metadata['status_validation'];assert s['detected_status']=='ACLARACION'and s['evidence']
+ # Criterio 72 y aclaración 23/11: importe confirmado + comprobante es seguimiento CONVENIO.
+ s=a.metadata['status_validation'];assert s['detected_status']=='CONVENIO'and s['evidence']
  assert a.metadata['shared_classification']['output_label_correction']['valid']
+ assert a.metadata['shared_classification']['output_label_correction']['corrected_code']=='PP'
  assert a.metadata['shared_classification']['clasificacion']=='APROBADO_ETIQUETA_CORREGIDA'
  unsafe=AnalyticsService.analyze_transcription(TranscriptionModel.from_dict({'archivo':'synthetic.ogg','texto':text+' En la llamada anterior me trataron mal.','duracion_segundos':130}),
    {'estatus_grabacion':'NO CONOCEN A DEUDOR','pago_minimo':1000,'numero_de_tarjeta':'1234567890123456','asignacion':'C3','nombre_final':'0001234567890123456_C3_300_NC_AGENTE_MRS_20261108'})

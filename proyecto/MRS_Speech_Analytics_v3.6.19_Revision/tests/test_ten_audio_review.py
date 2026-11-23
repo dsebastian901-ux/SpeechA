@@ -24,7 +24,13 @@ def test_listing_of_banks_does_not_make_other_authorized_options_unsafe():
     a=analyze(text);p=a.metadata['convenio_payment_validation']
     assert p['transfer_option_listing_only'] and not p['transfer_data_review']
     assert p['authorized_places_count']==2
-    assert a.metadata['final_result']=='APROBADO'
+    # 23/11: los lugares válidos no sustituyen aceptar el importe que se
+    # anunció después de la promesa del titular.
+    assert a.metadata['status_validation']['detected_status']=='NO DEFINE FECHA DE PAGO'
+    assert not a.metadata['status_validation']['amount_confirmed_from_dialogue']
+    # Calidad correcta de NO DEFINE, sin fabricar aceptación ni etiqueta.
+    assert a.metadata['final_result']=='APROBADO_SIN_ETIQUETAR'
+    assert not a.metadata['shared_classification']['output_label_correction']['valid']
 
 
 @pytest.mark.parametrize('text,places',[

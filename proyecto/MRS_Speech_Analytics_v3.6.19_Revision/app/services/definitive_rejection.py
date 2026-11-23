@@ -98,7 +98,6 @@ def definitive_rejection(metadata,findings,duration_seconds):
     # otra duda no lo convierte de nuevo en REVISAR ni desaparece del reporte.
     if any(f['severity']=='CRITICAL'for f in blocking):return None
     n=metadata.get('negotiation_validation')or{}
-    policy=n.get('mora_payment_policy')or{}
     # Importe aceptado y cotejado inválido: rechazo, no una extracción dudosa.
     # Las dudas independientes permanecen como alertas del rechazo.
     if (metadata.get('quality_contact_type')=='TITULAR'
@@ -114,27 +113,10 @@ def definitive_rejection(metadata,findings,duration_seconds):
             'severity':'CONFIRMED_NONCRITICAL','source_field':'negotiation_validation',
             'resolves_codes':['NEGOTIATION_INVALID_OR_UNCERTAIN'],
             'reasons':[n.get('motivo_validacion_monto')or'El importe del compromiso confirmado incumple la política financiera.']}
-    if (metadata.get('quality_contact_type')=='TITULAR'
-            and n.get('financial_validation_applicable') and n.get('valid')is False
-            and not n.get('review_required')
-            and n.get('payment_date_confirmed') and n.get('commitment_confirmed')
-            and n.get('amount_confirmed') and not n.get('date_year_rollover_review')
-            and not n.get('payment_confirmation_case') and not n.get('multipago_detectado')
-            and not(n.get('accepted_schedule')or{}).get('confirmed')
-            and not(n.get('installment_window')or{}).get('applies')):
-        from datetime import date
-        try:
-            promised=date.fromisoformat(str(n['promise_date'])[:10])
-            maximum=date.fromisoformat(str(policy['window_end'])[:10])
-            if promised>maximum:
-                return {'rule_group':12,'code':'CONFIRMED_PAYMENT_DATE_OUTSIDE_POLICY',
-                    'severity':'CONFIRMED_NONCRITICAL','source_field':'negotiation_validation',
-                    'resolves_codes':['NEGOTIATION_INVALID_OR_UNCERTAIN'],
-                    'reasons':[f'La fecha de pago aceptada ({promised}) excede el plazo autorizado ({maximum}); incumplimiento comprobado.']}
-        except (ValueError,KeyError,TypeError):
-            pass
+    # El plazo operativo fuera de política se resuelve como FALLA_MINIMA
+    # por la instrucción del 23/11, separado de los rechazos restantes.
     coverage=(metadata.get('negotiation_validation')or{}).get('followup_coverage_validation')or{}
-    if coverage.get('confirmed_failure'):
+    if coverage.get('confirmed_failure') and not (n.get('reported_payment_management')or{}).get('confirmed_receipt_only_shortfall'):
         return {'rule_group':12,'code':'CONFIRMED_INSUFFICIENT_FOLLOWUP','severity':'CONFIRMED_NONCRITICAL',
             'source_field':'negotiation_validation','reasons':[coverage['reason']]}
     # La acusación al gestor actual que NO se corroboró es alerta (141);

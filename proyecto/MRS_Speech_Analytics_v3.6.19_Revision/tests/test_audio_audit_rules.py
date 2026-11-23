@@ -100,7 +100,10 @@ def test_positive_answer_to_past_payment_question_is_a_report_not_a_future_agree
     assert n["payment_confirmation_case"]
     assert n["prior_payment_total"] == 5000
     assert not n["commitment_confirmed"]
-    assert r["status_validation"]["detected_status"] == "ACLARACION"
+    # Aclaración 23/11: solo comprobante con pago insuficiente es falta
+    # mínima; el seguimiento no es una aclaración bancaria.
+    assert r["status_validation"]["detected_status"] == "CONVENIO"
+    assert r['final_result'] == 'FALLA_MINIMA'
     assert "PEN_SIN_INTENTO_NEGOCIACION" in {p["id"] for p in r["penalties"]}
 
 

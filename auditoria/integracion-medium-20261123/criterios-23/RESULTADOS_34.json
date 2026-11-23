@@ -1,0 +1,1029 @@
+{
+  "base": "3f7011b",
+  "criterio": "USER_DECISIONS_20261123",
+  "casos": [
+    {
+      "identificador": "6b4c9fad9dbe",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_audio_audit_rules.py",
+      "funcion_prueba": "test_positive_answer_to_past_payment_question_is_a_report_not_a_future_agreement",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "Pago5000<11000 y solo comprobante: FALLA_MINIMA. Se conserva el descuento por falta de gestión; no clasificar ACLARACION ni inventar cobertura.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/minor_failure_policy.py",
+          "funcion": "reported_payment_management",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/minor_failure_policy.py",
+          "funcion": "confirmed_minor_failure",
+          "linea": 73
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "464be58a15554977baf9170dfb2d96671b1ef9d6b676d939009cd16c69e84a4e",
+      "xml_sha256": "e0d55954d165ad18676ec9364dc21524f1020850ab4c8f18a344e3b93e5d8b16"
+    },
+    {
+      "identificador": "c3ae0e056c8c",
+      "grupo": "checkpoints",
+      "archivo_prueba": "tests/test_checkpoint_review_import.py",
+      "funcion_prueba": "test_import_keeps_all_calls_original_transcripts_runtime_paths_and_validations",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "El estatus se resolvía antes de validar importes, plan final y confirmaciones financieras. La decisión retenía un bloqueo ya resuelto por evidencia válida.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea": 7
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "4c162e97915325c31d1b9ab825110d3e0dda582acf3cbe65ebc1833a58394297",
+      "xml_sha256": "e22f66b75369927ec74ce7d3a1cb755fba390ad72e819ad385d4aeaeb2f3c331"
+    },
+    {
+      "identificador": "acb4b2887845",
+      "grupo": "checkpoints",
+      "archivo_prueba": "tests/test_checkpoint_review_import.py",
+      "funcion_prueba": "test_reordered_reviewed_calls_are_matched_by_filename",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "El estatus se resolvía antes de validar importes, plan final y confirmaciones financieras. La decisión retenía un bloqueo ya resuelto por evidencia válida.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea": 7
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "647e621d2a798ec1a5fb7b8fcf749eb0e28e488e2bf21f4e6856b0729284906b",
+      "xml_sha256": "c5b68b18851e5b4822e7fab511ad06ca4b4d22f2bc553d2d41a9d75e40b449f3"
+    },
+    {
+      "identificador": "fb39a573fb0b",
+      "grupo": "recados",
+      "archivo_prueba": "tests/test_context_audio_recovery.py",
+      "funcion_prueba": "test_callback_consensus_resolves_only_missing_contact",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "El dictaminador duplicaba un detector estrecho de oferta de teléfono y trataba ASR incompleto como omisión acreditada de -15 puntos, llegando a aprobar.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/message_contact_evidence.py",
+          "funcion": "unfinished_callback_offer",
+          "linea": 204
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "6c1f1852aded9a68ba76536c980c0a3f0382e1f1593893498a827cc83ac8f66f",
+      "xml_sha256": "8e69c4e3ea45124bd0467c2c755b3d73dac1a639439022483db7c0713a3b15b7"
+    },
+    {
+      "identificador": "294977b1114a",
+      "grupo": "recados",
+      "archivo_prueba": "tests/test_dialogue_frames_r53.py",
+      "funcion_prueba": "test_later_receipt_replaces_temporary_inability_but_not_final_refusal",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "La recepción posterior se conserva; la revocación final acredita SE NIEGAN A TOMAR RECADO. Evaluar pasos ejecutables; sin código autorizado, calidad correcta queda sin etiquetar.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "confirmed_status_without_label",
+          "linea": 24
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "01cdd48247cab7b390581fe6c4304671fcddf040b2a9072ef90373db72da86eb",
+      "xml_sha256": "03798b427b48da292e408b4a8c16d8eab3711d05845bbcc17d9e6dbd6b133a19"
+    },
+    {
+      "identificador": "017c652653b3",
+      "grupo": "recados",
+      "archivo_prueba": "tests/test_dialogue_frames_r53.py",
+      "funcion_prueba": "test_received_message_with_incomplete_callback_has_its_actual_pending_reason",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "La decisión ya era REVISAR, pero el motivo no cumplía el contrato textual que distingue recepción probada de entrega incierta del teléfono.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "f9c9506451c8c246d741ba6f531e0c5616255ea5048df68bdc58562afc09939b",
+      "xml_sha256": "03af9742b38e8d010e4a2d44ac93759bc43211729426ef3ade5126e913dbcf3e"
+    },
+    {
+      "identificador": "e9724fcdf01e",
+      "grupo": "reportes",
+      "archivo_prueba": "tests/test_dialogue_status.py",
+      "funcion_prueba": "test_excel_does_not_put_contact_type_in_the_detected_status_column",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "Se cambió el identificador de método de evidencia, rompiendo lectores de reportes y validadores que dependen del contrato existente.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "tools/regression_checkpoints.py",
+          "funcion": "verified_current_agreement",
+          "linea": 210
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "1a66abe03b6728e6f464afeaafc29f0b4ee7a563d2b6a2dc77c82c9c357a9fe3",
+      "xml_sha256": "3cb0c4b9033fc1bf6db28a512ecab8498095ae3824c3b5197f2231029904b806"
+    },
+    {
+      "identificador": "4a443799d235",
+      "grupo": "checkpoints",
+      "archivo_prueba": "tests/test_financial_review.py",
+      "funcion_prueba": "test_checkpoint_reviews_persist_report_original_values_and_can_be_revoked",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "El estatus se resolvía antes de validar importes, plan final y confirmaciones financieras. La decisión retenía un bloqueo ya resuelto por evidencia válida.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea": 7
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "d1e4e466fce176b01a453588d2f9575c36d591dd1baa3070c0f952ffcf881a5a",
+      "xml_sha256": "4b7440117a7e40a75b8f39b201d13ad9648d2d343d33a5021a648c75d365929b"
+    },
+    {
+      "identificador": "d789165fd016",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_financial_review.py",
+      "funcion_prueba": "test_confirmed_fact_resolves_only_its_discrepancy_without_changing_source",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "El estatus se resolvía antes de validar importes, plan final y confirmaciones financieras. La decisión retenía un bloqueo ya resuelto por evidencia válida.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea": 7
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "6946673fa1f86990bd4ec2098053a244fc1f0340d5c1fe5cb08032b5f96d8616",
+      "xml_sha256": "9ede6a587a8386f0f5e51b5cb1226f4029debbc0a05f3286468e3faede1dcce6"
+    },
+    {
+      "identificador": "193292767136",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_financial_review.py",
+      "funcion_prueba": "test_final_plan_confirmation_keeps_other_blockers",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "El estatus se resolvía antes de validar importes, plan final y confirmaciones financieras. La decisión retenía un bloqueo ya resuelto por evidencia válida.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea": 7
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "c7a82a1acbc744ec410dfb95ad54738efc4c81739c4acaa9ea7d79fd5c953c6d",
+      "xml_sha256": "c1e54a048a1aa7523321bc4210a025db292cc543d094240739e012e4ad170d27"
+    },
+    {
+      "identificador": "519e8e72d388",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_followup_calibration.py",
+      "funcion_prueba": "test_regression_approval_exception_requires_the_new_user_policy_and_evidence",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "La herramienta de regresión exigía una promesa futura a un seguimiento de pago ya reportado y no reconocía el criterio 72 vigente.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "tools/regression_checkpoints.py",
+          "funcion": "verified_followup_approval",
+          "linea": 123
+        },
+        {
+          "archivo": "tools/regression_checkpoints.py",
+          "funcion": "_reported_followup_without_new_commitment",
+          "linea": 51
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "8707f6d4c96754710bf0a62f35c31285b102588e841b88c1f9f5d0aae715dadd",
+      "xml_sha256": "441243c7b82e064141d9bfb5372b8fc1c3a75f9a57f06ca30d30ac2fb821f960"
+    },
+    {
+      "identificador": "82f2e725a0c3",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_followup_calibration.py",
+      "funcion_prueba": "test_user_policy_retains_original_status_in_verified_payment_followup",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "Importe reportado suficiente y comprobante: CONVENIO. Ya aprobaba en 3f7011b; se concilia expectativa de ACLARACION/procedencia de octubre, no se cuenta como reparación nueva del motor.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/minor_failure_policy.py",
+          "funcion": "reported_payment_management",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/minor_failure_policy.py",
+          "funcion": "confirmed_minor_failure",
+          "linea": 73
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "033cfb085ee02f8d8e516c6dddf96f5f3719bd8b0c411f963e67c7de458e5e62",
+      "xml_sha256": "a09c79e71fcfa867fc5c37244f1c6fb03d5f38a9c5fbd8b7c560107fadcc9ffb"
+    },
+    {
+      "identificador": "7897731e2c1b",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_followup_calibration.py",
+      "funcion_prueba": "test_user_policy_retains_original_status_in_verified_payment_followup",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "Importe suficiente y comprobante: CONVENIO; Excel TH no coincide. Sin nombre reetiquetable pasa a APROBADO_SIN_ETIQUETAR, conservando fuente y motivo en reporte.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "confirmed_status_without_label",
+          "linea": 24
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/batch_report_service.py",
+          "funcion": "_row_from_item",
+          "linea": 534
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "320418a142dbb681dcc95cf0e2eab02616c1e2706712b2586cfb6de4b81dfb5b",
+      "xml_sha256": "aa01e0d3554c4d34c85d6040fa9bab1734d0da8379f383ab88ace1edfadf1620"
+    },
+    {
+      "identificador": "ef2311590209",
+      "grupo": "recados",
+      "archivo_prueba": "tests/test_fresh_batch_message_policy_r48.py",
+      "funcion_prueba": "test_new_batch_applies_message_policy_and_safety_before_any_reanalysis",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "El dictaminador duplicaba un detector estrecho de oferta de teléfono y trataba ASR incompleto como omisión acreditada de -15 puntos, llegando a aprobar.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/message_contact_evidence.py",
+          "funcion": "unfinished_callback_offer",
+          "linea": 204
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "07a63e52982d8b9c121de77eefaa6e8056505099ad5a339c1a3feff188c10168",
+      "xml_sha256": "eddd95a5245447b9ee83a862c1b67b3ea4230059b457e334849fc4c20882cccf"
+    },
+    {
+      "identificador": "ef2a5b872cb2",
+      "grupo": "dictaminación",
+      "archivo_prueba": "tests/test_fresh_batch_r49.py",
+      "funcion_prueba": "test_initial_batch_separates_approved_review_rejection_and_severe_failure",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "Lote nuevo genera aprobado, calidad sin etiquetar para los dos rechazos del tercero, REVISAR por privacidad incierta y FALLA_GRAVE por divulgación confirmada. No se sube el puntaje.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "confirmed_status_without_label",
+          "linea": 24
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "f0ca0e0e349595b844e6ce2f4cba603238a4e3cd61ca029de2e08e30a20a47b9",
+      "xml_sha256": "f462da0c7855ca1696744c4f51df7957179f80965f85dc63a987b39e4039e8cc"
+    },
+    {
+      "identificador": "6271a64e43b7",
+      "grupo": "dictaminación",
+      "archivo_prueba": "tests/test_message_dialogue_r49.py",
+      "funcion_prueba": "test_bare_no_to_positive_message_offer_is_an_explicit_refusal",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "Negativa directa del tercero conserva SE NIEGAN A TOMAR RECADO, sin rechazo automático de calidad del gestor; se registra evidencia alta del estatus.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "confirmed_status_without_label",
+          "linea": 24
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "1de35c6705200f587263c83005e9f31ab13478c878f7a3eb315d8c44fbbc91cc",
+      "xml_sha256": "794cf60b711ea3327f0a16b1719fc51cd3ce2ed2473696dcd3e7113de1aebbfc"
+    },
+    {
+      "identificador": "fccd255baf2b",
+      "grupo": "recados",
+      "archivo_prueba": "tests/test_message_dialogue_r49.py",
+      "funcion_prueba": "test_declined_note_without_contact_is_definitive_but_later_delivery_is_not",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "Sin recepción final se conserva SE NIEGAN A TOMAR RECADO. La incapacidad de anotar no acredita incumplimiento del gestor; calidad y etiqueta quedan separadas.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "confirmed_status_without_label",
+          "linea": 24
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "808dfae1ed8f9fdc74e04e9f4daf48a799b85ea62a74ce685b5f7c7368c58182",
+      "xml_sha256": "fab9374e3691963f2c2c8c36a07edf49bbee1ba0161a86c366ae9619f68c235c"
+    },
+    {
+      "identificador": "e33c4f619200",
+      "grupo": "dictaminación",
+      "archivo_prueba": "tests/test_message_dialogue_r49.py",
+      "funcion_prueba": "test_explicit_refusal_is_closed_without_approving_or_clearing_security",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "Rechazo del tercero: calidad por etapas ejecutables. Variante con posible divulgación permanece REVISAR; nunca dispensar privacidad por el rechazo.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "confirmed_status_without_label",
+          "linea": 24
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "a33286c6a594617561f0e2dcac2a49e43285cbd1cba8a7c7c6e90fb2dbe961c8",
+      "xml_sha256": "85abdd4b5d2cdefe1ea535b1afbea1df58f37c37dbd0620bc0795dfc416d3df4"
+    },
+    {
+      "identificador": "443928271266",
+      "grupo": "recados",
+      "archivo_prueba": "tests/test_message_dialogue_r49.py",
+      "funcion_prueba": "test_repeated_partial_number_at_cutoff_is_not_complete_contact",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "El dictaminador duplicaba un detector estrecho de oferta de teléfono y trataba ASR incompleto como omisión acreditada de -15 puntos, llegando a aprobar.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/message_contact_evidence.py",
+          "funcion": "unfinished_callback_offer",
+          "linea": 204
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "63203b4ec2b29e7ab8c45616e4d500960794bb60488784fb13fb7fe05b0386bf",
+      "xml_sha256": "1127e60d9aa00b3cc89ce28974cdd7c142c46407125b556a88c0ab2d55e97d6f"
+    },
+    {
+      "identificador": "e226eaa54329",
+      "grupo": "recados",
+      "archivo_prueba": "tests/test_message_dialogue_r49.py",
+      "funcion_prueba": "test_return_instruction_without_a_delivered_contact_never_approves",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "El dictaminador duplicaba un detector estrecho de oferta de teléfono y trataba ASR incompleto como omisión acreditada de -15 puntos, llegando a aprobar.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/message_contact_evidence.py",
+          "funcion": "unfinished_callback_offer",
+          "linea": 204
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "b336bfbb42d8a55315e2f7350d4a6528e0fd95453f81c1e21f96f9ae7c5d2932",
+      "xml_sha256": "1d4ece42685f4c9099d13c2fe693687f197c11b15012ab855446e82d121173a5"
+    },
+    {
+      "identificador": "2b434f84c6b9",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_mora_payment_policy.py",
+      "funcion_prueba": "test_two_installment_exception_is_applied_to_the_complete_decision",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "La aceptación expresa del plan completo no se vinculaba a sus importes anteriores y la clasificación repetía un límite fijo sin aplicar la ventana multipago validada.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/operational_outcome_resolution.py",
+          "funcion": "final_plan_amounts_accepted",
+          "linea": 47
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "5beef0f5d302fb12666a7ce7ac1117654f854b8eed2924bb1a949e6a3bd31241",
+      "xml_sha256": "c4adf923b5d566e99aa73444ee835cf25e9b91170f13c81da70dad7e448f4493"
+    },
+    {
+      "identificador": "0b1b344c0368",
+      "grupo": "checkpoints",
+      "archivo_prueba": "tests/test_recado_batch_review.py",
+      "funcion_prueba": "test_batch_does_not_force_approval_or_waive_other_controls",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "Una confirmación humana de entrega/contacto forzaba valid=True aunque una negativa final posterior revocara la recepción.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/message_workflow.py",
+          "funcion": "workflow_validation",
+          "linea": 52
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "093c5b9123e80e01bc14e02fb1c224b28bc4922b391264e39e6ebe4b90ec2ab8",
+      "xml_sha256": "3e2c6a408d43efc80ff946d1e777857fb1e0e63942b7877e63458d550f679740"
+    },
+    {
+      "identificador": "0bbd759fc50c",
+      "grupo": "recados",
+      "archivo_prueba": "tests/test_recado_context_r27.py",
+      "funcion_prueba": "test_actual_message_refusals_still_block",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "Se omitía el rechazo elíptico de un recado ofrecido («no se lo puedo pasar», «no puedo recibir»), permitiendo una recepción falsa.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "explicit_message_refusal",
+          "linea": 10
+        },
+        {
+          "archivo": "app/services/message_workflow.py",
+          "funcion": "workflow_validation",
+          "linea": 52
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "320418a142dbb681dcc95cf0e2eab02616c1e2706712b2586cfb6de4b81dfb5b",
+      "xml_sha256": "8a14e2de4a43dc030d284f2454d96a118e82614fa0389cb34a5e5cffcaff8e3e"
+    },
+    {
+      "identificador": "7b063e578671",
+      "grupo": "recados",
+      "archivo_prueba": "tests/test_recado_context_r27.py",
+      "funcion_prueba": "test_actual_message_refusals_still_block",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "Se omitía el rechazo elíptico de un recado ofrecido («no se lo puedo pasar», «no puedo recibir»), permitiendo una recepción falsa.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "explicit_message_refusal",
+          "linea": 10
+        },
+        {
+          "archivo": "app/services/message_workflow.py",
+          "funcion": "workflow_validation",
+          "linea": 52
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "320418a142dbb681dcc95cf0e2eab02616c1e2706712b2586cfb6de4b81dfb5b",
+      "xml_sha256": "3c71e9d31776b3baf184c2ff3dc85c0a468d40109d1eef498123acc726bac6d0"
+    },
+    {
+      "identificador": "eeaa0d19e854",
+      "grupo": "recados",
+      "archivo_prueba": "tests/test_recado_delivery_review.py",
+      "funcion_prueba": "test_delivered_recado_does_not_waive_other_quality_rules",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "Una confirmación humana de entrega/contacto forzaba valid=True aunque una negativa final posterior revocara la recepción.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/message_workflow.py",
+          "funcion": "workflow_validation",
+          "linea": 52
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "6edbdf6855c1e52b6d4717078920b961e1ebf9a67b233ef94fd73219a3da75b8",
+      "xml_sha256": "2200782c4ba757f44b29308eebad388b4823518fdf488302a10e98507dfc12b9"
+    },
+    {
+      "identificador": "9fdda7460edc",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_reported_batch_regression.py",
+      "funcion_prueba": "test_accepted_payment_does_not_require_literal_confirmo_convenio",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "Se reconocía aceptación/intención de pago pero no el importe explícito de la misma oferta; los extractores de compromiso e importe discrepaban.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/payment_intent_frames.py",
+          "funcion": "payment_frames",
+          "linea": 56
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea": 7
+        },
+        {
+          "archivo": "app/services/payment_lifecycle.py",
+          "funcion": "financial_response_events",
+          "linea": 34
+        },
+        {
+          "archivo": "app/services/conversation_evidence.py",
+          "funcion": "payment_commitment",
+          "linea": 390
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "6adb81285ad83cda4860e53fd7a29d459160a711fe0e4b04323f735de187fab8",
+      "xml_sha256": "1b07b556ff3ec62904794c331ab4f9107466035ca22da43a8d516c92b272008c"
+    },
+    {
+      "identificador": "9a345d8d9315",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_reported_batch_regression.py",
+      "funcion_prueba": "test_reported_deposit_amount_can_cover_the_minimum_without_a_new_promise",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "Pago1000>=750 pero sin solicitud de comprobante: NO DEFINE como estatus y FALLA_MINIMA por omisión. No inventar PAGO REPORTADO / ACLARACION.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/minor_failure_policy.py",
+          "funcion": "reported_payment_management",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/minor_failure_policy.py",
+          "funcion": "confirmed_minor_failure",
+          "linea": 73
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "d40f86cec22ce9eff8b5bcb1061ca911ae5ea7854fd90fa8be313cf1e0e05292",
+      "xml_sha256": "24e9e1b52e98a110c3a43c0c200974f9c451a726b05a6ec33a20682ce17b09ec"
+    },
+    {
+      "identificador": "1bf104e55442",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_review_backlog.py",
+      "funcion_prueba": "test_negated_partial_warning_does_not_generate_partial_penalty",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "Una explicación intermedia del efecto del pago cortaba el vínculo entre la única oferta monetaria y la aceptación propia posterior.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/payment_lifecycle.py",
+          "funcion": "financial_response_events",
+          "linea": 34
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea": 7
+        },
+        {
+          "archivo": "app/services/conversation_evidence.py",
+          "funcion": "payment_commitment",
+          "linea": 390
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "392b582e7c6e6f786f0689272be7632a2d498c4c99ce93770c01f072300a79fe",
+      "xml_sha256": "d098a2d40707304d5f3e9d15f59139fbb6f564c4c2968bb7a2388f1faafb500f"
+    },
+    {
+      "identificador": "50ccc8100657",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_review_backlog.py",
+      "funcion_prueba": "test_regression_guard_requires_real_current_agreement_not_cached_approval",
+      "antes_3f7011b": "PASA",
+      "despues": "PASA",
+      "causa_y_criterio": "Se cambió el identificador de método de evidencia, rompiendo lectores de reportes y validadores que dependen del contrato existente.",
+      "cambio_productivo": "Corrección de la intervención anterior conservada; regresión comprobada de nuevo.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "tools/regression_checkpoints.py",
+          "funcion": "verified_current_agreement",
+          "linea": 210
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "0234d51de03c8da96792f0ed8d0043697c9f1b2888dbf66e9cf6b5620819903b",
+      "xml_sha256": "c03cd6ae62025ac569544f9cf886834027e9511bfcd501dd28393b88b9aac9f3"
+    },
+    {
+      "identificador": "fc6722c87a20",
+      "grupo": "reportes",
+      "archivo_prueba": "tests/test_short_batch_outputs_r53.py",
+      "funcion_prueba": "test_short_normal_and_corrected_label_are_copied_once_and_reported",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "Las dos llamadas breves mantienen carpeta y corrección. La tercera conserva rechazo del tercero como estatus y REVISAR por privacidad incierta, sin inventar falta del gestor.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "confirmed_status_without_label",
+          "linea": 24
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "c7a82a1acbc744ec410dfb95ad54738efc4c81739c4acaa9ea7d79fd5c953c6d",
+      "xml_sha256": "74af958ce1daba5e96b4090bb40b38a0a9655f2eb32441f2858f6eb5997109b9"
+    },
+    {
+      "identificador": "8879649ffd54",
+      "grupo": "reportes",
+      "archivo_prueba": "tests/test_status_resolution_r51.py",
+      "funcion_prueba": "test_reported_payment_status_carries_original_evidence_for_output_correction",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "El envío reportado del comprobante conserva seguimiento CONVENIO y copia PP. Ya era APROBADO_ETIQUETA_CORREGIDA; cambia la expectativa ACLARA, no se afirma una nueva mejora de aprobación.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/minor_failure_policy.py",
+          "funcion": "reported_payment_management",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/minor_failure_policy.py",
+          "funcion": "confirmed_minor_failure",
+          "linea": 73
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "a4f4eee5c3cfd4d66ed0e5640986e5fdcdc04bcae931e493f824f1968c722867",
+      "xml_sha256": "3f8c8efb2d00674a7cb62ee0178dd430a72c94956682bd26ad79ecbf437bc3d9"
+    },
+    {
+      "identificador": "0232b94de1e7",
+      "grupo": "pagos",
+      "archivo_prueba": "tests/test_ten_audio_review.py",
+      "funcion_prueba": "test_listing_of_banks_does_not_make_other_authorized_options_unsafe",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "Mañana sin monto confirmado: NO DEFINE, sin certificar aceptación de1200 dicha después. Calidad y seguridad correctas con nombre no reetiquetable: APROBADO_SIN_ETIQUETAR. Los dos lugares siguen reconocidos.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "confirmed_status_without_label",
+          "linea": 24
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea": 18
+        },
+        {
+          "archivo": "app/services/batch_report_service.py",
+          "funcion": "_row_from_item",
+          "linea": 534
+        }
+      ],
+      "expectativa_prueba_modificada": true,
+      "autorizacion": "Respuesta de usuaria 23/11 y CRITERIOS_OPERATIVOS_20261123.md",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "8707f6d4c96754710bf0a62f35c31285b102588e841b88c1f9f5d0aae715dadd",
+      "xml_sha256": "9c1846039cbabe8bed5cfcadf1813d445b912ea7925e121a7a70997651b0a25c"
+    },
+    {
+      "identificador": "0c3512348454",
+      "grupo": "dictaminación",
+      "archivo_prueba": "tests/test_user_decisions_20261121.py",
+      "funcion_prueba": "test_last_confirmed_payment_agreement_overrides_prior_refusal",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "La aceptación final prevalece sobre negativa anterior. Fecha fuera de plazo operativo: conservar CONVENIO y FALLA_MINIMA, sin ampliar el plazo ni tocar puntaje.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/minor_failure_policy.py",
+          "funcion": "confirmed_minor_failure",
+          "linea": 73
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "f846ef4f29093638d9226f7e4a313def975d18b32ff0425cd659d1f6eea95ac1",
+      "xml_sha256": "cbcf575eb884a320f619193dc2ba656709d1fe397a32e2406bbe8ed54a1ecbae"
+    },
+    {
+      "identificador": "371e2097bb29",
+      "grupo": "dictaminación",
+      "archivo_prueba": "tests/test_user_decisions_round2_20261121.py",
+      "funcion_prueba": "test_agreement_requires_amount_and_date",
+      "antes_3f7011b": "FALLA",
+      "despues": "PASA",
+      "causa_y_criterio": "Monto y fecha aceptados, pero fuera de los tres días: CONVENIO con FALLA_MINIMA. Los parámetros sin cifra/fecha siguen NO DEFINE.",
+      "cambio_productivo": "Ver funciones y criterio 23/11; distinto de la actualización de expectativa.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea": 1047
+        },
+        {
+          "archivo": "app/services/minor_failure_policy.py",
+          "funcion": "confirmed_minor_failure",
+          "linea": 73
+        }
+      ],
+      "expectativa_prueba_modificada": false,
+      "autorizacion": "Prueba original conservada",
+      "estado": "PASA_CON_CRITERIO_ACTUAL",
+      "log_sha256": "82c201bb904df7561785e93b567cf9f67336470fb20ba42c9846547bf1029aea",
+      "xml_sha256": "a55997a2f165c3350f6c595d50e525b36ea78134d3d15bda3c496edc89c04a82"
+    }
+  ]
+}

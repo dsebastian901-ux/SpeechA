@@ -9,8 +9,9 @@ from app.services.whisper_service import whisper_service
 def test_initial_batch_separates_approved_review_rejection_and_severe_failure(tmp_path,monkeypatch):
     safe='Habla MRS. Soy su hermana. ¿Tiene dónde escribir? Claro, la escucho. El número telefónico es 5551234567. Dígale que se comunique.'
     cases=[('approved',safe,'APROBADO'),
-      ('rejected','Habla MRS. Soy su hermana. No quiero recibir el recado.','NO_APROBADO'),
-      ('declined_note','Habla MRS. Soy su hermana. Le dejo un número de teléfono. No puedo anotar. Nos comunicamos después.','NO_APROBADO'),
+      # 23/11: evaluar pasos ejecutables; estatus sin código, calidad correcta.
+      ('rejected','Habla MRS. Soy su hermana. No quiero recibir el recado.','APROBADO_SIN_ETIQUETAR'),
+      ('declined_note','Habla MRS. Soy su hermana. Le dejo un número de teléfono. No puedo anotar. Nos comunicamos después.','APROBADO_SIN_ETIQUETAR'),
       ('unsafe',safe+' Tiene una deuda de 1500 pesos.','REVISAR'),
       ('severe','Tercero: Soy su hermana.\nGestor: Habla MRS. Tiene una deuda de 1500 pesos.','FALLA_GRAVE')]
     wb=Workbook();ws=wb.active;ws.title='Relacion_Audios';ws.append(['archivo_original','nombre_final','numero_de_tarjeta','estatus_grabacion','gestor','supervisor','asignacion','fecha']);raw={};paths=[]
@@ -29,13 +30,17 @@ def test_initial_batch_separates_approved_review_rejection_and_severe_failure(tm
         assert item['classification']['clasificacion']==expected,item['classification']
         assert item['result']==raw[item['file_name']]
         assert Path(item['classified_audio_path']).read_bytes()==Path(item['path']).read_bytes()
-        if expected=='NO_APROBADO':assert Path(item['classified_audio_path']).parent.name=='NO_APROBADOS'
+        if expected=='APROBADO_SIN_ETIQUETAR':
+            assert Path(item['classified_audio_path']).parent.name=='APROBADO_SIN_ETIQUETAR'
+            assert item['analytics_metadata']['status_validation']['detected_status']=='SE NIEGAN A TOMAR RECADO'
     stats=batch.get_classification_summary()
-    assert stats['aprobados']==1 and stats['revisar']==1 and stats['no_aprobados']==2 and stats['fallas_graves']==1
+    assert stats['aprobados']==1 and stats['revisar']==1 and stats['no_aprobados']==0 and stats['fallas_graves']==1
     wb=load_workbook(batch.last_report_path,data_only=True)
     try:
-        assert wb['NO_APROBADOS'].max_row==3
+        assert wb['APROBADO_SIN_ETIQUETAR'].max_row==3
+        assert wb['NO_APROBADOS'].max_row==1
         summary=dict(wb['RESUMEN'].values)
-        assert summary['Revisión manual']==1 and summary['No aprobados por incumplimiento confirmado']==2
+        assert summary['Revisión manual']==1 and summary['No aprobados por incumplimiento confirmado']==0
+        assert summary['Aprobados sin etiquetar']==2
     finally:wb.close()
     assert Path(batch.last_nonpayment_report_path).is_file()

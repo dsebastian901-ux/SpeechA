@@ -149,7 +149,12 @@ def test_monthly_calendar_does_not_hide_the_current_deposit_or_reuse_a_historica
     assert n['monto_detectado']==1760 and n['validacion_monto']=='VALIDA'
     assert not n['commitment_confirmed']
     assert a.metadata['status_validation']['matches']
-    assert a.metadata['final_result']=='APROBADO'
+    # 23/11: hubo gestión de diferencia, pero falta comprobante del pago
+    # reportado. No perder la propuesta actual ni certificar cobertura.
+    assert n['reported_payment_management']['has_collection_action']
+    assert n['reported_payment_management']['confirmed_missing_receipt_request']
+    assert not n['reported_payment_management']['confirmed_receipt_only_shortfall']
+    assert a.metadata['final_result']=='FALLA_MINIMA'
 
 
 @pytest.mark.parametrize('fee', [

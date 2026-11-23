@@ -8,7 +8,8 @@ def management_completeness(metadata, label=None):
     if (m.get('death_followup_validation')or{}).get('valid'):
         result['complete']=True;result['workflow']='SEGUIMIENTO_DOCUMENTAL_DEFUNCION'
         return result
-    known=status.get('valid')is True or (label or{}).get('valid')is True
+    from app.services.status_output_label import confirmed_status_without_label
+    known=status.get('valid')is True or (label or{}).get('valid')is True or confirmed_status_without_label(m, label).get('eligible')is True
     if not known or not status.get('evidence'):
         result['reasons'].append('No se confirmó con evidencia el estatus de la gestión breve.')
         return result
@@ -18,6 +19,8 @@ def management_completeness(metadata, label=None):
     elif workflow.startswith('MENSAJE ') or workflow in {'RECADO REF1','RECADO REF2'}:
         result['complete']=bool(str(status.get('evidence_method')or'').startswith('RECADO_ACEPTADO')
             and not(m.get('message_delivery_validation')or{}).get('review_required'))
+    elif workflow == 'SE NIEGAN A TOMAR RECADO':
+        result['complete'] = bool((m.get('explicit_message_refusal') or {}).get('confirmed'))
     elif n.get('payment_followup_case'):
         result['complete']=bool(n.get('prior_payment_covers_minimum') and (m.get('convenio_payment_validation')or{}).get('requests_payment_receipt'))
         # El extractor conserva las solicitudes y los reportes enviados en

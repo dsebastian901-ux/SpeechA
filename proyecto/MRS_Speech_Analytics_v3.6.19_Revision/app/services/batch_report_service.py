@@ -44,6 +44,8 @@ class BatchReportService:
         "Nivel de atención",
         "MRS detectado",
         "Estatus detectado IA",
+        "Estatus correcto pendiente de etiqueta",
+        "Motivo etiqueta pendiente",
         "Fecha textual escuchada",
         "Fecha de pago detectada",
         "Evidencia de fecha",
@@ -446,6 +448,8 @@ class BatchReportService:
         penalties = metadata.get("penalties") or []
 
         actions = []
+        if classification.get('clasificacion') == 'FALLA_MINIMA':
+            actions.append('Retroalimentar la falla mínima: confirmar importe pagado, solicitar comprobante, gestionar diferencias y respetar el plazo de promesa según la causa registrada.')
 
         if checks.get("identifica_mrs") is False:
             actions.append("Reforzar la presentación e identificación clara como MRS al inicio de la llamada.")
@@ -495,6 +499,10 @@ class BatchReportService:
 
         if final_result in {"INCORRECTA", "FALLA_GRAVE"} or failures:
             return "CRÍTICA"
+        if classification.get('requires_alert_review'):
+            return 'ALTA'
+        if classification.get('clasificacion') == 'FALLA_MINIMA':
+            return 'MEDIA'
         if not classification.get("aprobado"):
             return "ALTA"
         if penalties:
@@ -655,6 +663,7 @@ class BatchReportService:
             "MAL_DICTAMINADO": "NO APROBADO - MAL DICTAMINADO",
             "NEGOCIACION_INVALIDA": "NO APROBADO - NEGOCIACION INVALIDA",
             "FALLA_GRAVE": "NO APROBADO - FALLA GRAVE",
+            "FALLA_MINIMA": "NO APROBADO - FALLA MÍNIMA",
             "SIN_VOZ": "SIN VOZ - SIN GESTIÓN EVALUABLE",
             "REVISAR": "REVISAR MANUALMENTE",
             "ERROR": "ERROR DE PROCESAMIENTO",
@@ -672,6 +681,8 @@ class BatchReportService:
             motivo_dictamen = output_label['original_status']+' → '+output_label['corrected_status']
         return {
             'Estado de copia':item.get('copy_status') or '',
+            'Estatus correcto pendiente de etiqueta':(classification.get('output_label_pending')or{}).get('detected_status','') if classification.get('clasificacion')=='APROBADO_SIN_ETIQUETAR'else'',
+            'Motivo etiqueta pendiente':(classification.get('output_label_pending')or{}).get('reason','') if classification.get('clasificacion')=='APROBADO_SIN_ETIQUETAR'else'',
             'Error de copia':item.get('copy_error') or '',
             'Estado de procesamiento':item.get('status') or '',
             "Alertas pendientes":int(classification.get('pending_alert_count')or 0),
@@ -1028,6 +1039,7 @@ class BatchReportService:
             ("MAL_DICTAMINADO", "MAL_DICTAMINADO"),
             ("NEGOCIACION_INVALIDA", "NEGOCIACION_INVALIDA"),
             ("FALLA_GRAVE", "FALLA_GRAVE"),
+            ("FALLA_MINIMA", "FALLA_MINIMA"),
             ("REVISAR", "REVISAR"),
             ("SIN_RELACION_EXCEL", "SIN_RELACION_EXCEL"),
             ("PENDIENTES_PROCESAMIENTO", "PENDIENTE"),
@@ -1095,6 +1107,7 @@ class BatchReportService:
         bad_dictation = sum(1 for r in rows if r.get("Clasificación física") == "MAL_DICTAMINADO")
         invalid_negotiation = sum(1 for r in rows if r.get("Clasificación física") == "NEGOCIACION_INVALIDA")
         severe_failure = sum(1 for r in rows if r.get("Clasificación física") == "FALLA_GRAVE")
+        minor_failure = sum(1 for r in rows if r.get('Clasificación física') == 'FALLA_MINIMA')
         scores = [
             float(r["Score"])
             for r in rows
@@ -1141,6 +1154,7 @@ class BatchReportService:
         summary_ws.append(["Llamadas rechazadas con alertas pendientes",sum(bool((i.get('classification')or{}).get('requires_alert_review'))for i in source_items)])
         summary_ws.append(["Aprobados sin etiquetar", approved_untagged])
         summary_ws.append(["No aprobados por incumplimiento confirmado", confirmed_rejection])
+        summary_ws.append(['Fallas mínimas', minor_failure])
         summary_ws.append(["No aprobados menor a 80%", under_80])
         summary_ws.append(["Clasificación calculada: MAL DICTAMINADO", bad_dictation])
         summary_ws.append(["Clasificación calculada: NEGOCIACION_INVALIDA", invalid_negotiation])
@@ -1282,10 +1296,10 @@ class BatchReportService:
                     gpct,
                     common_codes,
                     common_areas,
-                    sum(str(r.get("Clasificación física")or"").startswith('NO_APROBADO')or r.get("Clasificación física")in{'MAL_DICTAMINADO','NEGOCIACION_INVALIDA'}for r in group),
+                    sum(str(r.get("Clasificación física")or"").startswith('NO_APROBADO')or r.get("Clasificación física")in{'MAL_DICTAMINADO','NEGOCIACION_INVALIDA','FALLA_MINIMA'}for r in group),
                     sum(r.get("Clasificación física")=="FALLA_GRAVE"for r in group),
                     sum(r.get("Clasificación física")=="ERROR"for r in group),
-                    sum(r.get("Clasificación física")not in APPROVED_RESULTS|{'REVISAR','NO_APROBADO','NO_APROBADO_MENOR_80','MAL_DICTAMINADO','NEGOCIACION_INVALIDA','FALLA_GRAVE','ERROR'}for r in group),
+                    sum(r.get("Clasificación física")not in APPROVED_RESULTS|{'REVISAR','NO_APROBADO','NO_APROBADO_MENOR_80','MAL_DICTAMINADO','NEGOCIACION_INVALIDA','FALLA_GRAVE','FALLA_MINIMA','ERROR'}for r in group),
                 ])
 
             gestor_widths = {

@@ -97,6 +97,14 @@ def _evidence(metadata, code):
     elif code == 'PEN_ESPERA_PROLONGADA': candidates = (metadata.get('wait_validation') or {}).get('intervals') or []
     elif code == 'PEN_QUEJA_MALTRATO': candidates = (metadata.get('treatment_validation') or {}).get('mistreatment_report_evidence') or []
     elif code.startswith('PEN_GROSERIA'): candidates = (metadata.get('treatment_validation') or {}).get('offensive_language_evidence') or []
+    elif code == 'CONFIRMED_MINOR_FAILURE':
+        n = metadata.get('negotiation_validation') or {}
+        management = n.get('reported_payment_management') or {}
+        candidates = list((n.get('completed_payment_evidence') or {}).get('evidence') or [])
+        candidates += list(management.get('receipt_evidence') or [])
+        candidates += list(management.get('collection_evidence') or [])
+        if (n.get('commitment_evidence') or {}).get('evidence'):
+            candidates.append({'text': n['commitment_evidence']['evidence']})
     else: candidates = []
     if isinstance(candidates, dict): candidates = [candidates]
     if isinstance(candidates, str): return candidates, ''
@@ -143,6 +151,10 @@ def _record(item, source):
             'reason':' | '.join(map(str,f.get('reasons') or [])),
             'state':'CONFIRMACION_PENDIENTE', 'evidence':'', 'window':''}
     errors = {}
+    for finding in findings:
+        if isinstance(finding, dict) and finding.get('code') == 'CONFIRMED_MINOR_FAILURE':
+            errors[finding['code']] = {'code': finding['code'], 'category': 'Falla mínima',
+                'reasons': list(finding.get('reasons') or []), 'grave': False}
     for p in [*penalties, *failures]:
         if not isinstance(p, dict): continue
         code = str(p.get('id') or 'SIN_CODIGO')
@@ -227,7 +239,8 @@ def _summary(calls, keys):
     return [list(k) + [len(rows), sum(_approved(r['classification']) for r in rows),
                        sum(r['classification'] == 'REVISAR' for r in rows), sum(r['severe'] for r in rows),
                        sum(r['classification']=='APROBADO_SIN_ETIQUETAR' for r in rows),
-                       sum(r['classification']=='APROBADO_CON_EXCEPCION' for r in rows)]
+                       sum(r['classification']=='APROBADO_CON_EXCEPCION' for r in rows),
+                       sum(r['classification']=='FALLA_MINIMA' for r in rows)]
             for k, rows in _groups(calls, keys)]
 
 
@@ -379,7 +392,7 @@ class ConsolidatedReportService:
             ['Lotes cargados', len(dataset['sources'])], ['Registros seleccionados', len(calls)],
             ['Llamadas con falla grave reportada', sum(r['severe'] for r in calls)],
             ['Duplicados excluidos del universo', len(dataset['duplicates'])], ['Deduplicación', 'SI' if dataset['deduplicate'] else 'NO']])
-        independent = ['Calidad aprobada sin etiquetar','Excepción validada']
+        independent = ['Calidad aprobada sin etiquetar','Excepción validada','Fallas mínimas']
         sheet('POR_GESTOR', ['Supervisor', 'Gestor', 'Llamadas', 'Aprobadas en origen', 'Revisar en origen', 'Con falla grave',*independent], _summary(calls, ('supervisor','gestor')))
         sheet('POR_LOTE_GESTOR', ['Lote','Supervisor','Gestor','Evaluaciones','Aprobadas en origen','Revisar en origen','Con falla grave',*independent], _summary(calls, ('source','supervisor','gestor')))
         sheet('POR_LOTE_SUPERVISOR', ['Lote','Supervisor','Evaluaciones','Aprobadas en origen','Revisar en origen','Con falla grave',*independent], _summary(calls, ('source','supervisor')))

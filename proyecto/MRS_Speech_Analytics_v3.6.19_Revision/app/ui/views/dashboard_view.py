@@ -1625,6 +1625,7 @@ class DashboardView(ctk.CTkFrame):
             ("REVISAR",counts['REVISAR'],Theme.colors.CARD_PURPLE),
             ("NO APROBADOS",counts['NO_APROBADO']+counts['NO_APROBADO_MENOR_80'],Theme.colors.CARD_ORANGE),
             ("FALLA GRAVE",counts['FALLA_GRAVE'],Theme.colors.CARD_BLUE),
+            ("FALLA MÍNIMA",counts['FALLA_MINIMA'],Theme.colors.CARD_ORANGE),
         ])
         self._metric_strip(self.detail_content,[
             ('SIN ETIQUETAR',counts['APROBADO_SIN_ETIQUETAR'],Theme.colors.CARD_PURPLE),

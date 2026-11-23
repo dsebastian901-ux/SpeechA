@@ -82,9 +82,11 @@ def test_missing_filename_is_reported_as_label_data_not_an_unknown_audio_status(
     m=metadata();m['operational_context']['nombre_final']=''
     d=evaluate_quality(m,100)
     steps=review_steps({'classification':d,'analytics_metadata':m})
-    assert d['clasificacion']=='REVISAR'
-    assert len(steps)==1 and steps[0]['domain']=='DATOS_ETIQUETA'
-    assert 'No requiere repetir la escucha' in steps[0]['action']
+    # 23/11: no repetir escucha ni bloquear calidad por nombre inexistente.
+    assert d['clasificacion']=='APROBADO_SIN_ETIQUETAR' and d['calidad_aprobada']
+    assert steps==[]
+    assert d['output_label_pending']['eligible']
+    assert 'nombre'in d['output_label_pending']['reason'].lower()
 
 
 @pytest.mark.parametrize('field,value',[

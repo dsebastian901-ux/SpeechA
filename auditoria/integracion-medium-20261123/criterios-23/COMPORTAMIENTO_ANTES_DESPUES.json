@@ -1,0 +1,336 @@
+{
+  "datos": "11 escenarios sintéticos, mismo texto y contexto; ejecución real del motor de análisis, sin Whisper ni escucha humana.",
+  "casos": [
+    {
+      "caso": "RECADO_RECHAZADO",
+      "antes": {
+        "id": "RECADO_RECHAZADO",
+        "status": "SE NIEGAN A TOMAR RECADO",
+        "classification": "REVISAR",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "despues": {
+        "id": "RECADO_RECHAZADO",
+        "status": "SE NIEGAN A TOMAR RECADO",
+        "classification": "APROBADO_SIN_ETIQUETAR",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": true,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "puntaje_conservado": true,
+      "descuentos_conservados": true
+    },
+    {
+      "caso": "SEGUIMIENTO_CUBIERTO",
+      "antes": {
+        "id": "SEGUIMIENTO_CUBIERTO",
+        "status": "CONVENIO",
+        "classification": "APROBADO",
+        "score": 100.0,
+        "approved": true,
+        "quality_approved": true,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "despues": {
+        "id": "SEGUIMIENTO_CUBIERTO",
+        "status": "CONVENIO",
+        "classification": "APROBADO",
+        "score": 100.0,
+        "approved": true,
+        "quality_approved": true,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "puntaje_conservado": true,
+      "descuentos_conservados": true
+    },
+    {
+      "caso": "PAGO_INSUFICIENTE_SOLO_COMPROBANTE",
+      "antes": {
+        "id": "PAGO_INSUFICIENTE_SOLO_COMPROBANTE",
+        "status": "CONVENIO",
+        "classification": "NO_APROBADO",
+        "score": 85.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [
+          [
+            "PEN_SIN_INTENTO_NEGOCIACION",
+            15
+          ]
+        ],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "despues": {
+        "id": "PAGO_INSUFICIENTE_SOLO_COMPROBANTE",
+        "status": "CONVENIO",
+        "classification": "FALLA_MINIMA",
+        "score": 85.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [
+          [
+            "PEN_SIN_INTENTO_NEGOCIACION",
+            15
+          ]
+        ],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "puntaje_conservado": true,
+      "descuentos_conservados": true
+    },
+    {
+      "caso": "DIFERENCIA_GESTIONADA_SIN_ACEPTACION",
+      "antes": {
+        "id": "DIFERENCIA_GESTIONADA_SIN_ACEPTACION",
+        "status": "NO DEFINE FECHA DE PAGO",
+        "classification": "REVISAR",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "despues": {
+        "id": "DIFERENCIA_GESTIONADA_SIN_ACEPTACION",
+        "status": "NO DEFINE FECHA DE PAGO",
+        "classification": "APROBADO_ETIQUETA_CORREGIDA",
+        "score": 100.0,
+        "approved": true,
+        "quality_approved": true,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "puntaje_conservado": true,
+      "descuentos_conservados": true
+    },
+    {
+      "caso": "IMPORTE_NO_CONFIRMADO_SOLO_COMPROBANTE",
+      "antes": {
+        "id": "IMPORTE_NO_CONFIRMADO_SOLO_COMPROBANTE",
+        "status": "CONVENIO",
+        "classification": "REVISAR",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "despues": {
+        "id": "IMPORTE_NO_CONFIRMADO_SOLO_COMPROBANTE",
+        "status": "",
+        "classification": "FALLA_MINIMA",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "puntaje_conservado": true,
+      "descuentos_conservados": true
+    },
+    {
+      "caso": "COMPROBANTE_NO_SOLICITADO",
+      "antes": {
+        "id": "COMPROBANTE_NO_SOLICITADO",
+        "status": "",
+        "classification": "REVISAR",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "despues": {
+        "id": "COMPROBANTE_NO_SOLICITADO",
+        "status": "NO DEFINE FECHA DE PAGO",
+        "classification": "FALLA_MINIMA",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "puntaje_conservado": true,
+      "descuentos_conservados": true
+    },
+    {
+      "caso": "FECHA_FUERA_PLAZO_OPERATIVO",
+      "antes": {
+        "id": "FECHA_FUERA_PLAZO_OPERATIVO",
+        "status": "NEGATIVA DE PAGO",
+        "classification": "NO_APROBADO",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "despues": {
+        "id": "FECHA_FUERA_PLAZO_OPERATIVO",
+        "status": "CONVENIO",
+        "classification": "FALLA_MINIMA",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "puntaje_conservado": true,
+      "descuentos_conservados": true
+    },
+    {
+      "caso": "MANANA_SIN_MONTO_ACEPTADO",
+      "antes": {
+        "id": "MANANA_SIN_MONTO_ACEPTADO",
+        "status": "NO DEFINE FECHA DE PAGO",
+        "classification": "REVISAR",
+        "score": 80.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [
+          [
+            "PEN_CONV_LUGARES",
+            20
+          ]
+        ],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "despues": {
+        "id": "MANANA_SIN_MONTO_ACEPTADO",
+        "status": "NO DEFINE FECHA DE PAGO",
+        "classification": "APROBADO_SIN_ETIQUETAR",
+        "score": 80.0,
+        "approved": false,
+        "quality_approved": true,
+        "deductions": [
+          [
+            "PEN_CONV_LUGARES",
+            20
+          ]
+        ],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "puntaje_conservado": true,
+      "descuentos_conservados": true
+    },
+    {
+      "caso": "ETIQUETA_NO_SEGURA",
+      "antes": {
+        "id": "ETIQUETA_NO_SEGURA",
+        "status": "CONVENIO",
+        "classification": "REVISAR",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "despues": {
+        "id": "ETIQUETA_NO_SEGURA",
+        "status": "CONVENIO",
+        "classification": "APROBADO_SIN_ETIQUETAR",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": true,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "puntaje_conservado": true,
+      "descuentos_conservados": true
+    },
+    {
+      "caso": "PRIVACIDAD_INCIERTA",
+      "antes": {
+        "id": "PRIVACIDAD_INCIERTA",
+        "status": "SE NIEGAN A TOMAR RECADO",
+        "classification": "REVISAR",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "despues": {
+        "id": "PRIVACIDAD_INCIERTA",
+        "status": "SE NIEGAN A TOMAR RECADO",
+        "classification": "REVISAR",
+        "score": 100.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [],
+        "critical_ids": [],
+        "raw_text_unchanged": true
+      },
+      "puntaje_conservado": true,
+      "descuentos_conservados": true
+    },
+    {
+      "caso": "PRIVACIDAD_CONFIRMADA",
+      "antes": {
+        "id": "PRIVACIDAD_CONFIRMADA",
+        "status": "",
+        "classification": "FALLA_GRAVE",
+        "score": 0.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [
+          [
+            "PEN003",
+            100
+          ]
+        ],
+        "critical_ids": [
+          "PEN003"
+        ],
+        "raw_text_unchanged": true
+      },
+      "despues": {
+        "id": "PRIVACIDAD_CONFIRMADA",
+        "status": "",
+        "classification": "FALLA_GRAVE",
+        "score": 0.0,
+        "approved": false,
+        "quality_approved": false,
+        "deductions": [
+          [
+            "PEN003",
+            100
+          ]
+        ],
+        "critical_ids": [
+          "PEN003"
+        ],
+        "raw_text_unchanged": true
+      },
+      "puntaje_conservado": true,
+      "descuentos_conservados": true
+    }
+  ]
+}

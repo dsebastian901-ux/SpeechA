@@ -21,6 +21,28 @@ STATUS_LABEL_POLICY = {'enabled':True,'component_index':3,
              'MENSAJE EN TRABAJO':'3EROS','RECADO REF1':'3EROS','ACLARACION':'ACLARA','NO CONOCEN A DEUDOR':'NC'}}
 
 
+def confirmed_status_without_label(metadata, correction=None):
+    """Calidad puede aprobar sin fabricar nombre/código (usuaria 23/11).
+
+    Resuelve solo discrepancia de etiqueta con estatus probado. Las dudas de
+    identidad, privacidad, cuenta, importes y voz siguen en sus validadores.
+    """
+    status = metadata.get('status_validation') or {}
+    correction = corrected_status_label(metadata) if correction is None else correction
+    statuses = set(STATUS_LABEL_POLICY['codes']) | {
+        'SE NIEGAN A TOMAR RECADO', 'TITULAR CUELGA', 'CONVENIO INCUMPLIDO', 'BUZON', 'BUZÓN'}
+    if (correction.get('valid') or correction.get('status_evidence_rejected') or status.get('matches') is not False
+            or status.get('detection_confidence') != 'ALTA' or status.get('review_required')
+            or status.get('detected_status') not in statuses
+            or not status.get('evidence_method') or status.get('evidence_method') == 'SIN_EVIDENCIA'
+            or not status.get('evidence')):
+        return {'eligible': False}
+    return {'eligible': True, 'detected_status': status['detected_status'],
+            'reason': correction.get('reason') or 'El estatus probado no tiene etiqueta de salida segura.',
+            'original_name': (metadata.get('operational_context') or {}).get('nombre_final') or '',
+            'source': 'USER_DECISIONS_20261123', 'original_modified': False}
+
+
 def corrected_status_label(metadata, policy=None):
     policy = STATUS_LABEL_POLICY if policy is None else policy
     none={'eligible':False,'valid':False,'reason':''}
@@ -36,7 +58,7 @@ def corrected_status_label(metadata, policy=None):
         evidence=normalize(status['evidence'])
         if (re.search(r'\byo (?:le )?(?:solicito|requiero)(?: lo que es)? (?:el |un |su )?pago\b',evidence)
                 or re.search(r'\bsi\b[^.!?]{0,140}\b(?:vuelve|vuelven|hubiera|tuviera|pudiera)\b[^.!?]{0,100}\bno (?:vamos|voy) a pagar\b',evidence)):
-            return dict(none,reason='La frase es una instrucción de cobro o una condición hipotética; no acredita el nuevo estatus para reetiquetar.')
+            return dict(none,status_evidence_rejected=True,reason='La frase es una instrucción de cobro o una condición hipotética; no acredita el nuevo estatus para reetiquetar.')
     old_status=str(status.get('excel_status') or '')
     old_key='MENSAJE CON FAMILIAR' if old_status=='RECADO REF2' else old_status  # Solo compatibilidad de entrada.
     new_status=str(status['detected_status'])

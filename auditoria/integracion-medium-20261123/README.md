@@ -1,6 +1,6 @@
 # Auditoría e integración de Whisper Medium — antes de compilar
 
-**Actualización del 23/11:** el [cierre individual de los 34 fallos](cierre-34/README.md) corrige 20 y conserva 14 abiertos; suite actual: 3208 pasan, 14 fallan y 2 omitidos. El documento siguiente y sus CSV se conservan como línea base de la intervención anterior (`14cd432`); no describen el estado final del cierre.
+**Actualización vigente del 23/11:** el [cierre con los criterios confirmados por la usuaria](criterios-23/README.md) deja los 34 casos pasando individualmente y la suite en 3248 pasan, cero fallos y dos omisiones de entorno. Incluye cambios productivos, FALLA_MINIMA y ajustes de expectativas trazados. El [cierre anterior](cierre-34/README.md), el documento siguiente y sus CSV se conservan como evidencia histórica de las bases anteriores; no describen el estado final actual.
 
 **Estado: NO LISTO PARA COMPILAR.** Esta entrega contiene código y evidencia de mejoras comprobadas; conserva fallos abiertos y no se presenta como una versión terminada de producción.
 

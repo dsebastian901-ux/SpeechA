@@ -173,9 +173,10 @@ def test_reported_deposit_amount_can_cover_the_minimum_without_a_new_promise():
     assert n["prior_payment_covers_minimum"]
     assert not n["promise_date_confirmed_from_call"]
     assert "PEN_SIN_INTENTO_NEGOCIACION" not in {p["id"] for p in r["penalties"]}
-    assert r["status_validation"]["detected_status"] == "PAGO REPORTADO / ACLARACION"
-    assert r["status_validation"]["matches"] is False
-    assert r["final_result"] == "REVISAR"
+    # 23/11: no inventar aclaración; se omitió solicitar comprobante.
+    assert r["status_validation"]["detected_status"] == "NO DEFINE FECHA DE PAGO"
+    assert r["status_validation"]["matches"] is True
+    assert r["final_result"] == "FALLA_MINIMA"
 
 
 def test_payment_today_followed_by_good_day_is_not_a_second_installment():

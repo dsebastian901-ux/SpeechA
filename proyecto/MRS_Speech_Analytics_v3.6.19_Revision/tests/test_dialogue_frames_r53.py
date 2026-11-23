@@ -55,7 +55,10 @@ def test_later_receipt_replaces_temporary_inability_but_not_final_refusal():
  a=analyze(text,estatus_grabacion='MENSAJE CON FAMILIAR')
  assert a.metadata['message_workflow_validation']['complete']
  b=analyze(text+' No le voy a pasar el recado.',estatus_grabacion='MENSAJE CON FAMILIAR')
- assert b.metadata['shared_classification']['clasificacion']=='NO_APROBADO'
+ # 23/11: conservar la revocación del recado y calificar pasos ejecutados.
+ assert b.metadata['status_validation']['detected_status']=='SE NIEGAN A TOMAR RECADO'
+ assert not b.metadata['message_workflow_validation']['complete']
+ assert b.metadata['shared_classification']['clasificacion']=='APROBADO_SIN_ETIQUETAR'
 
 
 def test_known_contact_must_be_confirmed_by_recipient_not_agent():

@@ -582,6 +582,7 @@ class BatchService:
             "MAL_DICTAMINADO": "MAL_DICTAMINADO",
             "NEGOCIACION_INVALIDA": "NEGOCIACION_INVALIDA",
             "FALLA_GRAVE": "FALLA_GRAVE",
+            "FALLA_MINIMA": "FALLA_MINIMA",
             "SIN_VOZ": "SIN_VOZ",
             "REVISAR": "REVISAR",
         }
@@ -1362,7 +1363,7 @@ class BatchService:
         counts=Counter(str(c.get('clasificacion') or 'REVISAR').upper() for c in records)
         return {'analizados':len(records),'aprobados':sum(bool(c.get('aprobado')) for c in records),
             'revisar':counts['REVISAR'],'no_aprobados':sum(n for c,n in counts.items() if c.startswith('NO_APROBADO')),
-            'fallas_graves':counts['FALLA_GRAVE'],'errores':counts['ERROR'],
+            'fallas_graves':counts['FALLA_GRAVE'],'fallas_minimas':counts['FALLA_MINIMA'],'errores':counts['ERROR'],
             'errores_copia':sum(i.get('copy_status')=='error' for i in self.items),
             'aprobadas_duracion_menor':counts['APROBADO_DURACION_MENOR'],
             'llamadas_con_alertas_pendientes':sum(bool(c.get('requires_alert_review'))for c in records),

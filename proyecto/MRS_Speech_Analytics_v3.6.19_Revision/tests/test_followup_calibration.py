@@ -75,10 +75,14 @@ def test_user_policy_retains_original_status_in_verified_payment_followup(status
     a=analyze('Habla MRS. Soy yo. Ya pagué 900 pesos. Envíe su comprobante por WhatsApp.',
         estatus_grabacion=status,pago_minimo='700',saldo_total='3000')
     s=a.metadata['status_validation'];n=a.metadata['negotiation_validation']
-    assert s['matches'] and s['policy_source']=='ACLARACION_USUARIO_20261028'
-    assert s['detected_status']=='ACLARACION'
+    # Criterio 72, ratificado 23/11: importe suficiente + comprobante,
+    # sin certificar pago bancario ni conservar una etiqueta TH incorrecta.
+    assert s['matches'] is (status == 'CONVENIO')
+    assert s['policy_source']=='CRITERIO_72_USUARIO_20261121'
+    assert s['detected_status']=='CONVENIO'
     assert n['payment_followup_case'] and not n['commitment_confirmed']
-    assert a.metadata['final_result']=='APROBADO'
+    # 23/11: calidad correcta sin nombre seguro conserva etiqueta pendiente.
+    assert a.metadata['final_result']==('APROBADO' if status=='CONVENIO' else 'APROBADO_SIN_ETIQUETAR')
     assert not any(p['id'] in {'PEN_CONV_LUGARES','PEN009'} for p in a.metadata['penalties'])
 
 

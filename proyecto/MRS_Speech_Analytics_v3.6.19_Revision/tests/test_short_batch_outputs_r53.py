@@ -40,16 +40,20 @@ def test_short_normal_and_corrected_label_are_copied_once_and_reported(tmp_path,
             assert copy.parent.name=='APROBADAS_DURACION_MENOR'
             assert copy.name.split('_')[3]=='PP'
         else:
-            assert d['clasificacion']=='NO_APROBADO' and d['pending_alert_count']>0
-            assert copy.parent.name=='NO_APROBADOS'
+            # 23/11: el rechazo del tercero no prueba falta del gestor.
+            # Privacidad sin atribución sigue bloqueando aprobación.
+            assert d['clasificacion']=='REVISAR' and not d['calidad_aprobada']
+            assert item['analytics_metadata']['privacy_validation']['review_required']
+            assert item['analytics_metadata']['status_validation']['detected_status']=='SE NIEGAN A TOMAR RECADO'
+            assert copy.parent.name=='REVISAR'
     stats=b.get_classification_summary()
-    assert stats['aprobadas_duracion_menor']==2 and stats['revisar']==0
+    assert stats['aprobadas_duracion_menor']==2 and stats['revisar']==1
     wb=load_workbook(b.last_report_path,data_only=True)
     try:
         rows=[dict(zip(next(wb['RESULTADOS'].values),v))for v in list(wb['RESULTADOS'].values)[1:]]
         corrected=next(r for r in rows if r['Nombre antes de reetiquetar']and r['Código de salida']=='PP')
         assert corrected['Carpeta de etiqueta corregida']=='APROBADAS_DURACION_MENOR'
-        assert wb['ALERTAS_PENDIENTES'].max_row>1
+        assert wb['REVISION_PENDIENTE'].max_row>1
     finally:wb.close()
     # Exportar un checkpoint de lote vuelve a validar; no ejecuta Whisper.
     checkpoint=tmp_path/'saved.json';checkpoint.write_text(json.dumps({'items':b.items},ensure_ascii=False),encoding='utf-8')

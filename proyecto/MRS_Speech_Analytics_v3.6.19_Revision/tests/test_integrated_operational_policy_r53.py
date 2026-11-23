@@ -118,9 +118,11 @@ def test_mislabeled_excel_does_not_create_convenio_deductions_for_a_refused_offe
 
 def test_unknown_followup_amount_is_pending_but_confirmed_insufficient_is_rejected():
     unknown=analyze('Habla MRS. Soy yo. Ya pagué ayer. Envíe su comprobante por WhatsApp.')
-    assert unknown.metadata['shared_classification']['clasificacion']=='REVISAR'
+    # 23/11: solo comprobante sin confirmar importe es falta mínima;
+    # preguntar el importe y no entender respuesta sigue siendo revisión.
+    assert unknown.metadata['shared_classification']['clasificacion']=='FALLA_MINIMA'
     below=analyze('Habla MRS. Soy yo. Ya pagué 900 pesos ayer. Envíe su comprobante por WhatsApp.')
-    assert below.metadata['shared_classification']['clasificacion']=='NO_APROBADO'
+    assert below.metadata['shared_classification']['clasificacion']=='FALLA_MINIMA'
     covered=analyze('Habla MRS. Soy yo. Ya pagué 1000 pesos ayer. Envíe su comprobante por WhatsApp.')
     assert covered.metadata['shared_classification']['aprobado']
 

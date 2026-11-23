@@ -3150,6 +3150,20 @@ class AnalyticsService:
             and minimum_for_attempt is not None
             and prior_payment_total + 0.009 >= minimum_for_attempt
         )
+        from app.services.minor_failure_policy import reported_payment_management, reported_payment_is_prior_period
+        new_payment_proposals = remaining_payment_proposals(text, segments)
+        reported_management = reported_payment_management(text, segments,
+            # La gestión de un complemento no borra el pago reportado ni
+            # exime su comprobante cuando aún no hay nuevo acuerdo aceptado.
+            applies=bool(contact_type == 'TITULAR' and payment_already_made and not confirms_commitment
+                and not (not payment_confirmation_case and reported_payment_is_prior_period(completed_payment_confirmation))),
+            amount=prior_payment_total, minimum=minimum_for_attempt,
+            amount_review=prior_payment_binding['review_required'],
+            receipt=receipt_assessment, proposals=new_payment_proposals)
+        negotiation_attempt = bool(negotiation_attempt or reported_management['has_collection_action'])
+        shortfall_managed_without_acceptance = bool(reported_management['applies']
+            and reported_management['insufficient'] and reported_management['has_collection_action']
+            and not confirms_commitment)
         # Un reporte sin importe comprobable es incertidumbre, no una falta de
         # gestión confirmada. No afirmar que cubre el mínimo ni restar 15 puntos.
         reported_amount_pending = bool(contact_type == 'TITULAR' and payment_confirmation_case and not negotiation_attempt
@@ -3291,7 +3305,6 @@ class AnalyticsService:
             requests_payment_receipt or payment_registration or agent_statement(text, segments,
                 r"\b(?:tiene|cuenta con|mande|envie|comparta|enviar|mandar|enviarnos|haga llegar)\b[^.!?]{0,60}"
                 r"\b(?:comprobante|captura|ticket)\b") or receipt_followup_question or (not negotiation_attempt and agent_statement(text,segments,r'\batencion al cliente\b') and re.search(r'\bsi el pago ya se ve reflejado\b',normalized))))
-        new_payment_proposals = remaining_payment_proposals(text, segments)
         unaccepted_new_payment_instruction = bool(contact_type=='TITULAR' and payment_confirmation_case and payment_followup_case
             and not confirms_commitment and (bool(new_payment_proposals) or agent_statement(text, segments,
                 r"\b(?:tiene|tendria|tendriamos|necesita) que (?:realizar|aplicar|cubrir|hacer) (?:un |el |su )?(?:pago|deposito)\b|"
@@ -3559,6 +3572,7 @@ class AnalyticsService:
         identifier_positions = [m.start() for m in identifier_anchor_re.finditer(source_norm)]
 
         detected_claim_amount = None
+        detected_claim_span = None
         detected_claim_evidence = ""
         detected_amount_role = "NO DETERMINADO"
         detected_amount_raw = None
@@ -3806,6 +3820,7 @@ class AnalyticsService:
             # Mayor confianza primero; a igualdad, el ancla de pago más cercana.
             _, _, best = max(amount_candidates, key=lambda x: (x[0], x[1]))
             detected_claim_amount = best[2]
+            detected_claim_span = best[:2]
             detected_claim_evidence = best[3]
             amount_asr_normalized = bool(best[4]) if len(best) > 4 else False
             detected_amount_raw = best[5] if len(best) > 5 else best[2]
@@ -3921,6 +3936,16 @@ class AnalyticsService:
             balance_validation = 'REVISAR - SALDOS CONTRADICTORIOS TRAS CORRECCION'
             balance_reason = 'Se corrigió un saldo y después se declaró otro distinto; confirmar el saldo final en audio.'
 
+        # Un reporte previo ligado por posiciones no se transforma en monto
+        # negociado porque después el cliente no acepte completar diferencia.
+        # El mismo valor propuesto en otro turno conserva su validación propia.
+        reported_claim_only = bool(detected_claim_span and not confirms_commitment
+            and not multi_payment_detected and not recovered_amounts
+            and not prior_payment_binding['review_required']
+            and any(e.get('start') is not None and e.get('end') is not None
+                and e['start'] <= detected_claim_span[0] and detected_claim_span[1] <= e['end']
+                and abs(float(e.get('amount', -1)) - float(detected_claim_amount or 0)) < .01
+                for e in prior_payment_binding.get('evidence', [])))
         if data_inconsistency:
             amount_validation = "REVISAR - DATOS DE ORIGEN INCONSISTENTES"
             amount_reason = f"Pago mínimo ({minimum_expected:g}) mayor que saldo total ({total_expected:g}); revisar Excel/origen antes de penalizar."
@@ -3935,13 +3960,15 @@ class AnalyticsService:
                 and not new_payment_proposals
                 and not agent_statement(text,segments,
                     r"\b(?:tiene|tendria|tendriamos|necesita) que (?:realizar|aplicar|cubrir|hacer) (?:un |el |su )?(?:pago|deposito)\b")
-                and (payment_confirmation_case or dispute_guidance
+                and (payment_confirmation_case or reported_claim_only or dispute_guidance
                      or (pending_decision or {}).get('method')=='ACCOUNT_DISPUTE')):
             # Un pago previo o una compra discutida no es el importe de un
             # convenio nuevo. El comprobante incierto y los saldos informados
             # se validan aparte; no se inventa cobertura del mínimo.
             amount_validation = "INFORMATIVO - IMPORTE HISTORICO O DISPUTADO"
             amount_reason = "No se compara un antecedente o compra disputada como pago negociado vigente."
+            if reported_claim_only:
+                detected_amount_role = 'PAGO PREVIO REPORTADO'
         elif detected_claim_amount is not None and total_expected is not None and detected_claim_amount > total_expected + 0.009:
             amount_validation = "INVALIDA - MONTO EXCEDE SALDO TOTAL"
             amount_reason = f"Monto negociado {detected_claim_amount:g} excede el saldo total {total_expected:g}."
@@ -4086,6 +4113,7 @@ class AnalyticsService:
             "prior_payment_amounts": prior_payment_amounts,
             "prior_payment_total": prior_payment_total,
             "prior_payment_covers_minimum": prior_payment_covers_minimum,
+            "reported_payment_management": reported_management,
             "prior_payment_amount_validation": prior_payment_binding,
             "reported_payment_amount_pending": reported_amount_pending,
             "remaining_minimum_required": (max(0.0, minimum_expected - prior_payment_total) if minimum_expected is not None and prior_payment_total is not None else None),
@@ -4198,7 +4226,7 @@ class AnalyticsService:
             negotiation_validation["review_required"] = True
             negotiation_validation["reasons"].append(prior_payment_binding["reason"] or
                 "Pago reportado sin importe y mínimo comparables; confirmar comprobante antes de dar cobertura por acreditada.")
-        pure_paid_followup=bool(payment_followup_case and not new_payment_proposals and not unaccepted_new_payment_instruction
+        pure_paid_followup=bool(payment_followup_case and not reported_management['has_collection_action'] and not new_payment_proposals and not unaccepted_new_payment_instruction
             and not prior_payment_with_current_decline and not prior_payment_with_current_condition)
         negotiation_validation['followup_coverage_validation']={
             'applies':pure_paid_followup,'reported_payment':prior_payment_total,'required_minimum':minimum_for_attempt,
@@ -4210,7 +4238,7 @@ class AnalyticsService:
             negotiation_validation['valid']=False
             negotiation_validation['review_required']=True
             negotiation_validation['reasons'].append('El seguimiento no demuestra que el pago reportado cubra el mínimo del Excel; confirmar importe y cobertura, sin acreditar el pago bancario.')
-        if unaccepted_new_payment_instruction:
+        if unaccepted_new_payment_instruction and not shortfall_managed_without_acceptance:
             negotiation_validation['valid']=False
             negotiation_validation['review_required']=True
             negotiation_validation['reasons'].append(
@@ -4435,8 +4463,8 @@ class AnalyticsService:
                 r"\b(?:no\s+se\s+cuando\s+(?:pueda|voy\s+a)\s+pagar|"
                 r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
                 r"no\s+tengo\s+fecha|lo\s+voy\s+a\s+revisar)\b")
-            # Criterio 65: NEGATIVA es el resultado OPERATIVO de una fecha
-            # fuera de mora, sin falsear la respuesta real del titular.
+            # Aclaración 23/11: no convertir fecha fuera de política en
+            # negativa del titular. Mantener convenio y falta de calidad.
             outside_due=bool(promise_date and parsed_due_date and promise_date>parsed_due_date)
             outside_month=bool(promise_date and parsed_call_date
                 and mora_policy['mode']=='MES_DE_LLAMADA'
@@ -4469,10 +4497,10 @@ class AnalyticsService:
                     status_evidence="El titular anunció que terminaría la llamada antes de recibir alternativas."
                 status_detection_confidence="ALTA"
             elif date_outside_operational_policy:
-                detected_status="NEGATIVA DE PAGO"
+                detected_status="CONVENIO"
                 status_detection_confidence="ALTA"
                 status_evidence=commitment_confirmation.get("evidence") or promise_date_evidence
-                status_evidence_method="NEGATIVA_OPERATIVA_POR_FECHA_FUERA_DE_MORA"
+                status_evidence_method="CONVENIO_CON_FECHA_FUERA_DE_POLITICA"
             elif promise_date is not None and confirms_commitment and confirmed_agreement_amount and not payment_confirmation_case:
                 detected_status = "CONVENIO"
                 status_detection_confidence = "ALTA"
@@ -4506,6 +4534,12 @@ class AnalyticsService:
                 status_evidence_method=clarification_validation['method']
                 if clarification_validation.get('active_dispute_followup'):
                     status_evidence=clarification_validation['active_dispute_evidence']
+            elif shortfall_managed_without_acceptance:
+                detected_status = 'NO DEFINE FECHA DE PAGO'
+                status_detection_confidence = 'ALTA'
+                status_evidence_method = 'PAGO_PARCIAL_GESTIONADO_SIN_COMPLEMENTO_ACEPTADO'
+                status_evidence = ' / '.join(u['text'] for u in completed_payment_confirmation['evidence'][:3])
+                status_evidence += ' / ' + ' / '.join(u['text'] for u in reported_management['collection_evidence'])
             elif pending_decision:
                 detected_status=pending_decision['detected_status']
                 status_detection_confidence=pending_decision['confidence']
@@ -4534,7 +4568,9 @@ class AnalyticsService:
                     and (prior_payment_with_current_decline or unable_to_complete)
                     and not confirms_commitment)
                 detected_status = ("NO DEFINE FECHA DE PAGO" if declined_difference else
-                    "CONVENIO" if payment_followup_case else "")
+                    "CONVENIO" if payment_followup_case and prior_payment_total is not None
+                    and not prior_payment_binding['review_required'] else
+                    'NO DEFINE FECHA DE PAGO' if reported_management['amount_confirmed'] else '')
                 status_detection_confidence = "ALTA" if detected_status else "NO DETERMINADA"
                 status_evidence_method = ("PAGO_PARCIAL_SIN_COMPLEMENTO_ACEPTADO"
                     if declined_difference else
@@ -4543,6 +4579,13 @@ class AnalyticsService:
                 status_evidence = " / ".join(u["text"] for u in completed_payment_confirmation["evidence"][:3])
         elif detected_status:
             status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
+            if detected_status == 'SE NIEGAN A TOMAR RECADO' and message_refusal_validation.get('confirmed'):
+                # El rechazo ya validado prueba el estatus, aunque no exista
+                # código autorizado para reetiquetar. No inventar recepción.
+                status_detection_confidence = 'ALTA'
+                status_evidence_method = 'RECHAZO_EXPLICITO_DEL_RECADO'
+                status_evidence = ' / '.join(e.get('text') or e.get('phrase') or ''
+                    for e in message_refusal_validation.get('evidence', []))
             if recado_estatus_acreditado and detected_status.startswith('MENSAJE '):
                 status_detection_confidence = 'ALTA'
                 status_evidence=' / '.join(u['text'] for u in recado_assessment['acceptance'])
@@ -4750,8 +4793,15 @@ class AnalyticsService:
         if uncertain_disclosure:
             status_validation["review_required"] = True
             status_validation["reasons"].append("Posible divulgación financiera: interlocutor no confirmado; requiere revisión del audio.")
+        from app.services.minor_failure_policy import confirmed_minor_failure
+        minor_fact = confirmed_minor_failure({'quality_contact_type': contact_type,
+            'negotiation_validation': negotiation_validation})
         if critical_failures:
             final_result = "INCORRECTA"
+        elif minor_fact:
+            # Resultado provisional de la API básica. La puerta compartida
+            # incorpora las alertas y prioridades restantes al analizar.
+            final_result = 'FALLA_MINIMA'
         elif requires_review:
             final_result = "REVISAR"
         elif score >= 80:

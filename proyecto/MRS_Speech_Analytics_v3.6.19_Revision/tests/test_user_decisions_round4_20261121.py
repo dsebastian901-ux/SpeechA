@@ -54,8 +54,10 @@ def test_outside_mora_window_is_operational_negativa_even_if_amount_was_accepted
           "Titular: Me comprometo a pagar 1000 pesos el 2 de diciembre.")
     a=_analyze(text)
     status=a.metadata["status_validation"]
-    assert status["detected_status"]=="NEGATIVA DE PAGO"
-    assert status["evidence_method"]=="NEGATIVA_OPERATIVA_POR_FECHA_FUERA_DE_MORA"
+    # 23/11: fecha fuera de política no equivale a negativa del titular.
+    # Este caso supera además vencimiento; PEN005 conserva su prioridad.
+    assert status["detected_status"]=="CONVENIO"
+    assert status["evidence_method"]=="CONVENIO_CON_FECHA_FUERA_DE_POLITICA"
     assert a.metadata["negotiation_validation"]["commitment_confirmed"]
 
 

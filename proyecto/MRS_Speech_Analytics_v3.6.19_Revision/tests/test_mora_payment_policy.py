@@ -37,8 +37,9 @@ def test_later_maturity_does_not_allow_settlement_in_next_month(mora):
     assert any("fuera del mes" in reason for reason in n["reasons"])
     # Fecha y compromiso comprobados: la política de cierre de incumplimientos
     # de la usuaria exige rechazo, no una revisión manual genérica.
-    assert a.metadata["shared_classification"]["clasificacion"] == "NO_APROBADO"
-    assert any(f['code']=='CONFIRMED_PAYMENT_DATE_OUTSIDE_POLICY'
+    # 23/11: plazo operativo incumplido es FALLA_MINIMA, sin ampliar plazo.
+    assert a.metadata["shared_classification"]["clasificacion"] == "FALLA_MINIMA"
+    assert any('CONFIRMED_PAYMENT_DATE_OUTSIDE_POLICY' in f.get('detail_codes', [])
                for f in a.metadata['shared_classification']['decision_findings'])
     assert "PEN005" not in {p["id"] for p in a.metadata["penalties"]}
 
@@ -59,7 +60,7 @@ def test_earlier_maturity_remains_a_binding_limit():
 
 def test_month_of_next_year_is_not_the_same_month():
     a = analyze(promise="1 de enero de 2027", fecha="2026-12-20", vencimiento="2027-01-31")
-    assert a.metadata["shared_classification"]["clasificacion"] == "NO_APROBADO"
+    assert a.metadata["shared_classification"]["clasificacion"] == "FALLA_MINIMA"
 
 
 @pytest.mark.parametrize("minimum,total,amount", [("2000", "50000", 2000), ("2000", "50000", 50000)])

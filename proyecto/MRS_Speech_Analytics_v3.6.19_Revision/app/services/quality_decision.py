@@ -147,8 +147,9 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     if duration.get('valid') is False and not(short_call and duration.get('maximum_met',True)):
         add(13,'INVALID_DURATION',duration.get('reason') or 'Duración fuera del rango permitido','duration_validation')
 
-    from app.services.status_output_label import corrected_status_label
+    from app.services.status_output_label import corrected_status_label, confirmed_status_without_label
     output_label = corrected_status_label(m)
+    pending_output_label = confirmed_status_without_label(m, output_label)
     from app.services.short_call_policy import management_completeness
     completeness=management_completeness(m,output_label)if short_call else{}
     if short_call and not completeness.get('complete'):
@@ -159,6 +160,10 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         for finding in findings:
             if finding['code']=='STATUS_INVALID':
                 finding['severity']='CORRECTED_STATUS'
+    elif pending_output_label['eligible']:
+        for finding in findings:
+            if finding['code'] == 'STATUS_INVALID':
+                finding['severity'] = 'OUTPUT_LABEL_PENDING'
 
     exception = m.get('hostile_interlocutor_exception') or {}
     verified_exception = all(exception.get(k) is True for k in
@@ -208,25 +213,33 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     base = base_classification or {}
     from app.services.definitive_rejection import definitive_rejection
     rejection = definitive_rejection(m,findings,duration_seconds)
+    from app.services.minor_failure_policy import confirmed_minor_failure
+    minor_failure = confirmed_minor_failure(m)
     score_rejection=bool(not score_ok and ordinary_score_rejection(m,score,minimum_score,duration_seconds))
     pending_alerts=[]
-    if (rejection or score_rejection) and not critical:
+    if (rejection or minor_failure or score_rejection) and not critical:
         for finding in blocking:
-            if rejection and finding['code']in rejection.get('resolves_codes',[]):
+            resolution = rejection or minor_failure
+            if resolution and finding['code']in resolution.get('resolves_codes',[]):
                 finding['severity']='CONFIRMED_NONCRITICAL'
-                finding['resolved_by']=rejection['code']
+                finding['resolved_by']=resolution['code']
             elif finding['code']in{'STATUS_INVALID','STATUS_NOT_CONFIRMED','SHORT_MANAGEMENT_INCOMPLETE'}:
                 finding['severity']='OBSERVATION'
             else:
                 finding['severity']='PENDING_ALERT';pending_alerts.append(dict(finding))
         if rejection:findings.append(rejection)
-        blocking=[rejection]if rejection else[]
+        if minor_failure:findings.append(minor_failure)
+        blocking=[rejection]if rejection else [minor_failure]if minor_failure else[]
+    if minor_failure and minor_failure not in findings:
+        findings.append(minor_failure)
     if critical:
         category = 'FALLA_GRAVE'
     elif base.get('missing_excel_relation'):
         category = 'SIN_RELACION_EXCEL'
     elif rejection:
         category = 'NO_APROBADO'
+    elif minor_failure:
+        category = 'FALLA_MINIMA'
     elif verified_exception and score_ok and not blocking:
         # Una excepción validada permanece separada incluso si la llamada es
         # breve o también existe evidencia para corregir la etiqueta.
@@ -244,6 +257,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         category = 'APROBADO_CON_ALERTA'
     elif output_label['valid']:
         category = 'APROBADO_ETIQUETA_CORREGIDA'
+    elif pending_output_label['eligible']:
+        category = 'APROBADO_SIN_ETIQUETAR'
     elif base.get('estatus_autorizado') is False:
         category = 'APROBADO_SIN_ETIQUETAR'
     elif base.get('estatus_autorizado') is True and base.get('tiene_nombre_final') is False:
@@ -262,7 +277,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
             for reason in finding['reasons'] if '[ALERTA SIN EMISOR CONFIRMADO] '+reason not in reasons)
     if category == 'SIN_RELACION_EXCEL':
         reasons.insert(0,'Falta el registro de esta llamada en el Excel de cuentas; corregir la relación de origen. No requiere retranscribir para relacionarla.')
-    if category in {'NO_APROBADO','NO_APROBADO_MENOR_80'}:
+    if category in {'NO_APROBADO','NO_APROBADO_MENOR_80','FALLA_MINIMA'}:
         reasons.extend(r for f in findings if f['severity']=='OBSERVATION'for r in f['reasons']if r not in reasons)
     if pending_alerts:
         reasons.extend('[Pendiente '+f['code']+'] '+r for f in pending_alerts for r in f['reasons'])
@@ -288,6 +303,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
                  'OBSERVACION_CONSERVADA' if any(f['severity']=='OBSERVATION' for f in relevant) else
                  'EXCEPCION_VALIDADA' if any(f['severity']=='VALIDATED_EXCEPTION' for f in relevant) else
                  'ETIQUETA_CORREGIDA' if any(f['severity']=='CORRECTED_STATUS' for f in relevant) else
+                 'ETIQUETA_PENDIENTE' if any(f['severity']=='OUTPUT_LABEL_PENDING' for f in relevant) else
                  'ALERTA_INFORMATIVA' if any(f['severity']=='ALERTA_INFORMATIVA' for f in relevant) else
                  'DESCUENTO_APLICADO' if relevant else
                  'NO_APLICA' if applicability.get(number) is False else
@@ -298,14 +314,16 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
             'aprobado_con_alerta':approved_with_alert,
             'cumple_puntaje':score_ok,'rechazo_automatico_por_puntaje':category=='NO_APROBADO_MENOR_80',
             'rechazo_automatico_por_reglas':category=='NO_APROBADO',
+            'falla_minima':category=='FALLA_MINIMA',
             'observaciones_conservadas':reasons,
             'motivo':('Excepción por hostilidad validada en audio; gestor profesional' if category=='APROBADO_CON_EXCEPCION' else
                       ' | '.join(reasons) if reasons else 'Cumple calidad y seguridad; etiqueta corregida en copia separada' if category=='APROBADO_ETIQUETA_CORREGIDA' else 'Cumple reglas de aprobación' if score_ok else 'Puntaje inferior al mínimo'),
             'decision_findings':findings,'rule_evaluation':evaluations,
             'output_label_correction':output_label,'pending_alerts':pending_alerts,
+            'output_label_pending':pending_output_label,
             'requires_alert_review':bool(pending_alerts),'pending_alert_count':len(pending_alerts),
             'short_duration_approval':category=='APROBADO_DURACION_MENOR','management_completeness':completeness,
-            'decision_policy':'INTEGRATED_USER_POLICY_20261115'}
+            'decision_policy':'INTEGRATED_USER_POLICY_20261123'}
 
 
 def _no_voice_result(minimum_score):

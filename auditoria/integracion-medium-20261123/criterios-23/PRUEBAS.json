@@ -1,0 +1,68 @@
+{
+  "fecha": "2026-11-23",
+  "rama": "codex/integracion-medium-dictaminacion-20261123",
+  "base_commit": "3f7011b",
+  "criterio_nuevo": "auditoria/CRITERIOS_OPERATIVOS_20261123.md",
+  "version": "3.6.19-r58-criterios-20261123",
+  "individuales_34": {
+    "antes": {
+      "FALLA": 14,
+      "PASA": 20
+    },
+    "despues": {
+      "PASA": 34
+    },
+    "fuentes_sin_cambios": true
+  },
+  "focales_finales": {
+    "tests": 214,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 214
+  },
+  "suite_antes": {
+    "PASA": 3208,
+    "FALLA": 14,
+    "OMITIDA": 2
+  },
+  "suite_final": {
+    "tests": 3250,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 2,
+    "passed": 3248
+  },
+  "suite_fuentes_inmutables": true,
+  "regresiones": [],
+  "pruebas_nuevas": 26,
+  "pruebas_anteriores": 113,
+  "archivos_pruebas_ajustados": 17,
+  "llamadas_add_penalty_sin_cambios": true,
+  "escenarios_mismo_puntaje": 11,
+  "modulos_sin_cambios": {
+    "app/services/access_service.py": "fe2c186208c78c30abc4301d29e7a0a5ec7fc30edf8fc11a2d79fab8d5b51aca",
+    "app/services/whisper_service.py": "421700fc6a8bbd33e3a586a0067d6a7fcc3953c20ca4247400c3695def0c8ba1",
+    "app/services/offline_model_service.py": "df3362eee42a2d21b712d0ee21a61130b4419a927fe5576e9cc60b34eac5e88a",
+    "app/services/checkpoint_review_import.py": "a4820178a6141c73f22d05208599572059d492d34632390fdc9396fd650d6385",
+    "app/services/checkpoint_reanalysis.py": "a98f8f0bb6ed8ada1a5769a30f2a46264fcc0e90e4ce22f7930cb3e0ed05f8b7"
+  },
+  "r57_archivos_comparados": 780,
+  "r57_archivos_modificados": 0,
+  "windows_fisico": false,
+  "escucha_humana": false,
+  "asr_real_nuevo": false,
+  "medium_experimental_activado": false,
+  "exe_compilado": false,
+  "limitaciones": [
+    "Dos pruebas de GUI Medium omitidas por Python3.10/TclTk9 en Linux; no se declara validación en Windows físico.",
+    "Pruebas de lotes con ASR controlado validan motor, copias, contadores y reportes; no certifican precisión acústica ni tasa de aprobados de un lote de clientes.",
+    "APROBADO_SIN_ETIQUETAR conserva calidad aprobada separada de aprobación para reetiquetar; no inventa código ni elimina alertas."
+  ],
+  "xml_evidencia_sha256": {
+    "group_3.xml": "3bf0893cd6a4de2dfaf6c94e96c605acc8c2c86c698fa26373093cd3b19d1247",
+    "group_1.xml": "acc1fb2b5413acd12ccd8d58cfd1ec7ea4ed6be264fef87358c34836ac5a04bb",
+    "group_2.xml": "4a91b327dc0acc649e3f03f55e14c3a8b73715f3f0f4d73bd0e72e8309179d7f",
+    "group_0.xml": "beb35040c6ae629bf0458449b9a857f42417880c5772f87f208bc832a4b2b7e7"
+  }
+}

@@ -46,10 +46,13 @@ def test_contextual_relationship_answers(text):
 def test_explicit_refusal_is_closed_without_approving_or_clearing_security():
     text='Habla MRS. Soy su hermana. No quiero recibir el recado.'
     a=analyze(text);d=a.metadata['shared_classification']
-    assert d['clasificacion']=='NO_APROBADO'and not d['aprobado']
+    # 23/11: rechazo del tercero no es falta automática del gestor.
+    assert d['clasificacion']=='APROBADO_SIN_ETIQUETAR' and d['calidad_aprobada']
+    assert a.metadata['status_validation']['detected_status']=='SE NIEGAN A TOMAR RECADO'
     assert a.metadata['explicit_message_refusal']['confirmed']
     unsafe=analyze(text+' Tiene una deuda de 1500 pesos.').metadata['shared_classification']
-    assert unsafe['clasificacion']=='NO_APROBADO' and unsafe['requires_alert_review']
+    assert unsafe['clasificacion']=='REVISAR' and not unsafe['calidad_aprobada']
+    assert any(f['rule_group']==3 and f['severity']=='REVIEW'for f in unsafe['decision_findings'])
 
 @pytest.mark.parametrize('text',[
  'Gestor: No quiero recibir el recado.',
@@ -68,7 +71,10 @@ def test_short_duration_with_security_uncertainty_remains_review():
 
 def test_declined_note_without_contact_is_definitive_but_later_delivery_is_not():
     text='Habla MRS. Soy su hermana. Le voy a dejar un número telefónico. No tengo dónde anotar. Nos comunicamos más tarde.'
-    assert analyze(text).metadata['shared_classification']['clasificacion']=='NO_APROBADO'
+    # Sin recepción se acredita SE NIEGAN, sin inventar falta del gestor.
+    m=analyze(text).metadata
+    assert m['status_validation']['detected_status']=='SE NIEGAN A TOMAR RECADO'
+    assert m['shared_classification']['clasificacion']=='APROBADO_SIN_ETIQUETAR'
     delivered=text.replace('Nos comunicamos más tarde.','Ya tengo papel. El número telefónico es 5551234567. Dígale que se comunique.')
     assert not analyze(delivered).metadata['explicit_message_refusal']['confirmed']
     alternative=text.replace('Nos comunicamos más tarde.','Mándelo por mensaje de texto.')
@@ -190,9 +196,11 @@ def test_return_instruction_without_a_delivered_contact_never_approves():
 
 def test_bare_no_to_positive_message_offer_is_an_explicit_refusal():
     text='Habla MRS. Soy su hermana. ¿Le puedo dejar un recado con usted? No, gracias. Nos comunicamos después.'
-    assert analyze(text).metadata['shared_classification']['clasificacion']=='NO_APROBADO'
-    assert analyze(text.replace('? No, gracias.','? Gestor: No, gracias.')).metadata['shared_classification']['clasificacion']!='NO_APROBADO'
-    assert analyze(text.replace('¿Le puedo','¿No le puedo')).metadata['shared_classification']['clasificacion']!='NO_APROBADO'
+    m=analyze(text).metadata
+    assert m['status_validation']['detected_status']=='SE NIEGAN A TOMAR RECADO'
+    assert m['shared_classification']['clasificacion']=='APROBADO_SIN_ETIQUETAR'
+    assert not analyze(text.replace('? No, gracias.','? Gestor: No, gracias.')).metadata['explicit_message_refusal']['confirmed']
+    assert not analyze(text.replace('¿Le puedo','¿No le puedo')).metadata['explicit_message_refusal']['confirmed']
 
 
 @pytest.mark.parametrize('ending',[

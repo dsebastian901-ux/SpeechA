@@ -1092,6 +1092,7 @@ class BatchView(ctk.CTkFrame):
                 f"Revisar: {review}\n"
                 f"No aprobados: {classification_summary.get('no_aprobados', 0)}\n"
                 f"Fallas graves: {classification_summary.get('fallas_graves', 0)}\n"
+                f"Fallas mínimas: {classification_summary.get('fallas_minimas', 0)}\n"
                 f"Aprobadas de duración menor: {classification_summary.get('aprobadas_duracion_menor', 0)}\n"
                 f"Llamadas rechazadas con alertas pendientes: {classification_summary.get('llamadas_con_alertas_pendientes', 0)}\n"
                 f"Umbral: {minimum_score}%"

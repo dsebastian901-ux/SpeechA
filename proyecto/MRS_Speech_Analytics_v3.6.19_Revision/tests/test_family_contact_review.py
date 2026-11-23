@@ -31,7 +31,12 @@ def analyze(data,relation,record):
 
 def test_explicit_user_fact_is_separate_from_raw_asr_and_does_not_assign_speaker_roles():
     data,relation=fixture();raw=deepcopy(data)
-    assert analyze(data,relation,None).metadata['final_result']=='REVISAR'
+    # 23/11: el recado a tercero está probado, el parentesco no. No
+    # inventar hija/familiar: conservar calidad sin etiqueta corregida.
+    unconfirmed=analyze(data,relation,None).metadata
+    assert unconfirmed['final_result']=='APROBADO_SIN_ETIQUETAR'
+    assert unconfirmed['status_validation']['detected_status']=='MENSAJE CON TERCERO'
+    assert not unconfirmed['family_contact_validation']['valid']
     record=make_family_confirmation(data,relation,'HIJA',user_confirmed=True)
     a=analyze(data,relation,record)
     assert a.metadata['final_result']=='APROBADO'

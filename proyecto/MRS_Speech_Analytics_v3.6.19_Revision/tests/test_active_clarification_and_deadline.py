@@ -2,6 +2,7 @@ from copy import deepcopy
 import pytest
 from app.services.active_clarification_evidence import active_clarification
 from app.services.definitive_rejection import definitive_rejection
+from app.services.minor_failure_policy import confirmed_minor_failure
 from app.services.analytics_service import AnalyticsService as A
 from app.models.transcriptions import TranscriptionModel
 
@@ -38,13 +39,20 @@ def test_unopened_unacknowledged_undated_or_quoted_case_is_not_confirmed(text):
 def metadata():
     return {'quality_contact_type':'TITULAR','negotiation_validation':{'financial_validation_applicable':True,'valid':False,
         'payment_date_confirmed':True,'commitment_confirmed':True,'amount_confirmed':True,
-        'promise_date':'2026-11-13','mora_payment_policy':{'window_end':'2026-11-12'}}}
+        'promise_date':'2026-11-13','mora_payment_policy':{'window_end':'2026-11-12'},
+        'commitment_evidence':{'accepted':True,'evidence':'Me comprometo a pagar 1000 el 13 de noviembre.'}}}
 
 
 def test_confirmed_single_payment_outside_policy_closes_rejection_with_other_alerts_preserved():
     m=metadata();before=deepcopy(m)
-    result=definitive_rejection(m,[{'severity':'REVIEW','code':'UNCERTAIN_DISCLOSURE'}],100)
-    assert result['code']=='CONFIRMED_PAYMENT_DATE_OUTSIDE_POLICY'
+    # 23/11: confirmación va a FALLA_MINIMA; privacidad queda como alerta.
+    result=confirmed_minor_failure(m)
+    assert 'CONFIRMED_PAYMENT_DATE_OUTSIDE_POLICY'in result['detail_codes']
+    m['privacy_validation']={'review_required':True}
+    decision=A.shared_quality_decision(m,100,duration_seconds=100)
+    assert decision['clasificacion']=='FALLA_MINIMA' and not decision['aprobado']
+    assert any(a['rule_group']==3 for a in decision['pending_alerts'])
+    m.pop('privacy_validation')
     assert m==before
 
 
@@ -58,7 +66,7 @@ def test_confirmed_single_payment_outside_policy_closes_rejection_with_other_ale
 ])
 def test_unknown_unaccepted_or_installment_payment_does_not_close_as_single_date_failure(change):
     m=metadata();m['negotiation_validation'].update(change)
-    assert definitive_rejection(m,[],100)is None
+    assert confirmed_minor_failure(m)is None
 
 
 def test_confirmed_critical_failure_keeps_priority_over_ordinary_date_failure():

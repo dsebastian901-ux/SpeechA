@@ -152,7 +152,10 @@ def test_factual_relay_and_receipt_are_combined_without_waiving_a_refusal():
     assert a.metadata['status_validation']['detected_status']=='MENSAJE CON FAMILIAR'
     refused=base+' No le voy a pasar el recado.'
     a=A.analyze_transcription(TranscriptionModel.from_dict({'archivo':'synthetic.ogg','texto':refused,'duracion_segundos':90}),relation)
-    assert not a.metadata['shared_classification']['calidad_aprobada']
+    # 23/11: revocar recado cambia estatus, no acredita falta del gestor.
+    assert a.metadata['status_validation']['detected_status']=='SE NIEGAN A TOMAR RECADO'
+    assert not a.metadata['message_workflow_validation']['complete']
+    assert a.metadata['shared_classification']['clasificacion']=='APROBADO_SIN_ETIQUETAR'
 
 
 def test_accusation_of_mockery_does_not_become_an_approved_status_retag():

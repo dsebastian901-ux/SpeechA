@@ -1,5 +1,7 @@
 # Cierre comprobable de los 34 fallos
 
+**Documento histórico de `3f7011b`.** La continuación con las aclaraciones de la usuaria está en [criterios-23/README.md](../criterios-23/README.md): los 34 casos pasan; suite 3248 pasan, cero fallos y dos omisiones. Se preservan aquí los resultados anteriores para comparar.
+
 **Estado: 20 regresiones corregidas; 14 fallos abiertos. No apto para compilar.**
 
 Rama: `codex/integracion-medium-dictaminacion-20261123`. Base de esta intervención: `14cd4321186a05cae98ab17e6fb29260070989df`. Se mantuvo la rama solicitada y se preservó el CSV original de fallos como línea base.
