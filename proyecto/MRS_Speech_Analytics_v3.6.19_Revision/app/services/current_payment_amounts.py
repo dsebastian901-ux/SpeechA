@@ -12,7 +12,7 @@ def explicit_current_amounts(text,segments=()):
         if not frame['accepted']or frame['history']:continue
         if frame['kind']=='AMOUNT':
             value=frame['reply'];offset=frame['position']
-            matches=list(re.finditer(r'^(?:(?:si|ah|bueno)[, ]+)?(?:de |por )?(?:\$\s*)?(?P<amount>'+NUMBER+r')(?!\w)',value))
+            matches=list(re.finditer(r'^(?:(?:si|ah|bueno)[, ]+)?(?:(?:lo que (?:traigo|tengo) (?:son|es)|cuento con|tengo|traigo) )?(?:de |por )?(?:\$\s*)?(?P<amount>'+NUMBER+r')(?!\w)',value))
         else:
             value=frame['question'];offset=frame['question_position']
             matches=list(re.finditer(r'\b(?:pago (?:de|por)(?: los)?|por la cantidad de|por(?: los)?)\s+(?:\$\s*)?(?P<amount>'+NUMBER+r')(?!\w)',value))
@@ -25,6 +25,23 @@ def explicit_current_amounts(text,segments=()):
         events.append({'amount':amount,'amount_position':offset+match.start('amount'),
             'amount_end':offset+match.end('amount'),'amount_text':match['amount'],
             'position':frame['position'],'evidence':frame['evidence'],'method':'IMPORTE_EN_PREGUNTA_ACTUAL_ACEPTADA'})
+    # La aceptación propia inmediata puede remitir al único importe
+    # ofrecido. Nunca completar desde Excel ni de un saldo, teléfono o fecha.
+    from app.services.payment_lifecycle import financial_response_events
+    for response in financial_response_events(text,segments):
+        offer=response['offer'];offset=response['offer_position']
+        matches=list(re.finditer(r'\b(?:pagar|depositar|abonar|pago(?: (?:es|seria))?)(?: de| por)?\s+(?:\$\s*)?(?P<amount>'+NUMBER+r')(?!\w)',offer))
+        usable=[]
+        for match in matches:
+            if re.match(r'\s*(?:dias?|horas?|meses?|de (?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre))\b',offer[match.end():]):continue
+            value=money_value(match['amount'])
+            if value and value>=10:usable.append((match,value))
+        if len({value for _,value in usable})!=1:continue
+        match,value=usable[-1]
+        events.append({'amount':value,'amount_position':offset+match.start('amount'),
+            'amount_end':offset+match.end('amount'),'amount_text':match['amount'],
+            'position':response['position'],'evidence':response['evidence'],
+            'method':'IMPORTE_DE_OFERTA_INMEDIATA_ACEPTADA','human_verified':False})
     # Indicar el monto a ingresar en una operación es una propuesta actual,
     # no un número de teléfono ni el saldo meramente informado. No acredita
     # por sí solo aceptación, fecha o realización del pago.

@@ -1,0 +1,85 @@
+{
+  "fecha": "2026-11-23",
+  "rama": "codex/integracion-medium-dictaminacion-20261123",
+  "base_commit": "14cd4321186a05cae98ab17e6fb29260070989df",
+  "casos_originales": {
+    "antes": {
+      "FALLA": 34
+    },
+    "despues": {
+      "PASA": 20,
+      "FALLA": 14
+    },
+    "ejecucion_individual": true,
+    "reproduccion_con_script_publico": {
+      "FALLA": 14,
+      "PASA": 20
+    }
+  },
+  "grupos": {
+    "recados": {
+      "PASA": 8,
+      "FALLA": 2
+    },
+    "pagos": {
+      "FALLA": 5,
+      "PASA": 7
+    },
+    "checkpoints": {
+      "PASA": 4
+    },
+    "dictaminación": {
+      "FALLA": 5
+    },
+    "reportes": {
+      "PASA": 1,
+      "FALLA": 2
+    }
+  },
+  "focal_final": {
+    "tests": 219,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 2,
+    "passed": 217
+  },
+  "suite_base": {
+    "PASA": 3170,
+    "FALLA": 34,
+    "OMITIDA": 2
+  },
+  "suite_final": {
+    "tests": 3224,
+    "failures": 14,
+    "errors": 0,
+    "skipped": 2,
+    "passed": 3208
+  },
+  "regresiones_de_pruebas_previamente_verdes": [],
+  "pruebas_nuevas": 18,
+  "pruebas_existentes_sin_cambios": 112,
+  "fuentes_sin_cambios_durante_suite": true,
+  "r57_archivos_verificados": 780,
+  "r57_archivos_modificados": 0,
+  "windows_fisico_probado": false,
+  "escucha_humana": false,
+  "nuevo_asr_real_en_este_cierre": false,
+  "medium_experimental_activado": false,
+  "exe_compilado": false,
+  "apto_para_compilar": false,
+  "evidencia_privada_sha256": {
+    "focal_xml": "c120739fe80e4d4c1cf1a69b036ea7060017f7be36df8b103ffb95c6f431ca13",
+    "suite_xml": {
+      "group_0.xml": "2834a8df954bcc4a7d2d445dd3f0637183d83fcb355a306a56ee2a674a867752",
+      "group_1.xml": "171c31f51956e94978f97db686017e62ad3b751746e784abf88031249b242ab2",
+      "group_2.xml": "aa78b0ef4f0a82f1793db32204745f422b3080020ad0feff8d3b3073e9281feb",
+      "group_3.xml": "5a6e82c68c3ebbe31993b4947045772a5e38209b2f8c6b335499a9a458108573"
+    }
+  },
+  "limites": [
+    "14 fallos abiertos: 13 conflictos de expectativa/criterio/contrato y 1 falta de evidencia de aceptación; no se cuentan como aprobados.",
+    "Dos pruebas de diálogo Tk omitidas por incompatibilidad de Python3.10/TclTk9 del entorno Linux; no se probaron de nuevo en Windows físico.",
+    "Pruebas de roles, originales, reportes y rutas de lotes sintéticas incluidas; no equivalen a validar todos los flujos de cada plataforma.",
+    "No se modificaron valores de penalizaciones ni umbral de aprobación; las correcciones de evidencia pueden cambiar su aplicabilidad."
+  ]
+}

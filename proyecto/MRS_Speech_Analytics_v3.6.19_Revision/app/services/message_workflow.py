@@ -61,7 +61,8 @@ def workflow_validation(text,segments,assessment,body,refusal,delivery,human=Non
     supplied=bool(callback_available(text,segments)or(context_audio.get('valid')and context_audio.get('callback')))
     known=existing_callback_confirmation(text,segments)
     valid=bool(assessment.get('acceptance') and body and supplied and not refusal.get('confirmed'))
-    if human.get('valid')and human.get('message_delivered')and human.get('callback_delivered'):
+    if (human.get('valid')and human.get('message_delivered')and human.get('callback_delivered')
+            and not refusal.get('confirmed')):
         valid=True
     # Una negativa temporal a anotar no invalida recepción posterior y
     # contacto efectivamente disponible. Una negativa final sí prevalece.
@@ -76,4 +77,5 @@ def workflow_validation(text,segments,assessment,body,refusal,delivery,human=Non
         'previous_contact_confirmed':bool(known),'final_refusal':bool(refusal.get('confirmed')),
         'events':sorted(events,key=lambda e:e['position']),
         'method':'HECHOS_ORDENADOS_DE_RECEPCION_Y_CONTACTO','human_verified':bool(human.get('valid')),
+        'human_delivery_conflicts_with_final_refusal':bool(human.get('valid')and human.get('message_delivered')and refusal.get('confirmed')),
         'conditional_relay_does_not_cancel_receipt':True}

@@ -214,11 +214,13 @@ def unfinished_callback_offer(text,segments=()):
     if negative and not positive:
         return {'review_required':True,'reason':'La instrucción de retorno está negada en la transcripción; no se certifica un recado positivo.','evidence':[{'text':negative.group(),'method':'RETORNO_NEGADO_EN_TRANSCRIPCION'}]}
     pattern=re.compile(r'\b(?:le (?:voy a|puedo|podria|pudiera|quiero) (?:dejar|dictar|proporcionar|compartir|dar|otorgar)|'
-                       r'le (?:dejare|dejo|dictaria|dejaria|daria|proporcionare|proporciono|estaria dejando)|seria (?:dejarle|dictarle))\b[^.!?]{0,60}\b(?:numero|telefono)\b')
+                       r'le (?:doy|dare|dicto|dictare|dejare|dejo|dictaria|dejaria|daria|proporcionare|proporciono|estaria dejando)|seria (?:dejarle|dictarle))\b[^.!?]{0,60}\b(?:numero|telefono)\b')
     for match in pattern.finditer(source):
         if _role_at(text,segments,match.start()) in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
         if BAD_PREFIX.search(source[max(0,match.start()-65):match.start()]):continue
         offers.append(match)
+    for match in re.finditer(r'\b(?:el |su |este )?(?:numero(?: telefonico| de contacto)?|telefono) (?:es|seria)\b',source):
+        if _role_at(text,segments,match.start())not in {'TITULAR','TERCERO','INTERLOCUTOR'}and not BAD_PREFIX.search(source[max(0,match.start()-65):match.start()]):offers.append(match)
     for match in re.finditer(r'\b(?:al|el) siguiente numero(?: telefonico| de telefono)?\b',source):
         if _role_at(text,segments,match.start())not in {'TITULAR','TERCERO','INTERLOCUTOR'}:
             if not BAD_PREFIX.search(source[max(0,match.start()-65):match.start()]):offers.append(match)

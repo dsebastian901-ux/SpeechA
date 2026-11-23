@@ -1562,16 +1562,11 @@ class AnalyticsService:
         # por omisión del teléfono de retorno; se descuentan 15 puntos.
         # Distinto caso: el gestor SÍ ofrece/dicta un número, pero el ASR
         # no permite corroborarlo. Esa ambigüedad conserva revisión.
-        callback_offer_unverified=bool(
-            any(re.search(
-                r'\b(?:(?:le |se lo )?(?:voy a |puedo |podria |pudiera )?'
-                r'(?:dejar|dictar|proporcionar|indicar)(?:le)?|'
-                r'le (?:dejo|dejare|dejaremos|dicto|dictare|proporciono|proporcionare)|anote|apunte)\b'
-                r'[^.!?]{0,80}\b(?:numero|telefono|contacto|digitos)\b',
-                norm(u['text'])) or re.search(
-                    r'\b(?:el |su |este )?(?:numero(?: telefonico| de contacto)?|telefono) (?:es|seria)\b',norm(u['text']))
-                for u in sentence_evidence(text,segments)
-                if u.get('speaker_role') not in {'TERCERO','TITULAR','INTERLOCUTOR'}))
+        from app.services.message_contact_evidence import unfinished_callback_offer
+        pending_callback=unfinished_callback_offer(text,segments)
+        callback_offer_unverified=bool(pending_callback['review_required']
+            and not message_workflow_validation['callback_available']
+            and not (confirmed_recado.get('valid') and confirmed_recado.get('callback_delivered')))
         recado_sin_contacto_confirmado=bool(
             message_workflow_validation['recipient_accepted']
             and message_workflow_validation['directed_body']
@@ -1596,7 +1591,7 @@ class AnalyticsService:
                 and not message_workflow_validation['final_refusal']):
             message_delivery_validation={
                 'review_required':True,
-                'reason':'Recepción del recado detectada; el contacto ofrecido no quedó completo en ASR. Revisar su entrega sin inferir omisión.',
+                'reason':'La transcripción acredita la recepción del recado; el contacto ofrecido no quedó completo en ASR. Revisar su entrega sin inferir omisión.',
                 'evidence':[u for u in sentence_evidence(text,segments) if re.search(r'\b(?:numero|telefono|anot\w*|\d{2})\b',norm(u['text']))][-8:]}
         if recado_real:
             message_delivery_validation={'review_required':False,'reason':'Recepción y contacto acreditados en el diálogo.','evidence':message_workflow_validation['events']}
@@ -3304,310 +3299,6 @@ class AnalyticsService:
                 r"\b(?:se le esta requiriendo|se le esta solicitando|se le requiere) (?:un |el |su )?pago\b")
                 or (prior_payment_total is not None and minimum_for_attempt is not None
                     and not prior_payment_covers_minimum and negotiation_attempt)))
-        if contact_type == "TITULAR" and not detected_status:
-            from app.services.operational_outcome_resolution import (
-                prior_agreement_breached, offered_payment_alternatives)
-            breach_evidence=prior_agreement_breached(text,segments)
-            alternatives_before_hangup=offered_payment_alternatives(
-                text,segments,before_hangup=True) if explicit_holder_hangup else {'confirmed':False}
-            alternatives_after_breach=offered_payment_alternatives(text,segments) if breach_evidence else {'confirmed':False}
-            agreement_evidence = bool(re.search(
-                r"\b(?:gener(?:o|amos|are|amos)\s+(?:su\s+|el\s+)?convenio|"
-                r"su\s+convenio\s+quedaria|quedamos\s+en\s+(?:tres|dos|3|2)\s+pagos|"
-                r"confirmo\s+(?:su\s+)?convenio)\b", normalized
-            ))
-            refusal_evidence = full_payment_refusal(commitment_confirmation)
-            no_date_evidence = recipient_statement(text, segments,
-                r"\b(?:no\s+se\s+cuando\s+(?:pueda|voy\s+a)\s+pagar|"
-                r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
-                r"no\s+tengo\s+fecha|lo\s+voy\s+a\s+revisar)\b")
-            # Criterio 65: NEGATIVA es el resultado OPERATIVO de una fecha
-            # fuera de mora, sin falsear la respuesta real del titular.
-            outside_due=bool(promise_date and parsed_due_date and promise_date>parsed_due_date)
-            outside_month=bool(promise_date and parsed_call_date
-                and mora_policy['mode']=='MES_DE_LLAMADA'
-                and (promise_date.year,promise_date.month)!=(parsed_call_date.year,parsed_call_date.month))
-            outside_three_days=bool(promise_date and parsed_call_date
-                and mora_policy['mode']=='CORTE_Y_VENCIMIENTO'
-                and not accepted_schedule.get('confirmed')
-                and promise_date>parsed_call_date+timedelta(days=3))
-            date_outside_operational_policy=bool(
-                confirms_commitment and confirmed_agreement_amount
-                and not payment_confirmation_case
-                and (outside_due or outside_month or outside_three_days))
-            if explicit_holder_hangup:
-                # Decisión 16: aun si aceptó monto y fecha, el cuelgue del
-                # titular impide cerrar el convenio. Negativa expresa prevalece.
-                if refusal_evidence:
-                    detected_status="NEGATIVA DE PAGO"
-                    status_evidence=commitment_confirmation["evidence"]
-                    status_evidence_method="NEGATIVA_EXPRESA_ANTES_DE_COLGAR"
-                elif alternatives_before_hangup.get('confirmed') or (
-                        confirms_commitment and promise_date is not None):
-                    detected_status="NO DEFINE FECHA DE PAGO"
-                    status_evidence_method="ALTERNATIVAS_O_ACUERDO_INTERRUMPIDO_POR_CUELGUE"
-                    status_evidence=(alternatives_before_hangup.get('evidence')
-                        or commitment_confirmation.get('evidence') or
-                        "El titular terminó la llamada antes de cerrar el compromiso.")
-                else:
-                    detected_status="TITULAR CUELGA"
-                    status_evidence_method="CUELGUE_EXPRESO_SIN_ALTERNATIVAS"
-                    status_evidence="El titular anunció que terminaría la llamada antes de recibir alternativas."
-                status_detection_confidence="ALTA"
-            elif date_outside_operational_policy:
-                detected_status="NEGATIVA DE PAGO"
-                status_detection_confidence="ALTA"
-                status_evidence=commitment_confirmation.get("evidence") or promise_date_evidence
-                status_evidence_method="NEGATIVA_OPERATIVA_POR_FECHA_FUERA_DE_MORA"
-            elif promise_date is not None and confirms_commitment and confirmed_agreement_amount and not payment_confirmation_case:
-                detected_status = "CONVENIO"
-                status_detection_confidence = "ALTA"
-                status_evidence = commitment_confirmation["evidence"]
-                status_evidence_method = "COMPROMISO_ACEPTADO_CON_FECHA_Y_MONTO"
-            elif confirms_commitment and (promise_date is not None or agreement_evidence) and not confirmed_agreement_amount:
-                detected_status = "NO DEFINE FECHA DE PAGO"
-                status_detection_confidence = "ALTA"
-                status_evidence = commitment_confirmation["evidence"]
-                status_evidence_method = "FECHA_O_INTENCION_SIN_MONTO_CONFIRMADO"
-            elif refusal_evidence and not confirms_commitment:
-                detected_status="NEGATIVA DE PAGO"
-                status_detection_confidence="ALTA"
-                status_evidence=commitment_confirmation["evidence"]
-                status_evidence_method="NEGATIVA_EXPLICITA_DEL_INTERLOCUTOR"
-            elif breach_evidence and not confirms_commitment:
-                options=bool(alternatives_after_breach.get('confirmed'))
-                detected_status="NO DEFINE FECHA DE PAGO" if options else "CONVENIO INCUMPLIDO"
-                status_detection_confidence="ALTA"
-                status_evidence=(str(breach_evidence)+' / '+alternatives_after_breach['evidence']
-                    if options else str(breach_evidence))
-                status_evidence_method=("INCUMPLIMIENTO_CON_ALTERNATIVAS_SIN_ACUERDO" if options
-                    else "INCUMPLIMIENTO_PREVIO_SIN_ALTERNATIVAS")
-            elif (clarification_validation['confirmed'] and not confirms_commitment and not negotiation_attempt
-                  and not(clarification_validation.get('active_dispute_followup') and payment_confirmation_case)):
-                detected_status='ACLARACION'
-                status_detection_confidence='ALTA' if clarification_validation.get('active_dispute_followup') else 'MEDIA'
-                status_evidence=('Cancelación reportada por el interlocutor, folio aportado y registro en sistema para detener llamadas.'
-                                 if clarification_validation.get('cancellation_followup') else
-                                 'Pérdida de tarjeta reportada, folio confirmado y seguimiento de resolución.')
-                status_evidence_method=clarification_validation['method']
-                if clarification_validation.get('active_dispute_followup'):
-                    status_evidence=clarification_validation['active_dispute_evidence']
-            elif pending_decision:
-                detected_status=pending_decision['detected_status']
-                status_detection_confidence=pending_decision['confidence']
-                status_evidence=pending_decision['evidence']
-                status_evidence_method=pending_decision['method']
-            elif (no_date_evidence or commitment_confirmation["declined"] or commitment_confirmation.get("conditional")) and (not payment_confirmation_case or prior_payment_with_current_decline or prior_payment_with_current_condition) and not confirms_commitment:
-                detected_status = "NO DEFINE FECHA DE PAGO"
-                status_detection_confidence = "ALTA"
-                status_evidence = commitment_confirmation["evidence"]
-                status_evidence_method = "SIN_COMPROMISO_FIRME_RESPUESTA_EXPLICITA"
-            elif payment_confirmation_case and not confirms_commitment and not (negotiation_attempt and not payment_followup_case):
-                # Regla operativa confirmada 21/nov/2026: al titular que ya
-                # reporta un pago y el gestor verifica/solicita comprobante
-                # corresponde CONVENIO, aunque Excel diga NO DEFINE.
-                # Es estatus de gestión, NO acreditación bancaria ni promesa
-                # futura; el puntaje y las alertas se calculan por separado.
-                # Excepción 33: un pago inferior al mínimo y rechazo de
-                # completar la diferencia NO es nuevo convenio.
-                unable_to_complete=recipient_statement(text,segments,
-                    r'\b(?:no (?:puedo|voy a|quiero) (?:pagar|cubrir|completar|depositar)'
-                    r'[^.!?]{0,55}\b(?:diferencia|resto|restante|faltante|mas)|'
-                    r'no (?:tengo|cuento con) (?:el |lo |la )?(?:resto|diferencia|faltante))\b')
-                declined_difference=bool(prior_payment_total is not None
-                    and minimum_for_attempt is not None
-                    and prior_payment_total + .009 < minimum_for_attempt
-                    and (prior_payment_with_current_decline or unable_to_complete)
-                    and not confirms_commitment)
-                detected_status = ("NO DEFINE FECHA DE PAGO" if declined_difference else
-                    "CONVENIO" if payment_followup_case else "")
-                status_detection_confidence = "ALTA" if detected_status else "NO DETERMINADA"
-                status_evidence_method = ("PAGO_PARCIAL_SIN_COMPLEMENTO_ACEPTADO"
-                    if declined_difference else
-                    "SEGUIMIENTO_PAGO_REPORTADO_CON_COMPROBANTE_SIN_ACREDITACION"
-                    if payment_followup_case else "PAGO_REPORTADO_SIN_ESTATUS_ACREDITADO")
-                status_evidence = " / ".join(u["text"] for u in completed_payment_confirmation["evidence"][:3])
-        elif detected_status:
-            status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
-            if recado_estatus_acreditado and detected_status.startswith('MENSAJE '):
-                status_detection_confidence = 'ALTA'
-                status_evidence=' / '.join(u['text'] for u in recado_assessment['acceptance'])
-                status_evidence_method=('RECADO_RECIBIDO_SIN_POSIBILIDAD_DE_TRANSMITIR'
-                    if no_puede_transmitir_recado else
-                    'RECADO_ACEPTADO_SIN_CONTACTO_PENALIZADO'
-                    if recado_sin_contacto_confirmado else
-                    'RECADO_ACEPTADO_CON_CONTACTO')
-                if confirmed_family.get('valid'):
-                    status_evidence='Parentesco confirmado por usuario: '+confirmed_family['relationship']+'. '+status_evidence
-                    status_evidence_method='RECADO_ACEPTADO_Y_PARENTESCO_CONFIRMADO_POR_USUARIO'
-            if unknown_debtor and detected_status=='NO CONOCEN A DEUDOR' and not unknown_response['confirmed']:
-                declarations=[u['text'] for u in sentence_evidence(text,segments) if unknown_debtor_statement(
-                    u['text'],[{'text':u['text'],'speaker_role':u['speaker_role']}])]
-                if declarations:
-                    status_evidence=' / '.join(declarations)
-                    status_evidence_method='DECLARACION_DESCONOCIMIENTO_TITULAR'
-            if unknown_response['confirmed'] and detected_status=='NO CONOCEN A DEUDOR':
-                status_evidence=unknown_response['evidence']
-                status_evidence_method=unknown_response['method']
-
-        # ---------------------------------------------------------
-        # VALIDACIÓN ESPECÍFICA DEL ESTATUS EXCEL
-        # ---------------------------------------------------------
-        status_validation = {
-            "excel_status": excel_status,
-            "detected_status": detected_status,
-            "contact_type": contact_type,
-            "relationship": relationship,
-            "matches": None,
-            "valid": True,
-            "reasons": [],
-            "detection_confidence": status_detection_confidence,
-            "evidence_method": status_evidence_method,
-            "evidence": status_evidence,
-        }
-
-        if payment_confirmation_case and not detected_status and not confirms_commitment:
-            status_validation["valid"] = False
-            status_validation["review_required"] = True
-            status_validation["reasons"].append(
-                "Pago anterior reportado: no equivale a ACLARACION; no existe estatus operativo confirmado.")
-        if excel_status:
-            if excel_status == "NO CONOCEN A DEUDOR" and arco_validation["applies"]:
-                status_validation["matches"] = detected_status == "NO CONOCEN A DEUDOR"
-
-                if not unknown_debtor:
-                    status_validation["valid"] = False
-                    status_validation["reasons"].append(
-                        "El interlocutor no confirma que desconoce al titular."
-                    )
-                if family or third_party or work_contact:
-                    status_validation["valid"] = False
-
-                    if relationship:
-                        status_validation["reasons"].append(
-                            f"El interlocutor confirma conocer al titular y se identifica como {relationship.lower()}; "
-                            "el estatus NO CONOCEN A DEUDOR no corresponde."
-                        )
-                    elif family:
-                        status_validation["reasons"].append(
-                            "El interlocutor confirma conocer al titular y se identifica como familiar; "
-                            "el estatus NO CONOCEN A DEUDOR no corresponde."
-                        )
-                    elif work_contact:
-                        status_validation["reasons"].append(
-                            "El interlocutor confirma conocer al titular mediante un contacto de trabajo; "
-                            "el estatus NO CONOCEN A DEUDOR no corresponde."
-                        )
-                    else:
-                        status_validation["reasons"].append(
-                            "El interlocutor confirma conocer al titular; "
-                            "el estatus NO CONOCEN A DEUDOR no corresponde."
-                        )
-                if not arco_process:
-                    status_validation["valid"] = False
-                    status_validation["reasons"].append(
-                        "No se detectó el proceso ARCO."
-                    )
-                if not line_tenure_confirmed:
-                    status_validation["valid"] = False
-                    status_validation["reasons"].append(
-                        "No se detectó confirmación del tiempo que el interlocutor tiene con la línea."
-                    )
-
-                # Evidencia adicional del manual.
-                status_validation["arco_process"] = arco_process
-                status_validation["line_tenure_confirmed"] = line_tenure_confirmed
-                status_validation["privacy_email"] = gives_privacy_email
-                status_validation["ine_or_line_proof"] = asks_ine_or_line_proof
-                status_validation['ine_requested'] = arco_validation['ine_requested']
-                status_validation['line_proof_requested'] = arco_validation['line_proof_requested']
-                if not arco_validation['ine_requested']:
-                    status_validation["reasons"].append("No se detectó solicitud de INE o identificación oficial.")
-                if not arco_validation['line_proof_requested']:
-                    status_validation["reasons"].append("No se detectó solicitud del comprobante de la línea.")
-                if arco_validation['documents_as_alternatives']:
-                    status_validation['reasons'].append('Se requieren INE y comprobante, no uno u otro documento.')
-                if not gives_privacy_email:
-                    status_validation["reasons"].append("No se detectó el correo de privacidad para derechos ARCO.")
-                status_validation["valid"] = bool(no_conocen_valid)
-
-            elif detected_status:
-                status_validation["matches"] = canonical_excel_status == detected_status
-                # RECADO REF1/REF2 exige familiar identificado Y recado real.
-                # La sola relación familiar no prueba que se dejó el mensaje.
-                if canonical_excel_status == "MENSAJE CON FAMILIAR" and status_validation["matches"]:
-                    if not (recado_family_evidence and recado_estatus_acreditado):
-                        status_validation["valid"] = False
-                        status_validation["review_required"] = True
-                        status_validation["reasons"].append(
-                            "Falta evidencia conjunta de familiar y recado efectivamente transmitido."
-                        )
-                if not status_validation["matches"]:
-                    # No declarar MAL_DICTAMINADO con evidencia media/ambigua.
-                    # La discrepancia se registra y se remite a revisión.
-                    status_validation["valid"] = False
-                    status_validation["review_required"] = status_detection_confidence != "ALTA"
-                    status_validation["reasons"].append(
-                        f"Estatus Excel ({excel_status}) distinto del detectado ({detected_status}); "
-                        + ("evidencia alta." if status_detection_confidence == "ALTA" else "confirmar audio antes de declarar mal dictaminado.")
-                    )
-
-        if recado_applies or (recado_expected and not unknown_debtor and not own_finance_proof):
-            status_validation["recado_evidence"] = {
-                "family_phrases": recado_family_evidence[:8],
-                "message_transmitted": recado_transmitted,
-                "callback_information": recado_callback,
-                "recipient_declines": bool(recado_declines or recado_refusal),
-                "recipient_acceptance_evidence": recado_recibido_explicito,
-                "evidence": recado_assessment,
-                "confirmed_recado": bool(recado_family_evidence and recado_estatus_acreditado and not recado_unknown_explicit),
-            }
-            if recado_applies and not message_refusal_validation.get('confirmed') and (not recado_family_evidence or not recado_estatus_acreditado):
-                status_validation["valid"] = False
-                status_validation["review_required"] = True
-                if not recado_family_evidence:
-                    status_validation["reasons"].append("No se confirmó parentesco con el titular; verificar audio.")
-                if not recado_estatus_acreditado:
-                    status_validation["reasons"].append("No se confirmó recepción efectiva del recado; verificar audio.")
-            if recado_family_evidence and recado_estatus_acreditado and not recado_unknown_explicit:
-                matching = not excel_status or canonical_excel_status == "MENSAJE CON FAMILIAR"
-                status_validation["matches"] = matching
-                status_validation["valid"] = matching
-                status_validation["review_required"] = False
-                status_validation["reasons"] = [] if matching else [
-                    f"Estatus Excel ({excel_status}) distinto del detectado (MENSAJE CON FAMILIAR); evidencia alta."]
-                status_validation["detected_status"] = "MENSAJE CON FAMILIAR"
-                status_validation["contact_type"] = "TERCERO / FAMILIAR"
-                status_validation["relationship"] = relationship
-                status_validation["detection_confidence"] = "ALTA"
-
-        # No interpretar falta de evidencia como coincidencia válida.
-        # Con Excel y estatus no detectable: revisión, nunca mal dictaminado automático.
-        if (contact_type in {"TERCERO", "TERCERO / FAMILIAR", "TERCERO / TRABAJO"}
-                and not recado_estatus_acreditado and not message_refusal_validation.get('confirmed')):
-            status_validation["valid"] = False
-            status_validation["review_required"] = True
-            status_validation["evidence_method"] = "TERCERO_SIN_RECADO_CONFIRMADO"
-            status_validation["reasons"].append("Tercero identificado sin recado efectivamente confirmado; revisar conversación.")
-        if death_followup_validation['valid'] and excel_status:
-            status_validation.update(matches=True,valid=True,review_required=False,reasons=[],
-                detected_status=canonical_excel_status,conversation_event='SEGUIMIENTO_DE_DEFUNCION_REPORTADA',
-                detection_confidence='ALTA',evidence_method='SEGUIMIENTO_DEFUNCION_ESTATUS_ORIGINAL_CONSERVADO',
-                evidence=' / '.join(u['text']for u in death_followup_validation['evidence']),
-                policy_source=death_followup_validation['policy_source'],status_preserved_by_policy=True)
-            status_validation.pop('recado_evidence',None)
-            message_delivery_validation={'review_required':False,'reason':'Seguimiento documental por fallecimiento; no es nuevo recado.','evidence':[]}
-            message_refusal_validation={'confirmed':False,'evidence':[],'reason':'No aplica rechazo de recado en seguimiento documental.'}
-        if excel_status and status_validation["matches"] is None:
-            status_validation["valid"] = False
-            status_validation["review_required"] = True
-            status_validation["reasons"].append(
-                "Estatus de Excel sin evidencia suficiente para confirmar coincidencia; revisar conversación."
-            )
-
-        # ---------------------------------------------------------
-        # VALIDACIÓN DE NEGOCIACIÓN
-        # ---------------------------------------------------------
         # ---------------------------------------------------------
         # v3.5.5 · VALIDACIÓN MATEMÁTICA DE SALDOS / MONTOS
         # ---------------------------------------------------------
@@ -4149,6 +3840,11 @@ class AnalyticsService:
         detected_balance_amount, detected_balance_evidence, plan, financial_review = apply_financial_review(
             context.get("_financial_source"), context.get("_financial_review"),
             detected_balance_amount, detected_balance_evidence, plan)
+        from app.services.operational_outcome_resolution import final_plan_amounts_accepted
+        if final_plan_amounts_accepted(text,commitment_confirmation,plan):
+            confirmed_agreement_amount=True
+        if financial_review.get('installments_applied') and plan.get('human_confirmed_final_plan'):
+            confirmed_agreement_amount=bool(confirms_commitment and plan['amounts'])
         if plan["amounts"]:
             multi_payment_detected = True
             multi_payment_amounts = plan["amounts"]
@@ -4720,6 +4416,317 @@ class AnalyticsService:
         # conserva su bloqueo REVISAR independiente; no inventa un descuento
         # hasta 79 puntos ni se convierte por ello en una aprobación.
 
+        # Resolver el estatus una sola vez, después de validar el plan y las
+        # confirmaciones humanas. La calidad y la seguridad conservan sus puertas.
+        if contact_type == "TITULAR" and not detected_status:
+            from app.services.operational_outcome_resolution import (
+                prior_agreement_breached, offered_payment_alternatives)
+            breach_evidence=prior_agreement_breached(text,segments)
+            alternatives_before_hangup=offered_payment_alternatives(
+                text,segments,before_hangup=True) if explicit_holder_hangup else {'confirmed':False}
+            alternatives_after_breach=offered_payment_alternatives(text,segments) if breach_evidence else {'confirmed':False}
+            agreement_evidence = bool(re.search(
+                r"\b(?:gener(?:o|amos|are|amos)\s+(?:su\s+|el\s+)?convenio|"
+                r"su\s+convenio\s+quedaria|quedamos\s+en\s+(?:tres|dos|3|2)\s+pagos|"
+                r"confirmo\s+(?:su\s+)?convenio)\b", normalized
+            ))
+            refusal_evidence = full_payment_refusal(commitment_confirmation)
+            no_date_evidence = recipient_statement(text, segments,
+                r"\b(?:no\s+se\s+cuando\s+(?:pueda|voy\s+a)\s+pagar|"
+                r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
+                r"no\s+tengo\s+fecha|lo\s+voy\s+a\s+revisar)\b")
+            # Criterio 65: NEGATIVA es el resultado OPERATIVO de una fecha
+            # fuera de mora, sin falsear la respuesta real del titular.
+            outside_due=bool(promise_date and parsed_due_date and promise_date>parsed_due_date)
+            outside_month=bool(promise_date and parsed_call_date
+                and mora_policy['mode']=='MES_DE_LLAMADA'
+                and (promise_date.year,promise_date.month)!=(parsed_call_date.year,parsed_call_date.month))
+            outside_three_days=bool(promise_date and parsed_call_date
+                and mora_policy['mode']=='CORTE_Y_VENCIMIENTO'
+                and mora_policy.get('window_end')
+                and promise_date>date.fromisoformat(mora_policy['window_end']))
+            date_outside_operational_policy=bool(
+                confirms_commitment and confirmed_agreement_amount
+                and not payment_confirmation_case
+                and (outside_due or outside_month or outside_three_days))
+            if explicit_holder_hangup:
+                # Decisión 16: aun si aceptó monto y fecha, el cuelgue del
+                # titular impide cerrar el convenio. Negativa expresa prevalece.
+                if refusal_evidence:
+                    detected_status="NEGATIVA DE PAGO"
+                    status_evidence=commitment_confirmation["evidence"]
+                    status_evidence_method="NEGATIVA_EXPRESA_ANTES_DE_COLGAR"
+                elif alternatives_before_hangup.get('confirmed') or (
+                        confirms_commitment and promise_date is not None):
+                    detected_status="NO DEFINE FECHA DE PAGO"
+                    status_evidence_method="ALTERNATIVAS_O_ACUERDO_INTERRUMPIDO_POR_CUELGUE"
+                    status_evidence=(alternatives_before_hangup.get('evidence')
+                        or commitment_confirmation.get('evidence') or
+                        "El titular terminó la llamada antes de cerrar el compromiso.")
+                else:
+                    detected_status="TITULAR CUELGA"
+                    status_evidence_method="CUELGUE_EXPRESO_SIN_ALTERNATIVAS"
+                    status_evidence="El titular anunció que terminaría la llamada antes de recibir alternativas."
+                status_detection_confidence="ALTA"
+            elif date_outside_operational_policy:
+                detected_status="NEGATIVA DE PAGO"
+                status_detection_confidence="ALTA"
+                status_evidence=commitment_confirmation.get("evidence") or promise_date_evidence
+                status_evidence_method="NEGATIVA_OPERATIVA_POR_FECHA_FUERA_DE_MORA"
+            elif promise_date is not None and confirms_commitment and confirmed_agreement_amount and not payment_confirmation_case:
+                detected_status = "CONVENIO"
+                status_detection_confidence = "ALTA"
+                status_evidence = commitment_confirmation["evidence"]
+                status_evidence_method = "COMPROMISO_ACEPTADO_CON_FECHA"
+            elif confirms_commitment and (promise_date is not None or agreement_evidence) and not confirmed_agreement_amount:
+                detected_status = "NO DEFINE FECHA DE PAGO"
+                status_detection_confidence = "ALTA"
+                status_evidence = commitment_confirmation["evidence"]
+                status_evidence_method = "FECHA_O_INTENCION_SIN_MONTO_CONFIRMADO"
+            elif refusal_evidence and not confirms_commitment:
+                detected_status="NEGATIVA DE PAGO"
+                status_detection_confidence="ALTA"
+                status_evidence=commitment_confirmation["evidence"]
+                status_evidence_method="NEGATIVA_EXPLICITA_DEL_INTERLOCUTOR"
+            elif breach_evidence and not confirms_commitment:
+                options=bool(alternatives_after_breach.get('confirmed'))
+                detected_status="NO DEFINE FECHA DE PAGO" if options else "CONVENIO INCUMPLIDO"
+                status_detection_confidence="ALTA"
+                status_evidence=(str(breach_evidence)+' / '+alternatives_after_breach['evidence']
+                    if options else str(breach_evidence))
+                status_evidence_method=("INCUMPLIMIENTO_CON_ALTERNATIVAS_SIN_ACUERDO" if options
+                    else "INCUMPLIMIENTO_PREVIO_SIN_ALTERNATIVAS")
+            elif (clarification_validation['confirmed'] and not confirms_commitment and not negotiation_attempt
+                  and not(clarification_validation.get('active_dispute_followup') and payment_confirmation_case)):
+                detected_status='ACLARACION'
+                status_detection_confidence='ALTA' if clarification_validation.get('active_dispute_followup') else 'MEDIA'
+                status_evidence=('Cancelación reportada por el interlocutor, folio aportado y registro en sistema para detener llamadas.'
+                                 if clarification_validation.get('cancellation_followup') else
+                                 'Pérdida de tarjeta reportada, folio confirmado y seguimiento de resolución.')
+                status_evidence_method=clarification_validation['method']
+                if clarification_validation.get('active_dispute_followup'):
+                    status_evidence=clarification_validation['active_dispute_evidence']
+            elif pending_decision:
+                detected_status=pending_decision['detected_status']
+                status_detection_confidence=pending_decision['confidence']
+                status_evidence=pending_decision['evidence']
+                status_evidence_method=pending_decision['method']
+            elif (no_date_evidence or commitment_confirmation["declined"] or commitment_confirmation.get("conditional")) and (not payment_confirmation_case or prior_payment_with_current_decline or prior_payment_with_current_condition) and not confirms_commitment:
+                detected_status = "NO DEFINE FECHA DE PAGO"
+                status_detection_confidence = "ALTA"
+                status_evidence = commitment_confirmation["evidence"]
+                status_evidence_method = "SIN_COMPROMISO_FIRME_RESPUESTA_EXPLICITA"
+            elif payment_confirmation_case and not confirms_commitment and not (negotiation_attempt and not payment_followup_case):
+                # Regla operativa confirmada 21/nov/2026: al titular que ya
+                # reporta un pago y el gestor verifica/solicita comprobante
+                # corresponde CONVENIO, aunque Excel diga NO DEFINE.
+                # Es estatus de gestión, NO acreditación bancaria ni promesa
+                # futura; el puntaje y las alertas se calculan por separado.
+                # Excepción 33: un pago inferior al mínimo y rechazo de
+                # completar la diferencia NO es nuevo convenio.
+                unable_to_complete=recipient_statement(text,segments,
+                    r'\b(?:no (?:puedo|voy a|quiero) (?:pagar|cubrir|completar|depositar)'
+                    r'[^.!?]{0,55}\b(?:diferencia|resto|restante|faltante|mas)|'
+                    r'no (?:tengo|cuento con) (?:el |lo |la )?(?:resto|diferencia|faltante))\b')
+                declined_difference=bool(prior_payment_total is not None
+                    and minimum_for_attempt is not None
+                    and prior_payment_total + .009 < minimum_for_attempt
+                    and (prior_payment_with_current_decline or unable_to_complete)
+                    and not confirms_commitment)
+                detected_status = ("NO DEFINE FECHA DE PAGO" if declined_difference else
+                    "CONVENIO" if payment_followup_case else "")
+                status_detection_confidence = "ALTA" if detected_status else "NO DETERMINADA"
+                status_evidence_method = ("PAGO_PARCIAL_SIN_COMPLEMENTO_ACEPTADO"
+                    if declined_difference else
+                    "SEGUIMIENTO_PAGO_REPORTADO_CON_COMPROBANTE_SIN_ACREDITACION"
+                    if payment_followup_case else "PAGO_REPORTADO_SIN_ESTATUS_ACREDITADO")
+                status_evidence = " / ".join(u["text"] for u in completed_payment_confirmation["evidence"][:3])
+        elif detected_status:
+            status_detection_confidence = "ALTA" if contact_type == "NO CONOCEN A DEUDOR" else "MEDIA"
+            if recado_estatus_acreditado and detected_status.startswith('MENSAJE '):
+                status_detection_confidence = 'ALTA'
+                status_evidence=' / '.join(u['text'] for u in recado_assessment['acceptance'])
+                status_evidence_method=('RECADO_RECIBIDO_SIN_POSIBILIDAD_DE_TRANSMITIR'
+                    if no_puede_transmitir_recado else
+                    'RECADO_ACEPTADO_SIN_CONTACTO_PENALIZADO'
+                    if recado_sin_contacto_confirmado else
+                    'RECADO_ACEPTADO_CON_CONTACTO')
+                if confirmed_family.get('valid'):
+                    status_evidence='Parentesco confirmado por usuario: '+confirmed_family['relationship']+'. '+status_evidence
+                    status_evidence_method='RECADO_ACEPTADO_Y_PARENTESCO_CONFIRMADO_POR_USUARIO'
+            if unknown_debtor and detected_status=='NO CONOCEN A DEUDOR' and not unknown_response['confirmed']:
+                declarations=[u['text'] for u in sentence_evidence(text,segments) if unknown_debtor_statement(
+                    u['text'],[{'text':u['text'],'speaker_role':u['speaker_role']}])]
+                if declarations:
+                    status_evidence=' / '.join(declarations)
+                    status_evidence_method='DECLARACION_DESCONOCIMIENTO_TITULAR'
+            if unknown_response['confirmed'] and detected_status=='NO CONOCEN A DEUDOR':
+                status_evidence=unknown_response['evidence']
+                status_evidence_method=unknown_response['method']
+
+        # ---------------------------------------------------------
+        # VALIDACIÓN ESPECÍFICA DEL ESTATUS EXCEL
+        # ---------------------------------------------------------
+        status_validation = {
+            "excel_status": excel_status,
+            "detected_status": detected_status,
+            "contact_type": contact_type,
+            "relationship": relationship,
+            "matches": None,
+            "valid": True,
+            "reasons": [],
+            "detection_confidence": status_detection_confidence,
+            "evidence_method": status_evidence_method,
+            "evidence": status_evidence,
+            "amount_confirmed_from_dialogue": bool(confirmed_agreement_amount),
+        }
+
+        if status_evidence_method=='SEGUIMIENTO_PAGO_REPORTADO_CON_COMPROBANTE_SIN_ACREDITACION':
+            status_validation.update(policy_source='CRITERIO_72_USUARIO_20261121',
+                conversation_event='PAGO_REPORTADO_CON_COMPROBANTE',status_preserved_by_policy=False,
+                bank_payment_verified=False)
+        if payment_confirmation_case and not detected_status and not confirms_commitment:
+            status_validation["valid"] = False
+            status_validation["review_required"] = True
+            status_validation["reasons"].append(
+                "Pago anterior reportado: no equivale a ACLARACION; no existe estatus operativo confirmado.")
+        if excel_status:
+            if excel_status == "NO CONOCEN A DEUDOR" and arco_validation["applies"]:
+                status_validation["matches"] = detected_status == "NO CONOCEN A DEUDOR"
+
+                if not unknown_debtor:
+                    status_validation["valid"] = False
+                    status_validation["reasons"].append(
+                        "El interlocutor no confirma que desconoce al titular."
+                    )
+                if family or third_party or work_contact:
+                    status_validation["valid"] = False
+
+                    if relationship:
+                        status_validation["reasons"].append(
+                            f"El interlocutor confirma conocer al titular y se identifica como {relationship.lower()}; "
+                            "el estatus NO CONOCEN A DEUDOR no corresponde."
+                        )
+                    elif family:
+                        status_validation["reasons"].append(
+                            "El interlocutor confirma conocer al titular y se identifica como familiar; "
+                            "el estatus NO CONOCEN A DEUDOR no corresponde."
+                        )
+                    elif work_contact:
+                        status_validation["reasons"].append(
+                            "El interlocutor confirma conocer al titular mediante un contacto de trabajo; "
+                            "el estatus NO CONOCEN A DEUDOR no corresponde."
+                        )
+                    else:
+                        status_validation["reasons"].append(
+                            "El interlocutor confirma conocer al titular; "
+                            "el estatus NO CONOCEN A DEUDOR no corresponde."
+                        )
+                if not arco_process:
+                    status_validation["valid"] = False
+                    status_validation["reasons"].append(
+                        "No se detectó el proceso ARCO."
+                    )
+                if not line_tenure_confirmed:
+                    status_validation["valid"] = False
+                    status_validation["reasons"].append(
+                        "No se detectó confirmación del tiempo que el interlocutor tiene con la línea."
+                    )
+
+                # Evidencia adicional del manual.
+                status_validation["arco_process"] = arco_process
+                status_validation["line_tenure_confirmed"] = line_tenure_confirmed
+                status_validation["privacy_email"] = gives_privacy_email
+                status_validation["ine_or_line_proof"] = asks_ine_or_line_proof
+                status_validation['ine_requested'] = arco_validation['ine_requested']
+                status_validation['line_proof_requested'] = arco_validation['line_proof_requested']
+                if not arco_validation['ine_requested']:
+                    status_validation["reasons"].append("No se detectó solicitud de INE o identificación oficial.")
+                if not arco_validation['line_proof_requested']:
+                    status_validation["reasons"].append("No se detectó solicitud del comprobante de la línea.")
+                if arco_validation['documents_as_alternatives']:
+                    status_validation['reasons'].append('Se requieren INE y comprobante, no uno u otro documento.')
+                if not gives_privacy_email:
+                    status_validation["reasons"].append("No se detectó el correo de privacidad para derechos ARCO.")
+                status_validation["valid"] = bool(no_conocen_valid)
+
+            elif detected_status:
+                status_validation["matches"] = canonical_excel_status == detected_status
+                # RECADO REF1/REF2 exige familiar identificado Y recado real.
+                # La sola relación familiar no prueba que se dejó el mensaje.
+                if canonical_excel_status == "MENSAJE CON FAMILIAR" and status_validation["matches"]:
+                    if not (recado_family_evidence and recado_estatus_acreditado):
+                        status_validation["valid"] = False
+                        status_validation["review_required"] = True
+                        status_validation["reasons"].append(
+                            "Falta evidencia conjunta de familiar y recado efectivamente transmitido."
+                        )
+                if not status_validation["matches"]:
+                    # No declarar MAL_DICTAMINADO con evidencia media/ambigua.
+                    # La discrepancia se registra y se remite a revisión.
+                    status_validation["valid"] = False
+                    status_validation["review_required"] = status_detection_confidence != "ALTA"
+                    status_validation["reasons"].append(
+                        f"Estatus Excel ({excel_status}) distinto del detectado ({detected_status}); "
+                        + ("evidencia alta." if status_detection_confidence == "ALTA" else "confirmar audio antes de declarar mal dictaminado.")
+                    )
+
+        if recado_applies or (recado_expected and not unknown_debtor and not own_finance_proof):
+            status_validation["recado_evidence"] = {
+                "family_phrases": recado_family_evidence[:8],
+                "message_transmitted": recado_transmitted,
+                "callback_information": recado_callback,
+                "recipient_declines": bool(recado_declines or recado_refusal),
+                "recipient_acceptance_evidence": recado_recibido_explicito,
+                "evidence": recado_assessment,
+                "confirmed_recado": bool(recado_family_evidence and recado_estatus_acreditado and not recado_unknown_explicit),
+            }
+            if recado_applies and not message_refusal_validation.get('confirmed') and (not recado_family_evidence or not recado_estatus_acreditado):
+                status_validation["valid"] = False
+                status_validation["review_required"] = True
+                if not recado_family_evidence:
+                    status_validation["reasons"].append("No se confirmó parentesco con el titular; verificar audio.")
+                if not recado_estatus_acreditado:
+                    status_validation["reasons"].append("No se confirmó recepción efectiva del recado; verificar audio.")
+            if recado_family_evidence and recado_estatus_acreditado and not recado_unknown_explicit:
+                matching = not excel_status or canonical_excel_status == "MENSAJE CON FAMILIAR"
+                status_validation["matches"] = matching
+                status_validation["valid"] = matching
+                status_validation["review_required"] = False
+                status_validation["reasons"] = [] if matching else [
+                    f"Estatus Excel ({excel_status}) distinto del detectado (MENSAJE CON FAMILIAR); evidencia alta."]
+                status_validation["detected_status"] = "MENSAJE CON FAMILIAR"
+                status_validation["contact_type"] = "TERCERO / FAMILIAR"
+                status_validation["relationship"] = relationship
+                status_validation["detection_confidence"] = "ALTA"
+
+        # No interpretar falta de evidencia como coincidencia válida.
+        # Con Excel y estatus no detectable: revisión, nunca mal dictaminado automático.
+        if (contact_type in {"TERCERO", "TERCERO / FAMILIAR", "TERCERO / TRABAJO"}
+                and not recado_estatus_acreditado and not message_refusal_validation.get('confirmed')):
+            status_validation["valid"] = False
+            status_validation["review_required"] = True
+            status_validation["evidence_method"] = "TERCERO_SIN_RECADO_CONFIRMADO"
+            status_validation["reasons"].append("Tercero identificado sin recado efectivamente confirmado; revisar conversación.")
+        if death_followup_validation['valid'] and excel_status:
+            status_validation.update(matches=True,valid=True,review_required=False,reasons=[],
+                detected_status=canonical_excel_status,conversation_event='SEGUIMIENTO_DE_DEFUNCION_REPORTADA',
+                detection_confidence='ALTA',evidence_method='SEGUIMIENTO_DEFUNCION_ESTATUS_ORIGINAL_CONSERVADO',
+                evidence=' / '.join(u['text']for u in death_followup_validation['evidence']),
+                policy_source=death_followup_validation['policy_source'],status_preserved_by_policy=True)
+            status_validation.pop('recado_evidence',None)
+            message_delivery_validation={'review_required':False,'reason':'Seguimiento documental por fallecimiento; no es nuevo recado.','evidence':[]}
+            message_refusal_validation={'confirmed':False,'evidence':[],'reason':'No aplica rechazo de recado en seguimiento documental.'}
+        if excel_status and status_validation["matches"] is None:
+            status_validation["valid"] = False
+            status_validation["review_required"] = True
+            status_validation["reasons"].append(
+                "Estatus de Excel sin evidencia suficiente para confirmar coincidencia; revisar conversación."
+            )
+
+        # ---------------------------------------------------------
+        # VALIDACIÓN DE NEGOCIACIÓN
+        # ---------------------------------------------------------
         # Las inconsistencias de estatus no necesariamente son -100 del score,
         # pero obligan a revisión porque la clasificación operativa es incorrecta.
         requires_review = (

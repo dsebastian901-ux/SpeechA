@@ -125,7 +125,7 @@ def payment_frames(text,segments=()):
   else:
    conditional=condition or bool(kind=='DATE'and re.search(r'\b(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo|\d{1,2}) o (?:el )?(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo|\d{1,2})\b',answer))
    accepted=not(declined or conditional)and bool(action or (substantive_date and not negative_question))
-   direct_confirm=bool(re.search(r'\b(?:confirm\w*|cuento|contamos|contariamos|podemos contar|puede (?:realizar|aplicar)|lo (?:realizaria|estaria realizando|va a realizar))\b',q))
+   direct_confirm=bool(re.search(r'\b(?:confirm\w*|cuento|contamos|contariamos|podemos contar|podemos contemplar (?:su |el )?pago|puede (?:realizar|aplicar)|lo (?:realizaria|estaria realizando|va a realizar))\b',q))
    if direct_confirm and not negative_question and YES.match(answer)and not(declined or conditional):accepted=True
    if kind=='AMOUNT'and re.search(r'\b(?:confirmaria|va a (?:realizar|pagar)|podemos contemplar)\b',q)and re.search(NUMBER,answer)and not(declined or conditional):accepted=True
   meaningful=bool(accepted or declined or conditional or own)

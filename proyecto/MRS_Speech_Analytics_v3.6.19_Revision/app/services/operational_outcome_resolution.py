@@ -20,7 +20,7 @@ def amount_confirmed_for_agreement(text, segments, commitment, accepted_schedule
         return False
     if (accepted_schedule or {}).get('confirmed') and (accepted_schedule or {}).get('amounts'):
         return True
-    accepted_methods={'IMPORTE_Y_FECHA_CONFIRMADOS','IMPORTE_EN_PREGUNTA_ACTUAL_ACEPTADA'}
+    accepted_methods={'IMPORTE_Y_FECHA_CONFIRMADOS','IMPORTE_EN_PREGUNTA_ACTUAL_ACEPTADA','IMPORTE_DE_OFERTA_INMEDIATA_ACEPTADA'}
     if any(e.get('amount') and e.get('method') in accepted_methods
            for e in explicit_current_amounts(text,segments)):
         return True
@@ -42,6 +42,22 @@ def amount_confirmed_for_agreement(text, segments, commitment, accepted_schedule
         if value is not None and value>=10:
             return True
     return False
+
+
+def final_plan_amounts_accepted(text,commitment,plan):
+    """Aceptar el plan completo remite a sus términos explícitos anteriores.
+
+    No completa cifras desde Excel ni acepta un plan con importes conflictivos.
+    La confirmación humana se valida por separado antes de llamar esta función.
+    """
+    if not commitment.get('accepted')or not plan.get('amounts')or plan.get('review_required'):
+        return False
+    evidence=normalize(commitment.get('evidence')or'')
+    if not re.search(r'\b(?:me comprometo a pagar|acepto|confirmo) (?:el |ese |este |su )?(?:convenio|plan|acuerdo|los? pagos?) (?:completo|completos|en su totalidad)\b',evidence):
+        return False
+    source=normalize(text);position=source.rfind(evidence)
+    terms=[normalize(e.get('text')or'')for e in plan.get('evidence')or[]]
+    return bool(position>=0 and terms and all(t and 0<=source.find(t)<position for t in terms))
 
 
 def prior_agreement_breached(text,segments=()):

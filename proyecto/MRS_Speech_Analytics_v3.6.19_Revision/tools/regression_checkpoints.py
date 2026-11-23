@@ -47,6 +47,25 @@ def worker(source, files):
     return json.loads(result.stdout)
 
 
+
+def _reported_followup_without_new_commitment(metadata):
+    """Criterio 72: CONVENIO de seguimiento no afirma una promesa futura."""
+    status=metadata.get('status_validation')or{}
+    negotiation=metadata.get('negotiation_validation')or{}
+    completed=negotiation.get('completed_payment_evidence')or{}
+    return bool(status.get('policy_source')=='CRITERIO_72_USUARIO_20261121'
+        and status.get('evidence_method')=='SEGUIMIENTO_PAGO_REPORTADO_CON_COMPROBANTE_SIN_ACREDITACION'
+        and status.get('detected_status')=='CONVENIO' and status.get('valid')is True and status.get('evidence')
+        and metadata.get('quality_contact_type')=='TITULAR'
+        and negotiation.get('payment_followup_case')is True
+        and negotiation.get('payment_confirmation_case')is True
+        and completed.get('confirmed')is True and completed.get('evidence')
+        and negotiation.get('prior_payment_covers_minimum')is True
+        and negotiation.get('valid')is True and not negotiation.get('review_required')
+        and not negotiation.get('unaccepted_new_payment_instruction')
+        and not negotiation.get('commitment_confirmed'))
+
+
 def invariants(row):
     m = row["metadata"]
     failures = []
@@ -94,7 +113,9 @@ def invariants(row):
         failures.append('instrucción nueva de pago sin aceptación aprobada como seguimiento')
     if approved and (negotiation.get("installment_validation") or {}).get("review_required"):
         failures.append("parcialidades contradictorias aprobadas")
-    if approved and status.get("detected_status") == "CONVENIO" and not (negotiation.get("commitment_evidence") or {}).get("accepted"):
+    if (approved and status.get("detected_status") == "CONVENIO"
+            and not (negotiation.get("commitment_evidence") or {}).get("accepted")
+            and not _reported_followup_without_new_commitment(m)):
         failures.append("convenio aprobado sin aceptación acreditada")
     return failures
 
@@ -108,8 +129,13 @@ def verified_followup_approval(metadata):
     status=metadata.get('status_validation') or {}
     negotiation=metadata.get('negotiation_validation') or {}
     completed=negotiation.get('completed_payment_evidence') or {}
-    return bool(status.get('policy_source')=='ACLARACION_USUARIO_20261028'
-        and status.get('evidence_method')=='SEGUIMIENTO_PAGO_REPORTADO_ESTATUS_ORIGINAL'
+    legacy_policy=(status.get('policy_source')=='ACLARACION_USUARIO_20261028'
+        and status.get('evidence_method')=='SEGUIMIENTO_PAGO_REPORTADO_ESTATUS_ORIGINAL')
+    current_policy=(status.get('policy_source')=='CRITERIO_72_USUARIO_20261121'
+        and status.get('evidence_method')=='SEGUIMIENTO_PAGO_REPORTADO_CON_COMPROBANTE_SIN_ACREDITACION'
+        and status.get('detected_status')=='CONVENIO'
+        and negotiation.get('prior_payment_covers_minimum')is True)
+    return bool((legacy_policy or current_policy)
         and status.get('excel_status') in {'CONVENIO','NO DEFINE FECHA DE PAGO'}
         and status.get('matches') is True and status.get('valid') is True and status.get('evidence')
         and metadata.get('quality_contact_type')=='TITULAR'

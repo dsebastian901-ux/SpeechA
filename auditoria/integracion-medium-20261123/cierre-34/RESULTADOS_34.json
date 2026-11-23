@@ -1,0 +1,1601 @@
+{
+  "base_commit": "14cd4321186a05cae98ab17e6fb29260070989df",
+  "casos": [
+    {
+      "identificador": "6b4c9fad9dbe",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_audio_audit_rules.py",
+      "prueba_funcion": "test_positive_answer_to_past_payment_question_is_a_report_not_a_future_agreement",
+      "causa_comun": "SEGUIMIENTO72",
+      "causa_real": "La expectativa conserva ACLARACION o la procedencia de política 28/10, en conflicto con CONVENIO para pago reportado con comprobante del criterio 72.",
+      "particularidad": "El pago reportado de 5000 no cubre mínimo 11000; la solicitud de ticket no crea una promesa futura ni cobertura. La aserción inicial pide ACLARACION y otra posterior exige penalizar falta de negociación.",
+      "cambio_codigo": "Registrar procedencia CRITERIO_72_USUARIO_20261121 y evento PAGO_REPORTADO_CON_COMPROBANTE sin afirmar verificación bancaria. No falsificar ACLARA ni matches para hacer pasar la prueba.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4584
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "corrected_status_label",
+          "linea_funcion": 24,
+          "linea_evidencia": 24
+        }
+      ],
+      "criterios_21_11": "33,72; decisiones 15/11: cobertura mínima",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "CONVENIO como seguimiento; cobertura insuficiente conservada; pytest FALLA",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "95d5a883f3a9693714ca503b672a5c5574e0b74329b78126ec3f94773fddee7b",
+          "xml_sha256": "1f6d2a5e0a8ed4e41e900c6767e47abcde8809b73034a2ae456f2dfdbb2bdb0c"
+        },
+        "after": {
+          "log_sha256": "1377180d0f849398832bbcb0ce7f7aff5b21ea594fe68a4886eb4830c8721915",
+          "xml_sha256": "a3ceda47fba7db28e07b7de386fa1eb64b5fe419e4c3e226538411eb7478f00c"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "c3ae0e056c8c",
+      "grupo": "checkpoints",
+      "prueba_archivo": "tests/test_checkpoint_review_import.py",
+      "prueba_funcion": "test_import_keeps_all_calls_original_transcripts_runtime_paths_and_validations",
+      "causa_comun": "ORDEN",
+      "causa_real": "El estatus se resolvía antes de validar importes, plan final y confirmaciones financieras. La decisión retenía un bloqueo ya resuelto por evidencia válida.",
+      "particularidad": "El importador ya emparejaba por archivo y conservaba fuentes; fallaba la evaluación posterior del plan, no la copia de originales. Se comprueban las cuatro llamadas, rutas, revisiones, idempotencia y Excel.",
+      "cambio_codigo": "Resolver estatus una sola vez después de aplicar revisión financiera ligada a fuente y validar plan/ventana de mora; conservar los bloqueos independientes. Reconocer respuestas de cantidad con «lo que traigo son».",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 3840
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea_funcion": 7,
+          "linea_evidencia": 7
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        }
+      ],
+      "criterios_21_11": "48,49,112,120",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; 4 APROBADO sintéticos esperados; originales intactos",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "9e56f5551193bb635223641d13ad6107b4d9d979b74983bd2cf30d992295f595",
+          "xml_sha256": "1dea73786dae43ed04d70404c294719bf4ea2000d5c9ba10efaec1ece9606f5d"
+        },
+        "after": {
+          "log_sha256": "ab76d2e5f91441c1b86daf75ee4694a3a350f1e5ebb3c83bb124952d8faa4f72",
+          "xml_sha256": "fd9271ff37512df0590d77418aa47c0ef72b5891c987d0c3de421d392f387f0a"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "acb4b2887845",
+      "grupo": "checkpoints",
+      "prueba_archivo": "tests/test_checkpoint_review_import.py",
+      "prueba_funcion": "test_reordered_reviewed_calls_are_matched_by_filename",
+      "causa_comun": "ORDEN",
+      "causa_real": "El estatus se resolvía antes de validar importes, plan final y confirmaciones financieras. La decisión retenía un bloqueo ya resuelto por evidencia válida.",
+      "particularidad": "Reordenar llamadas no perdía asociación; el conteo 3 APROBADO +1 REVISAR provenía del plan mal resuelto. No se modificó el algoritmo de emparejamiento.",
+      "cambio_codigo": "Resolver estatus una sola vez después de aplicar revisión financiera ligada a fuente y validar plan/ventana de mora; conservar los bloqueos independientes. Reconocer respuestas de cantidad con «lo que traigo son».",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 3840
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea_funcion": 7,
+          "linea_evidencia": 7
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        }
+      ],
+      "criterios_21_11": "48,49,112,120",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; asociación por nombre y 4 evaluaciones conservadas",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "dc7c4051f4d087bbe9f8a8b87327cd2ea1584cd87363a6adb35220e80c27064a",
+          "xml_sha256": "36bded3812b29c04bd8166ccac2c4e240a497c7c7350be225e111ea964075ffc"
+        },
+        "after": {
+          "log_sha256": "158922711f1dc743d26f3959afd844dde2897cd1e7f446cc5f206a7a0e41781a",
+          "xml_sha256": "ee50a3db9a36b7d0cb7b05d3cdb29712c44847f8f3d82dfee71164dd4c1a7525"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "fb39a573fb0b",
+      "grupo": "recados",
+      "prueba_archivo": "tests/test_context_audio_recovery.py",
+      "prueba_funcion": "test_callback_consensus_resolves_only_missing_contact",
+      "causa_comun": "RETORNO",
+      "causa_real": "El dictaminador duplicaba un detector estrecho de oferta de teléfono y trataba ASR incompleto como omisión acreditada de -15 puntos, llegando a aprobar.",
+      "particularidad": "Antes aprobaba una oferta con seis dígitos. El consenso simulado posterior solo resuelve su entrega y conserva otros bloqueos. No se ejecutó una nueva escucha Whisper en esta prueba.",
+      "cambio_codigo": "Consumir unfinished_callback_offer como fuente compartida y reconocer ofertas directas y contacto truncado/repetido. Incertidumbre de entrega sigue REVISAR; omisión acreditada conserva -15 y umbral 80.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 1565
+        },
+        {
+          "archivo": "app/services/message_contact_evidence.py",
+          "funcion": "unfinished_callback_offer",
+          "linea_funcion": 204,
+          "linea_evidencia": 214
+        }
+      ],
+      "criterios_21_11": "58,146",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; sin consenso suficiente no aprueba",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "69cf4d8f149782e56dde8258a29bde8522b4d5a743fd797059050b25ef5760c6",
+          "xml_sha256": "18b77fca597352e845aaa89f4191821bb899237d1eead716e34d510decfee99d"
+        },
+        "after": {
+          "log_sha256": "4014033607bc52eed73602df3126bed197e72abc344415ddfab2bf1d2a06219f",
+          "xml_sha256": "531f23be66121d8cbe8632286ddacafa9ce8145c9f4ce7bc12cab8a720d8ee05"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "294977b1114a",
+      "grupo": "recados",
+      "prueba_archivo": "tests/test_dialogue_frames_r53.py",
+      "prueba_funcion": "test_later_receipt_replaces_temporary_inability_but_not_final_refusal",
+      "causa_comun": "RECHAZO14",
+      "causa_real": "La prueba exige NO_APROBADO por la sola negativa/incapacidad del tercero. La implementación vigente separa rechazo de recado y falta del gestor; el fixture deja una discrepancia de estatus sin código autorizado y, en algunas variantes, alertas independientes.",
+      "particularidad": "La primera variante con recepción posterior acreditada pasa; la segunda ya detecta rechazo final, pero la prueba exige además rechazo automático de calidad.",
+      "cambio_codigo": "Sin cambio para forzar NO_APROBADO: conservar estatus SE NIEGAN A TOMAR RECADO, evaluación de etapas ejecutables y REVISAR cuando falta resolución sustentada. No convertir una conducta del tercero en incumplimiento del gestor ni inventar código de etiqueta.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "definitive_rejection",
+          "linea_funcion": 86,
+          "linea_evidencia": 86
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "corrected_status_label",
+          "linea_funcion": 24,
+          "linea_evidencia": 24
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea_funcion": 18,
+          "linea_evidencia": 20
+        }
+      ],
+      "criterios_21_11": "13,14,50,98",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "Variante final: SE NIEGAN A TOMAR RECADO / REVISAR,100; pytest FALLA",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "b757bf2dcc85adb5d4b7c7ae231a53116ebffc522e8e8b8f83343b2d809725f3",
+          "xml_sha256": "476b7637f4cd346c50a0feaac283c1676d99968b7a79fa82dcca50fa9a0d3d11"
+        },
+        "after": {
+          "log_sha256": "4efcf793c06562d3369662e86885cf8328c0ea5bd993cb70f9d6c29ecaefabbe",
+          "xml_sha256": "0e61a12a4ac9a48b7824638ee0dbae4d3cc7ef3a2d9c7f33c8fc1b37d6d46da1"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "017c652653b3",
+      "grupo": "recados",
+      "prueba_archivo": "tests/test_dialogue_frames_r53.py",
+      "prueba_funcion": "test_received_message_with_incomplete_callback_has_its_actual_pending_reason",
+      "causa_comun": "DIAGNOSTICO",
+      "causa_real": "La decisión ya era REVISAR, pero el motivo no cumplía el contrato textual que distingue recepción probada de entrega incierta del teléfono.",
+      "particularidad": "No era una aprobación indebida: la falla era el texto del motivo pendiente. Se informa recepción acreditada y teléfono incierto.",
+      "cambio_codigo": "Explicar expresamente la recepción acreditada y el contacto incompleto en ASR; no cambiar dictamen, puntuación ni inferir omisión.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 1594
+        }
+      ],
+      "criterios_21_11": "58,146",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; conserva REVISAR",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "306f8764de417e7b8b3f0753c06c1919fdc1c75fa8281a30f2a6c9c17d63fc3f",
+          "xml_sha256": "8899c1c37e697128e7bd2598f6570f1cf48ea094f58af71456b91a5f836dd443"
+        },
+        "after": {
+          "log_sha256": "c3015b35bbe497af98bf5a2b3ceb02f809f7f7feb0377d20d0fae299787ed553",
+          "xml_sha256": "915e494106f26121a3fbe585b689c7df743f74cd06d326952ee1ca129ff9839c"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "e9724fcdf01e",
+      "grupo": "reportes",
+      "prueba_archivo": "tests/test_dialogue_status.py",
+      "prueba_funcion": "test_excel_does_not_put_contact_type_in_the_detected_status_column",
+      "causa_comun": "CONTRATO",
+      "causa_real": "Se cambió el identificador de método de evidencia, rompiendo lectores de reportes y validadores que dependen del contrato existente.",
+      "particularidad": "El Excel separaba correctamente tipo de contacto y estatus, pero esperaba el identificador público anterior del método.",
+      "cambio_codigo": "Restituir COMPROMISO_ACEPTADO_CON_FECHA y registrar amount_confirmed_from_dialogue por separado; conservar la exigencia de monto aceptado.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4480
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "tools/regression_checkpoints.py",
+          "funcion": "verified_current_agreement",
+          "linea_funcion": 210,
+          "linea_evidencia": 210
+        }
+      ],
+      "criterios_21_11": "45,112",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; columnas y contrato de evidencia conservados",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "5d67b95fcff4750397863616fca0915b6251d235a42ff2da2d389164d036484a",
+          "xml_sha256": "33ff3acd86cbed15cd4f7e4020bea8331a22d6b38322c1012d87e927db8d9e8f"
+        },
+        "after": {
+          "log_sha256": "33b662fdd3508192388779035d895f2d57122672755940fd2356172dbe21537b",
+          "xml_sha256": "6e8676195eeb30d76f1aae7f409819ee697985c40174f71757ac44d989d6af66"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "4a443799d235",
+      "grupo": "checkpoints",
+      "prueba_archivo": "tests/test_financial_review.py",
+      "prueba_funcion": "test_checkpoint_reviews_persist_report_original_values_and_can_be_revoked",
+      "causa_comun": "ORDEN",
+      "causa_real": "El estatus se resolvía antes de validar importes, plan final y confirmaciones financieras. La decisión retenía un bloqueo ya resuelto por evidencia válida.",
+      "particularidad": "Revisiones persistían pero una evaluación seguía REVISAR por resolver estatus antes del plan confirmado. La prueba cubre revocación y valores Excel originales.",
+      "cambio_codigo": "Resolver estatus una sola vez después de aplicar revisión financiera ligada a fuente y validar plan/ventana de mora; conservar los bloqueos independientes. Reconocer respuestas de cantidad con «lo que traigo son».",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 3840
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea_funcion": 7,
+          "linea_evidencia": 7
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        }
+      ],
+      "criterios_21_11": "48,49,157",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; persistencia y revocación comprobadas",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "1d06dd8291600fc9b658e7e520fd887ca4872a88a33de8fe229d30e50b124d6b",
+          "xml_sha256": "6f9f3ce7fa024dd02fbf7313ee92a6aff80df58128993ee97fe9df4db1282e98"
+        },
+        "after": {
+          "log_sha256": "8859ab7c5e89be5270fb63f40dd54951cb92d6ad00882c871d6b4221cc46a6e3",
+          "xml_sha256": "30da067c21be30e1d71fd2472547b39a84d2f3adac0540c3c51ad7078ee14c25"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "d789165fd016",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_financial_review.py",
+      "prueba_funcion": "test_confirmed_fact_resolves_only_its_discrepancy_without_changing_source",
+      "causa_comun": "ORDEN",
+      "causa_real": "El estatus se resolvía antes de validar importes, plan final y confirmaciones financieras. La decisión retenía un bloqueo ya resuelto por evidencia válida.",
+      "particularidad": "Confirmación financiera del plan final válida y ligada a fuente no despejaba su discrepancia; no se elimina otra incertidumbre ni se reescribe transcripción.",
+      "cambio_codigo": "Resolver estatus una sola vez después de aplicar revisión financiera ligada a fuente y validar plan/ventana de mora; conservar los bloqueos independientes. Reconocer respuestas de cantidad con «lo que traigo son».",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 3840
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea_funcion": 7,
+          "linea_evidencia": 7
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        }
+      ],
+      "criterios_21_11": "48,112,120",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; confirmación solo resuelve su alcance",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "f0a02d9f09b3421993b3cb64c8f2e06299769e86fe3029bb8b114472806c48c0",
+          "xml_sha256": "bc28219121fd0c2923fb384be1f3a6a7f99153025899e25fb7931d078730a4ee"
+        },
+        "after": {
+          "log_sha256": "5e3abe1410e15df540f2b4903e34bd7afe69b059b8897bbbb779f25917dd5472",
+          "xml_sha256": "6e15162b4603d26a47a13648cb1f607470f6e0cdc57bfff4303f57e6b60b8c87"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "193292767136",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_financial_review.py",
+      "prueba_funcion": "test_final_plan_confirmation_keeps_other_blockers",
+      "causa_comun": "ORDEN",
+      "causa_real": "El estatus se resolvía antes de validar importes, plan final y confirmaciones financieras. La decisión retenía un bloqueo ya resuelto por evidencia válida.",
+      "particularidad": "Variante name: el plan confirmado no debe eliminar el bloqueo independiente del nombre de salida; una vez éste se confirma debe decidirse con los hechos ya validados.",
+      "cambio_codigo": "Resolver estatus una sola vez después de aplicar revisión financiera ligada a fuente y validar plan/ventana de mora; conservar los bloqueos independientes. Reconocer respuestas de cantidad con «lo que traigo son».",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 3840
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea_funcion": 7,
+          "linea_evidencia": 7
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        }
+      ],
+      "criterios_21_11": "48,49,155",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; nombre sigue siendo control independiente",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "518a57c964fe1778debb98fda72f6af50a6417ff3e73eb5c889ff46c6f5fe617",
+          "xml_sha256": "99e546c344b59237146c28752af5967212a6835f3ced3dc85c349197a12bc7c2"
+        },
+        "after": {
+          "log_sha256": "ad53ab05d354fd1d9cc8ec829a12b33f0faaa880da385e693f5830972392f9f5",
+          "xml_sha256": "8551a75e03dd61c995f235d7fd0a77c2d7f80a3cba6da1a005509f169a2029e4"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "519e8e72d388",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_followup_calibration.py",
+      "prueba_funcion": "test_regression_approval_exception_requires_the_new_user_policy_and_evidence",
+      "causa_comun": "GUARDIA72",
+      "causa_real": "La herramienta de regresión exigía una promesa futura a un seguimiento de pago ya reportado y no reconocía el criterio 72 vigente.",
+      "particularidad": "El detector de regresiones rechazaba la excepción válida porque su propia invariante seguía exigiendo compromiso futuro a un pago previo.",
+      "cambio_codigo": "Reconocer seguimiento CONVENIO con pago reportado, comprobante, cobertura del mínimo, evidencia válida y sin instrucción nueva no aceptada. No dispensar privacidad, tarjeta, trato ni otros controles.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "tools/regression_checkpoints.py",
+          "funcion": "verified_followup_approval",
+          "linea_funcion": 123,
+          "linea_evidencia": 123
+        },
+        {
+          "archivo": "tools/regression_checkpoints.py",
+          "funcion": "_reported_followup_without_new_commitment",
+          "linea_funcion": 51,
+          "linea_evidencia": 51
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4584
+        }
+      ],
+      "criterios_21_11": "72; cobertura mínima 15/11",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; excepción no dispensa otros filtros",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "642e271a133a69f1e25e67b876c5121e9a157e4c04c6a283f2f6503979a31153",
+          "xml_sha256": "51f01e9202f9b542d1281664af8bb6d044e14c63772b9fbf03396b883901be88"
+        },
+        "after": {
+          "log_sha256": "e14daf961f7200a789a02c48847aa46265a689a9b6f7e88173595d0a3186ab76",
+          "xml_sha256": "c6e0e753abdc88f9baf9c4fd0b92ee18b87b527698531676537a734dac4db25c"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "82f2e725a0c3",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_followup_calibration.py",
+      "prueba_funcion": "test_user_policy_retains_original_status_in_verified_payment_followup",
+      "causa_comun": "SEGUIMIENTO72",
+      "causa_real": "La expectativa conserva ACLARACION o la procedencia de política 28/10, en conflicto con CONVENIO para pago reportado con comprobante del criterio 72.",
+      "particularidad": "Con Excel CONVENIO y pago900>=mínimo700 la calidad es APROBADO100. La prueba falla por exigir fuente de octubre y ACLARACION, no por exceso de REVISAR.",
+      "cambio_codigo": "Registrar procedencia CRITERIO_72_USUARIO_20261121 y evento PAGO_REPORTADO_CON_COMPROBANTE sin afirmar verificación bancaria. No falsificar ACLARA ni matches para hacer pasar la prueba.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4584
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "corrected_status_label",
+          "linea_funcion": 24,
+          "linea_evidencia": 24
+        }
+      ],
+      "criterios_21_11": "72",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "CONVENIO / APROBADO,100; pytest FALLA por expectativa histórica",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "e566ffa65b3ab563fe02adb7c02bad8cd653ac0311b7755e83e0da28569dd2eb",
+          "xml_sha256": "5a0a9633284786fc790263e8edf0919b19e2b1381e6bfb3148e9077bf019e9ad"
+        },
+        "after": {
+          "log_sha256": "5134a4af2738f677275fbf35d7d8fd12bd6200cc26dfb47433e7ef382b2e85de",
+          "xml_sha256": "8928dd8bb642036667b415fcbeeb4d214c103ebd435b3c2cbfe7324295b5ce08"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "7897731e2c1b",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_followup_calibration.py",
+      "prueba_funcion": "test_user_policy_retains_original_status_in_verified_payment_followup",
+      "causa_comun": "SEGUIMIENTO72",
+      "causa_real": "La expectativa conserva ACLARACION o la procedencia de política 28/10, en conflicto con CONVENIO para pago reportado con comprobante del criterio 72.",
+      "particularidad": "Excel NO DEFINE difiere de CONVENIO de seguimiento. El nombre sintético no tiene bloque TH/PP autorizado para corregir; no se puede afirmar matches=True conservando estatus diferente.",
+      "cambio_codigo": "Registrar procedencia CRITERIO_72_USUARIO_20261121 y evento PAGO_REPORTADO_CON_COMPROBANTE sin afirmar verificación bancaria. No falsificar ACLARA ni matches para hacer pasar la prueba.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4584
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "corrected_status_label",
+          "linea_funcion": 24,
+          "linea_evidencia": 24
+        }
+      ],
+      "criterios_21_11": "45,50,72",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "CONVENIO / REVISAR,100; corrección de etiqueta no sustentada por este nombre; pytest FALLA",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "c304bcfdbea59c87e13a6933ea25e29eac835aaf5a7d4b1d00c277179db2fd21",
+          "xml_sha256": "d57343411bd609f01cd17e9a3048120bd56cc3e48e5b545c7dfe053563ebf626"
+        },
+        "after": {
+          "log_sha256": "fe29f0fcf07274a6f391f1d06e859e21eda323d4c4d8336a048e5e970a496bd0",
+          "xml_sha256": "698570397599b1e820ca097811bbd4f426ced3211cf80e8eb59faf00b21e2a2d"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "ef2311590209",
+      "grupo": "recados",
+      "prueba_archivo": "tests/test_fresh_batch_message_policy_r48.py",
+      "prueba_funcion": "test_new_batch_applies_message_policy_and_safety_before_any_reanalysis",
+      "causa_comun": "RETORNO",
+      "causa_real": "El dictaminador duplicaba un detector estrecho de oferta de teléfono y trataba ASR incompleto como omisión acreditada de -15 puntos, llegando a aprobar.",
+      "particularidad": "Lote nuevo, variante conditionalphone: antes APROBADO85 al tratar contacto ofrecido incierto como omisión -15. Corrección aplicada en procesamiento normal, sin reanálisis ni lista de nombres.",
+      "cambio_codigo": "Consumir unfinished_callback_offer como fuente compartida y reconocer ofertas directas y contacto truncado/repetido. Incertidumbre de entrega sigue REVISAR; omisión acreditada conserva -15 y umbral 80.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 1565
+        },
+        {
+          "archivo": "app/services/message_contact_evidence.py",
+          "funcion": "unfinished_callback_offer",
+          "linea_funcion": 204,
+          "linea_evidencia": 214
+        }
+      ],
+      "criterios_21_11": "58,146",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; lote nuevo aplica incertidumbre y seguridad",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "e9b74febfe2fa69b239e51f8f6518e2df0552797a2c5fcbefdb6360b3eb24674",
+          "xml_sha256": "46bca517cefe3809511528f9fdb4e02ed036bd63aa4c521b28e8451b82430c12"
+        },
+        "after": {
+          "log_sha256": "33a1f925fa0a0bb193c269134ef98f6593253a06bb3f594f25152df69e1bacd2",
+          "xml_sha256": "ac85cfd7f1c8f3d9e68ea5e891eae1dcc2e404fae6531ab5677e26909afb2ade"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "ef2a5b872cb2",
+      "grupo": "dictaminación",
+      "prueba_archivo": "tests/test_fresh_batch_r49.py",
+      "prueba_funcion": "test_initial_batch_separates_approved_review_rejection_and_severe_failure",
+      "causa_comun": "RECHAZO14",
+      "causa_real": "La prueba exige NO_APROBADO por la sola negativa/incapacidad del tercero. La implementación vigente separa rechazo de recado y falta del gestor; el fixture deja una discrepancia de estatus sin código autorizado y, en algunas variantes, alertas independientes.",
+      "particularidad": "Lote inicial sintetiza aprobado, rechazo de tercero, privacidad incierta y PEN003 confirmado. Se detiene al esperar NO_APROBADO para rechazo de tercero; PEN003 confirmado sigue FALLA_GRAVE.",
+      "cambio_codigo": "Sin cambio para forzar NO_APROBADO: conservar estatus SE NIEGAN A TOMAR RECADO, evaluación de etapas ejecutables y REVISAR cuando falta resolución sustentada. No convertir una conducta del tercero en incumplimiento del gestor ni inventar código de etiqueta.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "definitive_rejection",
+          "linea_funcion": 86,
+          "linea_evidencia": 86
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "corrected_status_label",
+          "linea_funcion": 24,
+          "linea_evidencia": 24
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea_funcion": 18,
+          "linea_evidencia": 20
+        }
+      ],
+      "criterios_21_11": "14,45,46,50",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "Rechazos del tercero: REVISAR100; grave: FALLA_GRAVE0; pytest FALLA",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "036c0d3b037676439b6fb8440f3ec4803e52f7402e58a3d7fc64cfb8a5eeab30",
+          "xml_sha256": "80d6346e6c93f9d08f7c125e0434af64b84b4e8e11fb26e640e0c92f985ca13c"
+        },
+        "after": {
+          "log_sha256": "9b36b372e687b84d4397ea3f5b3fa069a3b077a37b99c720f52c333053905a2b",
+          "xml_sha256": "61f6c7ca1a5995538a4d58df5f1a2d2b0f1074fe6a041f6d30dc45dbd48e1978"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "6271a64e43b7",
+      "grupo": "dictaminación",
+      "prueba_archivo": "tests/test_message_dialogue_r49.py",
+      "prueba_funcion": "test_bare_no_to_positive_message_offer_is_an_explicit_refusal",
+      "causa_comun": "RECHAZO14",
+      "causa_real": "La prueba exige NO_APROBADO por la sola negativa/incapacidad del tercero. La implementación vigente separa rechazo de recado y falta del gestor; el fixture deja una discrepancia de estatus sin código autorizado y, en algunas variantes, alertas independientes.",
+      "particularidad": "Se reconoce «No,gracias» a oferta positiva; la prueba exige que ese hecho del destinatario sea por sí mismo NO_APROBADO.",
+      "cambio_codigo": "Sin cambio para forzar NO_APROBADO: conservar estatus SE NIEGAN A TOMAR RECADO, evaluación de etapas ejecutables y REVISAR cuando falta resolución sustentada. No convertir una conducta del tercero en incumplimiento del gestor ni inventar código de etiqueta.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "definitive_rejection",
+          "linea_funcion": 86,
+          "linea_evidencia": 86
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "corrected_status_label",
+          "linea_funcion": 24,
+          "linea_evidencia": 24
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea_funcion": 18,
+          "linea_evidencia": 20
+        }
+      ],
+      "criterios_21_11": "14,50",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "SE NIEGAN A TOMAR RECADO / REVISAR,100; pytest FALLA",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "4757366e197a22f56f250760670d529105a67d16513828024074564bba733d6b",
+          "xml_sha256": "adc0b2f3beb673d4133d60d4d47040733ca5925d177998c4b30dd0c33a1fd322"
+        },
+        "after": {
+          "log_sha256": "24c7546b4d9b43cc44f9bdc5334e2058b9131d66708228fcae25262e1af942af",
+          "xml_sha256": "78ba5cb07d3c9ed6d6c4ce82b8e8ecdd337c8465f1828e517696d127a5911674"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "fccd255baf2b",
+      "grupo": "recados",
+      "prueba_archivo": "tests/test_message_dialogue_r49.py",
+      "prueba_funcion": "test_declined_note_without_contact_is_definitive_but_later_delivery_is_not",
+      "causa_comun": "RECHAZO14",
+      "causa_real": "La prueba exige NO_APROBADO por la sola negativa/incapacidad del tercero. La implementación vigente separa rechazo de recado y falta del gestor; el fixture deja una discrepancia de estatus sin código autorizado y, en algunas variantes, alertas independientes.",
+      "particularidad": "Imposibilidad final de anotar está detectada; primer assert exige NO_APROBADO antes de comprobar las variantes con entrega o canal alternativo. No se certifican los asserts posteriores de una prueba fallida.",
+      "cambio_codigo": "Sin cambio para forzar NO_APROBADO: conservar estatus SE NIEGAN A TOMAR RECADO, evaluación de etapas ejecutables y REVISAR cuando falta resolución sustentada. No convertir una conducta del tercero en incumplimiento del gestor ni inventar código de etiqueta.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "definitive_rejection",
+          "linea_funcion": 86,
+          "linea_evidencia": 86
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "corrected_status_label",
+          "linea_funcion": 24,
+          "linea_evidencia": 24
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea_funcion": 18,
+          "linea_evidencia": 20
+        }
+      ],
+      "criterios_21_11": "7,14,50",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "SE NIEGAN A TOMAR RECADO / REVISAR,100; pytest FALLA",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "3efd58f014d670ea647798b968c37dbd364fe844a1b6e5dff371a041355606d6",
+          "xml_sha256": "d6cda097012f9639b0c1004b67a45e9f996abbc6a636ac1841f2df89ddf7acd4"
+        },
+        "after": {
+          "log_sha256": "784467ed9215302d9120b69f3c1e665b5f65feca7c67822cb814ad6e19c85667",
+          "xml_sha256": "e0f433b1a3b5ef38a61ab2619e5a7ca24871aae85ecc39cf6e5c55be0ce8494e"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "e33c4f619200",
+      "grupo": "dictaminación",
+      "prueba_archivo": "tests/test_message_dialogue_r49.py",
+      "prueba_funcion": "test_explicit_refusal_is_closed_without_approving_or_clearing_security",
+      "causa_comun": "RECHAZO14",
+      "causa_real": "La prueba exige NO_APROBADO por la sola negativa/incapacidad del tercero. La implementación vigente separa rechazo de recado y falta del gestor; el fixture deja una discrepancia de estatus sin código autorizado y, en algunas variantes, alertas independientes.",
+      "particularidad": "Rechazo expreso reconocido. La variante posterior con posible divulgación no llega a ejecutarse por fallo del primer assert; seguridad independiente cubierta por otras pruebas, sin atribución acústica inventada.",
+      "cambio_codigo": "Sin cambio para forzar NO_APROBADO: conservar estatus SE NIEGAN A TOMAR RECADO, evaluación de etapas ejecutables y REVISAR cuando falta resolución sustentada. No convertir una conducta del tercero en incumplimiento del gestor ni inventar código de etiqueta.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "definitive_rejection",
+          "linea_funcion": 86,
+          "linea_evidencia": 86
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "corrected_status_label",
+          "linea_funcion": 24,
+          "linea_evidencia": 24
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea_funcion": 18,
+          "linea_evidencia": 20
+        }
+      ],
+      "criterios_21_11": "14,46,50; PEN003",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "SE NIEGAN A TOMAR RECADO / REVISAR,100; pytest FALLA",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "5cc284da1e194beb69c4a392d692db00fc9d152fa629b3a8d78119120c0ef507",
+          "xml_sha256": "3fed223f2f4ab75b4c3aaf0f1e6948f9e5d84619bbcd9f151076e783a1f9f5c0"
+        },
+        "after": {
+          "log_sha256": "cdaeea4e0f9eb68a45dd584e85f584ff7742acb2aa2813b729a4a5f1db9e1030",
+          "xml_sha256": "15be30456090c1f8c414b84814eaa7152b4df1e4800644321ab78d8b9b00e9c6"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "443928271266",
+      "grupo": "recados",
+      "prueba_archivo": "tests/test_message_dialogue_r49.py",
+      "prueba_funcion": "test_repeated_partial_number_at_cutoff_is_not_complete_contact",
+      "causa_comun": "RETORNO",
+      "causa_real": "El dictaminador duplicaba un detector estrecho de oferta de teléfono y trataba ASR incompleto como omisión acreditada de -15 puntos, llegando a aprobar.",
+      "particularidad": "Repeticiones 222/500 al corte no conforman un teléfono completo. Se usa detector compartido en lugar de certificar por eco.",
+      "cambio_codigo": "Consumir unfinished_callback_offer como fuente compartida y reconocer ofertas directas y contacto truncado/repetido. Incertidumbre de entrega sigue REVISAR; omisión acreditada conserva -15 y umbral 80.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 1565
+        },
+        {
+          "archivo": "app/services/message_contact_evidence.py",
+          "funcion": "unfinished_callback_offer",
+          "linea_funcion": 204,
+          "linea_evidencia": 214
+        }
+      ],
+      "criterios_21_11": "58,146",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; no acredita teléfono ni aprueba",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "c69bab6ea583d8a78d51f5d3e8ae095227f5022b21dc62d50ef08892c73a2229",
+          "xml_sha256": "6a28c2bb2fceee580db1995560d9b558c360590d2c9deb0b1f48165fa5828873"
+        },
+        "after": {
+          "log_sha256": "7f20721722339faad833bedbd918bbce72ec5ee8917b82cf8b1a09bf4e47f2f3",
+          "xml_sha256": "009c5cc84dead27ccc72e4e7fbae10c8595164cc7d7163ed8ebd7864c1b95d8a"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "e226eaa54329",
+      "grupo": "recados",
+      "prueba_archivo": "tests/test_message_dialogue_r49.py",
+      "prueba_funcion": "test_return_instruction_without_a_delivered_contact_never_approves",
+      "causa_comun": "RETORNO",
+      "causa_real": "El dictaminador duplicaba un detector estrecho de oferta de teléfono y trataba ASR incompleto como omisión acreditada de -15 puntos, llegando a aprobar.",
+      "particularidad": "La instrucción «al siguiente número» sin dígitos disponibles es entrega incierta, no omisión acreditada que permita aprobar85.",
+      "cambio_codigo": "Consumir unfinished_callback_offer como fuente compartida y reconocer ofertas directas y contacto truncado/repetido. Incertidumbre de entrega sigue REVISAR; omisión acreditada conserva -15 y umbral 80.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 1565
+        },
+        {
+          "archivo": "app/services/message_contact_evidence.py",
+          "funcion": "unfinished_callback_offer",
+          "linea_funcion": 204,
+          "linea_evidencia": 214
+        }
+      ],
+      "criterios_21_11": "58,146",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; review_required=True y sin aprobación",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "1bca782a3a24f9ffcb5eb0c3b7b7ec6c94839569100ffee97d870f5297a7fc60",
+          "xml_sha256": "2e7a3b242a522d23445ca4062e5c5ca34007e28eca0cbbf4a08ae184c3ac9545"
+        },
+        "after": {
+          "log_sha256": "b4eb7be9000651a3e89c6a77e8b346d05d1d706d620aa6f8193e574a39b3ced1",
+          "xml_sha256": "ec2da2ca09dedf2e0a49939fa8d3f9a684b8e517661f44c92dec1fc586fc7e12"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "2b434f84c6b9",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_mora_payment_policy.py",
+      "prueba_funcion": "test_two_installment_exception_is_applied_to_the_complete_decision",
+      "causa_comun": "PLAN",
+      "causa_real": "La aceptación expresa del plan completo no se vinculaba a sus importes anteriores y la clasificación repetía un límite fijo sin aplicar la ventana multipago validada.",
+      "particularidad": "Dos exhibiciones dentro de sus ventanas: se exige aceptación del plan completo y se respeta excepción validada de política. Los plazos inválidos continúan rechazándose en los demás parámetros.",
+      "cambio_codigo": "Vincular aceptación propia del plan completo solo a términos explícitos anteriores sin conflicto; usar window_end de la política después de validar sus plazos. No completar desde Excel.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/operational_outcome_resolution.py",
+          "funcion": "final_plan_amounts_accepted",
+          "linea_funcion": 47,
+          "linea_evidencia": 47
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 3840
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        }
+      ],
+      "criterios_21_11": "63,65,112,120",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; excepción validada sin ampliar política",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "9830b13afd57bd0f03184a0d3de58836849c800ff233ff58103514cad5881269",
+          "xml_sha256": "9f098b0885a86c0844a01c12c66070a9babe210337ee053e4019b5a40c71871d"
+        },
+        "after": {
+          "log_sha256": "f9c684a79977ff1a5e73ad07b06ebe5942fb5893e2e738d093a0772e789a3e91",
+          "xml_sha256": "022771facfbfc6783e3b237cd758cd78ebe59fa62d688843ef1711bd219d1f4c"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "0b1b344c0368",
+      "grupo": "checkpoints",
+      "prueba_archivo": "tests/test_recado_batch_review.py",
+      "prueba_funcion": "test_batch_does_not_force_approval_or_waive_other_controls",
+      "causa_comun": "REVOCACION",
+      "causa_real": "Una confirmación humana de entrega/contacto forzaba valid=True aunque una negativa final posterior revocara la recepción.",
+      "particularidad": "Una confirmación humana de entrega en lote no acredita que la aceptación permanezca después de «no le voy a pasar el recado».",
+      "cambio_codigo": "La confirmación de entrega conserva su registro y alcance, pero no anula una revocación final. Registrar human_delivery_conflicts_with_final_refusal.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/message_workflow.py",
+          "funcion": "workflow_validation",
+          "linea_funcion": 52,
+          "linea_evidencia": 52
+        }
+      ],
+      "criterios_21_11": "48,98",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; no fuerza aprobación ni borra controles",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "5b711d8449d029bf48f2fd090859038d703840fc794e3d24416819c5216490cf",
+          "xml_sha256": "bc25e5f9cf455587ddd3d3cc3c45be28dde8c442cc6bd10be9290636093041cf"
+        },
+        "after": {
+          "log_sha256": "fb9551c84d9492ccb613d2c3f6f7083c943565185325a0797862ec0f57e3dcd9",
+          "xml_sha256": "904e20bc0d5a51ee61b239f5e740dcb833f195e2dc77ff341e2485e77dbb60c3"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "0bbd759fc50c",
+      "grupo": "recados",
+      "prueba_archivo": "tests/test_recado_context_r27.py",
+      "prueba_funcion": "test_actual_message_refusals_still_block",
+      "causa_comun": "ELIPSIS",
+      "causa_real": "Se omitía el rechazo elíptico de un recado ofrecido («no se lo puedo pasar», «no puedo recibir»), permitiendo una recepción falsa.",
+      "particularidad": "«No puedo recibir,disculpe» respondía a oferta de recado; antes se omitía el rechazo y se aprobaba recepción inexistente.",
+      "cambio_codigo": "Resolver el objeto recado por contexto inmediato, sin cruzar otro objeto ni citas/preguntas/rol del gestor. El rechazo final impide acreditar recepción; no inventar penalización de calidad.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "explicit_message_refusal",
+          "linea_funcion": 10,
+          "linea_evidencia": 10
+        },
+        {
+          "archivo": "app/services/message_workflow.py",
+          "funcion": "workflow_validation",
+          "linea_funcion": 52,
+          "linea_evidencia": 52
+        }
+      ],
+      "criterios_21_11": "14,98",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; rechazo reconocido, no aprobación",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "06d03ff77c80f7dccbd9bf78e9f484512223cadcdf3ede4162072f7f935bf829",
+          "xml_sha256": "43095e254d36f8fdcf2722b835cbf1ae719e1803e50af117533beb566276cc5e"
+        },
+        "after": {
+          "log_sha256": "057a4f811934a7c8e0413d700e4be6b0e9bcd24fc5edea4612ed45c4e19a021e",
+          "xml_sha256": "409355f34a5706ec7b66d9b7e47f442da85ac984dab5ac5672beed30281d47fc"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "7b063e578671",
+      "grupo": "recados",
+      "prueba_archivo": "tests/test_recado_context_r27.py",
+      "prueba_funcion": "test_actual_message_refusals_still_block",
+      "causa_comun": "ELIPSIS",
+      "causa_real": "Se omitía el rechazo elíptico de un recado ofrecido («no se lo puedo pasar», «no puedo recibir»), permitiendo una recepción falsa.",
+      "particularidad": "«No se lo puedo pasar» con objeto recado previo no se reconocía como rechazo; no se aplica a otros objetos ni preguntas.",
+      "cambio_codigo": "Resolver el objeto recado por contexto inmediato, sin cruzar otro objeto ni citas/preguntas/rol del gestor. El rechazo final impide acreditar recepción; no inventar penalización de calidad.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "explicit_message_refusal",
+          "linea_funcion": 10,
+          "linea_evidencia": 10
+        },
+        {
+          "archivo": "app/services/message_workflow.py",
+          "funcion": "workflow_validation",
+          "linea_funcion": 52,
+          "linea_evidencia": 52
+        }
+      ],
+      "criterios_21_11": "14,98",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; rechazo reconocido, no aprobación",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "57a295d80f23a199e41b98ba4701e7aef4b3d3cffa863f7676d019a6674f6ef9",
+          "xml_sha256": "9a3af9c0a9a614f9c163ea70257695728fc8d5056e7ab478e74d498c8a149553"
+        },
+        "after": {
+          "log_sha256": "7ccf0fd814bf75a35db28acedc1714736804ec6b943ff25b8e07969d5631a02d",
+          "xml_sha256": "3ba13236b9891beb8b5c1eaf404b34dd680ab9733f594138d0c7d97ddbd528cd"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "eeaa0d19e854",
+      "grupo": "recados",
+      "prueba_archivo": "tests/test_recado_delivery_review.py",
+      "prueba_funcion": "test_delivered_recado_does_not_waive_other_quality_rules",
+      "causa_comun": "REVOCACION",
+      "causa_real": "Una confirmación humana de entrega/contacto forzaba valid=True aunque una negativa final posterior revocara la recepción.",
+      "particularidad": "Confirmación individual de recepción/contacto no puede dispensar revocación final. No se altera ni descarta el registro humano.",
+      "cambio_codigo": "La confirmación de entrega conserva su registro y alcance, pero no anula una revocación final. Registrar human_delivery_conflicts_with_final_refusal.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/message_workflow.py",
+          "funcion": "workflow_validation",
+          "linea_funcion": 52,
+          "linea_evidencia": 52
+        }
+      ],
+      "criterios_21_11": "48,98",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; historial conservado y sin aprobación forzada",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "ff85358d04b4b0d445183b27e81857f17118836d6c572c894e1bf98f002f840d",
+          "xml_sha256": "ee65774fa5a408f4b4a57fed3f525f7be5d552cac25b0fc6057d02fcb4a9b690"
+        },
+        "after": {
+          "log_sha256": "85a7532b40196fb821e4b3dfb1231181e8e280a2da477abec65674576186c6c1",
+          "xml_sha256": "348e1d6b99bd4859e2795b8e0b1f311411a564b2a1a67ee9cb989cf4e0bc0495"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "9fdda7460edc",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_reported_batch_regression.py",
+      "prueba_funcion": "test_accepted_payment_does_not_require_literal_confirmo_convenio",
+      "causa_comun": "IMPORTE",
+      "causa_real": "Se reconocía aceptación/intención de pago pero no el importe explícito de la misma oferta; los extractores de compromiso e importe discrepaban.",
+      "particularidad": "«Podemos contemplar su pago600 el23» con aceptación contextual quedaba NO DEFINE porque el extractor del importe no reconocía la misma oferta aceptada.",
+      "cambio_codigo": "Unificar aceptación contextual y extracción del importe de oferta inmediata; admitir «podemos contemplar su pago», con controles de rol, negación, citas, historia y objeto.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/payment_intent_frames.py",
+          "funcion": "payment_frames",
+          "linea_funcion": 56,
+          "linea_evidencia": 56
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea_funcion": 7,
+          "linea_evidencia": 7
+        },
+        {
+          "archivo": "app/services/payment_lifecycle.py",
+          "funcion": "financial_response_events",
+          "linea_funcion": 34,
+          "linea_evidencia": 34
+        },
+        {
+          "archivo": "app/services/conversation_evidence.py",
+          "funcion": "payment_commitment",
+          "linea_funcion": 390,
+          "linea_evidencia": 390
+        }
+      ],
+      "criterios_21_11": "22,24,112",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; monto aceptado sin frase literal confirmo convenio",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "4a81332339375bdeb955f91961ce719a6bb0cdbf66f5d434ba1a25a7fecf9cf2",
+          "xml_sha256": "114ae09e58643ba7ce7d285401bcaad4897e8a479859efd3eedc39fa3652db37"
+        },
+        "after": {
+          "log_sha256": "808dfae1ed8f9fdc74e04e9f4daf48a799b85ea62a74ce685b5f7c7368c58182",
+          "xml_sha256": "d4ad0a9d3c6eb0bc77a2d399b37c9c1e7a27974d0cd1d5634ee9a88a7c8f3d82"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "9a345d8d9315",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_reported_batch_regression.py",
+      "prueba_funcion": "test_reported_deposit_amount_can_cover_the_minimum_without_a_new_promise",
+      "causa_comun": "SIN_CATALOGO",
+      "causa_real": "La prueba exige el estatus compuesto PAGO REPORTADO / ACLARACION, ausente del catálogo; reportar un depósito sin aceptación de envío de comprobante ni aclaración bancaria no prueba ese estatus.",
+      "particularidad": "Importe1000 y mínimo750 se reconocen sin inventar fecha. La falla es la etiqueta compuesta exigida; no falta extracción de cobertura.",
+      "cambio_codigo": "Sin crear etiqueta artificial: conservar importe reportado y cobertura del mínimo, evento previo y REVISAR por resultado no confirmado.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "corrected_status_label",
+          "linea_funcion": 24,
+          "linea_evidencia": 24
+        }
+      ],
+      "criterios_21_11": "33,50,72",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "Resultado sigue REVISAR; pytest FALLA por estatus compuesto no autorizado",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "456eb91a9a58a95de6f2d1ebe30a4e516e5f9d9b91bb5cc2dc1dceddf63eb440",
+          "xml_sha256": "cedfcbc8525bae1cb61012820f839d1a352be20640cba7766406d098e64abe82"
+        },
+        "after": {
+          "log_sha256": "3105e72417a4c1bea7505bb76640e11756cb1426c4655c2b388352d7c8b57c93",
+          "xml_sha256": "eb1f53677c57467a4e463b3e4fdae225808ee22bf21af60bfa569d4e4354e03d"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "1bf104e55442",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_review_backlog.py",
+      "prueba_funcion": "test_negated_partial_warning_does_not_generate_partial_penalty",
+      "causa_comun": "CLARIFICACION",
+      "causa_real": "Una explicación intermedia del efecto del pago cortaba el vínculo entre la única oferta monetaria y la aceptación propia posterior.",
+      "particularidad": "«De preferencia completo para que no se tome como parcial» no acepta otro importe ni justifica penalización por oferta parcial; antes perdía el nexo y seguía REVISAR.",
+      "cambio_codigo": "Permitir una explicación del mismo pago, excluyendo nueva cifra/fecha/objeto, pregunta, cita o turno de cliente. Mantener negaciones y cambios de términos como barreras.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/payment_lifecycle.py",
+          "funcion": "financial_response_events",
+          "linea_funcion": 34,
+          "linea_evidencia": 34
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea_funcion": 7,
+          "linea_evidencia": 7
+        },
+        {
+          "archivo": "app/services/conversation_evidence.py",
+          "funcion": "payment_commitment",
+          "linea_funcion": 390,
+          "linea_evidencia": 390
+        }
+      ],
+      "criterios_21_11": "67,112",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; explicación no inventa pago parcial ni borra términos",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "0ad226d69ebcf8bfb84999fffe25c2830fdbaed60a91f62cbfff7a7327b56578",
+          "xml_sha256": "84f687dcb8adb76992042a46755e8d85a369f06d2bfbc5221bdf502e780192d4"
+        },
+        "after": {
+          "log_sha256": "e26d0fb4bfcf8119be91d7f72c31b12932a638789d2c1afb4c369d26a9a5393d",
+          "xml_sha256": "5138c8a94bcf69d242cd7e3cde197f46422a0638ce39a51c1c89f79a2d5c7a6c"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "50ccc8100657",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_review_backlog.py",
+      "prueba_funcion": "test_regression_guard_requires_real_current_agreement_not_cached_approval",
+      "causa_comun": "CONTRATO",
+      "causa_real": "Se cambió el identificador de método de evidencia, rompiendo lectores de reportes y validadores que dependen del contrato existente.",
+      "particularidad": "El validador verified_current_agreement no reconocía la evidencia renombrada; se conserva contrato y ahora la aceptación enlaza cifra real. No se acepta aprobación cacheada.",
+      "cambio_codigo": "Restituir COMPROMISO_ACEPTADO_CON_FECHA y registrar amount_confirmed_from_dialogue por separado; conservar la exigencia de monto aceptado.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4480
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "tools/regression_checkpoints.py",
+          "funcion": "verified_current_agreement",
+          "linea_funcion": 210,
+          "linea_evidencia": 210
+        }
+      ],
+      "criterios_21_11": "22,24,112",
+      "antes": "FALLA",
+      "despues": "PASA",
+      "resultado_operacional": "Prueba completa PASA; requiere convenio actual con evidencia",
+      "estado": "CORREGIDO_COMPROBADO",
+      "accion_pendiente": "Ninguna para esta regresión sintética; no equivale a validación acústica.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "2fa57f61c94bb3c38406d1ae67af314c558839d142dd368a9ca1cdf28a174a0f",
+          "xml_sha256": "62af58ae4f485255592c1cbf25a29788434216fb6f9811028a28c1db0a2a045e"
+        },
+        "after": {
+          "log_sha256": "6adb81285ad83cda4860e53fd7a29d459160a711fe0e4b04323f735de187fab8",
+          "xml_sha256": "526c3a84a5931df4b1494f667a86805e81614e82c475e913547bf2463454642c"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "fc6722c87a20",
+      "grupo": "reportes",
+      "prueba_archivo": "tests/test_short_batch_outputs_r53.py",
+      "prueba_funcion": "test_short_normal_and_corrected_label_are_copied_once_and_reported",
+      "causa_comun": "RECHAZO14",
+      "causa_real": "La prueba exige NO_APROBADO por la sola negativa/incapacidad del tercero. La implementación vigente separa rechazo de recado y falta del gestor; el fixture deja una discrepancia de estatus sin código autorizado y, en algunas variantes, alertas independientes.",
+      "particularidad": "Las dos copias aprobadas cortas y etiqueta corregida se generan correctamente. Tercera llamada se espera en NO_APROBADO por rechazo del tercero y alerta de privacidad; sin incumplimiento propio probado no se fuerza ese destino.",
+      "cambio_codigo": "Sin cambio para forzar NO_APROBADO: conservar estatus SE NIEGAN A TOMAR RECADO, evaluación de etapas ejecutables y REVISAR cuando falta resolución sustentada. No convertir una conducta del tercero en incumplimiento del gestor ni inventar código de etiqueta.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "definitive_rejection",
+          "linea_funcion": 86,
+          "linea_evidencia": 86
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "corrected_status_label",
+          "linea_funcion": 24,
+          "linea_evidencia": 24
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea_funcion": 18,
+          "linea_evidencia": 20
+        }
+      ],
+      "criterios_21_11": "14,45,46,50,150",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "Dos APROBADO_DURACION_MENOR; tercero REVISAR; pytest FALLA",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "8fd84aa136c47a2b68e3753eb0782b8e08b2d056b72fe9990b3d68f5bccb9e62",
+          "xml_sha256": "cc4533c8ac299ae47e5b5c5bbb696378a97c22148755d538c41d3728d2d980b9"
+        },
+        "after": {
+          "log_sha256": "2a1276c89c3ef125f34ca4cc617a45bd97e84c4e1196cf81bd0a52854ff48080",
+          "xml_sha256": "8a176c4b235f0e8898b471088ee4cf41f6ddd665673f2e242d587d7551bb48e4"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "8879649ffd54",
+      "grupo": "reportes",
+      "prueba_archivo": "tests/test_status_resolution_r51.py",
+      "prueba_funcion": "test_reported_payment_status_carries_original_evidence_for_output_correction",
+      "causa_comun": "SEGUIMIENTO72",
+      "causa_real": "La expectativa conserva ACLARACION o la procedencia de política 28/10, en conflicto con CONVENIO para pago reportado con comprobante del criterio 72.",
+      "particularidad": "Se conserva evidencia para corregir etiqueta, pero el test pide ACLARA. El criterio72 lleva a CONVENIO/PP, no a ACLARACION; calidad y reetiquetado separados.",
+      "cambio_codigo": "Registrar procedencia CRITERIO_72_USUARIO_20261121 y evento PAGO_REPORTADO_CON_COMPROBANTE sin afirmar verificación bancaria. No falsificar ACLARA ni matches para hacer pasar la prueba.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4584
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/status_output_label.py",
+          "funcion": "corrected_status_label",
+          "linea_funcion": 24,
+          "linea_evidencia": 24
+        }
+      ],
+      "criterios_21_11": "45,50,72",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "CONVENIO / APROBADO_ETIQUETA_CORREGIDA,100; pytest FALLA",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "61f37742fd9ba8ff8bc322e3415555d94561fdd2f86a5710d296c8d897fe0635",
+          "xml_sha256": "7722a595f82bab60779cd8acc0059fe0a92609e8d9ad9afc038d5cf34b0223ea"
+        },
+        "after": {
+          "log_sha256": "27834c0662fad2db6827f1450b76f9b18e88e77b1f10ac0a2d477169b6e3b727",
+          "xml_sha256": "381222a0590f10d1d7cddd9e1ff3a57c5a770eb2983ff2488a23effdda3db1b6"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "0232b94de1e7",
+      "grupo": "pagos",
+      "prueba_archivo": "tests/test_ten_audio_review.py",
+      "prueba_funcion": "test_listing_of_banks_does_not_make_other_authorized_options_unsafe",
+      "causa_comun": "SIN_ACEPTACION",
+      "causa_real": "El titular promete depositar antes de que se enuncien los 1200 pesos; tras la cifra no existe respuesta que la acepte. Los lugares son válidos, pero eso no acredita aceptación del monto.",
+      "particularidad": "Se cuentan dos lugares autorizados y se conserva transfer_option_listing_only. No hay respuesta propia tras la cifra1200; no inferirla del deseo previo de depositar.",
+      "cambio_codigo": "Sin aprobar por inferencia: conservar conteo de lugares y ausencia de transferencia insegura; importe hablado no equivale a importe aceptado. Requiere audio/contexto adicional que pruebe aceptación.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/current_payment_amounts.py",
+          "funcion": "explicit_current_amounts",
+          "linea_funcion": 7,
+          "linea_evidencia": 7
+        },
+        {
+          "archivo": "app/services/quality_decision.py",
+          "funcion": "evaluate_quality",
+          "linea_funcion": 18,
+          "linea_evidencia": 20
+        }
+      ],
+      "criterios_21_11": "22,24,112",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "NO DEFINE / REVISAR,100; pytest FALLA",
+      "estado": "ABIERTO_EVIDENCIA_INSUFICIENTE",
+      "accion_pendiente": "Aportar audio/contexto que confirme aceptación del importe; sin esa evidencia no aprobar.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "fc44524423aefa8d28451a7fe2e62e8e8b52e62d194f580e699b8b493b6557f1",
+          "xml_sha256": "dcc4b35381ae8f82e35f80f6f37b749a1c89631414fced32f1a72483c4d07a1d"
+        },
+        "after": {
+          "log_sha256": "38c1a4ab81b3baa6b1f39a61d1f5d339c3f792f69a95d326158465f9983e171d",
+          "xml_sha256": "6a054b87c36a2c34b62c5730b6d51771452654f04e82e5a0db1a9590f886d716"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "0c3512348454",
+      "grupo": "dictaminación",
+      "prueba_archivo": "tests/test_user_decisions_20261121.py",
+      "prueba_funcion": "test_last_confirmed_payment_agreement_overrides_prior_refusal",
+      "causa_comun": "MORA65",
+      "causa_real": "El fixture 1PV fija llamada 21/11 y pago 25/11: cuatro días frente al límite autorizado de tres. Espera CONVENIO sin contemplar el criterio 65.",
+      "particularidad": "Se respeta aceptación final sobre negativa anterior; el bloqueo es la fecha fuera de mora, no una negativa previa retenida.",
+      "cambio_codigo": "Sin cambio de regla: mantener evidencia de aceptación, NEGATIVA por fecha fuera de política y rechazo de calidad comprobado; no ampliar plazo ni reducir penalización.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 3840
+        },
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "definitive_rejection",
+          "linea_funcion": 86,
+          "linea_evidencia": 86
+        }
+      ],
+      "criterios_21_11": "26,27,65",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "NEGATIVA por política / NO_APROBADO,70; pytest FALLA",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "329cc9c89f648a86f9484e7dda35b2c51cd7c1bb34e07d2d64fbe943bd7859a3",
+          "xml_sha256": "f25842b232a00f906bc2c65faae36223d568d5e427c3cfc76d81877ff78a6e00"
+        },
+        "after": {
+          "log_sha256": "848b101dda6eea312f55e8a090dd115e404032ffc9d0aded176fbaaeac984c5b",
+          "xml_sha256": "d05d9aaa13177b27098ad9a23c9f17076643433d5177c6d1de109e4d5014defd"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    },
+    {
+      "identificador": "371e2097bb29",
+      "grupo": "dictaminación",
+      "prueba_archivo": "tests/test_user_decisions_round2_20261121.py",
+      "prueba_funcion": "test_agreement_requires_amount_and_date",
+      "causa_comun": "MORA65",
+      "causa_real": "El fixture 1PV fija llamada 21/11 y pago 25/11: cuatro días frente al límite autorizado de tres. Espera CONVENIO sin contemplar el criterio 65.",
+      "particularidad": "El parámetro tiene monto y fecha explícitos aceptados pero plazo fuera de política. Los otros parámetros sin cifra/fecha se conservan en sus resultados existentes.",
+      "cambio_codigo": "Sin cambio de regla: mantener evidencia de aceptación, NEGATIVA por fecha fuera de política y rechazo de calidad comprobado; no ampliar plazo ni reducir penalización.",
+      "ubicaciones_codigo": [
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 4443
+        },
+        {
+          "archivo": "app/services/analytics_service.py",
+          "funcion": "calculate_basic_compliance",
+          "linea_funcion": 1047,
+          "linea_evidencia": 3840
+        },
+        {
+          "archivo": "app/services/definitive_rejection.py",
+          "funcion": "definitive_rejection",
+          "linea_funcion": 86,
+          "linea_evidencia": 86
+        }
+      ],
+      "criterios_21_11": "22,24,27,65",
+      "antes": "FALLA",
+      "despues": "FALLA",
+      "resultado_operacional": "NEGATIVA por política / NO_APROBADO,70; pytest FALLA",
+      "estado": "ABIERTO_CONFLICTO_CONTRATO_CRITERIO",
+      "accion_pendiente": "Conciliar formalmente expectativa histórica con criterio vigente/catálogo y contrato de calidad, sin modificar esta prueba ni imponer un dictamen artificial.",
+      "evidencia_individual": {
+        "before": {
+          "log_sha256": "4e3b8358a62306d2f9a83cb063549a274126aaff7077126b67e00df5879966d3",
+          "xml_sha256": "c8d9b496152e54f33741533affc4ab63bf01eb88174d53debf6644f434095a08"
+        },
+        "after": {
+          "log_sha256": "77e80c09548f698592868d682d76aed2d469800b5a62783031d439e1c78f1d71",
+          "xml_sha256": "4ab36dfe8ce162ad2cb10fa0b82703d372c51718448610f5475ac7e26106d7e1"
+        }
+      },
+      "audio_real_probado_en_este_cierre": false,
+      "escucha_humana": false
+    }
+  ]
+}

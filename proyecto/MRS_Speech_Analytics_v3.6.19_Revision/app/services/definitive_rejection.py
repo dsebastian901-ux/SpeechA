@@ -19,7 +19,12 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
         value=normalize(unit['text']);at=source.find(value,cursor)
         if at>=0:cursor=at+len(value)
         if unit['speaker_role']in{'GESTOR','TITULAR'}or at<0:continue
-        for match in pattern.finditer(value):
+        matches=list(pattern.finditer(value))
+        context=source[max(0,at-350):at]
+        message_objects=list(re.finditer(r'\b(?:recado|mensaje)\b',context))
+        if message_objects and not re.search(r'\b(?:transferencia|pago|deposito|comprobante|correo|paquete)\b',context[message_objects[-1].end():]):
+            matches.extend(re.finditer(r'\bno (?:(?:se lo|se la|lo|la|le) (?:puedo|voy a|quiero) (?:pasar|dar|transmitir)|puedo recibir)(?=\s*[,.;!]|$)',value))
+        for match in matches:
             before=value[max(0,match.start()-90):match.start()]
             if '?'in value or re.search(r'\b(?:dice que|dijo que|diga que|repita que|no es cierto que|'
                                        r'no es verdad que|si|en caso de que|cuando)\b[^.!?]{0,30}$',before):continue

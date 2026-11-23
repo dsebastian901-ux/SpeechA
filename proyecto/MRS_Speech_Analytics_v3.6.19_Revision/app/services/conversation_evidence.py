@@ -567,7 +567,8 @@ def payment_commitment(text, segments=()):
                 and _role_at(text,segments,match.start('answer')) not in {'GESTOR','TERCERO'}):
             events.append((match.start('answer'),True,match.group()))
     from app.services.dialogue_confirmation_evidence import future_confirmation_events
-    extra_events = future_confirmation_events(text,segments)
+    from app.services.payment_lifecycle import financial_response_events
+    extra_events = future_confirmation_events(text,segments)+financial_response_events(text,segments)
     events.extend((event['position'],True,event['evidence']) for event in extra_events)
     from app.services.payment_dialogue_frames import payment_replies
     framed_replies=payment_replies(text,segments)

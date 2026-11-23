@@ -38,19 +38,33 @@ def financial_response_events(text, segments=()):
     inmediatamente siguiente debe aceptar esa propuesta, sin cambio de objeto.
     """
     rows=frames(text,segments);events=[]
-    for previous,reply in zip(rows,rows[1:]):
+    for index,reply in enumerate(rows[1:],1):
+        previous=rows[index-1];explanation=''
+        # Una explicación del efecto del mismo pago no cambia sus términos.
+        # No atravesar otra cifra/fecha, una pregunta, un relato o un turno del cliente.
+        if index>=2:
+            middle=previous['text']
+            if (previous['role'] not in {'TITULAR','TERCERO','INTERLOCUTOR'}
+                    and re.search(r'\b(?:pago parcial|regulariza|al corriente|pago completo|de preferencia completo)\b',middle)
+                    and not(AMOUNT.search(middle)or DATE.search(middle)or OTHER.search(middle)or QUOTE.search(middle))
+                    and '?'not in middle and '¿'not in middle):
+                explanation=middle;previous=rows[index-2]
         offer=previous['text'];answer=reply['text'];fold=offer.lstrip('¿ ')
         if previous['role']in{'TITULAR','TERCERO','INTERLOCUTOR'}or reply['role']in{'GESTOR','TERCERO'}:continue
-        if QUOTE.search(offer)or PAST.search(offer)or OTHER.search(offer):continue
+        from app.services.payment_intent_frames import PAST as PAST_FRAME
+        if QUOTE.search(offer)or PAST.search(offer)or PAST_FRAME.search(offer)or OTHER.search(offer)or PAST_FRAME.search(answer):continue
         if not PAYMENT.search(offer)or not(DATE.search(offer)or AMOUNT.search(offer)):continue
-        directed=bool(re.search(r'\b(?:confirm(?:o|amos|aria|ariamos)|quedaria(?:mos)?|'
+        directed=re.search(r'\b(?:confirm(?:o|amos|aria|ariamos)|quedaria(?:mos)?|'
             r'quedamos|(?:su|el) pago (?:seria|queda)|seria (?:depositar|pagar|abonar)|'
             r'(?:puede|podria|tiene que|tendria que|debera) (?:realizar|hacer|pagar|depositar|abonar)|'
             r'(?:el banco|el minimo que nos) (?:le |nos )?(?:requiere|solicita)|'
-            r'(?:ponemos|genero|generamos|confirmamos) (?:su |el |un )?convenio)\b',fold))
-        if not directed or re.search(r'\b(?:no|nunca)\s*$',fold[:next((m.start()for m in PAYMENT.finditer(fold)),0)]):continue
-        accepted=FIRM.match(answer)
-        if not accepted or answer.startswith('¿')or'?'in answer:continue
+            r'(?:ponemos|genero|generamos|confirmamos) (?:su |el |un )?convenio)\b',fold)
+        from app.services.speech_scope import nonassertive_prefix
+        if not directed or nonassertive_prefix(fold,directed.start()) or nonassertive_prefix(fold,next((m.start()for m in PAYMENT.finditer(fold)),0)):continue
+        accepted=bool(FIRM.match(answer) or (POSITIVE_DECISION.search(answer) and DATE.search(answer)))
+        if not accepted or answer.startswith('¿')or'?'in answer or QUOTE.search(answer):continue
+        from app.services.conversation_evidence import _payment_review_condition,_payment_review_deferral
+        if _payment_review_condition(answer)or _payment_review_deferral(answer):continue
         if CONDITION.search(answer)or re.search(r'\b(?:pero no|no puedo|no podria|no tengo|no acepto|no me comprometo)\b',answer):continue
         if re.match(r'(?:(?:ah|bueno|ok|aja)[, ]+){0,2}si[ ,]+(?:no|lo realiza|lo puede|puede|paga|gusta|quiere|consigue)\b',answer):continue
         if re.search(r'\b(?:otro pago|segundo pago|remanente|restante|o realizar|o bien|en dos|dos pagos|dos exhibiciones)\b',offer):continue
@@ -62,8 +76,9 @@ def financial_response_events(text, segments=()):
             dated=offer[candidates[-1].start():]
             dated=re.split(r'\b(?:yo le sugiero|para que se comunique|para que pueda (?:cancelar|llamar|comunicarse))\b',dated)[0]
         events.append({'position':reply['start'],'end':reply['end'],'accepted':True,'declined':False,
-            'conditional':False,'evidence':offer+' '+answer,'date_evidence':dated+' '+answer,
-            'reply':answer,'method':'ACEPTACION_DE_RECAPITULACION_FINANCIERA_INMEDIATA',
+            'conditional':False,'evidence':' '.join(v for v in [offer,explanation,answer]if v),'date_evidence':dated+' '+answer,
+            'reply':answer,'offer':offer,'offer_position':previous['start'],
+            'method':'ACEPTACION_DE_RECAPITULACION_FINANCIERA_INMEDIATA',
             'speaker_role':reply['role'],'human_verified':False,'acoustic_voice_identified':False})
     return events
 
