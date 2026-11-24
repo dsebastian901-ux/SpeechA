@@ -1475,6 +1475,26 @@ class BatchView(ctk.CTkFrame):
                 sticky="ew",
             )
 
+        # Segunda escucha visible en cada tarjeta; el audio original no cambia.
+        context = (item.get('analytics_metadata') or {}).get('context_audio_validation') or {}
+        recovery_rows = context.get('readings') or []
+        if context.get('present'):
+            attempts = len(recovery_rows)
+            recovered = 'identidad corroborada' if context.get('holder') else (
+                'teléfono corroborado' if context.get('callback') else 'sin resolución automática')
+            details = ' · '.join(
+                str(row.get('purpose') or '') + ' #' + str(row.get('attempt') or '') +
+                ': ' + str(row.get('error') or row.get('text') or '')[:95]
+                for row in recovery_rows[:3])
+            ctk.CTkLabel(
+                frame, text='Segunda escucha (' + str(attempts) + '): ' + recovered +
+                    ((' | ' + details) if details else '') +
+                    ((' | ' + str(context.get('reason'))[:130]) if context.get('reason') else ''),
+                text_color=Theme.colors.TEXT_SECONDARY,
+                font=ctk.CTkFont(family="Segoe UI", size=10),
+                anchor="w", wraplength=650, justify="left",
+            ).grid(row=3,column=0,columnspan=2,padx=12,pady=(0,5),sticky="ew")
+
         elapsed_seconds = float(
             item.get("elapsed_seconds", 0.0)
             or 0.0
@@ -1486,9 +1506,9 @@ class BatchView(ctk.CTkFrame):
                 f"{self._format_seconds(elapsed_seconds)}"
             )
 
-        status_row = 3 if reason_text and result_text.upper() == "REVISAR" else (
+        status_row = 4 if context.get('present') else (3 if reason_text and result_text.upper() == "REVISAR" else (
             2 if detail_parts else 1
-        )
+        ))
 
         ctk.CTkLabel(
             frame,
