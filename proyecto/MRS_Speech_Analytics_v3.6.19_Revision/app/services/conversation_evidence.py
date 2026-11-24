@@ -178,7 +178,7 @@ def holder_confirmation(text, segments=()):
         r"\b(?:tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|hablo con|"
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|(?<=¿)con)\s+"
         r"(?P<identity>[^.!?]{2,100})[.?]\s*(?:ah[, ]+)?"
-        r"(?P<answer>si(?:[, ]+(?:digame|diganme|servidor|servidora))?|asi es|correcto|ella habla|el habla|digame|diganme|servidor|servidora)\b")
+        r"(?P<answer>si(?:[, ]+(?:digame|diganme|servidor|servidora))?|asi es|correcto|exactamente|ella habla|el habla|digame|diganme|servidor|servidora)\b")
     # La presentación de la empresa puede separar la pregunta de «ella habla».
     # Solo una respuesta explícita de identidad permite saltar ese tramo.
     delayed_self_identity = re.compile(
@@ -186,7 +186,7 @@ def holder_confirmation(text, segments=()):
         r"(?P<answer>(?:si[, ]+)?(?:ella habla|el habla))(?=[.!?]|$)")
     direct = re.compile(
         r"\b(?:es usted|usted es)(?P<identity>[^.!?]{0,85})\?\s*"
-        r"(?P<answer>si|asi es|correcto|aja)\b")
+        r"(?P<answer>si|asi es|correcto|exactamente|aja)\b")
     contextual = re.compile(
         rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}})[.?]\s*"
         r"(?P<answer>si(?:[, ]+si)?[^.!?]{0,35})[.!?]\s*"
