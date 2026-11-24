@@ -177,8 +177,11 @@ def test_loaded_model_reads_pcm_windows_without_prompt_or_download(tmp_path,monk
                 avg_logprob=-.2,no_speech_prob=.01,compression_ratio=1.)]),None
     service._model=LocalModel()
     record=service.recover_context(path,data,relation,analyze(data,relation).metadata)
-    assert [n for n,_ in calls]==[16000*28,16000*33]
-    assert [opts['beam_size']for _,opts in calls]==[5,10]
+    # r59 también puede releer otro objetivo acústico (finanzas/seguridad)
+    # en la misma llamada: verificar los dos encuadres de identidad sin
+    # exigir que sean las únicas ventanas del motor.
+    assert [n for n,_ in calls[:2]]==[16000*28,16000*33]
+    assert [opts['beam_size'] for _,opts in calls[:2]]==[5,10]
     assert all(opts['condition_on_previous_text']is False and opts['vad_filter']is False
                and 'initial_prompt'not in opts for _,opts in calls)
     assert validate(record,data,relation,path)['holder']
