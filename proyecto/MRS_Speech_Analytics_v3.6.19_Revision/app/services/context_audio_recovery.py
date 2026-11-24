@@ -104,10 +104,10 @@ def needs_recovery(metadata):
 def _cue_time(data,purpose):
     """Elegir un fragmento desde marcas ASR existentes, no desde Excel."""
     keywords={
-        'financial':r'\\b(?:pago|pagar|abono|deposito|comprobante|whatsapp|importe|pesos|manana|convenio)\\b',
-        'safety':r'\\b(?:domicilio|visita|abogado|amenaza|referencias|tarjeta|groser|espera|colgo|confront)\\w*',
-        'general':r'\\b(?:pago|recado|telefono|tarjeta|fecha|monto|convenio|negativa)\\b',
-        'callback':r'\\b(?:numero|telefono|anotar|whatsapp)\\b',
+        'financial':r'\b(?:pago|pagar|abono|deposito|comprobante|whatsapp|importe|pesos|manana|convenio)\b',
+        'safety':r'\b(?:domicilio|visita|abogado|amenaza|referencias|tarjeta|groser|espera|colgo|confront)\w*',
+        'general':r'\b(?:pago|recado|telefono|tarjeta|fecha|monto|convenio|negativa)\b',
+        'callback':r'\b(?:numero|telefono|anotar|whatsapp)\b',
     }
     cues=[]
     for segment in data.get('segmentos')or[]:
@@ -227,13 +227,43 @@ def validate(record,data,relation,audio_path):
         duration=float(data.get('duracion_segundos')or 0)
         if not math.isfinite(duration)or duration<=0:raise ValueError('Duración inválida')
         result['valid']=True
+        result['readings']=reading_summary(record)
         for group in record.get('groups')or[]:
-            attempts=group.get('attempts')or[]
-            if len(attempts)!=2 or [a.get('beam_size')for a in attempts]!=[5,10]:continue
-            if any(a.get('error')or not reading_quality(a)for a in attempts):continue
+            all_attempts=group.get('attempts')or[]
+            if len(all_attempts)not in (2,3)or [a.get('beam_size')for a in all_attempts[:2]]!=[5,10]:continue
+            if len(all_attempts)==3 and all_attempts[2].get('beam_size')!=8:continue
             if any(not(0<=float(a['start'])<float(a['end'])<=duration+.01)
-                   or float(a['end'])-float(a['start'])>45 for a in attempts):continue
-            if (attempts[0]['start'],attempts[0]['end'])==(attempts[1]['start'],attempts[1]['end']):continue
+                   or float(a['end'])-float(a['start'])>45 for a in all_attempts):continue
+            if (all_attempts[0]['start'],all_attempts[0]['end'])==(all_attempts[1]['start'],all_attempts[1]['end']):continue
+            good=[a for a in all_attempts if not a.get('error')and reading_quality(a)]
+            # No resolver con una única lectura; dos evidencias concordantes
+            # como mínimo y ninguna contradicción explícita en una tercera.
+            if len(good)<2:continue
+            attempts=good[:2]
+            if len(all_attempts)==3 and len(good)==3:
+                if group.get('purpose')=='holder':
+                    from app.services.contact_dialogue_resolution import declared_intermediary
+                    contradiction=any(COUNTER.search(normalize(a['text']))or
+                        declared_intermediary(a['text'])['confirmed'] or proxy_account_evidence(a['text'])
+                        for a in good)
+                    if contradiction:continue
+                    positive=[a for a in good if holder_confirmation(a['text'])['confirmed']]
+                    if len(positive)>=2:attempts=positive[:2]
+                elif group.get('purpose')=='callback':
+                    sets=[{p['digits']for p in callback_numbers(a['text'])}for a in good]
+                    singles=[n for n in sets if len(n)==1]
+                    if len(set.union(*singles))>1 if singles else False:continue
+                    if len(singles)>=2 and singles[0]==singles[1]:
+                        attempts=[good[sets.index(singles[0])],good[sets.index(singles[1],sets.index(singles[0])+1)]]
+            if group.get('purpose')in {'financial','safety','general'}:
+                # La segunda escucha de estas materias aporta fragmentos para
+                # revisión, no acredita automáticamente identidad ni pagos.
+                result['evidence'].append({'purpose':group['purpose'],
+                    'texts':[a['text']for a in good],
+                    'method':'LECTURA_FOCAL_DIAGNOSTICA',
+                    'source':'LOCAL_AUDIO_CONTEXT','human_verified':False})
+                result['review_required']=True
+                continue
             # Una relectura no puede aportar solamente hechos favorables e
             # ignorar una expresión ofensiva que la primera lectura omitió.
             for attempt in attempts:
@@ -300,6 +330,8 @@ def validate(record,data,relation,audio_path):
         if result['risks']:
             result.update(review_required=True,
                 reason='La relectura local detectó lenguaje ofensivo o información protegida sin voz confirmada; verificar el fragmento.')
+        elif result['review_required']:
+            result['reason']='Segunda escucha focal disponible; la evidencia requiere atribución o validación del dictaminador antes de modificar el resultado.'
         elif not result['holder'] and not result['callback']:
             result['reason']='Las relecturas no aportaron coincidencia suficiente para resolver la duda; se conserva el dictamen del texto original.'
     except (ValueError,TypeError,KeyError,AttributeError,OSError):
