@@ -389,3 +389,20 @@ def test_recovered_home_warning_obeys_existing_mora_and_attribution_rules(tmp_pa
     record=collect(audio,data,relation,meta,lambda *a:reading(text),'small')
     result=validate(record,data,relation,audio)
     assert any(r['type']=='ADVERTENCIA_DOMICILIARIA_PENDIENTE'for r in result['risks'])is risk
+
+
+def test_real_audio_76564249_reported_past_refusal_not_current_refusal():
+    from app.services.dialogue_evaluation import full_payment_refusal
+    historic={'declined':True,'accepted':False,
+        'evidence':'y les decia y no voy a pagar la tarjeta y no voy a esto'}
+    assert full_payment_refusal(historic) is False
+    present={'declined':True,'accepted':False,
+        'evidence':'No voy a pagar la tarjeta.'}
+    assert full_payment_refusal(present) is True
+
+
+def test_real_audio_70528974_not_knowing_debtor_is_not_message_refusal():
+    from app.services.definitive_rejection import explicit_message_refusal
+    text='Gestor: ¿Puedo dejar un recado? Tercero: No sé nada de él. Gracias, hasta luego.'
+    result=explicit_message_refusal(text)
+    assert result['confirmed'] is False
