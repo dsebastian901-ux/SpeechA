@@ -307,12 +307,13 @@ def validate(record,data,relation,audio_path):
                     # después de la solicitud nominal, repetida en dos
                     # ventanas y con el MISMO nombre del ASR original,
                     # es evidencia conversacional; nunca borra un tercero.
+                    folded=normalize(value)
                     named_reply=re.search(
                         r'\b(?:me (?:puede|puedes|podria|podre) comunicar(?: por favor)? con|'
                         r'tengo(?: el)? gusto con|hablo con)\s+'
                         r'(?P<person>[^.!?]{3,100})[.?]\s*'
                         r'(?:titular\s*:\s*)?(?:si[, ]+)?soy yo\b',
-                        value)
+                        folded)
                     from app.services.conversation_evidence import _role_at
                     named_valid=bool(named_reply and
                         _role_at(value, [], named_reply.end()-len('soy yo')) not in {'GESTOR','TERCERO'}
