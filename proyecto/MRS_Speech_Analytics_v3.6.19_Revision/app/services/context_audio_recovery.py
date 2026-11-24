@@ -15,7 +15,7 @@ from app.services.conversation_evidence import normalize,holder_confirmation,rec
 from app.services.contextual_identity_evidence import COUNTER,proxy_account_evidence,BAD_IDENTITY,valid_nominal_request
 from app.services.payment_reference_validation import callback_numbers
 
-SCHEMA=1
+SCHEMA=2
 
 
 def digest(value):
