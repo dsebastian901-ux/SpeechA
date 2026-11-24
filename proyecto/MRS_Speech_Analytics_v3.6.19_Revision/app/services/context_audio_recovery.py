@@ -236,6 +236,15 @@ def validate(record,data,relation,audio_path):
                    or float(a['end'])-float(a['start'])>45 for a in all_attempts):continue
             if (all_attempts[0]['start'],all_attempts[0]['end'])==(all_attempts[1]['start'],all_attempts[1]['end']):continue
             good=[a for a in all_attempts if not a.get('error')and reading_quality(a)]
+            # Una relectura no puede aportar solamente hechos favorables e
+            # ignorar una expresión ofensiva que la primera lectura omitió.
+            for attempt in all_attempts:
+                offensive=re.search(r'\b(?:que poca madre|chingad[ao]s?|chingues|chingue|'
+                    r'pendej[oa]s?|cabron(?:a|es)?|mierda|pinche|put[ao]s?)\b',normalize(attempt['text']))
+                if offensive:
+                    result['risks'].append({'type':'EXPRESION_OFENSIVA_SIN_VOZ_CONFIRMADA',
+                        'text':attempt['text'],'start':attempt['start'],'end':attempt['end'],
+                        'human_verified':False})
             # No resolver con una única lectura; dos evidencias concordantes
             # como mínimo y ninguna contradicción explícita en una tercera.
             if len(good)<2:continue
@@ -252,7 +261,7 @@ def validate(record,data,relation,audio_path):
                 elif group.get('purpose')=='callback':
                     sets=[{p['digits']for p in callback_numbers(a['text'])}for a in good]
                     singles=[n for n in sets if len(n)==1]
-                    if len(set.union(*singles))>1 if singles else False:continue
+                    if singles and len(set.union(*singles))>1:continue
                     if len(singles)>=2 and singles[0]==singles[1]:
                         attempts=[good[sets.index(singles[0])],good[sets.index(singles[1],sets.index(singles[0])+1)]]
             if group.get('purpose')in {'financial','safety','general'}:
@@ -264,15 +273,6 @@ def validate(record,data,relation,audio_path):
                     'source':'LOCAL_AUDIO_CONTEXT','human_verified':False})
                 result['review_required']=True
                 continue
-            # Una relectura no puede aportar solamente hechos favorables e
-            # ignorar una expresión ofensiva que la primera lectura omitió.
-            for attempt in all_attempts:
-                offensive=re.search(r'\b(?:que poca madre|chingad[ao]s?|chingues|chingue|'
-                    r'pendej[oa]s?|cabron(?:a|es)?|mierda|pinche|put[ao]s?)\b',normalize(attempt['text']))
-                if offensive:
-                    result['risks'].append({'type':'EXPRESION_OFENSIVA_SIN_VOZ_CONFIRMADA',
-                        'text':attempt['text'],'start':attempt['start'],'end':attempt['end'],
-                        'human_verified':False})
             if group.get('purpose')=='holder':
                 if any(a['start']!=0 or a['end']>34 for a in attempts):continue
                 source=normalize(data.get('texto'))
