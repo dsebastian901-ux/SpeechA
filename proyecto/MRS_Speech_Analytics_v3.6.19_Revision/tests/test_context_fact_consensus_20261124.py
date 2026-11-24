@@ -244,7 +244,7 @@ def test_reanalysis_reuses_valid_recovery_and_preserves_sources(tmp_path,monkeyp
     monkeypatch.setattr(whisper_service,'recover_context',forbidden)
     monkeypatch.setattr(whisper_service,'load_model',forbidden)
     result=reanalyze_checkpoint(source,tmp_path/'new-results')
-    saved=json.loads(__import__('pathlib').Path(result['checkpoint']).read_text())
+    saved=json.loads(__import__('pathlib').Path(result['checkpoint']).read_text(encoding='utf-8'))
     assert result['second_listening']['realizadas']==0
     # Comparar la evidencia persistida, no el objeto Python previo a JSON:
     # la entrada real del reanálisis es el checkpoint serializado.
