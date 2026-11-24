@@ -327,6 +327,20 @@ def validate(record,data,relation,audio_path):
                     result['evidence'].append({'purpose':'callback','texts':[a['text']for a in attempts],
                         'method':'CALLBACK_MATCH_IN_TWO_LOCAL_READINGS','source':'LOCAL_AUDIO_CONTEXT',
                         'human_verified':False})
+        result['outcomes']=[]
+        for group in record.get('groups')or[]:
+            purpose=group.get('purpose','')
+            if purpose=='holder' and result['holder']:
+                status='IDENTIDAD_CORROBORADA'
+            elif purpose=='callback' and result['callback']:
+                status='CONTACTO_CORROBORADO'
+            else:
+                status='SIN_CONSENSO_O_ATRIBUCION'
+            result['outcomes'].append({'purpose':purpose,'result':status,
+                'attempts':len(group.get('attempts')or[]),
+                'reason':('Coincidencia validada bajo los controles de identidad y privacidad.'
+                          if status!='SIN_CONSENSO_O_ATRIBUCION' else
+                          'Las lecturas no permiten confirmar el hecho sin atribución adicional.')})
         if result['risks']:
             result.update(review_required=True,
                 reason='La relectura local detectó lenguaje ofensivo o información protegida sin voz confirmada; verificar el fragmento.')
