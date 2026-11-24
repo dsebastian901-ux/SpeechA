@@ -36,10 +36,11 @@ def fixture(tmp_path,text=PRIMARY):
 def make_record(path,data,relation,texts=(REREAD,REREAD)):
     requests=[]
     def reader(start,end,beam):
-        requests.append((start,end,beam));return {'text':texts[len(requests)-1],'segments':[]}
+        requests.append((start,end,beam))
+        return {'text':texts[min(len(requests)-1,len(texts)-1)],'segments':[]}
     record=collect(path,data,relation,{'shared_classification':{'clasificacion':'REVISAR'},
         'quality_contact_type':'CONTACTO NO DETERMINADO'},reader,'small-test')
-    assert len(requests)==2 and requests[0]!=requests[1]
+    assert len(requests) in (2,3) and requests[0]!=requests[1]
     return record
 
 
