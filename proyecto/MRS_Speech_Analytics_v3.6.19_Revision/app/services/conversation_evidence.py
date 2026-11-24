@@ -223,12 +223,12 @@ def holder_confirmation(text, segments=()):
                     match["identity"]):
                 continue
             answer_role = _role_at(text, segments, match.start("answer"))
-            # La reconstrucción por oraciones puede arrastrar el rol GESTOR
-            # cuando pregunta y respuesta etiquetada comparten la misma línea.
-            # Una etiqueta explícita Titular: inmediatamente antes de la
-            # respuesta delimita su turno. Nunca se concede a Tercero:.
-            explicit_holder_turn = bool(re.search(
-                r'\btitular\s*:\s*
+            # Pregunta y respuesta pueden compartir línea, pero el turno
+            # 'Titular:' tiene precedencia solo si está explícito.
+            prefix = s[max(0,match.start("answer")-30):match.start("answer")]
+            explicit_holder_turn = bool(re.search(r'titular\s*:\s*$', prefix))
+            if answer_role in {"GESTOR", "TERCERO"} and not explicit_holder_turn:
+                continue
             if pattern is company_reply and re.search(r"\b(?:se lo comunico|te hablan|le paso|no esta|no se encuentra)\b",match['bridge']):
                 continue
             tail = s[match.end():match.end()+80]
