@@ -169,7 +169,7 @@ def holder_confirmation(text, segments=()):
     identification = rf"(?:{identification})(?:\s*\.\s*){{0,3}}"
     explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+)?(?:digame|diganme|dime|soy yo|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b"
     prompt = re.compile(
-        rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)(?:[.?]|,)\s*" + explicit_answer)
+        rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)(?:[.?]|,)\s*(?:titular\s*:\s*)?" + explicit_answer)
     salutation_prompt = re.compile(
         r"\b(?:buen dia|buenos dias|buenas tardes)[,. ]+"
         r"(?:juridico[, ]+m[. ]*r[. ]*s[. ]*)?con\s+"
