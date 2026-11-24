@@ -85,6 +85,9 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
     relecturas = {'realizadas': 0, 'sin_audio': 0, 'sin_modelo': 0, 'errores': 0}
     model_unavailable = False
     for item in updated["items"]:
+        # La recuperación acústica original es evidencia inmutable de entrada.
+        saved_context_asr_recovery = deepcopy(item.get('context_asr_recovery'))
+        new_context_asr_recovery = False
         # Un guardado intermedio conserva la cola. No crear ERROR, dictamen,
         # ni una transcripción para audios que todavía no se procesaron.
         if item.get('status') in {'pendiente', 'procesando', 'cancelado'} and not item.get('result'):
@@ -150,6 +153,7 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
                                 audio, data, relation, analysis.metadata)
                             if recovered is not None:
                                 item['context_asr_recovery'] = recovered
+                                new_context_asr_recovery = True
                                 transcription.metadata['context_asr_recovery'] = recovered
                                 transcription.audio_path = str(audio)
                                 analysis = AnalyticsService.analyze_transcription(
@@ -189,6 +193,11 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
             item["analytics"] = {}
             item["analytics_metadata"] = {"final_result": "ERROR"}
             item["compliance_score"] = None
+        # Los servicios de análisis y exportación nunca pueden reescribir
+        # las lecturas de un checkpoint cuando no se ejecutó Whisper otra vez.
+        # Restaurar la evidencia de entrada antes de la persistencia final.
+        if not new_context_asr_recovery:
+            item['context_asr_recovery'] = deepcopy(saved_context_asr_recovery)
         item["classified_audio_path"] = None
         item["copy_status"] = "NO_COPIADO_REANALISIS"
         item["transcription_recovered"] = category != "ERROR"
