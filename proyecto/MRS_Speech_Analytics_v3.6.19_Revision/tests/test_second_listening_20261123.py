@@ -103,7 +103,8 @@ def test_focal_read_is_visible_but_does_not_validate_financial_agreement(tmp_pat
     record=collect(audio,data,relation,_metadata("PAYMENT_OUTCOME_NOT_CONFIRMED"),reader,"small")
     result=validate(record,data,relation,audio)
     assert len(record["groups"][0]["attempts"])==3
-    assert result["review_required"]
+    assert not result["review_required"]  # No inventa un bloqueo nuevo
+    assert result["outcomes"][0]["result"] == "SIN_CONSENSO_O_ATRIBUCION"
     assert not result["holder"] and not result["callback"]
     assert result["reason"]
     assert len(result["readings"])==3
