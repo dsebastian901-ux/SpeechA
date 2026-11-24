@@ -1480,8 +1480,11 @@ class BatchView(ctk.CTkFrame):
         recovery_rows = context.get('readings') or []
         if context.get('present'):
             attempts = len(recovery_rows)
-            recovered = 'identidad corroborada' if context.get('holder') else (
-                'teléfono corroborado' if context.get('callback') else 'sin resolución automática')
+            outcomes = context.get('outcomes') or []
+            recovered = ', '.join(str(outcome.get('purpose','')) + '=' +
+                str(outcome.get('result','')) for outcome in outcomes) or (
+                'identidad corroborada' if context.get('holder') else (
+                    'teléfono corroborado' if context.get('callback') else 'sin resolución automática'))
             details = ' · '.join(
                 str(row.get('purpose') or '') + ' #' + str(row.get('attempt') or '') +
                 ': ' + str(row.get('error') or row.get('text') or '')[:95]
