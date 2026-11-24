@@ -275,7 +275,9 @@ def validate(record,data,relation,audio_path):
                     'texts':[a['text']for a in good],
                     'method':'LECTURA_FOCAL_DIAGNOSTICA',
                     'source':'LOCAL_AUDIO_CONTEXT','human_verified':False})
-                result['review_required']=True
+                # La relectura diagnóstica no genera otro bloqueo: se mantienen
+                # los bloqueos existentes, salvo riesgo NUEVO confirmado por
+                # la evidencia acústica que debe atribuirse.
                 continue
             if group.get('purpose')=='holder':
                 if any(a['start']!=0 or a['end']>34 for a in attempts):continue
@@ -351,7 +353,7 @@ def validate(record,data,relation,audio_path):
         elif result['review_required']:
             result['reason']='Segunda escucha focal disponible; la evidencia requiere atribución o validación del dictaminador antes de modificar el resultado.'
         elif not result['holder'] and not result['callback']:
-            result['reason']='Las relecturas no aportaron coincidencia suficiente para resolver la duda; se conserva el dictamen del texto original.'
+            result['reason']='Relectura focal registrada; sin coincidencia suficiente para resolver automáticamente la duda. Se conservan los bloqueos originales.'
     except (ValueError,TypeError,KeyError,AttributeError,OSError):
         result.update(valid=False,holder=False,callback=None,reason='Registro de relectura incompleto o no verificable.')
     return result
