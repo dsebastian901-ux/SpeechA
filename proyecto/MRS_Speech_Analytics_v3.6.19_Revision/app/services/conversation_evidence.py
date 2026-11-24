@@ -167,7 +167,7 @@ def holder_confirmation(text, segments=()):
     # Whisper puede separar la búsqueda nominal y el nombre con puntos de
     # vacilación; conservar el nombre y la respuesta, sin reescribir el texto.
     identification = rf"(?:{identification})(?:\s*\.\s*){{0,3}}"
-    explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+)?(?:digame|diganme|dime|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b"
+    explicit_answer = r"(?:ah[, ]+)?(?P<answer>(?:si[, ]+)?(?:digame|diganme|dime|soy yo|servidor|servidora|al habla|ella habla|el habla|con el habla|con ella habla|habla con el|habla con ella))\b"
     prompt = re.compile(
         rf"\b{identification}\s+(?P<identity>[^.!?]{{2,100}}?)(?:[.?]|,)\s*" + explicit_answer)
     salutation_prompt = re.compile(
