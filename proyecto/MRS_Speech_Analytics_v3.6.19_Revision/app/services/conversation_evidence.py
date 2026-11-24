@@ -177,7 +177,7 @@ def holder_confirmation(text, segments=()):
     named_identity = re.compile(
         r"\b(?:tengo(?: el)? (?:gusto|uso)(?: de hablar)? (?:con|a)|me comunico con|hablo con|"
         r"buen(?:os dias| dia)[, ]+con|buenas tardes[, ]+con|(?<=¿)con)\s+"
-        r"(?P<identity>[^.!?]{2,100})[.?]\\s*(?:titular\\s*:\\s*)?(?:ah[, ]+)?"
+        r"(?P<identity>[^.!?]{2,100})[.?]\s*(?:titular\s*:\s*)?(?:ah[, ]+)?"
         r"(?P<answer>si(?:[, ]+(?:digame|diganme|servidor|servidora))?|asi es|correcto|exactamente|ella habla|el habla|digame|diganme|servidor|servidora)\b")
     # La presentación de la empresa puede separar la pregunta de «ella habla».
     # Solo una respuesta explícita de identidad permite saltar ese tramo.
