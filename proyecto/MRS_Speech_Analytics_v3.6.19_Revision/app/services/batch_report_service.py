@@ -719,6 +719,10 @@ class BatchReportService:
                 str(round(float(row.get('end')or 0),1)) + "s]: " +
                 (str(row.get('error')or row.get('text')or '')[:220])
                 for row in (metadata.get('context_audio_validation')or{}).get('readings',[])),
+            "Segunda escucha - resultado": " | ".join(
+                str(row.get('purpose','')) + ": " + str(row.get('result','')) +
+                " (" + str(row.get('attempts',0)) + " lecturas)"
+                for row in (metadata.get('context_audio_validation')or{}).get('outcomes',[])),
             "Segunda escucha - motivo": (metadata.get('context_audio_validation')or{}).get('reason',''),
             "Estatus detectado IA": status.get("detected_status") or "",
             "Fecha de pago detectada": negotiation.get("promise_date") or "",
