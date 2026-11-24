@@ -21,3 +21,23 @@ def test_exactamente_with_third_party_denial_does_not_confirm_holder():
         "Gestor: Tengo el gusto con Luis Angel Antonio. Tercero: Exactamente. "
         "Tercero: Pero no soy el titular, soy su hermano.")
     assert result["confirmed"] is False
+
+
+def test_si_soy_yo_after_full_name_confirms_holder():
+    result = holder_confirmation(
+        "Gestor: ¿Me puede comunicar con Persona Ejemplo? "
+        "Titular: Sí, soy yo.")
+    assert result["confirmed"] is True
+
+
+def test_si_soy_yo_without_nominal_request_does_not_confirm_holder():
+    result = holder_confirmation(
+        "Gestor: ¿Puede realizar el pago? Titular: Sí, soy yo.")
+    assert result["confirmed"] is False
+
+
+def test_si_soy_yo_with_explicit_third_party_denial_stays_unconfirmed():
+    result = holder_confirmation(
+        "Gestor: ¿Me puede comunicar con Persona Ejemplo? "
+        "Tercero: Sí, soy yo. Tercero: No soy el titular, soy su hermano.")
+    assert result["confirmed"] is False
