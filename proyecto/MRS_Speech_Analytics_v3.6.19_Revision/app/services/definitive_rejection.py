@@ -69,12 +69,7 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
                     and not re.search(r'\b(?:dice que|dijo que|diga que|por ejemplo|si)\s*$',before[-90:])):
                 return {'confirmed':True,'evidence':[{'text':source[unable.start():],'method':'NO_PUEDE_ANOTAR_Y_SE_CIERRA_PARA_LLAMAR_DESPUES','human_verified':False}],
                     'reason':'El interlocutor no puede anotar y la llamada se cierra para llamar después, sin recado recibido.'}
-        final_contact = re.search(r'\b(?:ya no (?:tenemos|tengo) comunicacion|no (?:tengo|tenemos) (?:como|forma de) (?:contactarlo|contactarla|avisarle)|no se nada de (?:el|ella))\b',source)
-        ended = re.search(r'\b(?:hasta luego|gracias|me (?:voy a seguir comunicando|comunico (?:mas tarde|en otro momento)))\b',source[-180:])
-        if final_contact and ended and not acceptance and _role_at(text,segments,final_contact.start())not in{'GESTOR','TITULAR'}:
-            return {'confirmed':True,'evidence':[{'text':final_contact.group(),'method':'IMPOSIBILIDAD_EXPRESA_DE_TRANSMITIR_RECADO_CON_CIERRE','human_verified':False}],
-                    'reason':'El interlocutor declara que no tiene forma de contactar al titular y la llamada cierra sin aceptación del recado.'}
-        return none
+        # No localizar al titular, o decir 'no sé nada de él', NO es\n        # negarse a recibir un recado. Solo rechazo verbal explícito.\n        return none
     last=max(e['position']for e in events)
     for evidence in acceptance:
         value=normalize(evidence.get('text',''));at=source.rfind(value)
