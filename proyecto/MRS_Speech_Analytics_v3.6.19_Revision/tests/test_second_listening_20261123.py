@@ -43,7 +43,7 @@ def test_financial_and_security_reading_windows_are_focal():
 
 def _sample(tmp_path):
     audio = tmp_path / "sample.wav"
-    audio.write_bytes(b"audio sintético sin clientes")
+    audio.write_bytes("audio sintético sin clientes".encode("utf-8"))
     data = {
         "archivo": audio.name, "texto": "¿Me puede comunicar con Persona Ejemplo? Sí.",
         "duracion_segundos": 90, "segmentos": [], "modelo": "small",
