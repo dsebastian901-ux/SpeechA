@@ -43,7 +43,7 @@ def receipt_request_evidence(text, segments=()):
     source = normalize(text)
     requests, received, channels, pending = [], [], [], []
     explicit_refusal = False
-    verbs = (r'(?:mandar(?:me|nos|lo|la|les)?|mand(?:e|a)(?:me|nos)?|mandando|enviar(?:me|nos|lo|la|les)?|envi(?:e|a|en)(?:me|nos|lo|la)?|enviarme|enviarnos|enviando|'
+    verbs = (r'(?:mandar(?:me|nos|lo|la|les)?|mand(?:e|a|as)(?:me|nos)?|mandando|enviar(?:me|nos|lo|la|les)?|envi(?:e|a|as|en)(?:me|nos|lo|la)?|enviarme|enviarnos|enviando|'
              r'compartir|compartiria(?:mos)?|nos compartiria|comparta(?:me|nos)?|comparte|compartirnos|compartiendo|hagan? llegar|hacer(?:me|nos)? llegar|adjunte|agregue|anexe|reportar|reporte|reporta|reportarnos|regala|'
              r'proporcione|proporcionar|remitir|remita)')
     request = re.compile(rf'\b{verbs}\b[^.!?]{{0,100}}?\b{RECEIPT}\b')
