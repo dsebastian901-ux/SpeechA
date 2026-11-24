@@ -150,10 +150,14 @@ def needs_third_read(purpose,attempts):
     if len(attempts)!=2 or any(a.get('error')or not reading_quality(a)for a in attempts):
         return True
     if purpose=='holder':
-        return holder_confirmation(attempts[0]['text'])['confirmed'] != holder_confirmation(attempts[1]['text'])['confirmed']
+        identities=[holder_confirmation(a['text'])['confirmed'] for a in attempts]
+        names=[nominal_words(a['text']) for a in attempts]
+        return identities[0]!=identities[1] or names[0]!=names[1] or (
+            not all(identities) and normalize(attempts[0]['text'])!=normalize(attempts[1]['text']))
     if purpose=='callback':
-        return {n['digits']for n in callback_numbers(attempts[0]['text'])} != {
-            n['digits']for n in callback_numbers(attempts[1]['text'])}
+        numbers=[{n['digits']for n in callback_numbers(a['text'])}for a in attempts]
+        return numbers[0]!=numbers[1] or (not all(numbers) and
+            normalize(attempts[0]['text'])!=normalize(attempts[1]['text']))
     return normalize(attempts[0]['text'])!=normalize(attempts[1]['text'])
 
 
