@@ -64,8 +64,10 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         risks=context_audio.get('risks')or[]
         if any(r.get('type')=='INFORMACION_PROTEGIDA_SIN_VOZ_CONFIRMADA'for r in risks):
             add(3,'CONTEXT_AUDIO_PRIVACY_RISK','Información protegida en relectura local sin voz confirmada; verificar el fragmento.','context_audio_validation')
-        if not risks or any(r.get('type')!='INFORMACION_PROTEGIDA_SIN_VOZ_CONFIRMADA'for r in risks):
+        if any(r.get('type')=='EXPRESION_OFENSIVA_SIN_VOZ_CONFIRMADA' for r in risks):
             add(9,'CONTEXT_AUDIO_RISK',context_audio.get('reason')or'Expresión ofensiva en relectura local pendiente de atribución.','context_audio_validation')
+        if not risks:
+            add(13,'CONTEXT_AUDIO_UNVERIFIED',context_audio.get('reason')or'Relectura focal pendiente de validación; no confirma por sí sola cumplimiento.','context_audio_validation')
     additional = m.get('audio_block_evidence_validation') or {}
     if additional.get('review_required'):
         only_profanity = additional.get('valid') and additional.get('risks') and all(
