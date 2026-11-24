@@ -145,7 +145,9 @@ def full_payment_refusal(commitment):
     before=reply[:match.start()]
     # No atribuir al presente una negativa citada de conversación anterior.
     # Por ejemplo: 'les decía y no voy a pagar la tarjeta'.
-    if re.search(r'\b(?:yo\s+)?(?:les?|te|usted(?:es)?)\s+(?:decia|dije|habia dicho|comentaba|comente)\s*(?:(?:que|y|pues|entonces)\s*){0,2}
+    historical_clause = before.rsplit('.', 1)[-1][-90:]
+    if re.search(r'\b(?:les|le|te) decia\b', historical_clause) and historical_clause.strip().endswith(('y', 'que')):
+        return False
     if re.search(r'\b(?:no es que|no digo que|no dije que)\s*$',before):
         return False
     conditional=re.search(r'\b(?:si|cuando)\b[^.!?]{0,140}$',before)
