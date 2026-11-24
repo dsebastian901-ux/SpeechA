@@ -280,7 +280,8 @@ def validate(record,data,relation,audio_path):
                 # la evidencia acústica que debe atribuirse.
                 continue
             if group.get('purpose')=='holder':
-                if any(a['start']!=0 or a['end']>34 for a in attempts):continue
+                if any(a['start']!=0 or a['end']>(36 if a.get('beam_size')==8 else 34)
+                       for a in attempts):continue
                 source=normalize(data.get('texto'))
                 from app.services.contact_dialogue_resolution import declared_intermediary
                 from app.services.context_rules import unknown_debtor_statement
