@@ -232,6 +232,22 @@ def holder_confirmation(text, segments=()):
                 continue
             return {"confirmed": True, "method": "RESPUESTA_A_IDENTIFICACION",
                     "evidence": match.group(), "speaker_role": "NO DETERMINADO"}
+    # La respuesta nominal puede estar separada por etiquetas de turno.
+    # Reconocer «Exactamente» solamente si responde al nombre solicitado,
+    # y no si proviene del gestor o de un tercero explícito.
+    exact = re.compile(
+        r'\b(?:tengo(?: el)? gusto(?: de hablar)? con|me comunico con|hablo con)\s+'
+        r'(?P<identity>[^.!?]{3,100})[.?]\s*'
+        r'(?:titular\s*:\s*)?(?P<answer>exactamente)\b')
+    for match in exact.finditer(s):
+        if (valid_nominal_request(s,match.start(),match['identity'])
+                and not re.search(
+                    r'\b(?:familiar|espos[oa]|madre|padre|herman[oa]|referencia|'
+                    r'banco|despacho|pago|tarjeta|cuenta)\b',match['identity'])
+                and _role_at(text,segments,match.start('answer')) not in {'GESTOR','TERCERO'}
+                and not counter.search(s)):
+            return {'confirmed':True,'method':'RESPUESTA_A_IDENTIFICACION',
+                    'evidence':match.group(),'speaker_role':'NO DETERMINADO'}
     # Autorreferencia independiente del Excel: pregunta nominal + respuesta
     # sobre la PROPIA cuenta/tarjeta. «No tengo dinero»/«sí» solos no bastan.
     # No transforma en titular a un familiar que paga por otra persona.
