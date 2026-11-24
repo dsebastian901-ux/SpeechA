@@ -249,7 +249,142 @@ def test_reanalysis_reuses_valid_recovery_and_preserves_sources(tmp_path,monkeyp
     # Comparar la evidencia persistida, no el objeto Python previo a JSON:
     # la entrada real del reanálisis es el checkpoint serializado.
     original_saved=json.loads(original.decode('utf-8'))
-    assert saved['items'][0]['context_asr_recovery']==original_saved['items'][0]['context_asr_recovery']
+    actual=saved['items'][0]['context_asr_recovery']
+    expected=original_saved['items'][0]['context_asr_recovery']
+    if actual != expected:
+        def first_difference(a,b,path='
+    assert source.read_bytes()==original and audio.read_bytes()==original_audio
+
+
+def test_stable_comparison_uses_identifiers_and_refuses_duplicates(tmp_path):
+    from app.services.checkpoint_comparison import compare_checkpoints,compare_payloads
+    first={'items':[{'file_name':'a.ogg','classification':{'clasificacion':'REVISAR'}},
+                    {'file_name':'b.ogg','classification':{'clasificacion':'APROBADO'}}]}
+    second={'items':list(reversed(deepcopy(first['items'])))}
+    a,b=tmp_path/'a.json',tmp_path/'b.json'
+    a.write_text(json.dumps(first));b.write_text(json.dumps(second))
+    result=compare_checkpoints(a,b,tmp_path/'comparison.json')
+    assert result['changed']==0 and result['calls']==2
+    with pytest.raises(ValueError):compare_checkpoints(a,b,a)
+    second['items'].append(deepcopy(second['items'][0]))
+    with pytest.raises(ValueError):compare_payloads(first,second)
+
+
+def test_complete_reading_evidence_is_in_excel_and_program_source(tmp_path):
+    from app.services.context_recovery_report import add_context_recovery_sheet,display_trace
+    from openpyxl import Workbook
+    audio,data,relation=fixture(tmp_path)
+    meta={'quality_contact_type':'CONTACTO NO DETERMINADO',
+          'shared_classification':{'clasificacion':'REVISAR'}}
+    record=collect(audio,data,relation,meta,lambda *a:reading(
+        '¿Me puede comunicar con Persona Ejemplo? Sí, soy yo.'),'small')
+    context=validate(record,data,relation,audio)
+    item={'file_name':audio.name,'context_asr_recovery':record,
+          'analytics_metadata':{'context_audio_validation':context},
+          'classification':{'clasificacion':'REVISAR','motivo':'Referencia pendiente'}}
+    book=Workbook();sheet=add_context_recovery_sheet(book,[item])
+    assert sheet.max_row>=3
+    assert record['audio_sha256']in display_trace(item)
+    assert 'NO_ACREDITADA'in display_trace(item)or 'CONTEXTUAL'in display_trace(item)
+
+
+def test_recovered_receipt_is_consumed_by_productive_engine_without_changing_score(tmp_path):
+    from app.models.transcriptions import TranscriptionModel
+    from app.services.analytics_service import AnalyticsService
+    audio,data,relation=fixture(tmp_path)
+    data['texto']=('Gestor: Habla MRS. Tengo el gusto con Persona Ejemplo. Titular: Sí, soy yo. '
+        'Gestor: ¿Puede realizar el pago por 1500 pesos mañana? Titular: Sí, de acuerdo. '
+        'Gestor: Puede pagar en Farmacias del Ahorro y 7-Eleven. '
+        'A este WhatsApp nos hace llegar el comprobante.')
+    relation.update(estatus_grabacion='CONVENIO',fecha='2026-11-20',vencimiento='2026-11-30',
+                    corte='2026-11-25',asignacion='1PV',pago_minimo=1000,saldo_total=4000)
+    before=AnalyticsService.analyze_transcription(TranscriptionModel.from_dict(data),relation)
+    assert before.metadata['convenio_payment_validation']['receipt_request_review_required']
+    metadata={'quality_contact_type':'TITULAR','shared_classification':{'clasificacion':'REVISAR',
+              'pending_alerts':[{'code':'RECEIPT_UNCERTAIN'}]}}
+    record=collect(audio,data,relation,metadata,lambda *a:reading(
+        'Gestor: Por favor, envíe el comprobante por WhatsApp.'),'small')
+    transcription=TranscriptionModel.from_dict(data)
+    transcription.metadata['context_asr_recovery']=record
+    after=AnalyticsService.analyze_transcription(transcription,relation)
+    assert not after.metadata['convenio_payment_validation']['receipt_request_review_required']
+    assert after.metadata['convenio_payment_validation']['receipt_evidence_source']=='LOCAL_AUDIO_CONTEXT'
+    assert after.compliance_score==before.compliance_score
+    assert after.metadata['shared_classification']['aprobado']
+    assert transcription.text==data['texto']
+    assert any('RECEIPT_UNCERTAIN'in r['resolves_codes']for g in
+               after.metadata['context_audio_validation']['fact_validations']for r in g['rules'])
+
+
+def test_unconfirmed_date_does_not_become_negotiation_and_amount_is_not_a_day():
+    text='Gestor: ¿Puede realizar el pago por 20 pesos? Titular: Sí, de acuerdo.'
+    assert rule_result([text,text],'financial','PAYMENT_DATE')['state']=='EVIDENCIA_INSUFICIENTE'
+    conditional='Gestor: ¿Puede realizar el pago mañana? Titular: Tal vez, si consigo trabajo.'
+    assert rule_result([conditional,conditional],'financial','PAYMENT_DATE')['state']=='EVIDENCIA_INSUFICIENTE'
+
+
+def test_recovered_fact_cannot_approve_below_eighty_even_with_legacy_lower_threshold():
+    metadata={'quality_contact_type':'TITULAR','contact_validation':{'confirmed':True}}
+    outcome=evaluate_quality(metadata,79,minimum_score=70,duration_seconds=100)
+    assert not outcome['calidad_aprobada']
+    assert outcome['puntaje_minimo']==80
+
+
+def test_identical_offense_with_different_speaker_roles_is_contradictory():
+    texts=['Gestor: Que poca madre, ya terminó la llamada.',
+           'Titular: Que poca madre, ya terminó la llamada.']
+    result=rule_result(texts,'safety','OFFENSE')
+    assert result['state']=='CONTRADICTORIO'
+    assert result['reason_code']=='EMISORES_INCOMPATIBLES'
+
+
+def test_commitment_without_date_without_speaker_does_not_confirm_a_negotiation():
+    text='Yo voy a pagar lo que debo.'
+    assert rule_result([text,text],'financial','COMMITMENT_WITHOUT_DATE')['state']=='SIN_ATRIBUCION'
+
+
+def test_safety_reference_requires_full_digits_and_checks_account():
+    from app.services.context_fact_consensus import consensus
+    text='Gestor: La referencia de pago es 1234567890123456.'
+    for account,matches in [('1234567890123456',True),('1234567890123499',False)]:
+        result=consensus('safety',[reading(text)]*2,{'numero_de_tarjeta':account})
+        reference=next(r for r in result['rules']if r['rule']=='REFERENCE')
+        assert reference['state']=='CONFIRMADO'
+        assert reference['matches_account']is matches
+
+
+@pytest.mark.parametrize('text,mora,risk',[
+    ('Gestor: Vamos a realizar una visita a su domicilio.','1PV',True),
+    ('Gestor: Vamos a realizar una visita a su domicilio.','5PV',False),
+    ('Gestor: No vamos a realizar una visita a su domicilio.','1PV',False),
+    ('Titular: Vamos a realizar una visita a su domicilio.','1PV',False),
+])
+def test_recovered_home_warning_obeys_existing_mora_and_attribution_rules(tmp_path,text,mora,risk):
+    audio,data,relation=fixture(tmp_path);relation['asignacion']=mora
+    meta={'quality_contact_type':'TITULAR','shared_classification':{'clasificacion':'REVISAR',
+          'pending_alerts':[{'code':'HOME_WARNING_UNATTRIBUTED'}]}}
+    record=collect(audio,data,relation,meta,lambda *a:reading(text),'small')
+    result=validate(record,data,relation,audio)
+    assert any(r['type']=='ADVERTENCIA_DOMICILIARIA_PENDIENTE'for r in result['risks'])is risk
+):
+            if type(a) is not type(b):
+                return path,repr(a)[:300],repr(b)[:300]
+            if isinstance(a,dict):
+                for key in sorted(set(a)|set(b)):
+                    if key not in a or key not in b:
+                        return path+'.'+str(key),repr(a.get(key,'<AUSENTE>')),repr(b.get(key,'<AUSENTE>'))
+                    found=first_difference(a[key],b[key],path+'.'+str(key))
+                    if found:return found
+            elif isinstance(a,list):
+                if len(a)!=len(b):return path+'.length',len(a),len(b)
+                for i,(x,y) in enumerate(zip(a,b)):
+                    found=first_difference(x,y,f'{path}[{i}]')
+                    if found:return found
+            elif a!=b:
+                return path,repr(a)[:300],repr(b)[:300]
+            return None
+        pytest.fail(f'Relectura alterada al guardar; primera diferencia (actual, original): '
+                    f'{first_difference(actual,expected)}',pytrace=False)
     assert source.read_bytes()==original and audio.read_bytes()==original_audio
 
 
