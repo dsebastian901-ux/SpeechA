@@ -303,7 +303,21 @@ def validate(record,data,relation,audio_path):
                         or assess_recado(value)['family'])
                     direct=recipient_statement(value,[],r'\b(?:soy yo|soy (?:el|la) titular|habla (?:el|la) titular)\b')
                     proof=holder_confirmation(value)
-                    proofs.append({'confirmed':not contradicted and(proof['confirmed']or direct)})
+                    # Una autoidentificación inmediata ("sí, soy yo")
+                    # después de la solicitud nominal, repetida en dos
+                    # ventanas y con el MISMO nombre del ASR original,
+                    # es evidencia conversacional; nunca borra un tercero.
+                    named_reply=re.search(
+                        r'\b(?:me (?:puede|puedes|podria|podre) comunicar(?: por favor)? con|'
+                        r'tengo(?: el)? gusto con|hablo con)\s+'
+                        r'(?P<person>[^.!?]{3,100})[.?]\s*'
+                        r'(?:titular\s*:\s*)?(?:si[, ]+)?soy yo\b',
+                        value)
+                    named_valid=bool(named_reply and
+                        valid_nominal_request(normalize(value),named_reply.start(),named_reply['person'])
+                        and nominal_words(value)==source_names)
+                    proofs.append({'confirmed':not contradicted and
+                        (proof['confirmed']or direct or named_valid)})
                 if all(p['confirmed']for p in proofs):
                     result['holder']=True
                     result['evidence'].append({'purpose':'holder','texts':[a['text']for a in attempts],
