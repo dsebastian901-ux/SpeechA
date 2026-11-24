@@ -252,7 +252,30 @@ def test_reanalysis_reuses_valid_recovery_and_preserves_sources(tmp_path,monkeyp
     actual=saved['items'][0]['context_asr_recovery']
     expected=original_saved['items'][0]['context_asr_recovery']
     if actual != expected:
-        def first_difference(a,b,path='
+        def first_difference(left, right, location='root'):
+            if type(left) is not type(right):
+                return (location, repr(left)[:200], repr(right)[:200])
+            if isinstance(left, dict):
+                for key in sorted(set(left) | set(right)):
+                    if key not in left or key not in right:
+                        return (location + '.' + str(key),
+                                repr(left.get(key, '<AUSENTE>'))[:200],
+                                repr(right.get(key, '<AUSENTE>'))[:200])
+                    diff = first_difference(left[key], right[key], location + '.' + str(key))
+                    if diff is not None:
+                        return diff
+            elif isinstance(left, list):
+                if len(left) != len(right):
+                    return (location + '.length', len(left), len(right))
+                for idx, (value_left, value_right) in enumerate(zip(left, right)):
+                    diff = first_difference(value_left, value_right, location + '[' + str(idx) + ']')
+                    if diff is not None:
+                        return diff
+            elif left != right:
+                return (location, repr(left)[:200], repr(right)[:200])
+            return None
+        pytest.fail('Relectura alterada al guardar; primera diferencia: ' +
+                    repr(first_difference(actual, expected)), pytrace=False)
     assert source.read_bytes()==original and audio.read_bytes()==original_audio
 
 
