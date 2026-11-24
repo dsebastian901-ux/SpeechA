@@ -61,6 +61,26 @@ def nominal_words(text):
     return set()
 
 
+def nominal_self_reply(text):
+    """Respuesta autorreferida solo después de una solicitud nominal válida.
+
+    No atribuye la voz ni sustituye las comprobaciones de tercero.
+    """
+    folded=normalize(text)
+    expression=re.compile(
+        r'\b(?:me (?:puede|puedes|podria|podre) comunicar(?: por favor)? con|'
+        r'tengo(?: el)? gusto con|hablo con)\s+'
+        r'(?P<person>[^.!?]{3,100})[.?]\s*'
+        r'(?:titular\s*:\s*)?(?:si[, ]+)?soy yo\b')
+    from app.services.conversation_evidence import _role_at
+    for match in expression.finditer(folded):
+        if (_role_at(text, [], match.end()-len('soy yo')) not in {'GESTOR','TERCERO'}
+                and valid_nominal_request(folded,match.start(),match['person'])
+                and not BAD_IDENTITY.search(match['person'])):
+            return True
+    return False
+
+
 def needs_recovery(metadata):
     """Releer dudas acústicas de TODO REVISAR, sin convertir la relectura en aprobación."""
     decision=metadata.get('shared_classification')or{}
@@ -260,7 +280,7 @@ def validate(record,data,relation,audio_path):
                         declared_intermediary(a['text'])['confirmed'] or proxy_account_evidence(a['text'])
                         for a in good)
                     if contradiction:continue
-                    positive=[a for a in good if holder_confirmation(a['text'])['confirmed']]
+                    positive=[a for a in good if holder_confirmation(a['text'])['confirmed'] or nominal_self_reply(a['text'])]
                     if len(positive)>=2:attempts=positive[:2]
                 elif group.get('purpose')=='callback':
                     sets=[{p['digits']for p in callback_numbers(a['text'])}for a in good]
@@ -303,22 +323,7 @@ def validate(record,data,relation,audio_path):
                         or assess_recado(value)['family'])
                     direct=recipient_statement(value,[],r'\b(?:soy yo|soy (?:el|la) titular|habla (?:el|la) titular)\b')
                     proof=holder_confirmation(value)
-                    # Una autoidentificación inmediata ("sí, soy yo")
-                    # después de la solicitud nominal, repetida en dos
-                    # ventanas y con el MISMO nombre del ASR original,
-                    # es evidencia conversacional; nunca borra un tercero.
-                    folded=normalize(value)
-                    named_reply=re.search(
-                        r'\b(?:me (?:puede|puedes|podria|podre) comunicar(?: por favor)? con|'
-                        r'tengo(?: el)? gusto con|hablo con)\s+'
-                        r'(?P<person>[^.!?]{3,100})[.?]\s*'
-                        r'(?:titular\s*:\s*)?(?:si[, ]+)?soy yo\b',
-                        folded)
-                    from app.services.conversation_evidence import _role_at
-                    named_valid=bool(named_reply and
-                        _role_at(value, [], named_reply.end()-len('soy yo')) not in {'GESTOR','TERCERO'}
-                        and valid_nominal_request(normalize(value),named_reply.start(),named_reply['person'])
-                        and nominal_words(value)==source_names)
+                    named_valid=nominal_self_reply(value) and nominal_words(value)==source_names
                     proofs.append({'confirmed':not contradicted and
                         (proof['confirmed']or direct or named_valid)})
                 if all(p['confirmed']for p in proofs):
