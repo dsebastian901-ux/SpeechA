@@ -246,7 +246,10 @@ def test_reanalysis_reuses_valid_recovery_and_preserves_sources(tmp_path,monkeyp
     result=reanalyze_checkpoint(source,tmp_path/'new-results')
     saved=json.loads(__import__('pathlib').Path(result['checkpoint']).read_text())
     assert result['second_listening']['realizadas']==0
-    assert saved['items'][0]['context_asr_recovery']==record
+    # Comparar la evidencia persistida, no el objeto Python previo a JSON:
+    # la entrada real del reanálisis es el checkpoint serializado.
+    original_saved=json.loads(original.decode('utf-8'))
+    assert saved['items'][0]['context_asr_recovery']==original_saved['items'][0]['context_asr_recovery']
     assert source.read_bytes()==original and audio.read_bytes()==original_audio
 
 
