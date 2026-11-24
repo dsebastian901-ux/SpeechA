@@ -62,25 +62,62 @@ def nominal_words(text):
 
 
 def needs_recovery(metadata):
+    """Releer dudas acústicas de TODO REVISAR, sin convertir la relectura en aprobación."""
     decision=metadata.get('shared_classification')or{}
     category=str(decision.get('clasificacion')or'')
-    # La segunda escucha del contacto también aplica a llamadas por debajo
-    # de 80; resolver el teléfono nunca cambia por sí mismo la nota de calidad.
-    if category not in {'REVISAR','NO_APROBADO_MENOR_80'}:return set()
+    if category not in {'REVISAR','NO_APROBADO_MENOR_80'}:
+        return set()
     wanted=set()
-    if category=='REVISAR' and metadata.get('quality_contact_type')=='CONTACTO NO DETERMINADO':wanted.add('holder')
+    if category=='REVISAR' and metadata.get('quality_contact_type')=='CONTACTO NO DETERMINADO':
+        wanted.add('holder')
     workflow=metadata.get('message_workflow_validation')or{}
-    if (metadata.get('quality_contact_type')!='TITULAR'and workflow.get('directed_body')and workflow.get('recipient_accepted')
-            and not workflow.get('callback_available')and not workflow.get('final_refusal')):
+    if (metadata.get('quality_contact_type')!='TITULAR'and workflow.get('directed_body')
+            and workflow.get('recipient_accepted')and not workflow.get('callback_available')
+            and not workflow.get('final_refusal')):
         wanted.add('callback')
     if ((metadata.get('message_delivery_validation')or{}).get('review_required')
             and metadata.get('quality_contact_type')!='TITULAR'):
         wanted.add('callback')
     if (str(metadata.get('quality_contact_type')or'').startswith('TERCERO')
-            and workflow.get('directed_body') and not workflow.get('callback_available')
+            and workflow.get('directed_body')and not workflow.get('callback_available')
             and not workflow.get('final_refusal')):
         wanted.add('callback')
+    if category=='REVISAR':
+        # Se solicitan lecturas adicionales para comprobar, NO para eximir,
+        # los otros bloqueos del dictaminador.
+        findings=(decision.get('pending_alerts')or decision.get('decision_findings')or [])
+        codes={str(f.get('code')or'')for f in findings if isinstance(f,dict)}
+        if codes & {'RECEIPT_UNCERTAIN','PAYMENT_OUTCOME_NOT_CONFIRMED',
+                    'NEGOTIATION_INVALID_OR_UNCERTAIN','STATUS_INVALID','STATUS_NOT_CONFIRMED',
+                    'RECOVERED_AMOUNT_UNVERIFIED','FINANCIAL_CONFIRMATION'}:
+            wanted.add('financial')
+        if codes & {'UNCERTAIN_DISCLOSURE','WARNING_CONFIRMATION',
+                    'HOME_WARNING_UNATTRIBUTED','OFFENSIVE_LANGUAGE',
+                    'UNCERTAIN_CONFRONTATION','CONTEXT_AUDIO_RISK','ADDITIONAL_AUDIO_EVIDENCE',
+                    'WAIT_WITHOUT_RESUMPTION','CARD_REFERENCE'}:
+            wanted.add('safety')
+        if not wanted:
+            wanted.add('general')
     return wanted
+
+
+def _cue_time(data,purpose):
+    """Elegir un fragmento desde marcas ASR existentes, no desde Excel."""
+    keywords={
+        'financial':r'\\b(?:pago|pagar|abono|deposito|comprobante|whatsapp|importe|pesos|manana|convenio)\\b',
+        'safety':r'\\b(?:domicilio|visita|abogado|amenaza|referencias|tarjeta|groser|espera|colgo|confront)\\w*',
+        'general':r'\\b(?:pago|recado|telefono|tarjeta|fecha|monto|convenio|negativa)\\b',
+        'callback':r'\\b(?:numero|telefono|anotar|whatsapp)\\b',
+    }
+    cues=[]
+    for segment in data.get('segmentos')or[]:
+        value=normalize(segment.get('texto',segment.get('text','')))
+        if re.search(keywords.get(purpose,keywords['general']),value):
+            at=segment.get('inicio',segment.get('start'))
+            if isinstance(at,(int,float))and math.isfinite(at)and at>=0:
+                cues.append(float(at))
+    # Recuperación focal de riesgo/prueba: primer indicio, de contacto el último.
+    return (cues[-1]if purpose=='callback'else cues[0])if cues else None
 
 
 def windows(data,wanted):
@@ -90,16 +127,47 @@ def windows(data,wanted):
     if 'holder'in wanted:
         result.append(('holder',[(0.,min(duration,28.)),(0.,min(duration,33.))]))
     if 'callback'in wanted:
-        cues=[]
-        for segment in data.get('segmentos')or[]:
-            if re.search(r'\b(?:numero|telefono|anotar|whatsapp)\b',normalize(segment.get('texto',segment.get('text','')))):
-                value=segment.get('inicio',segment.get('start'))
-                if isinstance(value,(float,int))and 0<=value<duration:cues.append(float(value))
-        at=cues[-1]if cues else max(0.,duration-30.)
-        start=max(0.,at-6.)
+        at=_cue_time(data,'callback')
+        start=max(0.,(at if at is not None else duration-24.)-6.)
         result.append(('callback',[(start,min(duration,start+35.)),
                                    (max(0.,start-3.),min(duration,start+40.))]))
+    # Cada objetivo conserva dos encuadres distintos, <=45 segundos.
+    # Los hallazgos no relacionados con identidad/teléfono siguen pendientes
+    # hasta que el dictaminador los valide con evidencia atribuible.
+    for purpose in ('financial','safety','general'):
+        if purpose not in wanted:continue
+        at=_cue_time(data,purpose)
+        start=max(0.,(at if at is not None else duration/2)-6.)
+        first=(start,min(duration,start+30.))
+        second=(max(0.,start-3.),min(duration,start+36.))
+        if first!=second and all(end>begin for begin,end in (first,second)):
+            result.append((purpose,[first,second]))
     return result
+
+
+def needs_third_read(purpose,attempts):
+    """Una tercera lectura solo cuando falta consenso; nunca altera el original."""
+    if len(attempts)!=2 or any(a.get('error')or not reading_quality(a)for a in attempts):
+        return True
+    if purpose=='holder':
+        return holder_confirmation(attempts[0]['text'])['confirmed'] != holder_confirmation(attempts[1]['text'])['confirmed']
+    if purpose=='callback':
+        return {n['digits']for n in callback_numbers(attempts[0]['text'])} != {
+            n['digits']for n in callback_numbers(attempts[1]['text'])}
+    return normalize(attempts[0]['text'])!=normalize(attempts[1]['text'])
+
+
+def reading_summary(record):
+    """Fragmentos breves para interfaz/Excel; conserva evidencia completa en el checkpoint."""
+    rows=[]
+    for group in (record or {}).get('groups')or[]:
+        purpose=group.get('purpose','')
+        for idx,attempt in enumerate(group.get('attempts')or[],1):
+            rows.append({'purpose':purpose,'attempt':idx,
+                'start':attempt.get('start'),'end':attempt.get('end'),
+                'text':str(attempt.get('text')or'')[:350],
+                'error':attempt.get('error','')})
+    return rows
 
 
 def collect(audio_path,data,relation,metadata,read_window,model):
@@ -122,6 +190,20 @@ def collect(audio_path,data,relation,metadata,read_window,model):
             except Exception as error:
                 attempt.update(text='',segments=[],error=type(error).__name__)
             attempts.append(attempt)
+        if needs_third_read(purpose,attempts):
+            duration=float(data.get('duracion_segundos')or 0)
+            start=max(0.,pair[0][0]-2.)
+            end=min(duration,max(pair[0][1],pair[1][1])+2.)
+            if (start,end)in pair:
+                start=max(0.,start-1.)
+            if end>start and end-start<=45.:
+                attempt={'start':start,'end':end,'beam_size':8}
+                try:
+                    reading=read_window(start,end,8)
+                    attempt.update(text=str(reading.get('text')or''),segments=reading.get('segments')or[])
+                except Exception as error:
+                    attempt.update(text='',segments=[],error=type(error).__name__)
+                attempts.append(attempt)
         record['groups'].append({'purpose':purpose,'attempts':attempts})
     record['record_sha256']=record_digest(record)
     return record
