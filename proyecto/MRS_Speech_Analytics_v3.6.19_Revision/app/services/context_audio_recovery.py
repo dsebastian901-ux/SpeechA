@@ -313,8 +313,10 @@ def validate(record,data,relation,audio_path):
                         r'(?P<person>[^.!?]{3,100})[.?]\s*'
                         r'(?:titular\s*:\s*)?(?:si[, ]+)?soy yo\b',
                         value)
+                    from app.services.conversation_evidence import _role_at
                     named_valid=bool(named_reply and
-                        valid_nominal_request(normalize(value),named_reply.start(),named_reply['person'])
+                        _role_at(value, [], named_reply.end()-len('soy yo')) not in {'GESTOR','TERCERO'}
+                        and valid_nominal_request(normalize(value),named_reply.start(),named_reply['person'])
                         and nominal_words(value)==source_names)
                     proofs.append({'confirmed':not contradicted and
                         (proof['confirmed']or direct or named_valid)})
