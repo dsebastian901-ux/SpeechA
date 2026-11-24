@@ -224,7 +224,8 @@ class BatchReportService:
     HEADERS += ['Alertas pendientes','Revisión prioritaria pendiente']
     MODE_B_HEADERS += ['Alertas pendientes','Revisión prioritaria pendiente']
     CONTEXT_HEADERS=['Relectura local realizada','Identidad corroborada en relecturas',
-                     'Contacto corroborado en relecturas','Alerta de relectura']
+                     'Contacto corroborado en relecturas','Alerta de relectura',
+                     'Segunda escucha - fragmentos y resultados','Segunda escucha - motivo']
     for _headers in (HEADERS, MODE_B_HEADERS):
         _index = _headers.index('MRS detectado') + 1
         _headers[_index:_index] = CONTEXT_HEADERS
@@ -712,6 +713,13 @@ class BatchReportService:
             "Identidad corroborada en relecturas": cls._yes_no((metadata.get('context_audio_validation')or{}).get('holder')),
             "Contacto corroborado en relecturas": cls._yes_no((metadata.get('context_audio_validation')or{}).get('callback')),
             "Alerta de relectura": (metadata.get('context_audio_validation')or{}).get('reason',''),
+            "Segunda escucha - fragmentos y resultados": " | ".join(
+                str(row.get('purpose','')) + " #" + str(row.get('attempt','')) + " [" +
+                str(round(float(row.get('start')or 0),1)) + "-" +
+                str(round(float(row.get('end')or 0),1)) + "s]: " +
+                (str(row.get('error')or row.get('text')or '')[:220])
+                for row in (metadata.get('context_audio_validation')or{}).get('readings',[])),
+            "Segunda escucha - motivo": (metadata.get('context_audio_validation')or{}).get('reason',''),
             "Estatus detectado IA": status.get("detected_status") or "",
             "Fecha de pago detectada": negotiation.get("promise_date") or "",
             "Fecha textual escuchada": negotiation.get("promise_date_text") or "",
