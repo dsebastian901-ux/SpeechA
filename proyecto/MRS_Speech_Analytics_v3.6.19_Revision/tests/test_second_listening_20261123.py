@@ -54,7 +54,7 @@ def _sample(tmp_path):
 def test_third_read_when_two_disagree_and_two_safe_identity_reads_agree(tmp_path):
     audio, data, relation = _sample(tmp_path)
     texts = [
-        "¿Me puede comunicar con Persona Ejemplo? Dígame, ¿quién llama?",
+        "¿Me puede comunicar con Persona Ejemplo? ¿De dónde habla?",
         "¿Me puede comunicar con Persona Ejemplo? Sí, soy yo.",
         "¿Me puede comunicar con Persona Ejemplo? Sí, soy yo.",
     ]
