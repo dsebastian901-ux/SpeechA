@@ -84,7 +84,8 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
     pending_count = 0
     relecturas = {'realizadas': 0, 'sin_audio': 0, 'sin_modelo': 0, 'errores': 0}
     model_unavailable = False
-    for item in updated["items"]:
+    newly_recorded_context_indices = set()
+    for item_index, item in enumerate(updated["items"]):
         # La recuperación acústica original es evidencia inmutable de entrada.
         saved_context_asr_recovery = deepcopy(item.get('context_asr_recovery'))
         new_context_asr_recovery = False
@@ -154,6 +155,7 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
                             if recovered is not None:
                                 item['context_asr_recovery'] = recovered
                                 new_context_asr_recovery = True
+                                newly_recorded_context_indices.add(item_index)
                                 transcription.metadata['context_asr_recovery'] = recovered
                                 transcription.audio_path = str(audio)
                                 analysis = AnalyticsService.analyze_transcription(
@@ -237,6 +239,13 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
                               "second_listening": relecturas,
                               "pending_preserved": pending_count, "outcomes": outcomes}
     updated['engine_revision'] = AnalyticsService.ENGINE_REVISION
+    # El generador de reportes también recibe los items y puede manipularlos.
+    # Restaurar desde el JSON de entrada justo antes de persistir: nunca
+    # sustituir la evidencia original salvo que haya ASR realmente nuevo.
+    for item_index, source_item in enumerate(payload["items"]):
+        if item_index not in newly_recorded_context_indices:
+            updated["items"][item_index]["context_asr_recovery"] = deepcopy(
+                source_item.get("context_asr_recovery"))
     destination.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
     assert source.read_bytes() == raw, "El origen cambió durante el reanálisis"
     return {"report": report, "nonpayment_report": companion_status["path"], "nonpayment_report_error": companion_status["error"], "checkpoint": str(destination), "outcomes": outcomes,
