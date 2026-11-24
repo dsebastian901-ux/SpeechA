@@ -69,7 +69,8 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
                     and not re.search(r'\b(?:dice que|dijo que|diga que|por ejemplo|si)\s*$',before[-90:])):
                 return {'confirmed':True,'evidence':[{'text':source[unable.start():],'method':'NO_PUEDE_ANOTAR_Y_SE_CIERRA_PARA_LLAMAR_DESPUES','human_verified':False}],
                     'reason':'El interlocutor no puede anotar y la llamada se cierra para llamar después, sin recado recibido.'}
-        # No localizar al titular, o decir 'no sé nada de él', NO es\n        # negarse a recibir un recado. Solo rechazo verbal explícito.\n        return none
+        # No conocer el paradero del titular no equivale a rechazar un recado.
+        return none
     last=max(e['position']for e in events)
     for evidence in acceptance:
         value=normalize(evidence.get('text',''));at=source.rfind(value)
