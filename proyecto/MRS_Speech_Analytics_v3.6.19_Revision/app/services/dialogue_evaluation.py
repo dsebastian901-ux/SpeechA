@@ -143,6 +143,37 @@ def full_payment_refusal(commitment):
     if not match or QUOTED.search(reply) or '?' in reply:
         return False
     before=reply[:match.start()]
+    # No atribuir al presente una negativa citada de conversación anterior.
+    # Por ejemplo: 'les decía y no voy a pagar la tarjeta'.
+    if re.search(r'\b(?:yo\s+)?(?:les?|te|usted(?:es)?)\s+(?:decia|dije|habia dicho|comentaba|comente)\s*(?:(?:que|y|pues|entonces)\s*){0,2}
+    if re.search(r'\b(?:no es que|no digo que|no dije que)\s*$',before):
+        return False
+    conditional=re.search(r'\b(?:si|cuando)\b[^.!?]{0,140}$',before)
+    affirmative_bridge=re.search(r'(?:^|[.!])\s*(?:claro[, ]+)?si[, ]+pero\s*$',before)
+    if conditional and not affirmative_bridge:
+        return False
+    scope=reply[match.end():].split('.')[0][:85]
+    return not re.search(r'\b(?:eso|esos|esas|(?:esta|esa|la) cantidad|(?:este|ese) monto|intereses|cargos|compras|solo|solamente|menos|menor|sino)\b',scope)
+
+
+def pending_status(dialogue, commitment, payment_followup=False):
+    """Una decisión pendiente acreditada no es un convenio incumplido.
+
+    No inferir un estatus por ausencia de sí, por el Excel, por cortarse el
+    audio o por una dificultad de registro en una aplicación.
+    """
+    if commitment.get('accepted') or payment_followup:
+        return None
+    if full_payment_refusal(commitment):
+        return None  # Una negativa final completa prevalece sobre una duda anterior.
+    candidates = [e for e in dialogue['events'] if e['kind'] in {'PENDING_DECISION','ACCOUNT_DISPUTE'}]
+    if not candidates:
+        return None
+    event = max(candidates, key=lambda e:e['position'])
+    return {'detected_status':'NO DEFINE FECHA DE PAGO', 'confidence':'ALTA',
+            'method':event['kind'], 'evidence':event['evidence'], 'event_id':event['id']}
+, before):
+        return False
     if re.search(r'\b(?:no es que|no digo que|no dije que)\s*$',before):
         return False
     conditional=re.search(r'\b(?:si|cuando)\b[^.!?]{0,140}$',before)
