@@ -266,7 +266,7 @@ def validate(record,data,relation,audio_path):
                 continue
             # Una relectura no puede aportar solamente hechos favorables e
             # ignorar una expresión ofensiva que la primera lectura omitió.
-            for attempt in attempts:
+            for attempt in all_attempts:
                 offensive=re.search(r'\b(?:que poca madre|chingad[ao]s?|chingues|chingue|'
                     r'pendej[oa]s?|cabron(?:a|es)?|mierda|pinche|put[ao]s?)\b',normalize(attempt['text']))
                 if offensive:
