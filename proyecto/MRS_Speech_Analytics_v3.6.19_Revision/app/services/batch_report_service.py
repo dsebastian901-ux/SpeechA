@@ -225,7 +225,7 @@ class BatchReportService:
     MODE_B_HEADERS += ['Alertas pendientes','Revisión prioritaria pendiente']
     CONTEXT_HEADERS=['Relectura local realizada','Identidad corroborada en relecturas',
                      'Contacto corroborado en relecturas','Alerta de relectura',
-                     'Segunda escucha - fragmentos y resultados','Segunda escucha - motivo']
+                     'Segunda escucha - fragmentos y resultados','Segunda escucha - resultado','Segunda escucha - motivo']
     for _headers in (HEADERS, MODE_B_HEADERS):
         _index = _headers.index('MRS detectado') + 1
         _headers[_index:_index] = CONTEXT_HEADERS
