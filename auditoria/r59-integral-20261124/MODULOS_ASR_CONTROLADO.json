@@ -1,0 +1,19 @@
+{
+  "mode": "ASR_CONTROLADO_SIN_INFERENCIA_NI_ESCUCHA_HUMANA",
+  "arco": {
+    "before": false,
+    "after": true,
+    "source": "LOCAL_AUDIO_CONTEXT",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "remaining_quality_result": "APROBADO"
+  },
+  "places": {
+    "before": 1,
+    "after": 2,
+    "score_before": 80.0,
+    "score_after": 100.0,
+    "before_class": "APROBADO",
+    "after_class": "APROBADO"
+  }
+}

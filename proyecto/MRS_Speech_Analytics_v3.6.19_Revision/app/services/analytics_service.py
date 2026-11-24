@@ -485,6 +485,7 @@ class AnalyticsService:
         analysis.metadata["payment_reference_validation"] = compliance.get("payment_reference_validation", {})
         analysis.metadata["privacy_validation"] = compliance.get("privacy_validation", {})
         analysis.metadata['context_audio_validation'] = context_audio_validation
+        analysis.metadata['context_recovery_requirements'] = context_source.get('context_recovery_requirements',[])
         analysis.metadata['home_recovery_warning']=compliance.get('home_recovery_warning',{})
         analysis.metadata['clarification_validation']=compliance.get('clarification_validation',{})
         exception = (operational_context or {}).get("hostile_interlocutor_exception") or (getattr(transcription, "metadata", {}) or {}).get("hostile_interlocutor_exception")
@@ -538,6 +539,8 @@ class AnalyticsService:
                                                duration_seconds=enriched_context["_duration_seconds"])
         analysis.metadata["shared_classification"] = decision
         analysis.metadata["final_result"] = decision["clasificacion"]
+        from app.services.context_evidence_policy import annotate_decision
+        annotate_decision(analysis.metadata,decision)
 
         return analysis
 
@@ -1802,6 +1805,17 @@ class AnalyticsService:
         email_dictation=dictated_privacy_email(text,segments)
         gives_privacy_email=bool(gives_privacy_email or email_dictation['detected'])
         arco_validation = assess_arco(text, segments, email_given=gives_privacy_email)
+        from app.services.context_evidence_policy import confirmed_fact
+        recovered_arco=confirmed_fact(context.get('_context_audio_validation')or{},'ARCO')
+        if recovered_arco and arco_validation['partial_guidance_requires_audio'] and not arco_validation['process_denied']:
+            recovered_text=recovered_arco['matching_evidence'][0]['text']
+            recovered_email=bool(re.search(r'(?<![\w.+-])privacidad1?@bradesco\.com\.mx(?![\w-]|\.[\w.-])',
+                norm(recovered_text))or dictated_privacy_email(recovered_text)['detected'])
+            verified_arco=assess_arco(recovered_text,email_given=recovered_email)
+            if verified_arco['complete_procedure']:
+                arco_validation=dict(verified_arco,source='LOCAL_AUDIO_CONTEXT',
+                    recovery_evidence=recovered_arco['matching_evidence'])
+                gives_privacy_email=recovered_email
         arco_process = arco_validation['process_explained']
         asks_ine_or_line_proof = arco_validation['both_documents_requested']
 
@@ -2577,45 +2591,35 @@ class AnalyticsService:
         # no sea literalmente CONVENIO (por ejemplo 1PV).
 
         receipt_assessment = receipt_request_evidence(text, segments)
+        from app.services.context_evidence_policy import confirmed_fact
+        recovered_receipt=confirmed_fact(context.get('_context_audio_validation')or{},'RECEIPT_REQUEST')
+        if (recovered_receipt and receipt_assessment['review_required']
+                and not receipt_assessment['withdrawal_evidence']):
+            # Sustituye únicamente la duda sobre esta petición, no el monto,
+            # el destinatario, la fecha, la seguridad ni el texto ASR original.
+            from copy import deepcopy
+            receipt_assessment=deepcopy(receipt_assessment)
+            receipt_assessment['requested']=True
+            receipt_assessment['review_required']=False
+            receipt_assessment['request_evidence'].extend(dict(e,source='LOCAL_AUDIO_CONTEXT')
+                for e in recovered_receipt['matching_evidence'])
+            receipt_assessment['evidence_source']='LOCAL_AUDIO_CONTEXT'
         requests_payment_receipt = bool(receipt_assessment['requested'] or receipt_assessment['reported_sent'])
         requests_receipt_whatsapp = bool(requests_payment_receipt and receipt_assessment['channel'] == 'WHATSAPP')
         whatsapp_receipt_evidence = list(dict.fromkeys(
             e['text'] for e in receipt_assessment['request_evidence'] + receipt_assessment['reported_sent_evidence'])) if requests_receipt_whatsapp else []
 
-        authorized_payment_places = {
-            "TIENDA DE ORIGEN": ["en tienda", "en la tienda", "en su tienda", "en la misma tienda", "su misma tienda"],
-            "FARMACIAS DEL AHORRO": ["farmacias del ahorro", "farmacia del ahorro", "farmacias de la oro", "farmacia de la oro", "farmacias de la ahorro", "farmacia de la ahorro", "farmacia de la horro", "farmacias de la horro", "farmacia de la orro", "farmacias de la orro", "formacia de la oro", "formacias de la oro"],
-            "7-ELEVEN": ["7 eleven", "seven eleven", "7-11", "7/11", "7 y 11", "seven y leven", "7 11", "salvenileven", "sevenileven"],
-            "CHEDRAUI": ["chedraui", "che dragui", "chedragui", "che draui", "chedrawi", "chedrague", "chedraguy"],
-            "WOOLWORTH": ["woolworth", "bulbor", "bulbo", "bulvor", "hulbor", "hulvor", "ulbor", "wulbor", "wulvor", "wulworth", "bulboard"],
-            "TIENDAS DEL SOL": ["tiendas del sol", "tienda del sol", "del sol"],
-            "CIRCLE K": ["circle k", "circulo k", "circulo que", "circulquei", "circuloquei", "circuluka", "circulcay"],
-            "KIOSKO": ["kiosko", "kiosco", "kiosk", "kyosko", "quiosco", "quiosko", "qiosco"],
-            "TIENDAS NETO": ["tiendas neto", "tienda neto", "neto"],
-            "ABARREY": ["abarrey", "abarray"],
-            "7/24 MIX": ["7 24 mix", "7/24 mix", "724 mix"],
-            "FARMACIAS YZA": ["farmacias yza", "farmacia yza", "farmacias isa", "farmacia isa"],
-            "FARMACIAS ROMA": ["farmacias roma", "farmacia roma"],
-            "TIENDAS 3B": ["tiendas 3b", "tienda 3b", "tiendas tres b", "tienda tres b"],
-            "TIENDAS SIX": ["tiendas six", "tienda six", "tiendas 6", "tienda 6"],
-            # IMPORTANTE: mencionar solamente el banco NO acredita un lugar de pago
-            # autorizado. Para bancos se exige el convenio/servicio correcto.
-            "SANTANDER": ["convenio 3411", "convenio numero 3411", "convenio número 3411"],
-            "BBVA": ["convenio 1042378", "convenio numero 1042378", "convenio número 1042378"],
-            "BANAMEX": ["pago de servicio 4626", "servicio 4626", "convenio 4626"],
-            # Tiendas de origen autorizadas (regla operativa MRS/Bradescard)
-            "C&A": ["c&a", "c y a", "cy a", "ce y a"],
-            "CUIDADO CON EL PERRO": ["cuidado con el perro"],
-            "MALAYERBA": ["malayerba", "mala yerba"],
-            "BODEGA AURRERA": ["bodega aurrera"],
-            "MI BODEGA AURRERA": ["mi bodega aurrera"],
-            "BODEGA AURRERA EXPRESS": ["bodega aurrera express", "bodega express"],
-            "PROMODA": ["promoda"],
-            "SUBURBIA": ["suburbia"],
-        }
+        from app.config.payment_places import AUTHORIZED_PAYMENT_PLACES
+        authorized_payment_places = AUTHORIZED_PAYMENT_PLACES
         from app.services.bank_service_evidence import bank_service_payment
         service_payment = bank_service_payment(text,segments)
         place_evidence = payment_places(text, context.get("_segments") or [], authorized_payment_places)
+        recovered_places=confirmed_fact(context.get('_context_audio_validation')or{},'PAYMENT_PLACES')
+        if recovered_places:
+            for recovered in recovered_places['matching_evidence']:
+                for place in payment_places(recovered['text'],[],authorized_payment_places):
+                    if place['place']not in {e['place']for e in place_evidence}:
+                        place_evidence.append(dict(place,source='LOCAL_AUDIO_CONTEXT'))
         for bank in service_payment['authorized_banks']:
             if bank not in {e['place'] for e in place_evidence}:
                 code=next(c for c in service_payment['codes'] if c['bank']==bank and c['valid'])
@@ -2718,6 +2722,7 @@ class AnalyticsService:
             "receipt_reported_sent": receipt_assessment['reported_sent'],
             "receipt_channel": receipt_assessment['channel'],
             "receipt_request_evidence": receipt_assessment['request_evidence'],
+            "receipt_evidence_source": receipt_assessment.get('evidence_source','PRIMARY_TRANSCRIPT'),
             "receipt_sent_evidence": receipt_assessment['reported_sent_evidence'],
             "receipt_channel_evidence": receipt_assessment['channel_evidence'],
             "whatsapp_evidence": whatsapp_receipt_evidence,
@@ -4439,6 +4444,13 @@ class AnalyticsService:
         # ---------------------------------------------------------
         if any(p["id"] == "PEN005" for p in penalties):
             negotiation_validation["hard_invalid"] = True
+        from app.services.installment_validation import unresolved_accepted_plan
+        unresolved_plan=unresolved_accepted_plan(text,plan,schedule_dates,segments)
+        negotiation_validation['unresolved_accepted_plan']=unresolved_plan
+        if contact_type=='TITULAR' and not payment_confirmation_case and unresolved_plan['review_required']:
+            negotiation_validation['review_required']=True
+            negotiation_validation['valid']=False
+            negotiation_validation['reasons'].append(unresolved_plan['reason'])
         score = max(0.0, 100.0 - float(penalty_total))
         # Puntuar solo las penalizaciones observadas. La evidencia faltante
         # conserva su bloqueo REVISAR independiente; no inventa un descuento

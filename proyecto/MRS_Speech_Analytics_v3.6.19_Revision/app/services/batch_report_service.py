@@ -1021,6 +1021,9 @@ class BatchReportService:
             ws.append([row.get(h, "") for h in headers])
         cls._style_sheet(ws)
 
+        from app.services.context_recovery_report import add_context_recovery_sheet
+        cls._style_sheet(add_context_recovery_sheet(wb,source_items))
+
         from app.services.rule_audit_report import add_rule_audit_sheets
         audit_sheets = add_rule_audit_sheets(wb, source_items)
         for audit_sheet in audit_sheets:

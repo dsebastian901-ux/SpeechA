@@ -300,7 +300,7 @@ class WhisperService:
             return {'text':' '.join(r['text'] for r in rows),'segments':rows}
 
         return collect(audio_path,data,relation,metadata,read_window,
-                       'Faster-Whisper:'+str(data.get('modelo') or 'local'))
+                       'Faster-Whisper:'+str(data.get('modelo') or 'local'),include_tail=True)
 
     # =========================================================
     # TRANSCRIBIR AUDIO

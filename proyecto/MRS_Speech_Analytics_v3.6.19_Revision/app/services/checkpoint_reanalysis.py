@@ -34,6 +34,10 @@ def transcription_with_saved_reviews(item, data=None):
     transcription.metadata['privacy_disclosure_confirmation']=deepcopy(item.get('privacy_disclosure_confirmation'))
     transcription.metadata['home_warning_confirmation']=deepcopy(item.get('home_warning_confirmation'))
     transcription.metadata['context_asr_recovery']=deepcopy(item.get('context_asr_recovery'))
+    previous=item.get('classification')or{}
+    transcription.metadata['context_recovery_requirements']=[f['code'] for f in
+        previous.get('decision_findings',[]) if f.get('severity')in{'REVIEW','PENDING_ALERT'}
+        and f.get('code') and f.get('source_field')=='context_audio_validation']
     return transcription
 
 
@@ -54,7 +58,8 @@ def recover_saved_transcription(item, directory):
     return data, {"path": str(candidate), "sha256": hashlib.sha256(raw).hexdigest(),
                   "file_name": name, "whisper_executed": False}
 
-def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_excel=None):
+def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_excel=None,
+                        acoustic=True, audio_directory=None):
     source = Path(checkpoint_path).expanduser().resolve()
     raw = source.read_bytes()
     payload = json.loads(raw.decode("utf-8-sig"))
@@ -94,6 +99,11 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
             if not isinstance(data, dict) or not str(data.get("texto") or "").strip():
                 raise ValueError("La llamada no contiene transcripción recuperable.")
             transcription = transcription_with_saved_reviews(item, data)
+            if audio_directory:
+                name=str(item.get('file_name')or'')
+                if not name or any(c in name for c in ('/','\\',':')):
+                    raise ValueError('Nombre de audio inválido; no se permiten rutas dentro del identificador.')
+                transcription.audio_path=str(Path(audio_directory)/name)
             from app.services.account_source_validation import apply_output_name_authority
             apply_output_name_authority(item)
             relation = item.get("relation") or {}
@@ -105,19 +115,34 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
             from app.services.whisper_service import whisper_service
             pending = needs_recovery(analysis.metadata)
             item['relectura_r59'] = 'NO_REQUIERE' if not pending else 'PENDIENTE'
-            if pending:
-                audio = Path(item.get('path') or '')
+            if pending and not acoustic:
+                item['relectura_r59']='RELECTURA_NO_EJECUTADA_POR_OPCION'
+            if pending and acoustic:
+                audio = (Path(audio_directory)/str(item.get('file_name')or'')
+                         if audio_directory else Path(item.get('path') or ''))
+                if audio_directory and Path(str(item.get('file_name')or'')).name!=str(item.get('file_name')or''):
+                    raise ValueError('Nombre de audio inválido; no se permiten rutas dentro del identificador.')
                 if not audio.is_file() or audio.name != str(item.get('file_name') or audio.name):
                     relecturas['sin_audio'] += 1
                     item['relectura_r59'] = 'AUDIO_LOCAL_NO_DISPONIBLE'
                 else:
                     try:
-                        if not whisper_service.is_model_loaded and not model_unavailable:
+                        valid_context=analysis.metadata.get('context_audio_validation')or{}
+                        if valid_context.get('valid'):
+                            item['relectura_r59']='EVIDENCIA_VALIDA_REUTILIZADA'
+                            # Reutilizar lecturas vinculadas; no volver a ejecutar
+                            # Whisper para una regla que aún exige voz humana.
+                            pending=set()
+                        if not pending:
+                            pass
+                        elif not whisper_service.is_model_loaded and not model_unavailable:
                             try:
                                 whisper_service.load_model()
                             except Exception:
                                 model_unavailable = True
-                        if model_unavailable or not whisper_service.is_model_loaded:
+                        if not pending:
+                            pass
+                        elif model_unavailable or not whisper_service.is_model_loaded:
                             relecturas['sin_modelo'] += 1
                             item['relectura_r59'] = 'MODELO_LOCAL_NO_DISPONIBLE'
                         else:
@@ -177,13 +202,13 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
     note = workbook.create_sheet("NOTA_REANALISIS")
     note.append(["Reanálisis de reglas sobre transcripciones existentes"])
     note.append(["Se usa Whisper local solo en dudas REVISAR con audio disponible; no se copian ni mueven audios."])
+    note.append(["La columna 'Clasificación física' muestra la clasificación calculada; no acredita una copia nueva."])
+    note.append(["El checkpoint y el reporte originales permanecen sin cambios."])
+    note.append(["Revisión del motor", AnalyticsService.ENGINE_REVISION])
     note.append(["Segundas escuchas ejecutadas", relecturas['realizadas']])
     note.append(["Audios ausentes", relecturas['sin_audio']])
     note.append(["Modelo local ausente", relecturas['sin_modelo']])
     note.append(["Errores de relectura", relecturas['errores']])
-    note.append(["La columna 'Clasificación física' muestra la clasificación calculada; no acredita una copia nueva."])
-    note.append(["El checkpoint y el reporte originales permanecen sin cambios."])
-    note.append(["Revisión del motor", AnalyticsService.ENGINE_REVISION])
     if mora_update is not None:
         note.append(['Moras faltantes recuperadas del Excel',mora_update['filled']])
         note.append(['Moras existentes conservadas',mora_update['already_present']])

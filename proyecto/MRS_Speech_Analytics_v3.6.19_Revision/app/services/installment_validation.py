@@ -5,6 +5,30 @@ from app.services.reported_payment_amounts import NUMBER, money_value
 from app.services.conversation_evidence import normalize
 
 
+def unresolved_accepted_plan(text, plan, dates, segments=()):
+    """No ocultar un plan aceptado no extraído detrás de una intención posterior.
+
+    Detecta la obligación de validar el calendario; no fabrica sus importes,
+    no acredita aceptación por una pregunta ni atribuye falta grave.
+    """
+    from app.services.conversation_evidence import sentence_evidence
+    cues=[]
+    for unit in sentence_evidence(text,segments):
+        value=normalize(unit['text'])
+        if re.search(r'\b(?:me dijeron|dijo que|el mes pasado|anteriormente|por ejemplo|supongamos)\b',value):
+            continue
+        match=re.search(r'\b(?:usted (?:acepta|confirma)|confirma|confirmamos|acordamos|quedamos en)'
+                        r'\s+(?:los |el acuerdo de )?(dos|tres|2|3) pagos\b',value)
+        if match and not re.search(r'\b(?:no|nunca|si)\s*$',value[:match.start()]) and '?' not in unit['text']:
+            cues.append({'count':{'dos':2,'tres':3,'2':2,'3':3}[match[1]],
+                         'text':unit['text'],'speaker_role':unit['speaker_role']})
+    if not cues:return {'review_required':False,'evidence':[]}
+    count=cues[-1]['count']
+    unresolved=(len(plan.get('amounts')or[])!=count or len(dates)<count or plan.get('review_required'))
+    return {'review_required':bool(unresolved),'expected_count':count,'evidence':cues,
+            'reason':'Se describe un plan aceptado de varias parcialidades, pero no quedaron validados todos sus importes y fechas.' if unresolved else ''}
+
+
 def installment_dates(source, parse_date, expected_count=None):
     """Última fecha propuesta para cada parcialidad, separada de recordatorios."""
     matches = list(re.finditer(r"\b(primer(?: pago)?|segundo(?: pago)?|tercer(?: pago)?|pago mas)\b", source))

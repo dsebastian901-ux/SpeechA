@@ -1,0 +1,66 @@
+[
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/config/payment_places.py",
+    "sha256": "e601219f4815ebb0d8fccbf120ab3dffec27bdbb204e4a22d14b5ad7e2a3f3cd"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/analytics_service.py",
+    "sha256": "8510b69bbf4f3820ffb6b814256b654bc0163cd1d4fab04bf4780af1b8458ccc"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/batch_report_service.py",
+    "sha256": "b3e20108de02326843f7725a0204918cd14abf3f6f7fbb1d5bc755cd19e022a7"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_comparison.py",
+    "sha256": "d21c05d2ad3a7ebd241351de8b82e39fb53ddcfea62f4b4366cff6921af10721"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/checkpoint_reanalysis.py",
+    "sha256": "cf39baa1973ebe68fb7bc156cad2a39a22547aadf5e42644a6e30c1757f4f070"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_audio_recovery.py",
+    "sha256": "fdca0b5259001075777b515c7685aedf8dac76a5ca063e960f91cfc2b48a1256"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_evidence_policy.py",
+    "sha256": "45007dad7d2e0cde137ade16d95339af5479de6c6ae522a3881f3ef8dabeee57"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_fact_consensus.py",
+    "sha256": "07f8814df0a1d76a0e6794f22e4c56eac42c637c1ecc1f1fa5fd18b6006edfb3"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_recovery_report.py",
+    "sha256": "91bc4f1de80ff51c0928e32d3facd795f4a58fb93d4f42a515a87b55304bcf17"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/installment_validation.py",
+    "sha256": "7b0e08eb0b2e190d8579bf8ed1436209e37788e54ee1ad3e51fbb1941eeff255"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/quality_decision.py",
+    "sha256": "3f12123ede24834fabd350daa821be92af2df597ab9e49fe3c4e060c27a0fa33"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/whisper_service.py",
+    "sha256": "5c0673b09a8f6a6074ef54fda4b0ddcede1a4356a8e3a378d1fa1385d218aa35"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/ui/views/batch_view.py",
+    "sha256": "0ef1fc58e6c1d02d9a592f6ecb6834a3807a99eb00a9269f9f4017792033d273"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_context_fact_consensus_20261124.py",
+    "sha256": "62e3b31166ba4c7f694a29f0f8acaaea053d868353314191015931580eef6d91"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tools/compare_recovery_checkpoints.py",
+    "sha256": "e3474aadb85c43af66c1c383258954e4e696062d7e9f02f93bd6db2c5b188318"
+  },
+  {
+    "file": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tools/reanalyze_checkpoint.py",
+    "sha256": "66556ab52e9aea4e628aa943dfb346b07a269252812903988c7e890aa92fcad8"
+  }
+]

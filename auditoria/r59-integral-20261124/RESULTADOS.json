@@ -1,0 +1,93 @@
+{
+  "branch": "fix/receipt-asr-mandas-envias-20261123",
+  "base_commit": "8e5750868fed6700f4c82567142cfc7eb8f19dda",
+  "engine_revision": "3.6.19-r59-segunda-escucha-20261123",
+  "validator_revision": "r59-hechos-20261124-v1",
+  "full_suite_before": {
+    "total": 3287,
+    "passed": 3264,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 505.838
+  },
+  "full_suite_final": {
+    "total": 3336,
+    "passed": 3314,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 510.082
+  },
+  "requested_40_before": {
+    "total": 40,
+    "passed": 40,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 9.446
+  },
+  "requested_40_plus_new_49_final": {
+    "total": 89,
+    "passed": 89,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 12.609
+  },
+  "new_regressions_before": {
+    "total": 49,
+    "passed": 6,
+    "failed": 43,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 2.308
+  },
+  "new_regressions_after": {
+    "total": 49,
+    "passed": 49,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "note_on_new_tests": "Los fallos de nuevas APIs inexistentes en la base son diferencias de contrato, no 43 errores históricos demostrados.",
+  "skip_reasons": {
+    "Necesita pantalla Tk (Xvfb o Windows).": 5,
+    "Requiere pantalla Tk.": 2,
+    "Necesita una pantalla Tk real (DISPLAY o Windows).": 5,
+    "Requiere pantalla Tk de pruebas.": 2,
+    "Requiere CMD y Python de Windows.": 8
+  },
+  "demonstrated_fixes": [
+    "Bloqueo de plan aceptado no extraído, conservando 100 puntos en el caso real.",
+    "Evidencia inválida obligatoria no habilita respaldo favorable; evidencia opcional no inventa rechazo.",
+    "Consenso de hechos, polaridad y emisor; tercera lectura por contraste pertinente.",
+    "Consumo específico de petición de comprobante, ARCO y lugares; los demás bloqueos permanecen.",
+    "Compromiso sin fecha usa el contrato accepted del extractor y no inventa fecha ni convenio.",
+    "Cierre del audio y riesgos según mora/emisor; hostilidad no crea excepción humana.",
+    "Nota de reanálisis conserva B5 y mensajes CLI distinguen inferencia ejecutada, ausente y con errores."
+  ],
+  "old_test_files_byte_identical": 123,
+  "r57_protected_files_unchanged": 780,
+  "penalty_and_catalog_preservation": {
+    "catalog_unchanged": true,
+    "catalog_entries": 26,
+    "penalty_calls_unchanged": true,
+    "penalty_calls": 33
+  },
+  "code_files_changed": 16,
+  "comparison_calls": 79,
+  "original_checkpoint_bytes_preserved": true,
+  "new_79_audio_inference": false,
+  "human_audio_listening": false,
+  "physical_windows_test": false,
+  "exe_compiled": false,
+  "experimental_medium_activated": false,
+  "open_limitations": [
+    "No están disponibles los 79 audios de Windows para nueva inferencia acústica.",
+    "No se ejecutaron 14 casos de GUI por falta de pantalla ni 8 de CMD/Python Windows.",
+    "Los 39 REVISAR y 19 SIN_RELACION_EXCEL no se convierten en aprobaciones por cuota.",
+    "Las coincidencias sin atribución o sin calendario completo no sustituyen corroboración pendiente."
+  ],
+  "private_data_in_delivery": false
+}

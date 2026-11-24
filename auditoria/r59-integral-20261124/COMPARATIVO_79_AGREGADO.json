@@ -1,0 +1,65 @@
+{
+  "calls": 79,
+  "original": {
+    "NO_APROBADO": 4,
+    "FALLA_MINIMA": 6,
+    "APROBADO_ETIQUETA_CORREGIDA": 5,
+    "REVISAR": 39,
+    "APROBADO": 6,
+    "SIN_RELACION_EXCEL": 19
+  },
+  "received_reanalysis": {
+    "NO_APROBADO": 4,
+    "FALLA_MINIMA": 6,
+    "APROBADO_ETIQUETA_CORREGIDA": 6,
+    "REVISAR": 38,
+    "APROBADO": 6,
+    "SIN_RELACION_EXCEL": 19
+  },
+  "verified_rules": {
+    "NO_APROBADO": 4,
+    "FALLA_MINIMA": 6,
+    "APROBADO_ETIQUETA_CORREGIDA": 5,
+    "REVISAR": 39,
+    "APROBADO": 6,
+    "SIN_RELACION_EXCEL": 19
+  },
+  "changes_against_original": 0,
+  "changes_against_received_reanalysis": 1,
+  "score_changes": 0,
+  "new_approvals": 0,
+  "approval_with_pending_block": 0,
+  "focal_case": {
+    "before": "APROBADO_ETIQUETA_CORREGIDA",
+    "after": "REVISAR",
+    "score_before": 100,
+    "score_after": 100,
+    "reason": "Plan de tres parcialidades no validado; identidad acreditada por texto primario."
+  },
+  "acoustic_execution": false,
+  "human_listening": false,
+  "windows_physical_test": false,
+  "source_sha256": [
+    "941e9dc24bc6d151ff8462e81c4d5b813b7c45e1aacb044fdea02097e3d49fbe",
+    "cdaed6fdcf6266fa59f661c7d7201cdeaa3afe2348ada32f9fcdcb6815ffa244"
+  ],
+  "sources_intact": true,
+  "pending_codes": {
+    "STATUS_NOT_CONFIRMED": 26,
+    "STATUS_INVALID": 27,
+    "NEGOTIATION_INVALID_OR_UNCERTAIN": 14,
+    "UNIDENTIFIED_CONTACT": 15,
+    "UNCERTAIN_DISCLOSURE": 15,
+    "CARD_REFERENCE": 3,
+    "PAYMENT_OUTCOME_NOT_CONFIRMED": 6,
+    "MESSAGE_RECEIPT_NOT_CONFIRMED": 2,
+    "MESSAGE_BODY_NOT_CONFIRMED": 1,
+    "PAYMENT_DESTINATION": 5,
+    "OFFENSIVE_LANGUAGE": 1,
+    "RECEIPT_UNCERTAIN": 1,
+    "MISTREATMENT_REPORT": 1,
+    "WAIT_WITHOUT_RESUMPTION": 6,
+    "UNCERTAIN_CONFRONTATION": 2,
+    "CALLBACK_NOT_DELIVERED": 1
+  }
+}

@@ -37,8 +37,11 @@ def reading_quality(reading):
     segments=reading.get('segments')or[]
     probabilities=[];silences=[]
     for segment in segments:
+        ratio=segment.get('compression_ratio')
+        if isinstance(ratio,(int,float)) and (not math.isfinite(ratio) or ratio>2.4):return False
         for field,target in [('avg_logprob',probabilities),('no_speech_prob',silences)]:
             value=segment.get(field)
+            if isinstance(value,(int,float))and not math.isfinite(value):return False
             if isinstance(value,(float,int))and math.isfinite(value):target.append(value)
     if probabilities and sum(probabilities)/len(probabilities)<-1.15:return False
     if silences and sum(silences)/len(silences)>.65:return False
@@ -107,6 +110,8 @@ def needs_recovery(metadata):
         # los otros bloqueos del dictaminador.
         findings=(decision.get('pending_alerts')or decision.get('decision_findings')or [])
         codes={str(f.get('code')or'')for f in findings if isinstance(f,dict)}
+        if 'CONTEXT_AUDIO_REQUIRED_INVALID'in codes:
+            codes.update((metadata.get('context_audio_validation')or{}).get('required_findings',[]))
         if codes & {'RECEIPT_UNCERTAIN','PAYMENT_OUTCOME_NOT_CONFIRMED',
                     'NEGOTIATION_INVALID_OR_UNCERTAIN','STATUS_INVALID','STATUS_NOT_CONFIRMED',
                     'RECOVERED_AMOUNT_UNVERIFIED','FINANCIAL_CONFIRMATION'}:
@@ -166,19 +171,9 @@ def windows(data,wanted):
 
 
 def needs_third_read(purpose,attempts):
-    """Una tercera lectura solo cuando falta consenso; nunca altera el original."""
-    if len(attempts)!=2 or any(a.get('error')or not reading_quality(a)for a in attempts):
-        return True
-    if purpose=='holder':
-        identities=[holder_confirmation(a['text'])['confirmed'] for a in attempts]
-        names=[nominal_words(a['text']) for a in attempts]
-        return identities[0]!=identities[1] or names[0]!=names[1] or (
-            not all(identities) and normalize(attempts[0]['text'])!=normalize(attempts[1]['text']))
-    if purpose=='callback':
-        numbers=[{n['digits']for n in callback_numbers(a['text'])}for a in attempts]
-        return numbers[0]!=numbers[1] or (not all(numbers) and
-            normalize(attempts[0]['text'])!=normalize(attempts[1]['text']))
-    return normalize(attempts[0]['text'])!=normalize(attempts[1]['text'])
+    """Otra decodificación aporta contraste de hechos, nunca una voz independiente."""
+    from app.services.context_fact_consensus import consensus
+    return len(attempts)==2 and consensus(purpose,attempts)['third_recommended']
 
 
 def reading_summary(record):
@@ -194,16 +189,28 @@ def reading_summary(record):
     return rows
 
 
-def collect(audio_path,data,relation,metadata,read_window,model):
+def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=False):
     """read_window lee PCM real mediante el modelo ya cargado, sin prompt de cuenta."""
     requested=needs_recovery(metadata)
     plan=windows(data,requested)
     if not plan:return None
     path=Path(audio_path)
+    from app.config.release import ENGINE_REVISION
+    from app.services.context_fact_consensus import consensus, VALIDATOR_REVISION
+    decision=metadata.get('shared_classification')or{}
     record={'schema':SCHEMA,'kind':'LOCAL_CONTEXT_ASR_CONSENSUS',
         'source_binding':binding(data,relation),'audio_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
         'audio_file':path.name,'model':str(model),'human_verified':False,
-        'speaker_roles_confirmed':False,'groups':[]}
+        'speaker_roles_confirmed':False,'groups':[], 'engine_revision':ENGINE_REVISION,
+        'validator_revision':VALIDATOR_REVISION,
+        'required_findings':[f['code']for f in decision.get('decision_findings',[])
+                             if f.get('severity')=='REVIEW' and f.get('code')],
+        'classification_before':decision.get('clasificacion'),
+        'recovery_reasons':sorted(requested), 'independent_sources':1}
+    # El cierre también pasa por los mismos controles de consenso y calidad.
+    duration=float(data.get('duracion_segundos')or 0)
+    if include_tail and duration>45 and not any(purpose=='safety' and pair[-1][1]>=duration for purpose,pair in plan):
+        plan.append(('safety_tail',[(duration-25.,duration),(duration-30.,duration)]))
     for purpose,pair in plan:
         attempts=[]
         for (start,end),beam in zip(pair,(5,10)):
@@ -228,7 +235,8 @@ def collect(audio_path,data,relation,metadata,read_window,model):
                 except Exception as error:
                     attempt.update(text='',segments=[],error=type(error).__name__)
                 attempts.append(attempt)
-        record['groups'].append({'purpose':purpose,'attempts':attempts})
+        record['groups'].append({'purpose':purpose,'attempts':attempts,
+            'consensus':consensus(purpose,attempts,relation)})
     record['record_sha256']=record_digest(record)
     return record
 
@@ -238,8 +246,18 @@ def validate(record,data,relation,audio_path):
             'evidence':[],'risks':[],'review_required':False,'message_receipt':None,
             'human_verified':False,'method':'LOCAL_CONTEXT_ASR_CONSENSUS'}
     if record is None:return result
+    if isinstance(record,dict):
+        result.update(required_findings=record.get('required_findings',[]),
+            recovery_reasons=record.get('recovery_reasons')or
+                [g.get('purpose')for g in record.get('groups',[])if isinstance(g,dict)])
     try:
         path=Path(audio_path)
+        checks=[('VERSION_DE_REGISTRO_NO_COMPATIBLE',record.get('schema')==SCHEMA),
+                ('TIPO_DE_REGISTRO_NO_COMPATIBLE',record.get('kind')=='LOCAL_CONTEXT_ASR_CONSENSUS'),
+                ('REGISTRO_MODIFICADO',record.get('record_sha256')==record_digest(record)),
+                ('TEXTO_O_CUENTA_DISTINTOS',record.get('source_binding')==binding(data,relation)),
+                ('AUDIO_LOCAL_NO_DISPONIBLE',path.is_file())]
+        result['invalid_reason_codes']=[code for code,passed in checks if not passed]
         if (record.get('schema')!=SCHEMA or record.get('kind')!='LOCAL_CONTEXT_ASR_CONSENSUS'
                 or record.get('human_verified')is not False or record.get('speaker_roles_confirmed')is not False
                 or record.get('record_sha256')!=record_digest(record)
@@ -247,18 +265,29 @@ def validate(record,data,relation,audio_path):
                 or path.name!=record.get('audio_file')or not path.is_file()
                 or hashlib.sha256(path.read_bytes()).hexdigest()!=record.get('audio_sha256')):
             result['reason']='La relectura no corresponde al audio, texto y cuenta actuales.'
+            if not result['invalid_reason_codes']:result['invalid_reason_codes']=['AUDIO_O_DECLARACION_DE_ATRIBUCION_INCOMPATIBLES']
             return result
         duration=float(data.get('duracion_segundos')or 0)
         if not math.isfinite(duration)or duration<=0:raise ValueError('Duración inválida')
         result['valid']=True
+        from app.services.context_fact_consensus import consensus, VALIDATOR_REVISION
+        result.update(validator_revision=VALIDATOR_REVISION,
+            audio_sha256=record.get('audio_sha256'), audio_file=record.get('audio_file'),
+            model=record.get('model'), engine_revision=record.get('engine_revision'),
+            required_findings=record.get('required_findings',[]),
+            recovery_reasons=record.get('recovery_reasons',[]), independent_sources=1,
+            classification_before=record.get('classification_before'), fact_validations=[])
         result['readings']=reading_summary(record)
         for group in record.get('groups')or[]:
             all_attempts=group.get('attempts')or[]
-            if len(all_attempts)not in (2,3)or [a.get('beam_size')for a in all_attempts[:2]]!=[5,10]:continue
-            if len(all_attempts)==3 and all_attempts[2].get('beam_size')!=8:continue
+            if len(all_attempts)not in (2,3)or [a.get('beam_size')for a in all_attempts[:2]]!=[5,10]:raise ValueError('Lecturas incompletas')
+            if len(all_attempts)==3 and all_attempts[2].get('beam_size')!=8:raise ValueError('Tercera lectura inválida')
             if any(not(0<=float(a['start'])<float(a['end'])<=duration+.01)
-                   or float(a['end'])-float(a['start'])>45 for a in all_attempts):continue
-            if (all_attempts[0]['start'],all_attempts[0]['end'])==(all_attempts[1]['start'],all_attempts[1]['end']):continue
+                   or float(a['end'])-float(a['start'])>45 for a in all_attempts):raise ValueError('Ventana inválida')
+            if (all_attempts[0]['start'],all_attempts[0]['end'])==(all_attempts[1]['start'],all_attempts[1]['end']):raise ValueError('Ventanas idénticas')
+            purpose=group.get('purpose','')
+            semantic=consensus(purpose,all_attempts,relation)
+            result['fact_validations'].append(semantic)
             good=[a for a in all_attempts if not a.get('error')and reading_quality(a)]
             # Una relectura no puede aportar solamente hechos favorables e
             # ignorar una expresión ofensiva que la primera lectura omitió.
@@ -269,6 +298,32 @@ def validate(record,data,relation,audio_path):
                     result['risks'].append({'type':'EXPRESION_OFENSIVA_SIN_VOZ_CONFIRMADA',
                         'text':attempt['text'],'start':attempt['start'],'end':attempt['end'],
                         'human_verified':False})
+                from app.services.context_rules import prohibited_threat
+                mora=normalize((relation or{}).get('asignacion')or(relation or{}).get('mora')).upper().replace(' ','')
+                threats=prohibited_threat(attempt.get('text'),attempt.get('segments')or[],mora=mora or '1PV')
+                if threats:
+                    result['risks'].append({'type':'ADVERTENCIA_DOMICILIARIA_PENDIENTE',
+                        'text':attempt['text'],'start':attempt['start'],'end':attempt['end'],
+                        'human_verified':False})
+                from app.services.conversation_evidence import assess_privacy
+                from app.services.contact_dialogue_resolution import declared_intermediary
+                from app.services.contact_evidence_graph import nonholder_context
+                original_third=bool(nonholder_context(data.get('texto'),data.get('segmentos')or[])or
+                    declared_intermediary(data.get('texto'),data.get('segmentos')or[])['confirmed'])
+                original_holder=bool(result['holder']or holder_confirmation(
+                    data.get('texto'),data.get('segmentos')or[])['confirmed'])
+                privacy=assess_privacy(attempt.get('text'),attempt.get('segments')or[],
+                    third_party_confirmed=original_third,titular=original_holder)
+                for candidate in privacy['evidence']:
+                    if candidate.get('confirmed')or candidate.get('review_required'):
+                        result['risks'].append({'type':'INFORMACION_PROTEGIDA_SIN_VOZ_CONFIRMADA',
+                            'text':candidate['text'],'phrase':candidate.get('phrase',''),
+                            'start':attempt['start'],'end':attempt['end'],'human_verified':False})
+            if any(r['rule']=='CONFRONTATION'and r['state']in{'CONFIRMADO','SIN_ATRIBUCION','CONTRADICTORIO'}
+                   and any(e['speaker_role']in{'GESTOR','NO DETERMINADO'}for e in
+                       r['matching_evidence']+r['contradictory_evidence'])
+                   for r in semantic['rules']):
+                result['risks'].append({'type':'CONFRONTACION_PENDIENTE','human_verified':False})
             # No resolver con una única lectura; dos evidencias concordantes
             # como mínimo y ninguna contradicción explícita en una tercera.
             if len(good)<2:continue
@@ -288,7 +343,7 @@ def validate(record,data,relation,audio_path):
                     if singles and len(set.union(*singles))>1:continue
                     if len(singles)>=2 and singles[0]==singles[1]:
                         attempts=[good[sets.index(singles[0])],good[sets.index(singles[1],sets.index(singles[0])+1)]]
-            if group.get('purpose')in {'financial','safety','general'}:
+            if group.get('purpose')in {'financial','safety','general','safety_tail'}:
                 # La segunda escucha de estas materias aporta fragmentos para
                 # revisión, no acredita automáticamente identidad ni pagos.
                 result['evidence'].append({'purpose':group['purpose'],
@@ -365,18 +420,23 @@ def validate(record,data,relation,audio_path):
                 status='CONTACTO_CORROBORADO'
             else:
                 status='SIN_CONSENSO_O_ATRIBUCION'
+            semantic=next((c for c in result['fact_validations'] if c['purpose']==purpose),{})
             result['outcomes'].append({'purpose':purpose,'result':status,
                 'attempts':len(group.get('attempts')or[]),
+                'consensus':next((c for c in result['fact_validations'] if c['purpose']==purpose),{}),
+                'reason_code':semantic.get('reason_code','REGISTRO_NO_VALIDADO'),
                 'reason':('Coincidencia validada bajo los controles de identidad y privacidad.'
                           if status!='SIN_CONSENSO_O_ATRIBUCION' else
-                          'Las lecturas no permiten confirmar el hecho sin atribución adicional.')})
+                          semantic.get('reason_code','Información insuficiente para validar la regla.'))})
         if result['risks']:
             result.update(review_required=True,
-                reason='La relectura local detectó lenguaje ofensivo o información protegida sin voz confirmada; verificar el fragmento.')
+                reason='Riesgos en relectura local pendientes de validar: '+', '.join(
+                    sorted({r['type']for r in result['risks']}))+'. Verificar emisor y regla aplicable.')
         elif result['review_required']:
             result['reason']='Segunda escucha focal disponible; la evidencia requiere atribución o validación del dictaminador antes de modificar el resultado.'
         elif not result['holder'] and not result['callback']:
             result['reason']='Relectura focal registrada; sin coincidencia suficiente para resolver automáticamente la duda. Se conservan los bloqueos originales.'
     except (ValueError,TypeError,KeyError,AttributeError,OSError):
-        result.update(valid=False,holder=False,callback=None,reason='Registro de relectura incompleto o no verificable.')
+        result.update(valid=False,holder=False,callback=None,message_receipt=None,evidence=[],
+                      fact_validations=[],reason='Registro de relectura incompleto o no verificable.')
     return result

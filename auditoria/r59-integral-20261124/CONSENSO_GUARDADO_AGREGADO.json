@@ -1,0 +1,24 @@
+{
+  "validator_revision": "r59-hechos-20261124-v1",
+  "execution": "REPRODUCCION_DEL_SELECTOR_SOBRE_TEXTOS_GUARDADOS_SIN_INFERENCIA_ACUSTICA",
+  "groups": {
+    "groups": 112,
+    "third_recorded": 110,
+    "third_recommended_now": 38,
+    "CALIDAD_ACUSTICA_INSUFICIENTE": 16,
+    "INFORMACION_INSUFICIENTE": 78,
+    "CONSENSO_DE_HECHOS": 6,
+    "LECTURAS_CONTRADICTORIAS": 4,
+    "COINCIDENCIA_SIN_ATRIBUCION": 8
+  },
+  "states_per_rule": {
+    "EVIDENCIA_INSUFICIENTE": 541,
+    "CONFIRMADO": 2,
+    "CONTRADICTORIO": 5,
+    "SIN_ATRIBUCION": 8,
+    "DESCARTADO_CON_EVIDENCIA": 4
+  },
+  "independent_audio_sources_per_group": 1,
+  "total_time_improvement_measured": false,
+  "tail_windows_included_in_this_replay": false
+}

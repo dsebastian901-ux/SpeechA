@@ -1497,6 +1497,18 @@ class BatchView(ctk.CTkFrame):
                 font=ctk.CTkFont(family="Segoe UI", size=10),
                 anchor="w", wraplength=650, justify="left",
             ).grid(row=3,column=0,columnspan=2,padx=12,pady=(0,5),sticky="ew")
+            def show_reading_evidence(current=item):
+                from app.services.context_recovery_report import display_trace
+                dialog=ctk.CTkToplevel(self)
+                dialog.title('Evidencia de segunda y tercera escucha')
+                dialog.geometry('950x650')
+                content=ctk.CTkTextbox(dialog,wrap='word')
+                content.pack(fill='both',expand=True,padx=12,pady=12)
+                content.insert('1.0',display_trace(current))
+                content.configure(state='disabled')
+            ctk.CTkButton(frame,text='Ver evidencia completa de relecturas',
+                command=show_reading_evidence).grid(row=4,column=0,
+                padx=12,pady=(0,5),sticky='w')
 
         elapsed_seconds = float(
             item.get("elapsed_seconds", 0.0)

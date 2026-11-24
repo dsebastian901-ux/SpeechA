@@ -1,0 +1,300 @@
+{
+  "base_commit": "8e5750868fed6700f4c82567142cfc7eb8f19dda",
+  "explanation": "Las pruebas de APIs nuevas fallan por ausencia de contrato en la base; no se contabilizan como errores históricos demostrados. No se editaron las pruebas existentes.",
+  "cases": [
+    {
+      "case": "test_equivalent_receipt_reads_do_not_require_third",
+      "before": "FAIL",
+      "before_failure_type": "AssertionError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_equivalent_receipt_without_voice_is_not_attributed_by_repetition",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_receipt_withdrawal_is_a_real_contradiction_not_majority_vote",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_third_read_recovers_missing_fact_without_erasing_contradiction",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_third_read_without_fact_remains_insufficient",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_nominal_identity_equivalents_are_consensus[S\\xed, soy yo.]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_nominal_identity_equivalents_are_consensus[Exactamente.]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_nominal_identity_equivalents_are_consensus[S\\xed, d\\xedgame.]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_apparent_holder_reply_by_third_party_does_not_confirm",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_degraded_readings_do_not_get_a_third_identical_decode",
+      "before": "FAIL",
+      "before_failure_type": "AssertionError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_invalid_required_evidence_blocks_even_a_corrected_label",
+      "before": "FAIL",
+      "before_failure_type": "AssertionError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_invalid_optional_evidence_does_not_invent_a_rejection",
+      "before": "PASS",
+      "before_failure_type": null,
+      "after": "PASS"
+    },
+    {
+      "case": "test_invalid_identity_evidence_can_be_replaced_by_independent_primary_identity",
+      "before": "PASS",
+      "before_failure_type": null,
+      "after": "PASS"
+    },
+    {
+      "case": "test_financial_coincidence_without_voice_cannot_confirm_payment",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_tail_offense_or_threat_blocks_favorable_recovery[Qu\\xe9 poca madre.]",
+      "before": "FAIL",
+      "before_failure_type": "TypeError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_tail_offense_or_threat_blocks_favorable_recovery[Vamos a realizar una visita a su domicilio.]",
+      "before": "FAIL",
+      "before_failure_type": "TypeError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_checkpoint_roundtrip_recomputes_facts_instead_of_trusting_saved_consensus",
+      "before": "FAIL",
+      "before_failure_type": "KeyError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_unextracted_accepted_plan_is_not_replaced_by_later_channel_intention",
+      "before": "FAIL",
+      "before_failure_type": "KeyError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_plan_count_question_or_history_is_not_a_confirmed_calendar",
+      "before": "FAIL",
+      "before_failure_type": "ImportError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[AMOUNT-financial-Gestor: \\xbfPuede realizar el pago por 1500 pesos ma\\xf1ana? Titular: S\\xed, de acuerdo.-CONFIRMADO]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[COMMITMENT_WITHOUT_DATE-financial-Titular: Yo voy a pagar lo que debo.-CONFIRMADO]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[DISCLOSURE-safety-Tercero: Soy su esposa. Gestor: Su saldo pendiente es de 3000 pesos.-CONFIRMADO]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[DISCLOSURE-safety-Tercero: Soy su esposa, su saldo pendiente es de 3000 pesos.-DESCARTADO_CON_EVIDENCIA]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[PAYMENT_DATE-financial-Gestor: \\xbfPuede realizar el pago ma\\xf1ana? Titular: S\\xed, de acuerdo.-CONFIRMADO]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[RECEIPT_REQUEST-financial-Gestor: No es necesario enviar el comprobante.-DESCARTADO_CON_EVIDENCIA]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[REFERENCE-financial-Gestor: La referencia de pago es 1234567890123456.-CONFIRMADO]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[PAYMENT_PLACES-financial-Gestor: Puede pagar en Farmacias del Ahorro y 7-Eleven.-CONFIRMADO]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[OFFENSE-safety-Gestor: Que poca madre, ya termin\\xf3 la llamada.-CONFIRMADO]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[INTERLOCUTOR_HOSTILITY-safety-Titular: Que poca madre, ya termin\\xf3 la llamada.-CONFIRMADO]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[HOME_WARNING-safety-Gestor: Vamos a realizar una visita a su domicilio.-CONFIRMADO]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[CONFRONTATION-safety-Gestor: Usted es un mentiroso, ya termin\\xf3 la llamada.-CONFIRMADO]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_specific_fact_validators[ARCO-safety-text12-CONFIRMADO]",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_attributed_hostility_does_not_create_human_exception",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_receipt_fact_does_not_clear_independent_privacy_or_reference_blocks",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_different_confirmed_amounts_do_not_make_a_semantic_consensus",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_consensus_is_recomputed_across_conflicting_groups",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_reanalysis_reuses_valid_recovery_and_preserves_sources",
+      "before": "PASS",
+      "before_failure_type": null,
+      "after": "PASS"
+    },
+    {
+      "case": "test_stable_comparison_uses_identifiers_and_refuses_duplicates",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_complete_reading_evidence_is_in_excel_and_program_source",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_recovered_receipt_is_consumed_by_productive_engine_without_changing_score",
+      "before": "FAIL",
+      "before_failure_type": "assert not True",
+      "after": "PASS"
+    },
+    {
+      "case": "test_unconfirmed_date_does_not_become_negotiation_and_amount_is_not_a_day",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_recovered_fact_cannot_approve_below_eighty_even_with_legacy_lower_threshold",
+      "before": "FAIL",
+      "before_failure_type": "assert not True",
+      "after": "PASS"
+    },
+    {
+      "case": "test_identical_offense_with_different_speaker_roles_is_contradictory",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_commitment_without_date_without_speaker_does_not_confirm_a_negotiation",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_safety_reference_requires_full_digits_and_checks_account",
+      "before": "FAIL",
+      "before_failure_type": "ModuleNotFoundError",
+      "after": "PASS"
+    },
+    {
+      "case": "test_recovered_home_warning_obeys_existing_mora_and_attribution_rules[Gestor: Vamos a realizar una visita a su domicilio.-1PV-True]",
+      "before": "FAIL",
+      "before_failure_type": "assert False is True\n +  where False = any(<generator object test_recovered_home_warning_obeys_existing_mora_and_attribution_rules.<locals>.<genexpr> at 0x7f2796227d80>)",
+      "after": "PASS"
+    },
+    {
+      "case": "test_recovered_home_warning_obeys_existing_mora_and_attribution_rules[Gestor: Vamos a realizar una visita a su domicilio.-5PV-False]",
+      "before": "PASS",
+      "before_failure_type": null,
+      "after": "PASS"
+    },
+    {
+      "case": "test_recovered_home_warning_obeys_existing_mora_and_attribution_rules[Gestor: No vamos a realizar una visita a su domicilio.-1PV-False]",
+      "before": "PASS",
+      "before_failure_type": null,
+      "after": "PASS"
+    },
+    {
+      "case": "test_recovered_home_warning_obeys_existing_mora_and_attribution_rules[Titular: Vamos a realizar una visita a su domicilio.-1PV-False]",
+      "before": "PASS",
+      "before_failure_type": null,
+      "after": "PASS"
+    }
+  ]
+}

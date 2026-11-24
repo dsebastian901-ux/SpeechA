@@ -20,6 +20,10 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     score = round(float(score or 0), 2)
     if not math.isfinite(score) or not 0 <= score <= 100:
         raise ValueError('Puntaje de calidad inválido; debe ser finito y estar entre 0 y 100.')
+    minimum_score=float(minimum_score)
+    if not math.isfinite(minimum_score)or minimum_score<=0:
+        raise ValueError('Puntaje mínimo inválido.')
+    minimum_score=max(80.,minimum_score)
     no_voice=m.get('no_voice_validation') or {}
     checks = m.get('quality_checks') or {}
     penalties = m.get('penalties') or []
@@ -60,12 +64,22 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     ]:
         pending(domain, field, code, message)
     context_audio=m.get('context_audio_validation')or{}
+    from app.services.context_evidence_policy import unresolved_dependencies
+    dependencies=unresolved_dependencies(m)
+    if dependencies:
+        add(13,'CONTEXT_AUDIO_REQUIRED_INVALID',
+            'La corroboración acústica requerida no es válida; siguen pendientes: '+', '.join(dependencies),
+            'context_audio_validation')
     if context_audio.get('review_required'):
         risks=context_audio.get('risks')or[]
         if any(r.get('type')=='INFORMACION_PROTEGIDA_SIN_VOZ_CONFIRMADA'for r in risks):
             add(3,'CONTEXT_AUDIO_PRIVACY_RISK','Información protegida en relectura local sin voz confirmada; verificar el fragmento.','context_audio_validation')
         if any(r.get('type')=='EXPRESION_OFENSIVA_SIN_VOZ_CONFIRMADA' for r in risks):
             add(9,'CONTEXT_AUDIO_RISK',context_audio.get('reason')or'Expresión ofensiva en relectura local pendiente de atribución.','context_audio_validation')
+        if any(r.get('type')=='ADVERTENCIA_DOMICILIARIA_PENDIENTE' for r in risks):
+            add(8,'CONTEXT_AUDIO_HOME_WARNING','Advertencia domiciliaria en relectura; confirmar emisor y política de mora.','context_audio_validation')
+        if any(r.get('type')=='CONFRONTACION_PENDIENTE'for r in risks):
+            add(10,'CONTEXT_AUDIO_CONFRONTATION','Expresión confrontativa en relectura; confirmar emisor y contexto.','context_audio_validation')
         if not risks:
             add(13,'CONTEXT_AUDIO_UNVERIFIED',context_audio.get('reason')or'Relectura focal pendiente de validación; no confirma por sí sola cumplimiento.','context_audio_validation')
     additional = m.get('audio_block_evidence_validation') or {}
