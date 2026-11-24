@@ -67,7 +67,9 @@ def test_third_read_when_two_disagree_and_two_safe_identity_reads_agree(tmp_path
     assert len(attempts) == 3
     assert attempts[-1][-1] == 8
     outcome = validate(record, data, relation, audio)
-    assert outcome["valid"] and outcome["holder"]
+    assert outcome["valid"] and outcome["holder"], {
+        "outcome": outcome, "names": [a["text"] for a in record["groups"][0]["attempts"]],
+    }
     assert len(outcome["readings"]) == 3
     assert len(reading_summary(record)) == 3
 
