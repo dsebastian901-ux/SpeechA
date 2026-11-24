@@ -77,6 +77,8 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
         raise ValueError("Elija una carpeta nueva; no se sobrescriben checkpoints.")
     outcomes = {}
     pending_count = 0
+    relecturas = {'realizadas': 0, 'sin_audio': 0, 'sin_modelo': 0, 'errores': 0}
+    model_unavailable = False
     for item in updated["items"]:
         # Un guardado intermedio conserva la cola. No crear ERROR, dictamen,
         # ni una transcripción para audios que todavía no se procesaron.
@@ -96,6 +98,47 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
             apply_output_name_authority(item)
             relation = item.get("relation") or {}
             analysis = AnalyticsService.analyze_transcription(transcription, relation)
+            # El reanálisis debe pasar por la segunda escucha cuando exista
+            # el audio local y la duda se pueda resolver acústicamente.
+            # Nunca se altera el ASR original ni se inventa una confirmación.
+            from app.services.context_audio_recovery import needs_recovery
+            from app.services.whisper_service import whisper_service
+            pending = needs_recovery(analysis.metadata)
+            item['relectura_r59'] = 'NO_REQUIERE' if not pending else 'PENDIENTE'
+            if pending:
+                audio = Path(item.get('path') or '')
+                if not audio.is_file() or audio.name != str(item.get('file_name') or audio.name):
+                    relecturas['sin_audio'] += 1
+                    item['relectura_r59'] = 'AUDIO_LOCAL_NO_DISPONIBLE'
+                else:
+                    try:
+                        if not whisper_service.is_model_loaded and not model_unavailable:
+                            try:
+                                whisper_service.load_model()
+                            except Exception:
+                                model_unavailable = True
+                        if model_unavailable or not whisper_service.is_model_loaded:
+                            relecturas['sin_modelo'] += 1
+                            item['relectura_r59'] = 'MODELO_LOCAL_NO_DISPONIBLE'
+                        else:
+                            recovered = whisper_service.recover_context(
+                                audio, data, relation, analysis.metadata)
+                            if recovered is not None:
+                                item['context_asr_recovery'] = recovered
+                                transcription.metadata['context_asr_recovery'] = recovered
+                                transcription.audio_path = str(audio)
+                                analysis = AnalyticsService.analyze_transcription(
+                                    transcription, relation)
+                                validation = analysis.metadata.get('context_audio_validation') or {}
+                                item['relectura_r59'] = (
+                                    'VALIDADA' if validation.get('valid') else
+                                    'EVIDENCIA_NO_VERIFICADA')
+                                relecturas['realizadas'] += 1
+                            else:
+                                item['relectura_r59'] = 'SIN_VENTANA_ACUSTICA'
+                    except Exception as error:
+                        relecturas['errores'] += 1
+                        item['relectura_r59'] = 'ERROR_RELECTURA_' + type(error).__name__
             old = item.get("classification") or {}
             base = {"estatus_autorizado": old.get("estatus_autorizado"),
                     "tiene_nombre_final": bool(relation.get("nombre_final")),
@@ -133,7 +176,11 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
     workbook = load_workbook(report)
     note = workbook.create_sheet("NOTA_REANALISIS")
     note.append(["Reanálisis de reglas sobre transcripciones existentes"])
-    note.append(["No se ejecutó Whisper ni se copiaron/movieron audios."])
+    note.append(["Se usa Whisper local solo en dudas REVISAR con audio disponible; no se copian ni mueven audios."])
+    note.append(["Segundas escuchas ejecutadas", relecturas['realizadas']])
+    note.append(["Audios ausentes", relecturas['sin_audio']])
+    note.append(["Modelo local ausente", relecturas['sin_modelo']])
+    note.append(["Errores de relectura", relecturas['errores']])
     note.append(["La columna 'Clasificación física' muestra la clasificación calculada; no acredita una copia nueva."])
     note.append(["El checkpoint y el reporte originales permanecen sin cambios."])
     note.append(["Revisión del motor", AnalyticsService.ENGINE_REVISION])
@@ -152,11 +199,12 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
     updated['nonpayment_report_error'] = companion_status['error']
     updated["reanalysis"] = {"engine_revision": AnalyticsService.ENGINE_REVISION,
                               "source_sha256": hashlib.sha256(raw).hexdigest(),
-                              "whisper_executed": False, "audio_files_copied": False,
+                              "whisper_executed": relecturas['realizadas'] > 0, "audio_files_copied": False,
+                              "second_listening": relecturas,
                               "pending_preserved": pending_count, "outcomes": outcomes}
     updated['engine_revision'] = AnalyticsService.ENGINE_REVISION
     destination.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
     assert source.read_bytes() == raw, "El origen cambió durante el reanálisis"
     return {"report": report, "nonpayment_report": companion_status["path"], "nonpayment_report_error": companion_status["error"], "checkpoint": str(destination), "outcomes": outcomes,
             "evaluations": sum(outcomes.values()), "pending_preserved": pending_count,
-            "engine_revision": AnalyticsService.ENGINE_REVISION}
+            "engine_revision": AnalyticsService.ENGINE_REVISION, "second_listening": relecturas}
