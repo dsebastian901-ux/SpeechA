@@ -15,7 +15,11 @@ COUNTER = re.compile(
     r'es mi (?:espos[oa]|madre|padre|herman[oa]|hij[oa])|'
     r'no es mi (?:tarjeta|cuenta)|no (?:lo|la) conozco|no conocemos a|'
     r'no se encuentra(?: aqui| en casa| ahora)?(?=[.!?]|$)|no esta (?:aqui|en casa)|esta trabajando|'
-    r'(?:pago|pague|pagar(?:lo|la)?|pagando|llamo|hablo) (?:por|a nombre de) (?:el|ella|mi |su )|'
+    # Exigir pronombre completo o parentesco. «Hablo por su producto» y
+    # «me habló por el mismo motivo» NO son declaraciones de intermediario.
+    r'(?:pago|pague|pagar(?:lo|la)?|pagando|llamo|hablo) (?:por|a nombre de) '
+    r'(?:ella\b|el(?=[,;.!?]|$)|(?:el |la )(?:titular|senor|senora|cliente)\b|'
+    r'(?:mi |su )(?:espos[oa]|madre|padre|herman[oa]|hij[oa]|familiar)\b)|'
     r'(?:cuenta|tarjeta) de mi (?:espos[oa]|madre|padre|herman[oa]|hij[oa])|'
     r'(?:solicite|saque|tramite|contrate|adquiri) (?:la |una )?tarjeta (?:para|a nombre de) (?:ella|mi (?:espos[oa]|madre|padre|hij[oa]|herman[oa]))|'
     r'se lo comunico|le paso (?:al|con|a la)|lo busco|la busco)\b')
