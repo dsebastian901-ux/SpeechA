@@ -9,15 +9,20 @@ from app.services.conversation_evidence import normalize,sentence_evidence,_role
 from app.services.contextual_identity_evidence import BAD_IDENTITY,valid_nominal_request,proxy_account_evidence,own_marker_is_instruction
 
 REQUEST=(r'(?:me (?:puede|puedes|podria|podre|pueden|puedo) (?:a )?comunicar (?:(?:por|de|el) favor )?con|'
- r'(?<=¿)con|con(?= (?:el senor|la senora|la senorita) )|(?:me )?puedo poder comunicar (?:por favor )?con|me comunica con|me comunico con|(?:me )?estoy comunicando con|nos estamos comunicando con|tengo (?:el )?(?:gusto|uso) con|hablo con|busco (?:a |al |a la )?|'
+ r'(?<=¿)con|con(?= (?:el senor|la senora|la senorita) )|(?:me )?puedo poder comunicar (?:por favor )?con|me comunica con|me comunico con|(?:me )?estoy comunicando con|nos estamos comunicando con|tengo (?:el )?(?:gusto|uso) con|tengo gusto con|hablo con|busco (?:a |al |a la )?|'
  r'estoy buscando a|estoy buscando al|(?:podra|podria|puede) comunicar (?:por favor )?con|se encontr(?:ara|aba|a)|encuentro|encuentra|encuentre|(?:buenos dias|buen dia|buenas tardes|buena tarde) con|es usted|usted es|ustedes)')
 VARIANT=r'(?:tengo el busto con|te gusta con)'
 NAMED_GREETING=r'(?:buenos dias|buen dia|buenas tardes|buena tarde)(?= (?:senorita|senora|senor) )'
 BAD_NAME=re.compile(r'\b(?:que|como|donde|cuando|cuanto|si|no|usted|ustedes|puede|acudir|directamente|'
  r'habla|hablamos|llamada|credito|numero|referencia|contacto|cuenta|tarjeta|pago|banco|juridico|'
  r'corporativo|consulta|deudor|titular|persona|aplicacion|es|esta|conoce|tiene|tiempo)\b')
-RELAY=re.compile(r'\b(?:recado|mensajito|por otra persona|a otra persona|no soy la persona|'
- r'(?:dejo|registro|proporciono) (?:su |mi |este |el )?numero (?:como |de )referencia|(?:dejar|dar)(?:le|lo|selo)? (?:un |el )mensaje|no (?:esta|se encuentra)(?: en este momento)?[?.]| (?:conoce|conocer|conozca|ubica) a (?:esa|esta|la|el|al))\b')
+# No deducir que habla un tercero por palabras sueltas como "recado",
+# "mensajito" o porque el gestor ofrece dejar un mensaje. El parentesco,
+# intermediación y recepción se acreditan por rutas independientes.
+RELAY=re.compile(r'\b(?:por otra persona|a otra persona|no soy la persona|'
+ r'(?:dejo|registro|proporciono) (?:su |mi |este |el )?numero (?:como |de )referencia|'
+ r'no (?:esta|se encuentra)(?: en este momento)?[?.]|'
+ r'(?:conoce|conocer|conozca|ubica) a (?:esa|esta|la|el|al))\b')
 QUOTE=re.compile(r'\b(?:dice que|dijo que|diga que|repita que|usted dijo|usted dice|el cliente dice|'
  r'si fuera|si tuviera|por ejemplo|supongamos|no es cierto que)\b[^.!?]{0,100}$')
 
