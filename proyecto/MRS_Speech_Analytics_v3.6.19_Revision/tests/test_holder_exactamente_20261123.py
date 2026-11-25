@@ -65,3 +65,27 @@ def test_repeated_suffix_without_two_confirmations_remains_unverified():
     checked = AnalyticsService.calculate_basic_compliance(
         "Gestor: La tarjeta termina en 52 22 22.", context)
     assert checked["card_validation"]["result"] == "REVISAR - NUMERO NO CONFIABLE"
+
+
+def test_nominal_request_without_me_with_personal_response():
+    from app.services.contact_evidence_graph import nominal_requests, contextual_contact
+    text = (
+        "Gestor: ¿Podrá comunicar con Saúcedo Ramírez María Guadalupe? "
+        "Interlocutor: Sí, soy yo. "
+        "Gestor: ¿Ya pudo hacer el pago? "
+        "Interlocutor: No he podido pagar, estoy sin trabajo."
+    )
+    assert list(nominal_requests(text))
+    assert contextual_contact(text)["confirmed"] is True
+
+
+def test_estoy_buscando_nominal_does_not_confirm_third_party():
+    from app.services.contact_evidence_graph import nominal_requests, contextual_contact
+    text = (
+        "Gestor: Estoy buscando a Laura Ríos Sánchez. "
+        "Tercero: Es mi hermana, no está en casa. "
+        "Gestor: ¿Puede realizar el pago? "
+        "Tercero: No, yo no puedo."
+    )
+    assert list(nominal_requests(text))
+    assert contextual_contact(text)["confirmed"] is False
