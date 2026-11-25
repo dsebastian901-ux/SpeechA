@@ -3899,7 +3899,9 @@ class AnalyticsService:
                 'method':accepted_schedule['method'],'evidence':[{'text':accepted_schedule['evidence']}],
                 'conflicts':[],'review_required':False}
         accepted_mentions = monetary_mentions(norm(commitment_confirmation["evidence"])) if confirms_commitment else []
-        accepted_amounts = (set(accepted_schedule['amounts']) if accepted_schedule['confirmed'] else {float(m[2]) for m in accepted_mentions})
+        from app.services.payment_sequence_evidence import accepted_amount_values
+        accepted_amounts = (set(accepted_schedule['amounts']) if accepted_schedule['confirmed'] else
+            accepted_amount_values(commitment_confirmation['evidence'], accepted_mentions))
         if plan["amounts"] and accepted_amounts and not accepted_amounts.issubset(set(plan["amounts"])):
             plan["review_required"] = True
             plan["conflicts"].append({"accepted_amounts": sorted(accepted_amounts), "plan_amounts": plan["amounts"]})
