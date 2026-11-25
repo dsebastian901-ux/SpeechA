@@ -41,3 +41,43 @@ def bounded_two_payment_sequence(source, candidates):
             continue
         return [float(first[2]),float(second[2])]
     return []
+
+
+_DATE_MONTHS = r'(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)'
+_WEEKDAY = r'(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)'
+
+
+def accepted_amount_values(accepted_evidence, mentions):
+    """Exclude calendar days from amounts in an accepted installment recap.
+
+    Numbers in «2000 pesos el lunes 23-30 y 7 de diciembre» are
+    [2000], not [2000, 23, 30, 7]. Preserve true small payments with
+    explicit currency/payment anchors, e.g. «pago 20 pesos».
+    """
+    source = normalize(accepted_evidence or '')
+    calendar_spans = [
+        (m.start(), m.end()) for m in re.finditer(
+            rf'\b(?:\d{{1,2}}\s*(?:-|,|/|y)\s*)+\d{{1,2}}\s+de\s+{_DATE_MONTHS}\b',
+            source,
+        )
+    ]
+    calendar_spans += [
+        (m.start('day'), m.end('day')) for m in re.finditer(
+            rf'\b(?:el\s+)?(?:dia\s+)?{_WEEKDAY}\s+(?P<day>\d{{1,2}})\b',
+            source,
+        )
+    ]
+    accepted = set()
+    for mention in mentions:
+        pos, end, value = int(mention[0]), int(mention[1]), float(mention[2])
+        raw = source[pos:end].strip()
+        if value <= 31 and re.fullmatch(r'\d{1,2}', raw):
+            if any(pos >= start and end <= stop for start, stop in calendar_spans):
+                continue
+            following = source[end:end+24]
+            preceding = source[max(0, pos-17):pos]
+            if (re.match(rf'\s+de\s+{_DATE_MONTHS}\b', following)
+                    or re.search(rf'\b(?:dia|dias|{_WEEKDAY[3:-1]})\s*$', preceding)):
+                continue
+        accepted.add(value)
+    return accepted
