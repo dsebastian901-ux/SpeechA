@@ -212,3 +212,13 @@ def test_asr_augusto_conn_without_own_reply_does_not_confirm_holder():
     text = ("Gestor: Soy de MRS Consultores, tengo Augusto Conn "
             "Miranda Rodríguez Óscar Enrique. Interlocutor: Sí.")
     assert contextual_contact(text)["confirmed"] is False
+
+
+def test_never_paid_minimum_is_not_historical_payment():
+    from app.services.conversation_evidence import completed_payment
+    assert not completed_payment("Yo nunca pagué el mínimo, nunca me atrasé.", [])["confirmed"]
+
+
+def test_genuine_paid_minimum_still_counts():
+    from app.services.conversation_evidence import completed_payment
+    assert completed_payment("Yo pagué el mínimo ayer.", [])["confirmed"]
