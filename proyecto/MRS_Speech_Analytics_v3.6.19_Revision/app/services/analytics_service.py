@@ -2785,6 +2785,18 @@ class AnalyticsService:
             r"últimos?\s+(?:cuatro|4)\s+dígitos?).{0,25}?(\d{4})\b", normalized, re.I):
             if refers_to_card(cm):
                 card_mentions.append({"digits": cm.group(1), "evidence": cm.group(0).strip()})
+        # Whisper suele escribir la terminación como "52-22" o "52 22".
+        # Registrar exactamente dos pares, sin truncar números más largos.
+        for cm in re.finditer(
+            r"\\b(?:terminacion|termina(?:\\s+en)?|termino\\s+en)"
+            r"[,\\s]+(\\d{2})[\\s.\\-]+(\\d{2})(?![\\d])",
+            normalized, re.I):
+            if refers_to_card(cm) and not re.match(
+                    r"[\\s.,\\-]+\\d{1,3}\\b",
+                    normalized[cm.end():cm.end()+8]):
+                card_mentions.append({
+                    "digits": cm.group(1)+cm.group(2),
+                    "evidence": cm.group(0).strip()})
         # Número completo: solo secuencias de 13 a 19 dígitos, con o sin espacios/guiones,
         # asociadas explícitamente a tarjeta o a la instrucción de 16 dígitos.
         for cm in re.finditer(
