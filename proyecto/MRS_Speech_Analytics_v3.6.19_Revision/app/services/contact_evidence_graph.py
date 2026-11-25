@@ -30,7 +30,7 @@ QUOTE=re.compile(r'\b(?:dice que|dijo que|diga que|repita que|usted dijo|usted d
 def nominal_requests(text,segments=()):
  source=normalize(text);view=source.replace(',',' ')
  prefix=(REQUEST+'|'+VARIANT+'|'+NAMED_GREETING).replace(' ',r'\s+')
- for m in re.finditer(r'\b(?P<prefix>'+prefix+r')\s+(?P<person>[^.!?]{2,100}?)(?:[.!?]|(?=\s+(?:gracias|mucho gusto|me presento|me comunico|le hablo|mi nombre es)\b)|$)',view[:650]):
+ for m in re.finditer(r'\b(?P<prefix>'+prefix+r')\s+(?P<person>[^.!?]{2,100}?)(?:[.!?]|(?=\s+(?:gracias|mucho gusto|me presento|me comunico|le hablo|hablo por|hablamos por|mi nombre es)\b)|$)',view[:650]):
   person=re.sub(r'\bpor\s+favor\b','',m['person']);person=re.sub(r'^(?:(?:el|la) )?(?:senorita|senora|senor|caballero)\b\s*','',person).strip()
   if re.fullmatch(r'buenos dias|buen dia|buenas tardes|buena tarde',m['prefix']):
    if len(person.split())<2 or m.start()>300:continue
