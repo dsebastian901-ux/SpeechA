@@ -10,7 +10,7 @@ from app.services.contextual_identity_evidence import BAD_IDENTITY,valid_nominal
 
 REQUEST=(r'(?:me (?:puede|puedes|podria|podre|pueden|puedo) (?:a )?comunicar (?:(?:por|de|el) favor )?con|'
  r'(?<=¿)con|con(?= (?:el senor|la senora|la senorita) )|(?:me )?puedo poder comunicar (?:por favor )?con|me comunica con|me comunico con|(?:me )?estoy comunicando con|nos estamos comunicando con|tengo (?:el )?(?:gusto|uso) con|hablo con|busco (?:a |al |a la )?|'
- r'se encontr(?:ara|aba|a)|encuentro|encuentra|encuentre|(?:buenos dias|buen dia|buenas tardes|buena tarde) con|es usted|usted es|ustedes)')
+ r'estoy buscando a|estoy buscando al|(?:podra|podria|puede) comunicar (?:por favor )?con|se encontr(?:ara|aba|a)|encuentro|encuentra|encuentre|(?:buenos dias|buen dia|buenas tardes|buena tarde) con|es usted|usted es|ustedes)')
 VARIANT=r'(?:tengo el busto con|te gusta con)'
 NAMED_GREETING=r'(?:buenos dias|buen dia|buenas tardes|buena tarde)(?= (?:senorita|senora|senor) )'
 BAD_NAME=re.compile(r'\b(?:que|como|donde|cuando|cuanto|si|no|usted|ustedes|puede|acudir|directamente|'
