@@ -434,3 +434,36 @@ def test_third_party_amount_is_informational_not_negotiation_failure():
     # La ausencia de recado y la posible divulgación no quedan autorizadas.
     assert result["status_validation"]["valid"] is False
     assert "privacy_validation" in result
+
+
+@pytest.mark.parametrize("dialogue,expected", [
+    ("Gestor: ¿Lo realizó como transferencia o como pago de servicios? "
+     "Titular: Ya lo había realizado como transferencia.", False),
+    ("Titular: Si yo lo quisiera realizar por medio de transferencia, "
+     "¿es lo mismo? Gestor: En este caso mejor en tienda.", False),
+    ("Gestor: Si no tiene la posibilidad de generar la transferencia, "
+     "lo puede hacer en Farmacias del Ahorro.", False),
+    ("Gestor: Puede pagar mediante transferencia a Santander.", True),
+    ("Gestor: Puede pagar con transferencia por medio de Santander, "
+     "BBVA o Banamex.", True),
+    ("Titular: El pago lo estaría aplicando mediante transferencia.", True),
+])
+def test_transfer_review_requires_current_route_not_mention(dialogue, expected):
+    from app.services.payment_instruction_validation import affirmative_transfer_route
+    assert affirmative_transfer_route(dialogue) is expected
+
+
+def test_historical_transfer_does_not_block_approved_banking_service_route():
+    from app.services.analytics_service import AnalyticsService
+    text = ("Gestor: Buenas tardes, ¿lo realizó como transferencia o como pago de servicios? "
+            "Titular: Lo realicé como transferencia y me regresaron el dinero ayer. "
+            "Gestor: Ahora realice su pago de servicios en BBVA con el convenio. "
+            "También puede hacerlo en Farmacias del Ahorro.")
+    result = AnalyticsService.calculate_basic_compliance(text, {
+        "estatus_grabacion": "NO DEFINE FECHA DE PAGO", "asignacion": "1PV",
+        "fecha": "2026-11-20", "vencimiento": "2026-12-10",
+        "pago_minimo": 500, "saldo_total": 3000
+    })
+    c = result["convenio_payment_validation"]
+    assert c["transfer_data_review"] is False
+    assert c["unauthorized_payment_method"] is False
