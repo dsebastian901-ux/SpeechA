@@ -662,7 +662,7 @@ def completed_payment(text, segments=()):
                 if (re.search(r"\b(?:que|para que)\b[^.!?]{0,80}$",prefix)
                         or not re.search(r"\b(?:ya|hoy|ayer|pasado|pasada)\b",prefix+' '+candidate.group())):
                     continue
-            if re.search(r"\b(?:no|aun no|todavia no)\s+(?:he |lo )?$", s[:candidate.start()]):
+            if re.search(r"\b(?:no|nunca|jamas|aun no|todavia no)\s+(?:he |lo )?$", s[:candidate.start()]):
                 continue
             if (re.match(r'ya se (?:hizo|realizo) ',candidate.group())
                     and re.search(r'\b(?:si|cuando|una vez que|en caso de que|dijo que|dice que|creo que|'
