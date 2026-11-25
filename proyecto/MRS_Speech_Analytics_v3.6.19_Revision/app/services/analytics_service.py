@@ -27,7 +27,7 @@ from app.services.privacy_disclosure_review import validate_disclosure_confirmat
 from app.services.home_warning_review import validate_warning_confirmation
 from app.services.conversation_evidence import assess_home_recovery_warning,reported_card_clarification
 from app.services.conversation_evidence import directed_callback_message
-from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing, transfers_only_reported_or_asked
+from app.services.payment_instruction_validation import wrong_bank_instructions, transfer_instructions, only_negated_transfers, future_transfer_discussion, transfer_is_option_listing, transfers_only_reported_or_asked, affirmative_transfer_route
 from app.services.installment_validation import installment_plan, installment_dates
 from app.services.asr_amount_recovery import validated_entries
 from app.services.mora_payment_policy import payment_policy, two_installment_window, LIQUIDATION_MORAS
@@ -2706,10 +2706,16 @@ class AnalyticsService:
                                       and not transfer_instruction_evidence
                                       and not bank_destination_context and not new_transfer_discussion)
         transfer_option_listing = transfer_is_option_listing(text,segments,detected_payment_places)
+        current_transfer_route = affirmative_transfer_route(text, segments)
+        # No bloquear una llamada por decir 'transferencia' en un antecedente,
+        # pregunta hipotética o alternativa descartada. Es necesaria una ruta
+        # de transferencia actual o una instrucción de pago identificable.
         transfer_data_review = bool(not unauthorized_payment_method and (service_payment['review_required'] or (not service_payment['separates_from_clabe'] and (
             (transfer_instruction_evidence and not authorized_transfer_instruction)
-            or (transfer_wording and not authorized_transfer_account and payment_instruction_context
-                and not reported_transfer_only and not transfer_option_listing and not only_negated_transfers(text))))))
+            or ((current_transfer_route or new_transfer_discussion)
+                and transfer_wording and not authorized_transfer_account
+                and not reported_transfer_only and not transfer_option_listing
+                and not only_negated_transfers(text))))))
 
         convenio_payment_validation = {
             'bank_service_validation':service_payment,
@@ -2750,6 +2756,7 @@ class AnalyticsService:
             "reported_transfer_only": reported_transfer_only,
             "transfer_history_or_question": transfer_history_or_question,
             "future_transfer_discussion": new_transfer_discussion,
+            "current_transfer_route": current_transfer_route,
             "transfer_option_listing_only": transfer_option_listing,
             "authorized_transfer_account": "014320655030560466",
             "authorized_transfer_bank": "Santander",
