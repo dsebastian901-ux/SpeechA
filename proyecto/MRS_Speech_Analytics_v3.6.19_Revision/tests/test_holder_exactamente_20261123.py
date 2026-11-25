@@ -280,7 +280,7 @@ def test_installment_amounts_match_accepted_three_payment_recap():
 
 def test_generic_bank_list_no_longer_requires_two_retail_venues():
     from app.services.payment_instruction_validation import transfer_is_option_listing
-    wording = ("Puede realizar su pago en Farmacias del Ahorro, o por "
+    wording = ("Alternativas: Farmacias del Ahorro; "
                "transferencia por medio de Santander, BBVA o Banamex.")
     assert transfer_is_option_listing(wording, [], ["FARMACIAS DEL AHORRO"])
 
