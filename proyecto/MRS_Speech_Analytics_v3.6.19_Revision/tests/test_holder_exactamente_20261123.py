@@ -276,3 +276,17 @@ def test_installment_amounts_match_accepted_three_payment_recap():
                 for m in re.finditer(r'\b(?:2000|23|30|7)\b', source)]
     accepted = accepted_amount_values(evidence, mentions)
     assert accepted.issubset({2000.0})
+
+
+def test_generic_bank_list_no_longer_requires_two_retail_venues():
+    from app.services.payment_instruction_validation import transfer_is_option_listing
+    wording = ("Puede realizar su pago en Farmacias del Ahorro, o por "
+               "transferencia por medio de Santander, BBVA o Banamex.")
+    assert transfer_is_option_listing(wording, [], ["FARMACIAS DEL AHORRO"])
+
+
+def test_specific_bank_account_instruction_never_treated_as_generic_list():
+    from app.services.payment_instruction_validation import transfer_is_option_listing
+    wording = ("Puede pagar por transferencia por medio de Santander "
+               "a la cuenta bancaria 123456789012345678.")
+    assert not transfer_is_option_listing(wording, [], ["FARMACIAS DEL AHORRO"])
