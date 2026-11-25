@@ -222,3 +222,23 @@ def test_never_paid_minimum_is_not_historical_payment():
 def test_genuine_paid_minimum_still_counts():
     from app.services.conversation_evidence import completed_payment
     assert completed_payment("Yo pagué el mínimo ayer.", [])["confirmed"]
+
+
+def test_previous_agent_complaint_not_definitive_rejection():
+    from app.services.definitive_rejection import definitive_rejection
+    metadata = {
+        "quality_contact_type": "TITULAR",
+        "treatment_validation": {
+            "mistreatment_report_evidence": [{
+                "text": "La señorita de la llamada anterior se puso muy grosera.",
+                "phrase": "se puso muy grosera",
+                "speaker_role": "TITULAR"
+            }],
+            "current_agent_mistreatment_unverified": False
+        }
+    }
+    findings = [{
+        "rule_group": 11, "code": "MISTREATMENT_REPORT",
+        "severity": "REVIEW", "reasons": ["Queja de trato anterior"]
+    }]
+    assert definitive_rejection(metadata, findings, 462.34) is None
