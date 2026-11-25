@@ -117,10 +117,10 @@ def definitive_rejection(metadata,findings,duration_seconds):
             'source_field':'negotiation_validation','reasons':[coverage['reason']]}
     # La acusación al gestor actual que NO se corroboró es alerta (141);
     # no aplicar automáticamente rechazo por queja de maltrato previa.
-    if confirmed_complaint and not treatment.get('current_agent_mistreatment_unverified'):
-        return {'rule_group':11,'code':'CONFIRMED_SERVICE_COMPLAINT','severity':'CONFIRMED_NONCRITICAL',
-            'resolves_codes':['MISTREATMENT_REPORT'],
-            'source_field':'treatment_validation','reasons':['Queja de atención previa expresada en la conversación; bloquea aprobación por criterio operativo.']}
+    # Una queja sobre una llamada ANTERIOR no acredita infracción del
+    # gestor auditado. Conservar MISTREATMENT_REPORT en REVISAR hasta
+    # verificar los hechos; no transformar denuncia ajena en rechazo.
+    # Para maltrato del gestor ACTUAL rige su validación independiente.
     # La negativa del TERCERO a tomar un recado NO es una falta del gestor.
     # Se dictamina como SE NIEGAN A TOMAR RECADO; la calidad debe seguir
     # evaluando identificación, privacidad, trato y demás controles reales.
