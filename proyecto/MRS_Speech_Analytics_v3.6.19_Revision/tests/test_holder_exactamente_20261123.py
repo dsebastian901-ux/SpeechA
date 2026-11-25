@@ -170,3 +170,29 @@ def test_unconfirmed_partial_payment_does_not_invent_a_rejection():
         ],
     }
     assert not ordinary_score_rejection(metadata, 30, 80, None)
+
+
+def test_repeated_settlement_amount_does_not_become_two_payments():
+    from app.services.payment_sequence_evidence import bounded_two_payment_sequence
+    text = ("Se paga el día de hoy un descuento de 6400. "
+            "Si me confirma el pago de hoy y mañana, 6400. "
+            "Los 6400 están perfectos.")
+    first = text.index("6400")
+    second = text.index("6400", first + 1)
+    candidates = [
+        (10, 0, (first, first+4, 6400.0, "6400")),
+        (10, 0, (second, second+4, 6400.0, "6400")),
+    ]
+    assert bounded_two_payment_sequence(text, candidates) == []
+
+
+def test_explicit_two_identical_payments_remain_countable():
+    from app.services.payment_sequence_evidence import bounded_two_payment_sequence
+    text = "Acordamos dos pagos: primer pago de 600 hoy y segundo pago de 600 mañana."
+    first = text.index("600")
+    second = text.index("600", first + 1)
+    candidates = [
+        (10, 0, (first, first+3, 600.0, "600")),
+        (10, 0, (second, second+3, 600.0, "600")),
+    ]
+    assert bounded_two_payment_sequence(text, candidates) == [600.0, 600.0]
