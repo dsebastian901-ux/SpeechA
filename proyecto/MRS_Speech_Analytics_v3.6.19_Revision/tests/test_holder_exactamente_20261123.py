@@ -107,3 +107,27 @@ def test_declared_relative_still_prevents_holder_inference():
             "Gestor: Le dejo un recado para su hermana.")
     assert nonholder_context(text) is True
     assert contextual_contact(text)["confirmed"] is False
+
+
+def test_saying_hablo_por_su_producto_is_not_third_party():
+    from app.services.contact_evidence_graph import nonholder_context
+    text = ("Gestor: Tengo el gusto con Clara Pérez Mejía. "
+            "Titular: Sí, soy yo. "
+            "Gestor: Hablo por su producto de tarjeta Visa, "
+            "porque presenta un saldo vencido.")
+    assert nonholder_context(text) is False
+
+
+def test_hablo_por_el_mismo_motivo_is_not_third_party():
+    from app.services.contact_evidence_graph import nonholder_context
+    text = ("Gestor: Me comunica con Clara Pérez Mejía. Titular: Sí. "
+            "Titular: Me habló por el mismo motivo su compañera ayer, "
+            "ya hice el pago.")
+    assert nonholder_context(text) is False
+
+
+def test_explicit_paying_for_relative_still_blocked():
+    from app.services.contact_evidence_graph import nonholder_context
+    text = ("Gestor: Me comunica con Clara Pérez Mejía. "
+            "Tercero: Soy su hermana. Yo pago por ella, no está en casa.")
+    assert nonholder_context(text) is True
