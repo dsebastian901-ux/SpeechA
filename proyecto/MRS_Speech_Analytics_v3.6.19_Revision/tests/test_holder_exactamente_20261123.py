@@ -196,3 +196,19 @@ def test_explicit_two_identical_payments_remain_countable():
         (10, 0, (second, second+3, 600.0, "600")),
     ]
     assert bounded_two_payment_sequence(text, candidates) == [600.0, 600.0]
+
+
+def test_asr_augusto_conn_nominal_plus_own_payment_confirms_context():
+    from app.services.contact_evidence_graph import contextual_contact
+    text = ("Gestor: Soy de MRS Consultores, tengo Augusto Conn "
+            "Miranda Rodríguez Óscar Enrique. "
+            "Gestor: ¿Ya realizó el pago de su tarjeta? "
+            "Titular: Sí, de hecho ya lo realicé, lo hice en la aplicación.")
+    assert contextual_contact(text)["confirmed"] is True
+
+
+def test_asr_augusto_conn_without_own_reply_does_not_confirm_holder():
+    from app.services.contact_evidence_graph import contextual_contact
+    text = ("Gestor: Soy de MRS Consultores, tengo Augusto Conn "
+            "Miranda Rodríguez Óscar Enrique. Interlocutor: Sí.")
+    assert contextual_contact(text)["confirmed"] is False
