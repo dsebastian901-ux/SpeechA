@@ -4540,6 +4540,18 @@ class AnalyticsService:
                 status_detection_confidence = "ALTA"
                 status_evidence = commitment_confirmation["evidence"]
                 status_evidence_method = "COMPROMISO_ACEPTADO_CON_FECHA"
+            elif (confirms_commitment and promise_date is not None
+                  and unresolved_plan.get('review_required')
+                  and not payment_confirmation_case):
+                # Un plan de parcialidades aceptado sigue siendo CONVENIO aunque
+                # falte validar su desglose. Conservar la revisión financiera;
+                # no convertir automáticamente el acuerdo en NO DEFINE ni aprobarlo.
+                detected_status = "CONVENIO"
+                status_detection_confidence = "ALTA"
+                status_evidence = (commitment_confirmation.get("evidence")
+                    or unresolved_plan.get('reason')
+                    or "Plan de parcialidades aceptado con desglose pendiente.")
+                status_evidence_method = "CONVENIO_PARCIALIDADES_PENDIENTES_VALIDACION"
             elif confirms_commitment and (promise_date is not None or agreement_evidence) and not confirmed_agreement_amount:
                 detected_status = "NO DEFINE FECHA DE PAGO"
                 status_detection_confidence = "ALTA"
