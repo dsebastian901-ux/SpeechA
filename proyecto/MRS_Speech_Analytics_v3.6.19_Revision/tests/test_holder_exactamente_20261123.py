@@ -54,3 +54,14 @@ def test_repeated_suffix_requires_two_matching_card_mentions():
             "Gestor: Repito terminación 52 22 22.")
     checked = AnalyticsService.calculate_basic_compliance(text, context)
     assert checked["card_validation"]["result"] == "TARJETA CORRECTA"
+
+
+def test_repeated_suffix_without_two_confirmations_remains_unverified():
+    from app.services.analytics_service import AnalyticsService
+    context = {"estatus_grabacion": "NO DEFINE FECHA DE PAGO",
+               "numero_de_tarjeta": "0000000000005222",
+               "asignacion": "1PV", "fecha": "2026-11-20",
+               "pago_minimo": 200, "saldo_total": 1000}
+    checked = AnalyticsService.calculate_basic_compliance(
+        "Gestor: La tarjeta termina en 52 22 22.", context)
+    assert checked["card_validation"]["result"] == "REVISAR - NUMERO NO CONFIABLE"
