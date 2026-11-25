@@ -94,12 +94,13 @@ def transfer_instructions(text, segments=()):
 def transfer_is_option_listing(text, segments, authorized_places):
     """Enumerar bancos no es dictar una CLABE ni una transferencia elegida.
 
-    Solo exime el aviso genérico si hay dos alternativas autorizadas en la
-    conversación y no se desarrolla una transferencia concreta. No valida
-    datos bancarios ni agrega bancos al número de lugares autorizados.
+    Una simple enumeración de bancos es una opción de pago, aunque el
+    reconocedor ASR haya captado solo un establecimiento autorizado. No valida
+    datos bancarios, no inventa lugares y no exime instrucciones concretas
+    sobre cuenta, CLABE o transferencia elegida.
     """
     source=normalize(text)
-    if len(set(authorized_places))<2 or future_transfer_discussion(text,segments) or transfer_instructions(text,segments):
+    if future_transfer_discussion(text,segments) or transfer_instructions(text,segments):
         return False
     if re.search(r"\b(?:clabe|cuenta bancaria|numero de cuenta|cuenta de destino|"
                  r"cuenta personal|banca movil|pago de tarjetas|practicaja|convenio (?:es|numero|\d))\b",source):
