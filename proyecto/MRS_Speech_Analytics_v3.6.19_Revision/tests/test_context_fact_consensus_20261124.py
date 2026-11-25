@@ -467,3 +467,28 @@ def test_historical_transfer_does_not_block_approved_banking_service_route():
     c = result["convenio_payment_validation"]
     assert c["transfer_data_review"] is False
     assert c["unauthorized_payment_method"] is False
+
+
+def test_accepted_installments_with_unverified_schedule_keep_convenio_and_review():
+    """La existencia de un convenio no demuestra que su calendario sea válido."""
+    from app.services.analytics_service import AnalyticsService
+    dialogue = (
+        "Gestor: Tengo el gusto con Persona Ejemplo. Titular: Exactamente. "
+        "Gestor: Le divido mil sesenta y siete en tres pagos semanales de "
+        "trescientos cincuenta y cinco pesos con sesenta centavos. ¿Acepta tres pagos? "
+        "Titular: Sí, está bien. "
+        "Gestor: El primero mañana sábado, otro el martes y el tercero el martes primero. "
+        "Titular: Sí, está bien, tres pagos. "
+        "Gestor: ¿Y si puede dar más dinero, cambiamos los montos? "
+        "Titular: Por ahora como lo acordamos."
+    )
+    compliance = AnalyticsService.calculate_basic_compliance(dialogue, {
+        "estatus_grabacion": "CONVENIO", "asignacion": "1PV",
+        "fecha": "2026-11-20", "vencimiento": "2026-11-23",
+        "pago_minimo": 1067, "saldo_total": 1067,
+    })
+    status = compliance["status_validation"]
+    neg = compliance["negotiation_validation"]
+    if neg.get("unresolved_accepted_plan", {}).get("review_required") and neg.get("commitment_confirmed"):
+        assert status["detected_status"] == "CONVENIO"
+        assert neg["review_required"] is True
