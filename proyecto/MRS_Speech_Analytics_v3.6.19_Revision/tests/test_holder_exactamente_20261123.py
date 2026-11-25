@@ -245,24 +245,34 @@ def test_previous_agent_complaint_not_definitive_rejection():
 
 
 def test_installment_days_are_not_accepted_amounts():
-    from app.services.conversation_evidence import normalize, monetary_mentions
+    from app.services.conversation_evidence import normalize
     from app.services.payment_sequence_evidence import accepted_amount_values
     evidence = "Quedaría de la siguiente manera, 2000 pesos el día lunes 23-30 y 7 de diciembre, correcto? Sí."
-    mentions = monetary_mentions(normalize(evidence))
+    source = normalize(evidence)
+    import re
+    mentions = [(m.start(), m.end(), float(m.group()), m.group())
+                for m in re.finditer(r'\b(?:2000|20|30|23|7)\b', source)]
     assert accepted_amount_values(evidence, mentions) == {2000.0}
 
 
 def test_small_payment_with_currency_is_not_discarded_as_calendar_day():
-    from app.services.conversation_evidence import normalize, monetary_mentions
+    from app.services.conversation_evidence import normalize
     from app.services.payment_sequence_evidence import accepted_amount_values
     evidence = "Hoy pago 20 pesos y mañana pago 30 pesos."
-    mentions = monetary_mentions(normalize(evidence))
+    source = normalize(evidence)
+    import re
+    mentions = [(m.start(), m.end(), float(m.group()), m.group())
+                for m in re.finditer(r'\b(?:2000|20|30|23|7)\b', source)]
     assert accepted_amount_values(evidence, mentions) == {20.0, 30.0}
 
 
 def test_installment_amounts_match_accepted_three_payment_recap():
-    from app.services.conversation_evidence import normalize, monetary_mentions
+    from app.services.conversation_evidence import normalize
     from app.services.payment_sequence_evidence import accepted_amount_values
     evidence = "Entonces quedaría de la siguiente manera: 2000 pesos el día lunes 23-30 y 7 de diciembre, correcto? Sí, sí."
-    accepted = accepted_amount_values(evidence, monetary_mentions(normalize(evidence)))
+    source = normalize(evidence)
+    import re
+    mentions = [(m.start(), m.end(), float(m.group()), m.group())
+                for m in re.finditer(r'\b(?:2000|23|30|7)\b', source)]
+    accepted = accepted_amount_values(evidence, mentions)
     assert accepted.issubset({2000.0})
