@@ -3951,7 +3951,22 @@ class AnalyticsService:
                 and e['start'] <= detected_claim_span[0] and detected_claim_span[1] <= e['end']
                 and abs(float(e.get('amount', -1)) - float(detected_claim_amount or 0)) < .01
                 for e in prior_payment_binding.get('evidence', [])))
-        if data_inconsistency:
+        # Una conversación con tercero no acredita un convenio ni un pago
+        # negociado por el titular. Los montos permanecen disponibles para
+        # verificar posible divulgación indebida en privacy_validation.
+        third_party_financial_context = (
+            contact_type in {"TERCERO", "TERCERO / FAMILIAR", "TERCERO / TRABAJO"}
+            and not requires_new_negotiation_validation
+        )
+        if third_party_financial_context:
+            amount_validation = "INFORMATIVO - IMPORTE EN CONTACTO CON TERCERO"
+            amount_reason = (
+                "Importe mencionado durante contacto con tercero: no acredita "
+                "negociación con titular. Conservar alertas de privacidad y recado."
+            )
+            amount_review = False
+            amount_invalid = False
+        elif data_inconsistency:
             amount_validation = "REVISAR - DATOS DE ORIGEN INCONSISTENTES"
             amount_reason = f"Pago mínimo ({minimum_expected:g}) mayor que saldo total ({total_expected:g}); revisar Excel/origen antes de penalizar."
             amount_review = True
@@ -4045,17 +4060,17 @@ class AnalyticsService:
         # Una propuesta válida no acredita que un saldo informado diferente
         # sea correcto. La discrepancia requiere revisión, sin convertirla en
         # una falla grave automática ni ocultarla detrás del nuevo importe.
-        if fragmented_balance_evidence and not amount_invalid:
+        if not third_party_financial_context and fragmented_balance_evidence and not amount_invalid:
             amount_review = True
             amount_reason = 'El saldo contiene una cifra ASR fragmentada; verificar el importe en audio sin completarlo desde Excel.'
-        if balance_correction_conflict and not amount_invalid:
+        if not third_party_financial_context and balance_correction_conflict and not amount_invalid:
             amount_review = True
             amount_reason = balance_reason
-        if balance_validation == "SALDO INFORMADO DIFERENTE AL SALDO TOTAL" and not amount_invalid:
+        if not third_party_financial_context and balance_validation == "SALDO INFORMADO DIFERENTE AL SALDO TOTAL" and not amount_invalid:
             amount_review = True
             amount_validation = "REVISAR - SALDO INFORMADO DIFERENTE"
             amount_reason = balance_reason
-        if (not amount_invalid and detected_claim_amount is None and agent_statement(text, segments,
+        if (not third_party_financial_context and not amount_invalid and detected_claim_amount is None and agent_statement(text, segments,
                 r"\b(?:se le esta ofreciendo|le ofrecemos|le ofrezco) un descuento\b")):
             amount_review = True
             amount_validation = "REVISAR - IMPORTE DEL DESCUENTO NO CONFIRMADO"
