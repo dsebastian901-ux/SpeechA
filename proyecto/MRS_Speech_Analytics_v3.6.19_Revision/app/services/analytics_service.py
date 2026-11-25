@@ -2788,11 +2788,11 @@ class AnalyticsService:
         # Whisper suele escribir la terminación como "52-22" o "52 22".
         # Registrar exactamente dos pares, sin truncar números más largos.
         for cm in re.finditer(
-            r"\\b(?:terminacion|termina(?:\\s+en)?|termino\\s+en)"
-            r"[,\\s]+(\\d{2})[\\s.\\-]+(\\d{2})(?![\\d])",
+            r"\b(?:terminacion|termina(?:\s+en)?|termino\s+en)"
+            r"[,\s]+(\d{2})[\s.\-]+(\d{2})(?![\d])",
             normalized, re.I):
             if refers_to_card(cm) and not re.match(
-                    r"[\\s.,\\-]+\\d{1,3}\\b",
+                    r"[\s.,\-]+\d{1,3}\b",
                     normalized[cm.end():cm.end()+8]):
                 card_mentions.append({
                     "digits": cm.group(1)+cm.group(2),
