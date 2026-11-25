@@ -2821,11 +2821,38 @@ class AnalyticsService:
         card_detected = ""
         card_evidence = ""
         if ambiguous_card_mentions:
-            chosen = ambiguous_card_mentions[-1]
-            card_detected = chosen["digits"]
-            card_evidence = chosen["evidence"]
-            card_validation = "REVISAR - NUMERO NO CONFIABLE"
-            card_validation_reason = "Whisper detectó más de 4 dígitos en una terminación de tarjeta; no se declara discrepancia hasta revisión."
+            # Una repetición ASR final no invalida dos menciones independientes,
+            # exactas e inequívocas de los cuatro últimos dígitos de Excel.
+            # No extraer cuatro dígitos de la mención larga, ni ignorar
+            # terminaciones exactas contradictorias.
+            expected_last4 = expected_card_digits[-4:] if len(expected_card_digits) >= 4 else ""
+            exact_four = [m for m in card_mentions if len(m["digits"]) == 4]
+            concordant = (bool(expected_last4)
+                          and len(exact_four) >= 2
+                          and all(m["digits"] == expected_last4 for m in exact_four)
+                          and all(m["digits"].startswith(expected_last4)
+                                  and m["digits"][4:] == expected_last4[-2:]
+                                  for m in ambiguous_card_mentions
+                                  if len(m["digits"]) == 6))
+            # Todas las menciones largas deben ser la repetición de pareja
+            # final; no basta con que la lista filtrada sea vacía.
+            concordant = concordant and all(
+                len(m["digits"]) == 6 for m in ambiguous_card_mentions)
+            if concordant:
+                chosen = exact_four[-1]
+                card_detected = expected_last4
+                card_evidence = " / ".join(m["evidence"] for m in exact_four)
+                card_validation = "TARJETA CORRECTA"
+                card_validation_reason = (
+                    "Dos terminaciones independientes de cuatro dígitos coinciden "
+                    "con Excel; una tercera menciona repetida su pareja final. "
+                    "No se recortó la secuencia ASR ambigua.")
+            else:
+                chosen = ambiguous_card_mentions[-1]
+                card_detected = chosen["digits"]
+                card_evidence = chosen["evidence"]
+                card_validation = "REVISAR - NUMERO NO CONFIABLE"
+                card_validation_reason = "Whisper detectó más de 4 dígitos en una terminación de tarjeta; no se declara discrepancia hasta revisión."
         elif card_mentions:
             # Priorizar la mención más larga y, a igualdad, la última de la llamada.
             chosen = max(enumerate(card_mentions), key=lambda x: (len(x[1]["digits"]), x[0]))[1]
