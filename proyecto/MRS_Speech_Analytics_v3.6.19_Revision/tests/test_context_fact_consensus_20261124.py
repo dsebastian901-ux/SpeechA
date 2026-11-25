@@ -406,3 +406,31 @@ def test_real_audio_70528974_not_knowing_debtor_is_not_message_refusal():
     text='Gestor: ¿Puedo dejar un recado? Tercero: No sé nada de él. Gracias, hasta luego.'
     result=explicit_message_refusal(text)
     assert result['confirmed'] is False
+
+
+def test_third_party_amount_is_informational_not_negotiation_failure():
+    from app.services.analytics_service import AnalyticsService
+
+    text = (
+        "Gestor: ¿Me comunica con Persona Ejemplo? "
+        "Tercero: Soy su hermana, él no se encuentra. "
+        "Gestor: Se mencionaron quinientos pesos, pero necesito hablar con el titular. "
+        "Tercero: No tengo cómo localizarlo."
+    )
+    relation = {
+        "estatus_grabacion": "MENSAJE CON FAMILIAR",
+        "asignacion": "1PV",
+        "pago_minimo": 5019,
+        "saldo_total": 12000,
+        "fecha": "2026-11-20",
+        "vencimiento": "2026-11-30",
+    }
+    result = AnalyticsService.calculate_basic_compliance(text, relation)
+    assert result["contact_type"] in {"TERCERO", "TERCERO / FAMILIAR"}
+    validation = result["negotiation_validation"]
+    assert validation["validacion_monto"] == "INFORMATIVO - IMPORTE EN CONTACTO CON TERCERO"
+    assert not validation["amount_invalid"]
+    assert not any("menor al mínimo" in reason for reason in validation["reasons"])
+    # La ausencia de recado y la posible divulgación no quedan autorizadas.
+    assert result["status_validation"]["valid"] is False
+    assert "privacy_validation" in result
