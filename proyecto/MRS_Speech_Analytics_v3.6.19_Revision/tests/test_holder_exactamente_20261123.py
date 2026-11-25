@@ -41,3 +41,16 @@ def test_si_soy_yo_with_explicit_third_party_denial_stays_unconfirmed():
         "Gestor: ¿Me puede comunicar con Persona Ejemplo? "
         "Tercero: Sí, soy yo. Tercero: No soy el titular, soy su hermano.")
     assert result["confirmed"] is False
+
+
+def test_repeated_suffix_requires_two_matching_card_mentions():
+    from app.services.analytics_service import AnalyticsService
+    context = {"estatus_grabacion": "NO DEFINE FECHA DE PAGO",
+               "numero_de_tarjeta": "0000000000005222",
+               "asignacion": "1PV", "fecha": "2026-11-20",
+               "pago_minimo": 200, "saldo_total": 1000}
+    text = ("Gestor: La tarjeta termina en 52-22. "
+            "Gestor: Confirmo terminación, 52-22. "
+            "Gestor: Repito terminación 52 22 22.")
+    checked = AnalyticsService.calculate_basic_compliance(text, context)
+    assert checked["card_validation"]["result"] == "TARJETA CORRECTA"
