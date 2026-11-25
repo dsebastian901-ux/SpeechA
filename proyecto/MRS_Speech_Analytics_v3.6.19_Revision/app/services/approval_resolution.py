@@ -14,7 +14,17 @@ def ordinary_score_rejection(metadata, score, minimum_score, duration_seconds):
     """
     if float(score or 0)>=float(minimum_score):return False
     penalties=[p for p in metadata.get('penalties') or []if float(p.get('points')or 0)>0]
-    if not penalties or any(p.get('id') not in ORDINARY_PENALTIES for p in penalties):return False
+    # La omisión de explicar un pago parcial es una falta ordinaria con
+    # descuento confirmado cuando la propia evaluación acredita ambas
+    # condiciones. No convertir una duda del monto en aprobación ni en
+    # rechazo por una infracción que no quedó demostrada.
+    negotiation = metadata.get('negotiation_validation') or {}
+    partial_payment_confirmed = bool(
+        negotiation.get('partial_payment') is True
+        and negotiation.get('partial_explanation') is False
+    )
+    ordinary_ids = ORDINARY_PENALTIES | ({'PEN015'} if partial_payment_confirmed else set())
+    if not penalties or any(p.get('id') not in ordinary_ids for p in penalties):return False
     if not any(float(p.get('points') or 0)>0 for p in penalties):return False
     expected=max(0,100-sum(float(p.get('points') or 0) for p in penalties))
     if abs(expected-float(score or 0))>.01:return False
