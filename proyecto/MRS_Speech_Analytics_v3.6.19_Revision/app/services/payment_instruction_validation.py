@@ -146,3 +146,36 @@ def wrong_bank_instructions(text, segments, bank_variants, authorized_codes, tra
                                   "numbers_detected": invalid, "evidence": unit["text"],
                                   "speaker_role": unit["speaker_role"], "start": unit["start"], "end": unit["end"]})
     return wrong
+
+
+def affirmative_transfer_route(text, segments=()):
+    """Detectar la ruta de transferencia ofrecida o elegida, no menciones históricas.
+
+    Se conserva la alerta cuando se propone/aplica un canal de transferencia
+    actual sin destino corroborado. Una pregunta hipotética, una transferencia
+    previa o la alternativa negada no prueban una instrucción actual.
+    """
+    pattern = re.compile(
+        r"\b(?:mediante transferencia|por transferencia|transferencia (?:a|por medio de|desde)\b|"
+        r"(?:aplicando|realizando|efectuar|realizar|hacer) (?:el pago )?(?:mediante|por) transferencia\b)"
+    )
+    for unit in sentence_evidence(text, segments):
+        value = normalize(unit["text"])
+        for match in pattern.finditer(value):
+            before = value[max(0, match.start()-135):match.start()]
+            after = value[match.end():match.end()+90]
+            local = value[max(0, match.start()-90):match.end()+45]
+            if re.search(r"\b(?:si no (?:tiene|tengo|hay)|no (?:se puede|puedo|debe|es posible|recomiendo)|"
+                         r"sin necesidad de|en vez de)\b[^.!?]{0,85}$",before):
+                continue
+            if re.search(r"\b(?:ya lo habia|ya habia|ayer|el viernes|la semana pasada|"
+                         r"me dijeron|me indicaron|hice|realice|fue|era)\b[^.!?]{0,100}$", before):
+                continue
+            if ("?" in local or "¿" in local) and re.search(
+                    r"\b(?:si|quisiera|podria|puedo|es lo mismo|como|se hizo|lo realizo)\b",local):
+                continue
+            # No tomar preguntas sobre el canal histórico como nueva oferta.
+            if re.search(r"\b(?:se regreso|devolvieron|reembolso|reverso)\b",after):
+                continue
+            return True
+    return False
