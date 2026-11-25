@@ -1,0 +1,14 @@
+{
+  "C01_nominal_asr_identified": false,
+  "C02_financial_search_is_intermediary": true,
+  "C03_own_financial_context_identified": false,
+  "C04_immediate_recap_accepted": false,
+  "C05_joint_reply_accepted": false,
+  "C05_joint_reply_amounts": [],
+  "C07_minimum_scope": "SALDO_ACTUAL_DECLARADO",
+  "C08_own_app_scope": "SALDO_ACTUAL_DECLARADO",
+  "C09_bank_enum_listing": false,
+  "C10_confirmed_complaint": "REVISAR",
+  "C11_unattributed_asset_warning_review": false,
+  "C15_incomplete_two_payment_recap_review": false
+}

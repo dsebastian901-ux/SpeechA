@@ -12,7 +12,7 @@ def explicit_current_amounts(text,segments=()):
         if not frame['accepted']or frame['history']:continue
         if frame['kind']=='AMOUNT':
             value=frame['reply'];offset=frame['position']
-            matches=list(re.finditer(r'^(?:(?:si|ah|bueno)[, ]+)?(?:(?:lo que (?:traigo|tengo) (?:son|es)|cuento con|tengo|traigo) )?(?:de |por )?(?:\$\s*)?(?P<amount>'+NUMBER+r')(?!\w)',value))
+            matches=list(re.finditer(r'^(?:(?:si|ah|bueno)[, ]+)?(?:(?:lo que (?:traigo|tengo) (?:son|es)|cuento con|tengo|traigo|seria (?:el )?monto(?: es)?|(?:el )?monto es) )?(?:de |por )?(?:\$\s*)?(?P<amount>'+NUMBER+r')(?!\w)',value))
         else:
             value=frame['question'];offset=frame['question_position']
             matches=list(re.finditer(r'\b(?:pago (?:de|por)(?: los)?|por la cantidad de|por(?: los)?)\s+(?:\$\s*)?(?P<amount>'+NUMBER+r')(?!\w)',value))

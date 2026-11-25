@@ -12,7 +12,7 @@ import re
 
 from app.services.audio_block_evidence import binding
 from app.services.conversation_evidence import normalize,holder_confirmation,recipient_statement
-from app.services.contextual_identity_evidence import COUNTER,proxy_account_evidence,BAD_IDENTITY,valid_nominal_request
+from app.services.contextual_identity_evidence import nonholder_counter_evidence,proxy_account_evidence,BAD_IDENTITY,valid_nominal_request
 from app.services.payment_reference_validation import callback_numbers
 
 SCHEMA=2
@@ -331,7 +331,7 @@ def validate(record,data,relation,audio_path):
             if len(all_attempts)==3 and len(good)==3:
                 if group.get('purpose')=='holder':
                     from app.services.contact_dialogue_resolution import declared_intermediary
-                    contradiction=any(COUNTER.search(normalize(a['text']))or
+                    contradiction=any(nonholder_counter_evidence(a['text'],a.get('segments')or[])or
                         declared_intermediary(a['text'])['confirmed'] or proxy_account_evidence(a['text'])
                         for a in good)
                     if contradiction:continue
@@ -363,7 +363,7 @@ def validate(record,data,relation,audio_path):
                 from app.services.conversation_evidence import assess_recado
                 raw_segments=data.get('segmentos')or[]
                 from app.services.contact_evidence_graph import nonholder_context
-                if (nonholder_context(data.get('texto'),raw_segments)or COUNTER.search(source)or proxy_account_evidence(data.get('texto'),raw_segments)
+                if (nonholder_context(data.get('texto'),raw_segments)or nonholder_counter_evidence(data.get('texto'),raw_segments)or proxy_account_evidence(data.get('texto'),raw_segments)
                     or declared_intermediary(data.get('texto'),raw_segments)['confirmed']
                     or unknown_debtor_statement(data.get('texto'),raw_segments)
                     or assess_recado(data.get('texto'),raw_segments)['family']):continue
@@ -373,7 +373,7 @@ def validate(record,data,relation,audio_path):
                 proofs=[]
                 for attempt in attempts:
                     value=attempt['text']
-                    contradicted=(COUNTER.search(normalize(value))or proxy_account_evidence(value)
+                    contradicted=(nonholder_counter_evidence(value,attempt.get('segments')or[])or proxy_account_evidence(value)
                         or declared_intermediary(value)['confirmed']or unknown_debtor_statement(value)
                         or assess_recado(value)['family'])
                     direct=recipient_statement(value,[],r'\b(?:soy yo|soy (?:el|la) titular|habla (?:el|la) titular)\b')

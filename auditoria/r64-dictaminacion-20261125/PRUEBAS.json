@@ -1,0 +1,67 @@
+{
+  "baseline_commit": "e8d2da8e78d8d411950598265221675295054769",
+  "version": "3.6.19-r64-dictaminacion-20261125",
+  "baseline_suite": {
+    "tests": 3370,
+    "passed": 3301,
+    "failures": 47,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 511.346,
+    "junit_sha256": "cc5aa1a9a79c837721c4394f54d8ccfcc2df5cad3cfd565f1bf457dfaed8ca79"
+  },
+  "complete_regression_suite": {
+    "tests": 3410,
+    "passed": 3388,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 519.833,
+    "junit_sha256": "aaf453b27a264cd80d6a01bbb0e67e29719881fd836764bbd2bc5c9351e419f6"
+  },
+  "final_focused_suite": {
+    "tests": 148,
+    "passed": 148,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 18.956,
+    "junit_sha256": "54918e0386a3edbe031cfeec6b2c21be1d0470690cf7bcef32428ab502bfd048"
+  },
+  "payment_and_checkpoint_focus": {
+    "tests": 165,
+    "passed": 165,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 5.822,
+    "junit_sha256": "6ce97e372d1dc129444b1d969735593d220d165d3bce6733fb237eb1fe271687"
+  },
+  "baseline_failures_fixed_with_existing_assertions": 47,
+  "label_only_change_after_full_suite_start": "HOME_WARNING_UNATTRIBUTED: descripción sin mora inventada; verificación posterior 148/148 y evaluación final de las 79 transcripciones. El nuevo caso de presentación es adicional a los 40 casos r64 incluidos en la suite global.",
+  "existing_test_expectations_changed": [
+    {
+      "test": "test_release_recovery_invalidation_20261123.py",
+      "change": "Solo literal de versión r59 -> r64; SCHEMA=2 y expectativas funcionales conservados."
+    }
+  ],
+  "skipped_reasons": {
+    "Tk_display_unavailable": 14,
+    "Windows_CMD_unavailable": 8
+  },
+  "compileall": "PASS",
+  "git_diff_check": "PASS",
+  "preservation": {
+    "r57_files_checked": 780,
+    "r57_changed": [],
+    "penalty_call_arguments_unchanged": true,
+    "penalty_calls_checked": 33
+  },
+  "real_audio_inference": {
+    "executed": false,
+    "reason": "Los 79 audios originales no están disponibles en este entorno."
+  },
+  "whisper_medium_production_enabled": false,
+  "physical_windows_tested": false,
+  "human_listening_performed": false
+}

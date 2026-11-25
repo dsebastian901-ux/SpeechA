@@ -67,6 +67,10 @@ def balance_scope(text, segments, start, end):
         return 'PROPUESTA_ANTERIOR_REPORTADA'
     if role in {'TITULAR','TERCERO','INTERLOCUTOR'}:
         return 'IMPORTE_DICHO_POR_INTERLOCUTOR'
+    if re.match(r'\s*[,;]?\s*(?:que )?es (?:el |un |su )?(?:pago )?minimo(?: requerido)?\b',after):
+        return 'MINIMO_REQUERIDO_NO_SALDO_TOTAL'
+    if re.search(r'\byo (?:ahorita |acabo de )?consulte (?:mi |el )?saldo\b[^.!?]{0,80}$',before):
+        return 'CONSULTA_PERSONAL_REPORTADA_NO_SALDO_DEL_GESTOR'
     if re.search(r'\b(?:tenia|tenian|tuve|tenia registrado|habia) (?:un |el |mi )?saldo[^.!?]{0,45}$',before):
         return 'SALDO_HISTORICO'
     # «Le estamos dando el saldo de X» al presentar el descuento no declara

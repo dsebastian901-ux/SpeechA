@@ -143,6 +143,8 @@ def full_payment_refusal(commitment):
     if not match or QUOTED.search(reply) or '?' in reply:
         return False
     before=reply[:match.start()]
+    if re.search(r'\bno (?:me |le |nos )?(?:(?:va|vaya) a |hay )?(?:decir|diga)\b[^.!?]{0,85}$',before):
+        return False  # Citar la negativa que otro podría decir no la acredita.
     # No atribuir al presente una negativa citada de conversación anterior.
     # Por ejemplo: 'les decía y no voy a pagar la tarjeta'.
     historical_clause = before.rsplit('.', 1)[-1][-90:]

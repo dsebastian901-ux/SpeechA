@@ -106,9 +106,14 @@ def transfer_is_option_listing(text, segments, authorized_places):
                  r"cuenta personal|banca movil|pago de tarjetas|practicaja|convenio (?:es|numero|\d))\b",source):
         return False
     mentions=list(re.finditer(r"\btransferencia\b",source))
-    return bool(mentions) and all(re.match(
-        r"\s+(?:de |desde |con |en )?(?:bbva|bancomer|van commer|citibanamex|santander)\b",
+    listed=bool(mentions) and all(re.match(
+        r"\s+(?:de |desde |con |en |por medio de )?(?:bbva|bancomer|van commer|citibanamex|citi banamex|banamex|santander)\b",
         source[m.end():]) for m in mentions)
+    if not listed:return False
+    banks=r'(?:bbva|bancomer|van commer|citibanamex|citi banamex|banamex|santander)'
+    enumeration=all(re.match(r'\s+(?:de |desde |con |en |por medio de )?'+banks+
+        r'\s*(?:,|\bo\b|\by\b)\s*'+banks+r'\b',source[m.end():])for m in mentions)
+    return bool(enumeration or len(set(authorized_places))>=2)
 
 
 def wrong_bank_instructions(text, segments, bank_variants, authorized_codes, transfer_account):

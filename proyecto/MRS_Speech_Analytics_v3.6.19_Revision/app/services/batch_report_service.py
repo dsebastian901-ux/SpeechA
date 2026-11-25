@@ -1023,6 +1023,8 @@ class BatchReportService:
 
         from app.services.context_recovery_report import add_context_recovery_sheet
         cls._style_sheet(add_context_recovery_sheet(wb,source_items))
+        from app.services.medium_review_plan import add_medium_plan_sheet
+        cls._style_sheet(add_medium_plan_sheet(wb,source_items))
 
         from app.services.rule_audit_report import add_rule_audit_sheets
         audit_sheets = add_rule_audit_sheets(wb, source_items)

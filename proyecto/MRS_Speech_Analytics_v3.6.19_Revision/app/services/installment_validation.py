@@ -22,6 +22,18 @@ def unresolved_accepted_plan(text, plan, dates, segments=()):
         if match and not re.search(r'\b(?:no|nunca|si)\s*$',value[:match.start()]) and '?' not in unit['text']:
             cues.append({'count':{'dos':2,'tres':3,'2':2,'3':3}[match[1]],
                          'text':unit['text'],'speaker_role':unit['speaker_role']})
+    # Una recapitulación aceptada puede enumerar ambos pagos sin decir
+    # «dos pagos». No comparar solo el primero contra el mínimo mientras
+    # falta extraer el calendario completo. Esto no confirma ni suma el plan.
+    from app.services.payment_lifecycle import financial_response_events
+    day=r'(?:hoy|manana|lunes|martes|miercoles|jueves|viernes|sabado|domingo|dia \d{1,2})'
+    coordinated=re.compile(r'\bpago (?:de|por) '+NUMBER+r'(?: pesos)? '
+        r'[^?!]{0,65}?\b'+day+r'\b\s+y\s+(?:otro pago de |un pago de )?'+NUMBER+
+        r'(?: pesos)? [^?!]{0,80}?\b'+day+r'\b')
+    for event in financial_response_events(text,segments):
+        if coordinated.search(normalize(event['offer'])):
+            cues.append({'count':2,'text':event['evidence'],'speaker_role':event['speaker_role'],
+                'method':'RECAPITULACION_DE_DOS_IMPORTES_CON_FECHAS'})
     if not cues:return {'review_required':False,'evidence':[]}
     count=cues[-1]['count']
     unresolved=(len(plan.get('amounts')or[])!=count or len(dates)<count or plan.get('review_required'))

@@ -1852,6 +1852,7 @@ class AnalyticsService:
             r"|(?P<directive>\b(?:usted\s+)?(?:puede|podra|debe|debera|tiene\s+que|tendria\s+que)\b.{0,80}\b(?:liquidar|liquida)\b)"
             r"|(?P<offer>\b(?:le\s+ofrecemos|le\s+podemos\s+ofrecer|la\s+opcion\s+es)\b.{0,100}\b(?:liquidar|liquidacion)\b)"
             r"|(?P<bare>\b(?:liquida|liquidaria)\s+(?:su\s+cuenta|la\s+cuenta|saldo\s+total|el\s+saldo\s+total)\b"
+            r"|\b(?:va a|puede) saldar (?:el|su) total\b"
             r"|\b(?:tendria|tendra|dejaria|dejara)\s+(?:su|la)\s+cuenta\s+en\s+ceros\b)",
         )
         # «Finiquitar la deuda» expresa liquidación total, aunque la oferta
@@ -3641,6 +3642,8 @@ class AnalyticsService:
         for mm in money_mentions:
             before_token=source_norm[max(0,mm[0]-60):mm[0]]
             after_token=source_norm[mm[1]:mm[1]+35]
+            if re.search(r'\bsi (?:le |les |me )?(?:llega a |llegara a )?(?:faltar|falta)\s*$',before_token):
+                continue  # Advertir «si falta un peso» no negocia ese peso.
             # Fechas, horas y plazos se excluyen por su sintaxis inmediata;
             # mencionar «mañana» cerca de un pago no convierte ese pago en fecha.
             if not re.search(r"\$|peso", str(mm[3])) and (
@@ -4018,7 +4021,7 @@ class AnalyticsService:
             and not requires_new_negotiation_validation
         )
         if third_party_financial_context:
-            amount_validation = "INFORMATIVO - IMPORTE EN CONTACTO CON TERCERO"
+            amount_validation = ("INFORMATIVO - IMPORTE EN CONTACTO CON TERCERO"if money_mentions else "NO APLICA")
             amount_reason = (
                 "Importe mencionado durante contacto con tercero: no acredita "
                 "negociación con titular. Conservar alertas de privacidad y recado."

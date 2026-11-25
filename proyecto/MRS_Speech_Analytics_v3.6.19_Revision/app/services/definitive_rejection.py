@@ -117,10 +117,15 @@ def definitive_rejection(metadata,findings,duration_seconds):
             'source_field':'negotiation_validation','reasons':[coverage['reason']]}
     # La acusación al gestor actual que NO se corroboró es alerta (141);
     # no aplicar automáticamente rechazo por queja de maltrato previa.
-    # Una queja sobre una llamada ANTERIOR no acredita infracción del
-    # gestor auditado. Conservar MISTREATMENT_REPORT en REVISAR hasta
-    # verificar los hechos; no transformar denuncia ajena en rechazo.
-    # Para maltrato del gestor ACTUAL rige su validación independiente.
+    # La política MRS bloquea una denuncia de atención confirmada por la
+    # evaluación de la conversación. Eso no acredita falta grave del gestor
+    # actual. Un fragmento aislado sin validación de calidad conserva REVISAR.
+    if (confirmed_complaint and bool((metadata.get('quality_checks')or{}).get('queja_maltrato_detectada'))
+            and not treatment.get('current_agent_mistreatment_unverified')):
+        return {'rule_group':11,'code':'CONFIRMED_SERVICE_COMPLAINT',
+            'severity':'CONFIRMED_NONCRITICAL','resolves_codes':['MISTREATMENT_REPORT'],
+            'source_field':'treatment_validation',
+            'reasons':['Denuncia de atención corroborada en la conversación; bloquea por política MRS sin atribuir falta grave al gestor actual.']}
     # La negativa del TERCERO a tomar un recado NO es una falta del gestor.
     # Se dictamina como SE NIEGAN A TOMAR RECADO; la calidad debe seguir
     # evaluando identificación, privacidad, trato y demás controles reales.

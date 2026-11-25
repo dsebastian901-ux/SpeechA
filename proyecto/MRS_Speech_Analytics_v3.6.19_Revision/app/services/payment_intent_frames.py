@@ -74,7 +74,7 @@ def payment_frames(text,segments=()):
   topics=list(re.finditer(r'\b(?:pago|pagar|deposito|pesos|convenio|cantidad|monto|whatsapp|telefono|numero|comprobante|ticket|recibo|folio|visita|domicilio|cita)\b',local))
   payment_context=bool(topics and PAYMENT.fullmatch(topics[-1].group()))
   date_question=bool(re.search(r'\b(?:que dia|que fecha|en que fecha|para cuando|cuando)\b',q))
-  amount_question=bool(re.search(r'\b(?:que monto|de que monto|de cuanto|que cantidad|cuanto(?:s)?)\b',q))
+  amount_question=bool(re.search(r'\b(?:que monto|de que monto|de cuanto|que cantidad|cuanto(?:s)?|(?:indicar|indica|confirmar|confirma) (?:el |su )?monto)\b',q))
   if not explicit and not((date_question or amount_question)and payment_context):continue
   if re.search(r'\b(?:le dan|le pagan|recibe|recibira|cobran|le depositan)\b[^?]{0,70}\b(?:aguinaldo|sueldo|salario|quincena|pension)\b',q):continue
   if re.search(r'\b(?:corte|fecha limite|fecha de vencimiento|vencio|vencera|vence|interes|restante del saldo)\b',q):continue
@@ -125,9 +125,13 @@ def payment_frames(text,segments=()):
   else:
    conditional=condition or bool(kind=='DATE'and re.search(r'\b(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo|\d{1,2}) o (?:el )?(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo|\d{1,2})\b',answer))
    accepted=not(declined or conditional)and bool(action or (substantive_date and not negative_question))
-   direct_confirm=bool(re.search(r'\b(?:confirm\w*|cuento|contamos|contariamos|podemos contar|podemos contemplar (?:su |el )?pago|puede (?:realizar|aplicar)|lo (?:realizaria|estaria realizando|va a realizar))\b',q))
+   direct_confirm=bool(re.search(r'\b(?:confirm\w*|cuento|contamos|contariamos|podemos contar|podemos contemplar (?:su |el )?pago|seria (?:un |el |su )?pago|puede (?:realizar|aplicar)|lo (?:realizaria|estaria realizando|va a realizar))\b',q))
    if direct_confirm and not negative_question and YES.match(answer)and not(declined or conditional):accepted=True
    if kind=='AMOUNT'and re.search(r'\b(?:confirmaria|va a (?:realizar|pagar)|podemos contemplar)\b',q)and re.search(NUMBER,answer)and not(declined or conditional):accepted=True
+   paired_terms=bool(kind=='AMOUNT'and re.search(r'\bfecha\b',q)and explicit
+       and re.search(r'\b(?:hoy|manana|(?:el )?dia \d{1,2}|\d{1,2} de [a-z]+)\b',answer)
+       and re.search(r'(?:^(?:de |por )?'+NUMBER+r'\b|\b(?:monto|cantidad) (?:es|seria|de|por) '+NUMBER+r'\b)',answer))
+   if paired_terms and not(negative_question or declined or conditional):accepted=True;own=True
   meaningful=bool(accepted or declined or conditional or own)
   if not meaningful:continue
   evidence=source[qstart:pos+len(answer)]

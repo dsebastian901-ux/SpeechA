@@ -87,6 +87,7 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
     newly_recorded_context_indices = set()
     for item_index, item in enumerate(updated["items"]):
         # La recuperación acústica original es evidencia inmutable de entrada.
+        has_saved_context_asr_recovery = 'context_asr_recovery'in item
         saved_context_asr_recovery = deepcopy(item.get('context_asr_recovery'))
         new_context_asr_recovery = False
         # Un guardado intermedio conserva la cola. No crear ERROR, dictamen,
@@ -199,10 +200,15 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
         # las lecturas de un checkpoint cuando no se ejecutó Whisper otra vez.
         # Restaurar la evidencia de entrada antes de la persistencia final.
         if not new_context_asr_recovery:
-            item['context_asr_recovery'] = deepcopy(saved_context_asr_recovery)
+            if has_saved_context_asr_recovery:
+                item['context_asr_recovery'] = deepcopy(saved_context_asr_recovery)
+            else:
+                item.pop('context_asr_recovery',None)
         item["classified_audio_path"] = None
         item["copy_status"] = "NO_COPIADO_REANALISIS"
         item["transcription_recovered"] = category != "ERROR"
+        from app.services.medium_review_plan import plan_for_item
+        item['medium_review_plan']=plan_for_item(item)
         outcomes[category] = outcomes.get(category, 0)+1
     report = BatchReportService.generate_report(updated["items"], target/"02_Audios"/"Transcripciones",
                                                 report_filename="Reporte_Reanalisis_Reglas.xlsx")
@@ -244,8 +250,10 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
     # sustituir la evidencia original salvo que haya ASR realmente nuevo.
     for item_index, source_item in enumerate(payload["items"]):
         if item_index not in newly_recorded_context_indices:
-            updated["items"][item_index]["context_asr_recovery"] = deepcopy(
-                source_item.get("context_asr_recovery"))
+            if 'context_asr_recovery'in source_item:
+                updated["items"][item_index]["context_asr_recovery"] = deepcopy(source_item['context_asr_recovery'])
+            else:
+                updated["items"][item_index].pop('context_asr_recovery',None)
     destination.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
     assert source.read_bytes() == raw, "El origen cambió durante el reanálisis"
     return {"report": report, "nonpayment_report": companion_status["path"], "nonpayment_report_error": companion_status["error"], "checkpoint": str(destination), "outcomes": outcomes,

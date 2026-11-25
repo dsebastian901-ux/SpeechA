@@ -11,7 +11,7 @@ from app.services.contextual_identity_evidence import BAD_IDENTITY,valid_nominal
 REQUEST=(r'(?:me (?:puede|puedes|podria|podre|pueden|puedo) (?:a )?comunicar (?:(?:por|de|el) favor )?con|'
  r'(?<=¿)con|con(?= (?:el senor|la senora|la senorita) )|(?:me )?puedo poder comunicar (?:por favor )?con|me comunica con|me comunico con|(?:me )?estoy comunicando con|nos estamos comunicando con|tengo (?:el )?(?:gusto|uso) con|tengo gusto con|hablo con|busco (?:a |al |a la )?|'
  r'estoy buscando a|estoy buscando al|(?:podra|podria|puede) comunicar (?:por favor )?con|se encontr(?:ara|aba|a)|encuentro|encuentra|encuentre|(?:buenos dias|buen dia|buenas tardes|buena tarde) con|es usted|usted es|ustedes)')
-VARIANT=r'(?:tengo el busto con|te gusta con|tengo augusto conn?|tengo nuestro con)'
+VARIANT=r'(?:tengo el busto con|te gusta con|tengo augusto conn?|tengo nuestro con|que uso con|mecumonico con|no puede comunicar con)'
 NAMED_GREETING=r'(?:buenos dias|buen dia|buenas tardes|buena tarde)(?= (?:senorita|senora|senor) )'
 BAD_NAME=re.compile(r'\b(?:que|como|donde|cuando|cuanto|si|no|usted|ustedes|puede|acudir|directamente|'
  r'habla|hablamos|llamada|credito|numero|referencia|contacto|cuenta|tarjeta|pago|banco|juridico|'
@@ -19,7 +19,7 @@ BAD_NAME=re.compile(r'\b(?:que|como|donde|cuando|cuanto|si|no|usted|ustedes|pued
 # No deducir que habla un tercero por palabras sueltas como "recado",
 # "mensajito" o porque el gestor ofrece dejar un mensaje. El parentesco,
 # intermediación y recepción se acreditan por rutas independientes.
-RELAY=re.compile(r'\b(?:por otra persona|a otra persona|no soy la persona|'
+RELAY=re.compile(r'\b(?:por otra persona|a otra persona|para otra persona|no soy la persona|'
  r'(?:dejo|registro|proporciono) (?:su |mi |este |el )?numero (?:como |de )referencia|'
  r'no (?:esta|se encuentra)(?: en este momento)?[?.]|'
  r'(?:conoce|conocer|conozca|ubica) a (?:esa|esta|la|el|al))\b')
@@ -30,7 +30,7 @@ QUOTE=re.compile(r'\b(?:dice que|dijo que|diga que|repita que|usted dijo|usted d
 def nominal_requests(text,segments=()):
  source=normalize(text);view=source.replace(',',' ')
  prefix=(REQUEST+'|'+VARIANT+'|'+NAMED_GREETING).replace(' ',r'\s+')
- for m in re.finditer(r'\b(?P<prefix>'+prefix+r')\s+(?P<person>[^.!?]{2,100}?)(?:[.!?]|(?=\s+(?:gracias|mucho gusto|me presento|me comunico|le hablo|hablo por|hablamos por|mi nombre es)\b)|$)',view[:650]):
+ for m in re.finditer(r'\b(?P<prefix>'+prefix+r')\s+(?P<person>[^.!?]{2,100}?)(?:[.!?]|(?=\s+(?:gracias|mucho gusto|me presento|me comunico|le hablo|hablo por|hablamos por|el motivo|motivo de|mi nombre es)\b)|$)',view[:650]):
   person=re.sub(r'\bpor\s+favor\b','',m['person']);person=re.sub(r'^(?:(?:el|la) )?(?:senorita|senora|senor|caballero)\b\s*','',person).strip()
   if re.fullmatch(r'buenos dias|buen dia|buenas tardes|buena tarde',m['prefix']):
    if len(person.split())<2 or m.start()>300:continue
@@ -61,15 +61,8 @@ def nonholder_context(text,segments=()):
  from app.services.contact_dialogue_resolution import declared_intermediary
  from app.services.context_rules import unknown_debtor_statement
  if declared_intermediary(text,segments)['confirmed']or unknown_debtor_statement(text,segments):return True
- from app.services.contextual_identity_evidence import COUNTER
- for u in sentence_evidence(text,segments):
-  s=normalize(u['text'])
-  if u['speaker_role']=='GESTOR'or'?'in s or'¿'in s:continue
-  for m in COUNTER.finditer(s):
-   if QUOTE.search(s[:m.start()]):continue
-   if m.group()=='esta trabajando'and not re.search(r'\b(?:el|ella|mi|su|no esta|no se encuentra)\b',s[:m.start()]):continue
-   return True
- return False
+ from app.services.contextual_identity_evidence import nonholder_counter_evidence
+ return bool(nonholder_counter_evidence(text,segments))
 
 
 def own_payment_responses(text,segments=()):
@@ -115,7 +108,7 @@ def contextual_contact(text,segments=()):
   if frame['own_financial_response']:
    responses.append({'text':frame['evidence'],'position':frame['position'],'speaker_role':frame['speaker_role'],
      'method':'RESPUESTA_PERSONAL_EN_OBJETO_DE_PAGO','human_verified':False})
- from app.services.contextual_identity_evidence import OWN_ACCOUNT
+ from app.services.contextual_identity_evidence import OWN_ACCOUNT,personal_financial_statement
  source=normalize(text);cursor=0
  from app.services.declarative_evidence import declarative_units
  for u in declarative_units(text,segments):
@@ -123,16 +116,21 @@ def contextual_contact(text,segments=()):
   if at<0:continue
   cursor=at+len(value)
   if u['speaker_role']in{'GESTOR','TERCERO'}or'?'in value:continue
-  own=OWN_ACCOUNT.search(value)
+  personal=personal_financial_statement(value)
+  own=personal or OWN_ACCOUNT.search(value)
   if not own or QUOTE.search(value[:own.start()]):continue
-  if own_marker_is_instruction(u['text'],own):continue
+  if not personal and own_marker_is_instruction(u['text'],own):continue
   if re.search(r'\b(?:si tuviera|si yo tuviera|si pudiera|diga|repita)\b',value[:own.start()]):continue
   responses.append({'text':u['text'],'position':at+own.start(),'speaker_role':u['speaker_role'],
                     'method':'AUTORREFERENCIA_PERSONAL','human_verified':False})
  for request in requests:
   for response in responses:
    if response['position']<=request['end']:continue
-   if request['asr_variant']and not re.search(r'\b(?:mrs|mrc|mrss|m\.r\.s|mirs)\b',source):continue
+   if request['asr_variant']:
+    from app.services.operational_script_evidence import company_alias_evidence
+    company_context=bool(re.search(r'\b(?:mrs|mrc|mrss|m\.r\.s|mirs)\b',source)or company_alias_evidence(text,segments))
+    institutional_intro=bool(re.search(r'\bme comunico de juridico\b[^.!?]{0,90}\brepresentacion del banco\b',source[:650]))
+    if not(company_context or institutional_intro):continue
    return {'confirmed':True,'method':'SOLICITUD_NOMINAL_Y_RESPUESTA_PERSONAL_EN_LA_MISMA_GESTION',
     'evidence':request['text']+' / '+response['text'],'request':request,'personal_response':response,
     'speaker_role':response['speaker_role'],'human_verified':False,'acoustic_voice_identified':False,

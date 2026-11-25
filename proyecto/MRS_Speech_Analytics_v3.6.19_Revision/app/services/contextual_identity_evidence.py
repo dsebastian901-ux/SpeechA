@@ -73,6 +73,39 @@ def valid_nominal_request(source, start, identity):
     return not re.search(r'\b(?:no|no se|ya no|dice que|dijo que|diga que|repita que)\s*$',prefix)
 
 
+def nonholder_counter_evidence(text,segments=()):
+    """Distinguir buscar a una persona de buscar la fecha de su propio pago."""
+    source=normalize(text);found=[]
+    for match in COUNTER.finditer(source):
+        role=_role_at(text,segments,match.start())
+        if role=='GESTOR':continue
+        from app.services.message_contact_evidence import _outside_question
+        if not _outside_question(source,match.start(),match.end()):continue
+        before=source[max(0,match.start()-160):match.start()]
+        if re.search(r'\b(?:dice que|dijo que|diga que|repita que|por ejemplo|si fuera)\b[^.!?]{0,100}$',before):continue
+        if match.group()=='esta trabajando'and not re.search(r'\b(?:el|ella|mi|su|no esta|no se encuentra)\b',before):continue
+        if match.group()in{'lo busco','la busco'}:
+            financial_search=re.search(r'\b(?:fecha|comprobante|recibo|folio|registro|pago realizado)\b',before)
+            person_search=re.search(r'\b(?:comunicar con|se encuentra|hablo con|gusto con|busco a)\b[^.!?]{2,90}[.?][^.!?]{0,70}$',before)
+            if financial_search and not person_search:continue
+        found.append({'phrase':match.group(),'position':match.start(),'speaker_role':role})
+    return found
+
+
+def personal_financial_statement(value):
+    """Autorreferencia financiera que identifica contexto, nunca una promesa firme."""
+    source=normalize(value)
+    expression=re.compile(r'\b(?:yo (?:creo que|pienso que) (?:la |lo )?(?:liquido|pago|cubro)|'
+        r'(?:yo )?hago (?:el|mi|un) pago|'
+        r'(?:yo )?voy a (?:saldar|liquidar|cubrir) (?:el |mi |la )?(?:total|saldo|cantidad|tarjeta|cuenta)|'
+        r'(?:segun )?yo (?:ya )?(?:no (?:tenia|debia)|tenia) (?:nada|saldo|(?:ese |el |mi )?pago))\b')
+    for match in expression.finditer(source):
+        before=source[max(0,match.start()-100):match.start()]
+        if re.search(r'\b(?:dice que|dijo que|diga|repita|supongamos|si tuviera|si fuera|cuando|para que)\b[^.!?]{0,65}$',before):continue
+        return match
+    return None
+
+
 def own_marker_is_instruction(value,marker):
     """«Cuando lo realice» del gestor no es «yo lo realicé»."""
     before=normalize(value)[:marker.start()]

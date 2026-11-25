@@ -1184,8 +1184,22 @@ def assess_home_recovery_warning(text,segments=(),mora=''):
                     or '?' in s or '¿' in s):continue
             if unit['speaker_role'] in {'TITULAR','TERCERO','INTERLOCUTOR'}:continue
             evidence.append(dict(unit,phrase=match.group(),confirmed=unit['speaker_role']=='GESTOR'))
+    # La cobranza en bienes es un riesgo en cualquier mora. Sin atribución
+    # de emisor conserva revisión; no se convierte en una amenaza confirmada.
+    for unit in sentence_evidence(text,segments):
+        s=normalize(unit['text'])
+        if unit['speaker_role']in{'TITULAR','TERCERO','INTERLOCUTOR'}or '?'in s or '¿'in s:continue
+        pattern=re.compile(r'\b(?:abogados|licenciados|banco)\b[^.!?]{0,80}\b(?:recuperar|cobrar)\b'
+            r'[^.!?]{0,70}\ben bienes(?: y muebles)?\b|'
+            r'\b(?:se (?:le )?cobre|cobraran|cobraremos) (?:el )?monto total (?:al|en el) domicilio\b')
+        for match in pattern.finditer(s):
+            before=s[max(0,match.start()-100):match.start()]
+            if re.search(r'\b(?:no|nunca|jamas) (?:van a |va a |vamos a |pueden |podran )?(?:recuperar|cobrar)\b',match.group()):continue
+            if re.search(r'\b(?:no|nunca|jamas|sin|me dijeron que|me dijo que|dijo que|dice que|supongamos que)\b[^.!?]{0,70}$',before):continue
+            evidence.append(dict(unit,phrase=match.group(),confirmed=unit['speaker_role']=='GESTOR',
+                method='COBRO_EN_BIENES_REQUIERE_ATRIBUCION'))
     confirmed=any(e['confirmed'] for e in evidence)
-    return {'applies':applies,'confirmed':confirmed,'review_required':bool(evidence) and not confirmed,'evidence':evidence}
+    return {'applies':bool(applies or evidence),'confirmed':confirmed,'review_required':bool(evidence) and not confirmed,'evidence':evidence}
 
 
 def reported_card_clarification(text,segments=()):

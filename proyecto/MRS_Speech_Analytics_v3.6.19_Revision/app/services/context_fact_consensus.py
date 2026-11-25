@@ -8,7 +8,7 @@ import re
 
 from app.services.conversation_evidence import normalize, sentence_evidence
 
-VALIDATOR_REVISION = 'r59-hechos-20261124-v1'
+VALIDATOR_REVISION = 'r64-evidencia-20261125-v1'
 STATES = {'CONFIRMADO', 'DESCARTADO_CON_EVIDENCIA', 'CONTRADICTORIO',
           'SIN_ATRIBUCION', 'EVIDENCIA_INSUFICIENTE'}
 OFFENSE = re.compile(r'\b(?:que poca madre|chingad[ao]s?|chingues|chingue|'
@@ -61,7 +61,7 @@ def extract_facts(reading, purpose, relation=None):
     from app.services.conversation_evidence import (
         holder_confirmation, payment_commitment, assess_privacy, dictated_privacy_email,
     )
-    from app.services.contextual_identity_evidence import COUNTER, proxy_account_evidence
+    from app.services.contextual_identity_evidence import nonholder_counter_evidence, proxy_account_evidence
     from app.services.contact_dialogue_resolution import declared_intermediary
     from app.services.payment_reference_validation import callback_numbers, find_reference
     from app.services.operational_script_evidence import receipt_request_evidence
@@ -74,7 +74,7 @@ def extract_facts(reading, purpose, relation=None):
     facts = []
     if purpose in {'holder', 'general'}:
         names = sorted(nominal_words(text))
-        third = bool(COUNTER.search(source) or proxy_account_evidence(text, segments)
+        third = bool(nonholder_counter_evidence(text,segments) or proxy_account_evidence(text, segments)
                      or declared_intermediary(text, segments)['confirmed'])
         if third:
             facts.append(_fact('IDENTITY', names, text, polarity=False, attributed=True))

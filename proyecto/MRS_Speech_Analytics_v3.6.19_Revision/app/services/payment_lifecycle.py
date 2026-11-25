@@ -54,8 +54,9 @@ def financial_response_events(text, segments=()):
         from app.services.payment_intent_frames import PAST as PAST_FRAME
         if QUOTE.search(offer)or PAST.search(offer)or PAST_FRAME.search(offer)or OTHER.search(offer)or PAST_FRAME.search(answer):continue
         if not PAYMENT.search(offer)or not(DATE.search(offer)or AMOUNT.search(offer)):continue
-        directed=re.search(r'\b(?:confirm(?:o|amos|aria|ariamos)|quedaria(?:mos)?|'
+        directed=re.search(r'\b(?:confirm(?:o|a|amos|aria|ariamos)|quedaria(?:mos)?|'
             r'quedamos|(?:su|el) pago (?:seria|queda)|seria (?:depositar|pagar|abonar)|'
+            r'seria (?:un |el |su )?pago|'
             r'(?:puede|podria|tiene que|tendria que|debera) (?:realizar|hacer|pagar|depositar|abonar)|'
             r'(?:el banco|el minimo que nos) (?:le |nos )?(?:requiere|solicita)|'
             r'(?:ponemos|genero|generamos|confirmamos) (?:su |el |un )?convenio)\b',fold)

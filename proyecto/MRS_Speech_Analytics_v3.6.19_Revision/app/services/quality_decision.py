@@ -95,7 +95,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     if negotiation.get('liquidation_offer_review_required'):
         add(12,'LIQUIDATION_UNATTRIBUTED','Posible liquidación total sin atribución u oferta confirmada; revisar audio','negotiation_validation')
     if (m.get('home_recovery_warning') or {}).get('review_required'):
-        add(8,'HOME_WARNING_UNATTRIBUTED','Posible advertencia de recuperación en domicilio en 1–2 PV; confirmar voz y frase en audio.','home_recovery_warning')
+        add(8,'HOME_WARNING_UNATTRIBUTED','Posible advertencia de recuperación en domicilio o bienes; confirmar voz y frase en audio.','home_recovery_warning')
     if (m.get('amount_recovery_validation') or {}).get('review_required'):
         add(12,'RECOVERED_AMOUNT_UNVERIFIED','Importe recuperado por lecturas adicionales de audio; conserva revisión de evidencia','amount_recovery_validation')
     if m.get('quality_contact_type') == 'CONTACTO NO DETERMINADO':

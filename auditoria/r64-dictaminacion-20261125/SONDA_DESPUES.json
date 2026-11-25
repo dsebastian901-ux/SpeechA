@@ -1,0 +1,16 @@
+{
+  "C01_nominal_asr_identified": true,
+  "C02_financial_search_is_intermediary": false,
+  "C03_own_financial_context_identified": true,
+  "C04_immediate_recap_accepted": true,
+  "C05_joint_reply_accepted": true,
+  "C05_joint_reply_amounts": [
+    900.0
+  ],
+  "C07_minimum_scope": "MINIMO_REQUERIDO_NO_SALDO_TOTAL",
+  "C08_own_app_scope": "CONSULTA_PERSONAL_REPORTADA_NO_SALDO_DEL_GESTOR",
+  "C09_bank_enum_listing": true,
+  "C10_confirmed_complaint": "NO_APROBADO",
+  "C11_unattributed_asset_warning_review": true,
+  "C15_incomplete_two_payment_recap_review": true
+}
