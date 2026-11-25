@@ -18,6 +18,18 @@ def bounded_two_payment_sequence(source, candidates):
         if second[0]-first[1] > 180 or first[2] < 10 or second[2] < 10:
             continue
         fragment = source[max(0,first[0]-65):min(len(source),second[1]+65)]
+
+        # Repetir una misma oferta no crea dos parcialidades.
+        # Solo admitir dos importes idénticos cuando se anuncian
+        # expresamente dos pagos / primera y segunda exhibición.
+        if abs(float(first[2]) - float(second[2])) < 0.01 and not re.search(
+                r'\b(?:dos pagos|dos abonos|dos parcialidades|primer(?:o|a)? pago|'
+                r'segund[oa] pago|primera parcialidad|segunda parcialidad)\b',
+                fragment):
+            continue
+        if re.search(r'\bhoy\s+o\s+manana\b', fragment):
+            continue
+
         if re.search(r'\b(?:o bien|o en|en lugar de|mejor|alternativa|antes me|me dijeron|whatsapp|telefono|referencia)\b',fragment):
             continue
         actions = re.findall(r'\b(?:pago|pagar|pague|deposito|depositar|abono|abonar)\b',fragment)
