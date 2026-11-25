@@ -89,3 +89,21 @@ def test_estoy_buscando_nominal_does_not_confirm_third_party():
     )
     assert list(nominal_requests(text))
     assert contextual_contact(text)["confirmed"] is False
+
+
+def test_word_recado_alone_is_not_evidence_of_third_party():
+    from app.services.contact_evidence_graph import nonholder_context
+    text = ("Gestor: ¿Me comunica con Aurora Méndez Lara? "
+            "Titular: Sí, soy yo. "
+            "Gestor: Le comento que ya le dejé un recado la semana pasada. "
+            "Titular: Sí, lo recuerdo, mi tarjeta está al corriente.")
+    assert nonholder_context(text) is False
+
+
+def test_declared_relative_still_prevents_holder_inference():
+    from app.services.contact_evidence_graph import nonholder_context, contextual_contact
+    text = ("Gestor: ¿Me comunica con Aurora Méndez Lara? "
+            "Tercero: No soy la persona, soy su hermana. No está. "
+            "Gestor: Le dejo un recado para su hermana.")
+    assert nonholder_context(text) is True
+    assert contextual_contact(text)["confirmed"] is False
