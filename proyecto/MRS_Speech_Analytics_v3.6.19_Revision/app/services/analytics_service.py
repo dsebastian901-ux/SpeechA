@@ -3911,6 +3911,17 @@ class AnalyticsService:
         from app.services.operational_outcome_resolution import final_plan_amounts_accepted
         if final_plan_amounts_accepted(text,commitment_confirmation,plan):
             confirmed_agreement_amount=True
+        # La aceptación explícita de la recapitulación («tres pagos de 2000
+        # los días 23, 30 y 7, ¿correcto? Sí») confirma el importe del plan.
+        # Las fechas ya se excluyeron de accepted_amounts. No elimina
+        # revisiones por plazo, discrepancias financieras o privacidad.
+        accepted_recap = norm(commitment_confirmation.get('evidence') or '')
+        if (commitment_confirmation.get('accepted') and plan.get('amounts')
+                and not plan.get('review_required') and accepted_amounts
+                and accepted_amounts.issubset(set(plan['amounts']))
+                and re.search(r'\b(?:correcto|de acuerdo|acepta|confirmamos)\b[^.!]{0,35}\bsi\b',
+                              accepted_recap)):
+            confirmed_agreement_amount = True
         if financial_review.get('installments_applied') and plan.get('human_confirmed_final_plan'):
             confirmed_agreement_amount=bool(confirms_commitment and plan['amounts'])
         if plan["amounts"]:
