@@ -131,3 +131,42 @@ def test_explicit_paying_for_relative_still_blocked():
     text = ("Gestor: Me comunica con Clara Pérez Mejía. "
             "Tercero: Soy su hermana. Yo pago por ella, no está en casa.")
     assert nonholder_context(text) is True
+
+
+def test_confirmed_partial_payment_penalty_below_80_is_rejected_with_alerts():
+    from app.services.quality_decision import evaluate_quality
+    metadata = {
+        "negotiation_validation": {
+            "partial_payment": True, "partial_explanation": False,
+            "valid": False, "review_required": True,
+            "reasons": ["Importe del compromiso aún no confirmado."],
+        },
+        "penalties": [
+            {"id": "PEN001", "points": 20, "invalidates": False,
+             "reason": "Identificación del despacho omitida."},
+            {"id": "PEN_CONV_LUGARES", "points": 20, "invalidates": False,
+             "reason": "No proporcionó dos lugares de pago."},
+            {"id": "PEN015", "points": 30, "invalidates": False,
+             "reason": "Pago parcial sin explicar la falta de regularización."},
+        ],
+    }
+    result = evaluate_quality(metadata, score=30)
+    assert result["clasificacion"] == "NO_APROBADO_MENOR_80"
+    assert any(f["code"] == "NEGOTIATION_INVALID_OR_UNCERTAIN"
+               and f["severity"] == "PENDING_ALERT"
+               for f in result["decision_findings"])
+
+
+def test_unconfirmed_partial_payment_does_not_invent_a_rejection():
+    from app.services.approval_resolution import ordinary_score_rejection
+    metadata = {
+        "negotiation_validation": {
+            "partial_payment": False, "partial_explanation": False,
+        },
+        "penalties": [
+            {"id": "PEN001", "points": 20},
+            {"id": "PEN_CONV_LUGARES", "points": 20},
+            {"id": "PEN015", "points": 30},
+        ],
+    }
+    assert not ordinary_score_rejection(metadata, 30, 80, None)
