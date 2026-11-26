@@ -55,7 +55,7 @@ def financial_response_events(text, segments=()):
         if QUOTE.search(offer)or PAST.search(offer)or PAST_FRAME.search(offer)or OTHER.search(offer)or PAST_FRAME.search(answer):continue
         if not PAYMENT.search(offer)or not(DATE.search(offer)or AMOUNT.search(offer)):continue
         directed=re.search(r'\b(?:confirm(?:o|a|amos|aria|ariamos)|quedaria(?:mos)?|'
-            r'quedamos|(?:su|el) pago (?:seria|queda)|seria (?:depositar|pagar|abonar)|'
+            r'quedamos|queda confirmado (?:su |el )?pago|(?:su|el) pago (?:seria|queda)|seria (?:depositar|pagar|abonar)|'
             r'seria (?:un |el |su )?pago|'
             r'(?:puede|podria|tiene que|tendria que|debera) (?:realizar|hacer|pagar|depositar|abonar)|'
             r'(?:el banco|el minimo que nos) (?:le |nos )?(?:requiere|solicita)|'
@@ -66,7 +66,8 @@ def financial_response_events(text, segments=()):
         if not accepted or answer.startswith('¿')or'?'in answer or QUOTE.search(answer):continue
         from app.services.conversation_evidence import _payment_review_condition,_payment_review_deferral
         if _payment_review_condition(answer)or _payment_review_deferral(answer):continue
-        if CONDITION.search(answer)or re.search(r'\b(?:pero no|no puedo|no podria|no tengo|no acepto|no me comprometo)\b',answer):continue
+        from app.services.speech_scope import conditional_yes_reply
+        if conditional_yes_reply(answer)or CONDITION.search(answer)or re.search(r'\b(?:pero no|no puedo|no podria|no tengo|no acepto|no me comprometo)\b',answer):continue
         if re.match(r'(?:(?:ah|bueno|ok|aja)[, ]+){0,2}si[ ,]+(?:no|lo realiza|lo puede|puede|paga|gusta|quiere|consigue)\b',answer):continue
         if re.search(r'\b(?:otro pago|segundo pago|remanente|restante|o realizar|o bien|en dos|dos pagos|dos exhibiciones)\b',offer):continue
         if re.search(r'\b(?:clave inter ?bancaria|concepto|banco destino|referencia|digitos)\b',offer):continue
@@ -89,6 +90,12 @@ NEGATIVE_DECISION = re.compile('\\b(?:no (?:(?:le|les|lo) )?(?:voy a|puedo|piens
 CONDITIONAL_DECISION = re.compile('\\b(?:si me da tiempo|si consigo (?:el )?dinero|si tengo dinero|si puedo juntar|lo podria(?: hacer)?|(?:yo )?pagaria|hare lo posible|a lo mejor|yo creo|no sabria decir(?:le|te)? (?:si|cuanto|cuando)|no se cuanto (?:voy a|vaya a|pueda) (?:pagar|depositar)|(?:yo )?voy a (?:ver|revisar) cuanto (?:puedo|podria) (?:juntar|pagar|abonar|depositar)|(?:aun |todavia )?no se cuando(?: (?:pueda|voy a) pagar)?|no puedo (?:dar|confirmar) (?:una? )?fecha)\\b')
 
 
+def unrelated_payment_object(value):
+    """Pagar un artículo para anotar no es pagar la cuenta de la llamada."""
+    return bool(re.search(r'\b(?:pagar|pago de|pago del)\s+(?:una? |el |la )?'
+        r'(?:servilleta|semilleta|taxi|estacionamiento|comida|cafe)\b',value))
+
+
 def payment_decision_events(text, segments=()):
     """Todos los cambios de decisión, no solo el primer verbo de cada ventana.
 
@@ -102,6 +109,7 @@ def payment_decision_events(text, segments=()):
         value=normalize(unit['text']);at=source.find(value,cursor)
         if at<0:continue
         cursor=at+len(value)
+        if unrelated_payment_object(value):continue
         if unit['speaker_role']in{'GESTOR','TERCERO'}:continue
         # Las preguntas requieren el marco de respuesta, no autodeterminación.
         if '?'in value or '¿'in value:
@@ -110,6 +118,14 @@ def payment_decision_events(text, segments=()):
         negatives=list(NEGATIVE_DECISION.finditer(value))
         negatives+=list(re.finditer(r'\bno (?:le |les )?voy a (?:seguir |estar )pagando(?: nada)?\b',value))
         positives=list(POSITIVE_DECISION.finditer(value))
+        from app.services.payment_intent_frames import ACTION
+        from app.services.contextual_identity_evidence import own_marker_is_instruction
+        for action in ACTION.finditer(value):
+            if (re.search(r'\b(?:pago|deposito|abono)\b',action.group())
+                    and not any(p.start()<=action.start()<p.end()for p in positives)
+                    and not own_marker_is_instruction(unit['text'],action)
+                    and not PAST.search(value)):
+                positives.append(action)
         positives+=list(re.finditer(r'\b(?:(?:yo )?lo (?:hago|hare|realizo|realizare|aplico)|'
             r'(?:el |mi )?(?:pago|deposito) lo (?:hago|hare|realizo)|lo estaria (?:realizando|haciendo|depositando)) '
             r'(?:(?:el dia de|el dia|para|el) )?(?:hoy|manana|lunes|martes|miercoles|jueves|viernes|sabado|domingo|\d{1,2})\b',value))
@@ -117,6 +133,9 @@ def payment_decision_events(text, segments=()):
         negatives+=list(re.finditer(r'\b(?:no me voy a comprometer|no (?:quisiera|quiero) comprometerme|'
             r'no (?:se lo |te lo |lo )?(?:prometo|aseguro))\b',value))
         conditions=list(CONDITIONAL_DECISION.finditer(value))
+        conditions+=list(re.finditer(r'\b(?:voy a (?:tratar|intentar|pensar) (?:de |como )?(?:realizar|hacer|pagar|depositar|abonar|conseguir)|'
+            r'no estoy segur[oa] (?:de )?que (?:lo )?vaya a (?:hacer|pagar)|'
+            r'no tengo (?:la )?seguridad de (?:poder|que)|chance (?:pudiera|podria) pagar)\b',value))
         conditions+=list(re.finditer(r'\b(?:cuando (?:yo )?pueda (?:pagar(?:la|lo)?|apagar(?:la|lo)|depositar|abonar)|'
             r'(?:pago|pagare|pagaria|pagando) (?:cuando (?:yo )?pueda|en cuanto (?:tenga|junte|consiga))|'
             r'me comprometo a (?:ir )?(?:estar )?pagando\b[^.!?]{0,110}\b(?:quincenalmente|semanalmente))\b',value))
@@ -137,6 +156,9 @@ def payment_decision_events(text, segments=()):
                     if re.search(r'\bsi (?:yo )?(?:tuviera|tuviese|pudiera|pudiese)\b[^.!?]{0,90}$',before):continue
                 nearby=source[max(0,pos-160):pos]+match.group()
                 topics=list(re.finditer(r'\b(?:pagos?|pagar|depositar|deposito|abonar|abono|dinero|pesos|cantidad|convenio|comprobante|ticket|whatsapp|telefono|numero|folio|cita|consulta medica)\b',nearby))
+                if accepted is None and match.group().startswith('voy a ') and re.match(
+                        r'\s+(?:ese |el |mi |un )?(?:pago|deposito|abono)\b',value[match.end():]):
+                    topics=list(PAYMENT.finditer(value[match.end():match.end()+60]))
                 if accepted is None and(not topics or OTHER.fullmatch(topics[-1].group())):
                     if not re.match(r'cuando (?:yo )?pueda (?:pagar|apagar|depositar|abonar)',match.group()):continue
                 if accepted is None and re.search(r'\b(?:no se (?:ha )?reflejado|no (?:habia|tenia|tienen) sistema)\b',value[match.end():]):
@@ -184,9 +206,37 @@ def payment_decision_events(text, segments=()):
 
 
 def active_paid_followup(payment_events, completed_payment_evidence):
-    """Un rechazo vigente posterior al pago histórico no es seguimiento puro."""
+    """Una decisión vigente posterior al pago histórico no es seguimiento puro."""
     reports=completed_payment_evidence.get('evidence')or[]
     if not completed_payment_evidence.get('confirmed')or not reports:return False
     last_report=max(e.get('text_end',0)for e in reports)
     current=[e for e in payment_events if e['position']>=last_report]
-    return not(current and max(current,key=lambda e:e['position']).get('declined'))
+    return not(current and not max(current,key=lambda e:e['position']).get('accepted'))
+
+
+def resolve_payment_events(events, confirmations):
+    """Un solo cierre para todos los extractores; el método no reemplaza el pacto.
+
+    Las candidatas conservan su posición original. Condición y negativa ganan
+    ante una aceptación de la misma respuesta; no se heredan fechas ajenas.
+    """
+    choices=[]
+    for position,accepted,evidence in sorted(events,key=lambda e:e[0]):
+        value=normalize(evidence)
+        if unrelated_payment_object(value):continue
+        # Una duda sobre las condiciones de un acuerdo ANTERIOR no es una
+        # intención condicional de realizar un movimiento nuevo. El importe
+        # reportado incierto sigue sujeto a comprobación del mínimo.
+        if accepted is None and re.search(r'\bcreo que (?:quedo|eran|fueron|me cobraron)\b',value):
+            if not re.search(r'\b(?:voy a pagar|voy a depositar|pagaria|pagare|si consigo|si puedo)\b',value):continue
+        route_only=bool(re.search(r'\b(?:lo voy a realizar|voy a (?:hacer|realizar) (?:el )?pago)\b'
+            r'[^.!?]{0,40}\b(?:por (?:medio de )?transferencia|por (?:la )?aplicacion|con (?:mi |la )?banca|en (?:la )?(?:tienda|tierna|sucursal))\b',value)
+            and not DATE.search(value)and not AMOUNT.search(value))
+        if accepted is True and route_only and any(e[1]is True for e in choices):continue
+        if accepted is True and re.search(r'\bcreo que (?:lo voy|voy|podre|puedo|hago)\b',value):accepted=None
+        choices.append((position,accepted,evidence))
+    if not choices:return {'accepted':False,'declined':False,'evidence':''}
+    position,accepted,evidence=max(choices,key=lambda e:(e[0],2 if e[1]is None else 1 if e[1]is False else 0))
+    return {'accepted':accepted is True,'declined':accepted is False,'conditional':accepted is None,
+        'evidence':evidence,'position':position,'contextual_confirmation_events':confirmations,
+        'resolution_method':'ULTIMA_DECISION_FINANCIERA_EN_AMBITO'}

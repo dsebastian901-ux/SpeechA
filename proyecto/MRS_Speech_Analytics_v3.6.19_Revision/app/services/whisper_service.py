@@ -264,6 +264,33 @@ class WhisperService:
             self._model = None
             self._loaded_model_config = None
 
+    @property
+    def has_local_medium_review(self):
+        """Medium importado localmente; consultar no carga pesos ni usa red."""
+        from app.services.offline_model_service import local_model_identity
+        return bool(local_model_identity('medium'))
+
+    def recover_medium_context(self, audio_path, data, relation, metadata, *, model_source='medium'):
+        """Segunda escucha Medium separada del modelo primario del lote."""
+        with self._model_lock:
+            reviewer=getattr(self,'_medium_reviewer',None)
+            if reviewer is None:
+                reviewer=WhisperService()
+                self._medium_reviewer=reviewer
+        from app.services.offline_model_service import local_model_source
+        from app.services.local_model_catalog import inspect_model
+        source=local_model_source(str(model_source))
+        inspect_model(source,'medium')  # Nunca etiquetar Small como Medium.
+        reviewer.load_model(model_name=source,device='cpu',compute_type='int8')
+        return reviewer._collect_context(audio_path,data,relation,metadata,reviewer._model,
+            'Faster-Whisper:medium',focused=True)
+
+    def recover_review_context(self, audio_path, data, relation, metadata):
+        """Usar Medium local cuando esté importado; registrar siempre el modelo real."""
+        if self.has_local_medium_review:
+            return self.recover_medium_context(audio_path,data,relation,metadata)
+        return self.recover_context(audio_path,data,relation,metadata)
+
     def recover_context(self, audio_path, data, relation, metadata):
         """Dos lecturas locales con el modelo actual; no descarga ni sustituye ASR."""
         with self._model_lock:
@@ -275,6 +302,10 @@ class WhisperService:
                 self.load_model(model_name=selected,device=data.get('dispositivo')or loaded[1],
                                 compute_type=data.get('tipo_calculo')or loaded[2])
                 model=self._model
+        return self._collect_context(audio_path,data,relation,metadata,model,
+            'Faster-Whisper:'+str(data.get('modelo')or'local'))
+
+    def _collect_context(self, audio_path, data, relation, metadata, model, model_label, *, focused=False):
         from faster_whisper.audio import decode_audio
         from app.services.context_audio_recovery import collect
         samples = decode_audio(str(audio_path), sampling_rate=16000)
@@ -300,7 +331,7 @@ class WhisperService:
             return {'text':' '.join(r['text'] for r in rows),'segments':rows}
 
         return collect(audio_path,data,relation,metadata,read_window,
-                       'Faster-Whisper:'+str(data.get('modelo') or 'local'),include_tail=True)
+                       model_label,include_tail=True,focused=focused)
 
     # =========================================================
     # TRANSCRIBIR AUDIO

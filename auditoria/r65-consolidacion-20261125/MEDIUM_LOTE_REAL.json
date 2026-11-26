@@ -1,0 +1,22 @@
+{
+  "scope": "INTEGRATION_ONLY_8_SECOND_HISTORICAL_CROP_NOT_FULL_CALL_NOT_THE_79",
+  "real_batch_service": true,
+  "primary_real_asr": "small",
+  "review_real_asr": "medium",
+  "asr_output_doubles": false,
+  "configuration_isolation": "Process-local settings and local model folder aliases; no application configuration persisted.",
+  "items_completed": 1,
+  "classification": "REVISAR",
+  "seconds": 35.21679700900131,
+  "medium_attempts": 3,
+  "medium_errors": 0,
+  "nonempty_medium_attempts": 3,
+  "primary_model_preserved": true,
+  "source_and_copy_sha256_equal": true,
+  "quality_excel_generated": true,
+  "nonpayment_excel_generated": true,
+  "checkpoint_generated": true,
+  "target_79_medium_executions": 0,
+  "human_verified": false,
+  "physical_windows_tested": false
+}

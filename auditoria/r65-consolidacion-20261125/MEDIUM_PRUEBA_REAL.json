@@ -1,0 +1,21 @@
+{
+  "scope": "INTEGRATION_ONLY_HISTORICAL_AUDIO_NOT_ONE_OF_THE_79",
+  "clip_start": 4,
+  "clip_end": 12,
+  "medium_architecture": {
+    "encoder_layers": 24,
+    "decoder_layers": 24,
+    "hidden_size": 1024,
+    "mel_bins": 80,
+    "ct2_revision": 3
+  },
+  "seconds": 28.92253780700412,
+  "primary_model_unchanged": true,
+  "executed": true,
+  "medium_attempts": 3,
+  "attempt_errors": [],
+  "nonempty_attempts": 3,
+  "human_verified": false,
+  "target_79_medium_executions": 0,
+  "release": "3.6.19-r65-consolidacion-20261125-validacion"
+}

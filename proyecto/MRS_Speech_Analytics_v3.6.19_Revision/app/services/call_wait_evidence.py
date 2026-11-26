@@ -9,11 +9,13 @@ WAIT_LIMIT_SECONDS = 65.0  # Aclaración operativa del usuario, 6/nov/2026.
 CUSTOMER_ROLES = {'TITULAR', 'TERCERO', 'INTERLOCUTOR'}
 WAIT_REQUEST = re.compile(
     r'\b(?:un momento|un momentito|espere (?:un momento|en (?:la )?linea)|'
+    r'permitame(?=\s*(?:[,!.]|$|permitame\b))|'
     r'permanezca en (?:la )?linea|permitame (?:verificar|validar|revisar|consultar)|'
     r'no (?:me )?cuelg(?:a|ue)(?: la llamada)?[, ]+para que le (?:de|brinde|proporcione) (?:la )?informacion)\b')
 RESUMPTION = re.compile(
     r'\b(?:gracias por (?:esperar|su espera|mantenerse)|sigo con usted|ya (?:regrese|volvi|estoy de vuelta)|'
     r'continuamos|le (?:comento|confirmo|indico|informo|explico)|verificando (?:el |su )?sistema|'
+    r'ya (?:revisando|consultando|verificando)|su servidor[ae]?|'
     r'(?:puede|podria|requiere|necesita|tiene que) (?:usted )?(?:realizar|aplicar|hacer|cubrir|enviar)|'
     r'(?:su|el) (?:pago|importe|saldo) (?:es|seria|queda|se)|su (?:cuenta|tarjeta) (?:registra|presenta|se encuentra))\b')
 CHECKING_PROMPT = re.compile(
@@ -90,7 +92,8 @@ def _timed_units(text, segments, duration):
         label = re.match(r'^\s*(gestor|agente|asesor|titular|familiar|tercero|interlocutor|cliente)\s*:\s*', fragment, re.I)
         if label:
             role = role_of(label[1])
-        unit = {'start': start, 'end': end, 'text': fragment, 'speaker_role': role}
+        unit = {'start': start, 'end': end, 'text': fragment, 'speaker_role': role,
+                'text_start':position,'text_end':cursor}
         units.append(unit)
         words = segment.get('words', segment.get('palabras')) or []
         word_units = []
@@ -148,22 +151,45 @@ def assess_call_wait(text, segments=(), duration_seconds=None):
         if duration is not None and not _closed_recording_tail(units):
             record(previous['end'], duration, 'FINAL_SIN_RETOMA_ASR', units[-1]['text'])
 
+    # Las preguntas de gestión y sus respuestas acotadas ya se interpretan
+    # en el motor financiero. Reutilizar esas posiciones para reconocer retoma;
+    # no exigir una frase de cortesía determinada mientras el diálogo continúa.
+    from app.services.payment_intent_frames import payment_frames
+    financial_returns=[f['question_position']for f in payment_frames(text,segments)
+        if f['own_financial_response'] or f['accepted'] or f['history']]
+    from app.services.speech_scope import nonassertive_prefix
     pending = None
     for unit in units:
         value = normalize(unit['text'])
         if pending:
+            if (unit['end']-unit['start']>=WAIT_LIMIT_SECONDS
+                    and len(re.findall(r'\w+',value))<=8
+                    and (CHECKING_PROMPT.fullmatch(value)or re.fullmatch(r'(?:(?:bueno|hola)[, ]+)?buen[ao]s? (?:dias?|tardes?|noches?)[.! ]*',value))):
+                record(unit['start'],unit['end'],'PROMPT_DE_ESPERA_EN_SEGMENTO_ASR_IMPRECISO',unit['text'])
             # Un «¿bueno?, ¿me escucha?» del cliente no acredita regreso del
             # gestor. Con voz desconocida solo se toma una intervención plena.
+            framed_return=any(unit['text_start']<=position<unit['text_end']for position in financial_returns)
             resumed = (unit['speaker_role'] == 'GESTOR' or
                        (unit['speaker_role'] not in CUSTOMER_ROLES and RESUMPTION.search(value)
-                        and not re.search(r'\b(?:diga que|dice que|dijo que|repita que|por ejemplo)\b',value)))
+                        and not re.search(r'\b(?:diga que|dice que|dijo que|repita que|por ejemplo)\b',value))
+                       or framed_return)
             if resumed or _closing(value, allow_brief=True):
                 record(pending['end'], unit['start'], 'ESPERA_ANUNCIADA_SIN_RETOMA', pending['text'], unit['text'])
                 pending = None
         request = WAIT_REQUEST.search(value)
+        if request and request.group()=='permitame'and unit['end']-unit['start']<WAIT_LIMIT_SECONDS:
+            request=None  # Un prompt corto aislado no prolonga una espera por sí solo.
         if request and unit['speaker_role'] not in CUSTOMER_ROLES:
             prefix = value[max(0, request.start()-60):request.start()]
-            if not re.search(r'\b(?:no|nunca|dijo que|me dijeron que|diga que|si dice)\s*$', prefix) and not _closing(value, allow_brief=True):
+            reported=bool(nonassertive_prefix(value,request.start()) or (
+                re.search(r'\b(?:hable|hacian|hacia|me dijeron|me decian)\b',prefix)
+                and re.search(r'\b(?:hablaba|hablaron|dijeron|decian)\b',value[request.end():])))
+            if not reported and not re.search(r'\b(?:no|nunca|dijo que|me dijeron que|diga que|si dice)\s*$', prefix) and not _closing(value, allow_brief=True):
+                # Un prompt de dos palabras puede ocupar una ventana ASR de
+                # varios minutos. No tratar toda esa ventana como habla plena
+                # ni afirmar silencio: señalar su imprecisión para cotejo acústico.
+                if len(re.findall(r'\w+',value))<=8 and unit['end']-unit['start']>=WAIT_LIMIT_SECONDS:
+                    record(unit['start'],unit['end'],'PROMPT_DE_ESPERA_EN_SEGMENTO_ASR_IMPRECISO',unit['text'])
                 if pending is None or unit['speaker_role']=='GESTOR':
                     pending = unit
     if pending and duration is not None:

@@ -1,0 +1,11 @@
+{
+  "r57_protected_files_verified": 780,
+  "r64_protected_code_files_verified": 21,
+  "r64_head_preserved": "62e4659dd9e6d6eaa4e5a3c9561b230568ad94f4",
+  "r64_branch_preserved": "fix/receipt-asr-mandas-envias-20261123",
+  "penalty_calls_unchanged": 33,
+  "gui_auth_users_permissions_source_changed": [],
+  "original_uploaded_checkpoints_unchanged": 2,
+  "physical_windows_tested": false,
+  "human_listening_performed": false
+}

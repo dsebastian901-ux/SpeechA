@@ -1,0 +1,52 @@
+{
+  "candidate_not_released": true,
+  "cases": [
+    {
+      "test": "tests.test_mora_payment_policy::test_final_installment_date_is_not_replaced_by_a_today_receipt_reminder",
+      "candidate_result": "FAILED",
+      "after_code_fix": "PASSED_FOCUSED",
+      "cause": "La decisión de fecha pendiente se tomaba antes de recuperar el calendario completo del convenio formalizado.",
+      "product_change": "AnalyticsService.calculate_basic_compliance: vincular fechas al mismo turno del plan formalizado antes de evaluar aplicabilidad y puntuación.",
+      "existing_test_expectations_changed": false,
+      "after_full_suite": "PASSED"
+    },
+    {
+      "test": "tests.test_mora_payment_policy::test_two_installment_exception_is_applied_to_the_complete_decision[16 de octubre-24 de octubre-2026-10-30-REVISAR]",
+      "candidate_result": "FAILED",
+      "after_code_fix": "PASSED_FOCUSED",
+      "cause": "La decisión de fecha pendiente se tomaba antes de recuperar el calendario completo del convenio formalizado.",
+      "product_change": "AnalyticsService.calculate_basic_compliance: vincular fechas al mismo turno del plan formalizado antes de evaluar aplicabilidad y puntuación.",
+      "existing_test_expectations_changed": false,
+      "after_full_suite": "PASSED"
+    },
+    {
+      "test": "tests.test_mora_payment_policy::test_two_installment_exception_is_applied_to_the_complete_decision[17 de octubre-23 de octubre-2026-10-30-REVISAR]",
+      "candidate_result": "FAILED",
+      "after_code_fix": "PASSED_FOCUSED",
+      "cause": "La decisión de fecha pendiente se tomaba antes de recuperar el calendario completo del convenio formalizado.",
+      "product_change": "AnalyticsService.calculate_basic_compliance: vincular fechas al mismo turno del plan formalizado antes de evaluar aplicabilidad y puntuación.",
+      "existing_test_expectations_changed": false,
+      "after_full_suite": "PASSED"
+    },
+    {
+      "test": "tests.test_mora_payment_policy::test_two_installment_exception_is_applied_to_the_complete_decision[16 de octubre-23 de octubre-2026-10-22-FALLA_GRAVE]",
+      "candidate_result": "FAILED",
+      "after_code_fix": "PASSED_FOCUSED",
+      "cause": "La decisión de fecha pendiente se tomaba antes de recuperar el calendario completo del convenio formalizado.",
+      "product_change": "AnalyticsService.calculate_basic_compliance: vincular fechas al mismo turno del plan formalizado antes de evaluar aplicabilidad y puntuación.",
+      "existing_test_expectations_changed": false,
+      "after_full_suite": "PASSED"
+    },
+    {
+      "test": "tests.test_new_project_program_r47::test_general_rules_apply_to_new_project_before_any_checkpoint_review[liquidacion_prohibida]",
+      "candidate_result": "FAILED",
+      "after_code_fix": "PASSED_FOCUSED",
+      "cause": "Un plan completo dentro del rango se cerraba por efecto de liquidación de atribución incierta.",
+      "product_change": "confirmed_installment_range_failure exige total fuera de mínimo/saldo; conserva revisión ante efectos no atribuibles.",
+      "existing_test_expectations_changed": false,
+      "after_full_suite": "PASSED"
+    }
+  ],
+  "full_suite_rerun_required": false,
+  "full_suite_rerun_completed": true
+}

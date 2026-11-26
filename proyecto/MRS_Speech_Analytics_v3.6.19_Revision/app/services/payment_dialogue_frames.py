@@ -47,7 +47,8 @@ def payment_replies(text,segments=()):
         if _role_at(text,segments,start)in{'GESTOR','TERCERO'}:continue
         if re.search(r'\b(?:ya (?:lo |les )?pague|pague ayer|ya (?:hice|realice|mande)|me lo habia dicho|ya les habia pagado)\b',reply):continue
         if re.match(r'(?:me presento|mi nombre|hablamos|le (?:hablo|ofrezco|solicito|requiero|voy a)|se le|el banco)\b',reply):continue
-        conditional=bool(CONDITION.search(reply))
+        from app.services.speech_scope import conditional_yes_reply
+        conditional=bool(CONDITION.search(reply) or conditional_yes_reply(reply))
         declined=bool(re.match(r'(?:no\b|(?:hoy|ahorita)[, ]+no\b)',reply))
         accepted=not(conditional or declined)and bool(re.match(
             r'(?:(?:ah|bueno|ok|aja)[, ]+){0,2}(?:si\b|asi es\b|de acuerdo\b|esta bien\b|claro\b|'

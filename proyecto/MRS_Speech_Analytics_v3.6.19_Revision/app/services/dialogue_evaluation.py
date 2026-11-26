@@ -28,6 +28,7 @@ PENDING = re.compile(
     r'no (?:puedo|sabria) (?:prometer|confirmar|asegurar)(?:le)? (?:cuanto|una cantidad|la cantidad|una fecha)|'
     r'(?:no[, ]+)?(?:pues[, ]+)?no (?:la |lo )?tengo(?=[.!?]|$)|'
     r'(?:voy a|tengo que|necesito) (?:ver|checar|revisar) (?:si|cuanto|con cuanto)\b|'
+    r'tengo que volver a (?:marcar|llamar)|no voy a cumplir|'
     r'(?:hago|hacer|sacar|revisar) mis cuentas|'
     r'si (?:arreglo|resuelvo|consigo) (?:todo|el dinero|esto)|'
     r'no puedo (?:hacer|generar|formalizar) (?:un |algun )?convenio|no me alcanza|(?:estoy|estaba) esperando (?:a que )?[^.!?]{0,65}\b(?:dinero|deposito|quincena)\b|'
@@ -42,7 +43,8 @@ PENDING = re.compile(
     r'lo voy a (?:analizar|pensar|consultar|revisar)|'
     r'(?:no|pero) (?:te |le )?estoy diciendo que no[^.!?]{0,80}(?:quiero|convenio))\b')
 DISPUTE = re.compile(
-    r'\b(?:yo no he usado (?:esa|mi|la) tarjeta|'
+    r'\b(?:(?:yo )?no (?:debo nada|tengo (?:ningun )?adeudo|reconozco (?:ese|el) adeudo)|'
+    r'no entiendo por ?que\b[^.!?]{0,80}\b(?:seguro|comision|cargos|saldo)|yo no he usado (?:esa|mi|la) tarjeta|'
     r'no (?:he utilizado|he usado) (?:esa|mi|la) tarjeta|'
     r'no (?:hice|reconozco) (?:las |esas |ninguna )?compras|'
     r'no reconozco (?:esos |los )?cargos|'
@@ -160,13 +162,19 @@ def full_payment_refusal(commitment):
     return not re.search(r'\b(?:eso|esos|esas|(?:esta|esa|la) cantidad|(?:este|ese) monto|intereses|cargos|compras|solo|solamente|menos|menor|sino)\b',scope)
 
 
-def pending_status(dialogue, commitment, payment_followup=False):
+def pending_status(dialogue, commitment, payment_followup=False, *, date_confirmed=None):
     """Una decisión pendiente acreditada no es un convenio incumplido.
 
     No inferir un estatus por ausencia de sí, por el Excel, por cortarse el
     audio o por una dificultad de registro en una aplicación.
     """
-    if commitment.get('accepted') or payment_followup:
+    if payment_followup:
+        return None
+    if commitment.get('accepted'):
+        if date_confirmed is False:
+            return {'detected_status':'NO DEFINE FECHA DE PAGO','confidence':'ALTA',
+                'method':'COMPROMISO_SIN_FECHA_CONFIRMADA','evidence':commitment.get('evidence')or'',
+                'event_id':'ACCEPTED_WITHOUT_DATE'}
         return None
     if full_payment_refusal(commitment):
         return None  # Una negativa final completa prevalece sobre una duda anterior.

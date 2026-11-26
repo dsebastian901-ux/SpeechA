@@ -74,6 +74,10 @@ def confirmed_minor_failure(metadata):
     if metadata.get('quality_contact_type') != 'TITULAR':
         return None
     n = metadata.get('negotiation_validation') or {}
+    plan=n.get('installment_validation')or{}
+    dates=n.get('installment_dates')or[]
+    complete_accepted_calendar=bool(n.get('multipago_detectado')and len(dates)==len(plan.get('amounts')or[])>=2
+        and not plan.get('review_required')and all(d.get('method')=='CALENDARIO_ACEPTADO_CON_MES_FINAL_EXPLICITO'for d in dates))
     payment = n.get('reported_payment_management') or {}
     reasons = []
     codes = []
@@ -91,7 +95,7 @@ def confirmed_minor_failure(metadata):
     if (n.get('financial_validation_applicable') and not n.get('review_required')
             and n.get('payment_date_confirmed') and n.get('commitment_confirmed')
             and n.get('amount_confirmed') and not n.get('date_year_rollover_review')
-            and not n.get('payment_confirmation_case') and not n.get('multipago_detectado')
+            and not n.get('payment_confirmation_case') and (not n.get('multipago_detectado')or complete_accepted_calendar)
             and not (n.get('accepted_schedule') or {}).get('confirmed')
             and not (n.get('installment_window') or {}).get('applies')
             and (n.get('commitment_evidence') or {}).get('accepted')

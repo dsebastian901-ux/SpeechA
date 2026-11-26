@@ -1,0 +1,70 @@
+[
+  {
+    "file": "test_attention_wait_r41.py",
+    "test": "test_bad_attention_complaint_blocks_approval_above_80",
+    "before_sha256": "a14c5e6baefa735e4def014e8b601e0671193bc6afc16e155e7a293e8bac4095",
+    "after_sha256": "26f91569bc780d366ae73d86e8fd79396d1139072d9fb135ae66198c8d4bc7c9",
+    "reason": "Instrucción explícita de la usuaria 25/11: queja previa sola conserva REVISAR; no se modifica el puntaje ni se elimina el bloqueo."
+  },
+  {
+    "file": "test_treatment_context_r38.py",
+    "test": "test_prior_mistreatment_blocks_paid_followup",
+    "before_sha256": "fcaf128baf7f257b503bc665316a81a04b49b7252753abdaae28568a76f2e535",
+    "after_sha256": "487afa8559d258f100d82bc24a35d54e20a81ffdaa7b203a5b112a8d99fec7a7",
+    "reason": "Instrucción explícita de la usuaria 25/11: queja previa sola conserva REVISAR; no se modifica el puntaje ni se elimina el bloqueo."
+  },
+  {
+    "file": "test_payment_places_score_policy.py",
+    "test": "test_report_of_threatening_collection_blocks_otherwise_eighty",
+    "before_sha256": "8ed0eefb63459a6ae845255e929a382eed139e96a431dc36e1b91c9a5707f7b6",
+    "after_sha256": "71a8b4373f74855d4ff5836b7d66bccfa4aca1805b1bc6959ceab35fc88ae21e",
+    "reason": "Instrucción explícita de la usuaria 25/11: queja previa sola conserva REVISAR; no se modifica el puntaje ni se elimina el bloqueo."
+  },
+  {
+    "file": "test_payment_places_score_policy.py",
+    "test": "test_sufficient_score_with_missing_places_does_not_waive_a_complaint",
+    "before_sha256": "cf426ab34bb3563390b85c38eed6a49d6d0f9fe814e8a53d2a0125ed3626a613",
+    "after_sha256": "845ddd5a45b898febbf125a427a81141343b1afeae6de777787293bd3acf02e7",
+    "reason": "Instrucción explícita de la usuaria 25/11: queja previa sola conserva REVISAR; no se modifica el puntaje ni se elimina el bloqueo."
+  },
+  {
+    "file": "test_followup_calibration.py",
+    "test": "test_receipt_followup_does_not_approve_new_complaint_variants",
+    "before_sha256": "1f43773f3cf87720ef8169452304e8553f80ee44bba618721d785616f103760d",
+    "after_sha256": "9dfcb06f2f0d028080a8f850a4804851a8ab7152d0b42dd8b731453f862a70af",
+    "reason": "Instrucción explícita de la usuaria 25/11: queja previa sola conserva REVISAR; no se modifica el puntaje ni se elimina el bloqueo."
+  },
+  {
+    "file": "test_comprehensive_resolution_r50.py",
+    "test": "test_clear_service_complaint_closes_nonapproval_but_other_safety_uncertainty_remains",
+    "before_sha256": "8a120239048360263750862ab854962f4c754171527081d59ce922e58177f6b0",
+    "after_sha256": "0a37c5a961fc536d486f7fed7d19e469d676bb00340705c9bbdf6228cf297326",
+    "reason": "Instrucción explícita de la usuaria 25/11: queja previa sola conserva REVISAR; no se modifica el puntaje ni se elimina el bloqueo."
+  },
+  {
+    "file": "test_integrated_dictamination_r64.py",
+    "test": "test_complete_primary_complaint_closes_quality_without_false_critical",
+    "before_sha256": "04304f8721ef7fde6e8f24961349a85c6c03c84b5025f35cafb59e274828a373",
+    "after_sha256": "f8fde24c0328e3f789b9e1c3b7c6c0c0e485e65492f227ef82f0f7af8562f5ce",
+    "reason": "Instrucción explícita de la usuaria 25/11: queja previa sola conserva REVISAR; no se modifica el puntaje ni se elimina el bloqueo."
+  },
+  {
+    "file": "test_new_project_program_r47.py",
+    "test": "queja_previa",
+    "before": "NO_APROBADO",
+    "after": "REVISAR",
+    "reason": "Misma instrucción de queja previa en proyecto nuevo."
+  },
+  {
+    "file": "test_batch_attention_100_r41.py",
+    "test": "lote_100",
+    "before": "25 APROBADO, 25 NO_APROBADO, 50 REVISAR",
+    "after": "25 APROBADO, 75 REVISAR",
+    "reason": "Las 25 denuncias previas conservan revisión; se mantienen 25 aprobados y las otras 50 dudas de privacidad/espera."
+  },
+  {
+    "file": "test_release_recovery_invalidation_20261123.py",
+    "test": "literal_version",
+    "reason": "Identificador real de la nueva versión; SCHEMA=2 intacto."
+  }
+]

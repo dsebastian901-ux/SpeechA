@@ -116,7 +116,7 @@ def needs_recovery(metadata):
                     'NEGOTIATION_INVALID_OR_UNCERTAIN','STATUS_INVALID','STATUS_NOT_CONFIRMED',
                     'RECOVERED_AMOUNT_UNVERIFIED','FINANCIAL_CONFIRMATION'}:
             wanted.add('financial')
-        if codes & {'UNCERTAIN_DISCLOSURE','WARNING_CONFIRMATION',
+        if codes & {'THIRD_PARTY_PAYMENT_GUIDANCE','UNCERTAIN_DISCLOSURE','WARNING_CONFIRMATION',
                     'HOME_WARNING_UNATTRIBUTED','OFFENSIVE_LANGUAGE',
                     'UNCERTAIN_CONFRONTATION','CONTEXT_AUDIO_RISK','ADDITIONAL_AUDIO_EVIDENCE',
                     'WAIT_WITHOUT_RESUMPTION','CARD_REFERENCE'}:
@@ -189,10 +189,42 @@ def reading_summary(record):
     return rows
 
 
-def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=False):
+def execution_status(record):
+    """Contabilidad de llamadas al decodificador, separada del consenso."""
+    attempts=[a for group in (record or{}).get('groups',[])for a in group.get('attempts',[])]
+    return {'attempted':len(attempts),'completed':sum(not bool(a.get('error'))for a in attempts),
+            'failed':sum(bool(a.get('error'))for a in attempts),'model':(record or{}).get('model')}
+
+
+def _focused_windows(data,metadata):
+    """Ejecutar las ventanas del reporte, agrupadas sin duplicar el mismo PCM."""
+    from app.services.medium_review_plan import plan_for_item
+    decision=metadata.get('shared_classification')or{}
+    plan=plan_for_item({'result':data,'analytics_metadata':metadata,'classification':decision})
+    duration=float(data.get('duracion_segundos')or 0);groups={}
+    if not math.isfinite(duration)or duration<=0:return []
+    for row in plan:
+        a,b=row['start'],row['end']
+        if a is None or b is None:continue
+        code=row['finding_code']
+        purpose=('holder'if code=='UNIDENTIFIED_CONTACT'else'callback'if code.startswith(('CALLBACK','MESSAGE_'))else
+                 'safety'if code in{'THIRD_PARTY_PAYMENT_GUIDANCE','UNCERTAIN_DISCLOSURE','HOME_WARNING_UNATTRIBUTED','OFFENSIVE_LANGUAGE',
+                    'UNCERTAIN_CONFRONTATION','WAIT_WITHOUT_RESUMPTION','CARD_REFERENCE','MISTREATMENT_REPORT'}else'financial')
+        while a<b:
+            end=min(b,a+38.)
+            first=(a,end);second=(max(0.,a-2.),min(duration,end+2.))
+            if first==second:first=(a,max(a,end-1.))
+            if all(y>x for x,y in (first,second)):
+                groups[(purpose,first,second)]=(purpose,[first,second])
+            if end==b:break
+            a=end-2.
+    return list(groups.values())
+
+
+def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=False,focused=False):
     """read_window lee PCM real mediante el modelo ya cargado, sin prompt de cuenta."""
     requested=needs_recovery(metadata)
-    plan=windows(data,requested)
+    plan=_focused_windows(data,metadata)if focused else windows(data,requested)
     if not plan:return None
     path=Path(audio_path)
     from app.config.release import ENGINE_REVISION
@@ -212,6 +244,12 @@ def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=F
     if include_tail and duration>45 and not any(purpose=='safety' and pair[-1][1]>=duration for purpose,pair in plan):
         plan.append(('safety_tail',[(duration-25.,duration),(duration-30.,duration)]))
     for purpose,pair in plan:
+        primary=[]
+        for segment in data.get('segmentos')or[]:
+            a=segment.get('inicio',segment.get('start'));b=segment.get('fin',segment.get('end'))
+            if isinstance(a,(float,int))and isinstance(b,(float,int))and a<pair[0][1]and b>pair[0][0]:
+                primary.append(str(segment.get('texto',segment.get('text',''))))
+        primary_text=' '.join(primary)
         attempts=[]
         for (start,end),beam in zip(pair,(5,10)):
             attempt={'start':start,'end':end,'beam_size':beam}
@@ -221,10 +259,12 @@ def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=F
             except Exception as error:
                 attempt.update(text='',segments=[],error=type(error).__name__)
             attempts.append(attempt)
-        if needs_third_read(purpose,attempts):
+        primary_disagrees=bool(focused and primary_text and
+            normalize(primary_text)!=normalize(attempts[0].get('text')))
+        if needs_third_read(purpose,attempts)or primary_disagrees:
             duration=float(data.get('duracion_segundos')or 0)
             start=max(0.,pair[0][0]-2.)
-            end=min(duration,max(pair[0][1],pair[1][1])+2.)
+            end=min(duration,start+45.,max(pair[0][1],pair[1][1])+2.)
             if (start,end)in pair:
                 start=max(0.,start-1.)
             if end>start and end-start<=45.:
@@ -235,7 +275,11 @@ def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=F
                 except Exception as error:
                     attempt.update(text='',segments=[],error=type(error).__name__)
                 attempts.append(attempt)
+        # Comparar con el ASR original sin reemplazarlo ni atribuir una voz.
         record['groups'].append({'purpose':purpose,'attempts':attempts,
+            'primary_text':primary_text,'primary_overlap_is_segment_level':True,
+            'third_read_required_by_primary_disagreement':primary_disagrees,
+            'primary_text_matches_first_read':normalize(primary_text)==normalize(attempts[0].get('text')),
             'consensus':consensus(purpose,attempts,relation)})
     record['record_sha256']=record_digest(record)
     return record

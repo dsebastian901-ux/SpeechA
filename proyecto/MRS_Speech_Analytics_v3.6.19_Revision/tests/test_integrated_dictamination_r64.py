@@ -174,7 +174,7 @@ def test_complete_primary_complaint_closes_quality_without_false_critical():
     raw={'archivo':'sample.wav','texto':'Habla MRS. Soy yo. Ya pagué 900 pesos. Envíe comprobante. En la llamada anterior me trataron mal.',
          'duracion_segundos':90,'segmentos':[]}
     result=A.analyze_transcription(TranscriptionModel.from_dict(raw),{'estatus_grabacion':'CONVENIO','pago_minimo':800})
-    assert result.metadata['shared_classification']['clasificacion']=='NO_APROBADO'
+    assert result.metadata['shared_classification']['clasificacion']=='REVISAR'
     assert not result.metadata['critical_failures']
 
 

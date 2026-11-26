@@ -47,6 +47,7 @@ def mistreatment_reports(text, segments, phrases):
         value = normalize(unit['text'])
         matches = [m for phrase in phrases for m in re.finditer(re.escape(normalize(phrase)), value)]
         matches.extend(variants.finditer(value))
+        matches.extend(re.finditer(r'\bme tuvieron (?:dos|tres|cuatro|\d+) personas[^.!?]{0,90}\bmismas preguntas\b',value))
         if prior_contact:
             matches.extend(re.finditer(r'\buna persona me dice una cosa y (?:otra persona|otra|otro) (?:me dice )?otra cosa\b',value))
         if wrong_line_report:
@@ -61,7 +62,7 @@ def mistreatment_reports(text, segments, phrases):
             matches.extend(re.finditer(r'\b(?:a que se debe que|por que) me (?:sigan|siguen) llamando\b',value))
         matches.extend(re.finditer(
             r'\b(?:nunca me contest(?:a|an)|'
-            r'me (?:cortaba|cortaban|cortaron) la llamada|me colg(?:aron|o)|'
+            r'me (?:cortaba|cortaban|cortaron) la llamada|me colg(?:aron|o|aban)|'
             r'me (?:dice|dices|dijo) que me calle|'
             r'nadie me quiso resolver|'
             r'me hablo (?:bien|muy) enojad[oa]|'
@@ -128,6 +129,11 @@ def mistreatment_reports(text, segments, phrases):
                 r'[^.!?]{0,45}\b(?:(?:bien|muy|bastante) )?(?:groser[oa]|prepotente|agresiv[oa])\b',value))
         matches.extend(re.finditer(r'\b(?:ayer|antes|la vez pasada)[^.!?]{0,65}me (?:hablaba|hablo|llamo|marco)[^.!?]{0,65}\b(?:groser[oa]|agresiv[oa]|prepotente)\b',value))
         for match in matches:
+            # Negarse a cancelar una tarjeta/cargo es disputa del trámite,
+            # no denuncia de trato ofensivo por sí misma.
+            if (re.search(r'\bno me (?:lo |la )?quisieron dar\b',match.group())
+                    and re.match(r'\s+de baja\b',value[match.end():])):
+                continue
             before = value[max(0, match.start()-50):match.start()]
             if re.search(r'\b(?:no|nunca|jamas|nadie)\s*$', before):
                 continue

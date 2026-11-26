@@ -924,7 +924,7 @@ class BatchService:
                 already_checked=(analysis.metadata.get('context_audio_validation')or{}).get('valid')
                 recovery_applicable=bool(pending_context and not already_checked
                     and (record is not None or not self.has_relation_excel()))
-                if recovery_applicable and not whisper_service.is_model_loaded and not context_model_unavailable:
+                if recovery_applicable and not whisper_service.has_local_medium_review and not whisper_service.is_model_loaded and not context_model_unavailable:
                     try:
                         # load_model y local_model_source solo admiten archivos
                         # locales completos (local_files_only=True).
@@ -933,15 +933,20 @@ class BatchService:
                         context_model_unavailable=True
                         item['context_asr_recovery_error']=str(context_load_error)
                         item['context_recovery_status']='MODELO_LOCAL_NO_DISPONIBLE'
-                if recovery_applicable and whisper_service.is_model_loaded:
+                if recovery_applicable and (whisper_service.has_local_medium_review or whisper_service.is_model_loaded):
                     recovery_started=perf_counter()
                     try:
-                        recovered_context=whisper_service.recover_context(item['path'],item['result'],
+                        recovered_context=whisper_service.recover_review_context(item['path'],item['result'],
                             operational_context,analysis.metadata)
                         if recovered_context is not None:
                             item['context_asr_recovery']=recovered_context
                             item.pop('context_asr_recovery_error',None)
                             item['context_recovery_status']='FRAGMENTOS_RELEIDOS_LOCALMENTE'
+                            from app.services.context_audio_recovery import execution_status
+                            executed=execution_status(recovered_context)
+                            if executed['failed']:
+                                item['context_recovery_status']='RELECTURA_PARCIAL_CON_ERRORES' if executed['completed'] else 'ERROR_RELECTURA'
+                                item['context_asr_recovery_error']='Error en '+str(executed['failed'])+' fragmento(s) de segunda escucha.'
                             transcription.audio_path=item['path']
                             transcription.metadata['context_asr_recovery']=recovered_context
                             recovery_analysis_started=perf_counter()

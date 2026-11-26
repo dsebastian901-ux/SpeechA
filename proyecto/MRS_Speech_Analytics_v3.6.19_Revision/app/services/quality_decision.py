@@ -110,6 +110,9 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         if isinstance(failure,dict) and failure.get('invalidates') is True and failure.get('id') in critical_domains:
             add(critical_domains[failure['id']],'CRITICAL_'+failure['id'],failure.get('reason') or failure['id'], 'critical_failures','CRITICAL')
     privacy = m.get('privacy_validation') or {}
+    guidance=(m.get('convenio_payment_validation')or{}).get('third_party_guidance')or{}
+    if guidance.get('confirmed')or guidance.get('review_required'):
+        add(3,'THIRD_PARTY_PAYMENT_GUIDANCE',guidance.get('reason'),'convenio_payment_validation')
     if privacy.get('confirmed_disclosure'):
         add(3,'CONFIRMED_DISCLOSURE',privacy.get('reason') or 'Divulgación confirmada a un tercero','privacy_validation','CRITICAL')
     elif privacy.get('review_required'):

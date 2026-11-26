@@ -228,7 +228,7 @@ def test_receipt_followup_does_not_approve_new_complaint_variants(complaint):
     a=analyze('Habla MRS. Soy yo. Ya pagué 900 pesos. Envíe comprobante por WhatsApp. '+complaint,
               estatus_grabacion='CONVENIO',pago_minimo='700')
     assert a.metadata['quality_checks']['queja_maltrato_detectada']
-    assert a.metadata['final_result']=='NO_APROBADO'
+    assert a.metadata['final_result']=='REVISAR'
 
 
 def test_negated_mistreatment_complaint_is_not_an_actual_complaint():

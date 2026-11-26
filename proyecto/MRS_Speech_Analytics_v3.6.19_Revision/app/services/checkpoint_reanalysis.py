@@ -59,7 +59,9 @@ def recover_saved_transcription(item, directory):
                   "file_name": name, "whisper_executed": False}
 
 def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_excel=None,
-                        acoustic=True, audio_directory=None):
+                        acoustic=True, audio_directory=None, review_model="auto"):
+    if review_model not in {"auto","primary","medium"}:
+        raise ValueError("Modelo de segunda escucha inválido.")
     source = Path(checkpoint_path).expanduser().resolve()
     raw = source.read_bytes()
     payload = json.loads(raw.decode("utf-8-sig"))
@@ -138,21 +140,22 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
                             # Reutilizar lecturas vinculadas; no volver a ejecutar
                             # Whisper para una regla que aún exige voz humana.
                             pending=set()
+                        medium_review=review_model=='medium' or (review_model=='auto' and whisper_service.has_local_medium_review)
                         if not pending:
                             pass
-                        elif not whisper_service.is_model_loaded and not model_unavailable:
+                        elif not medium_review and not whisper_service.is_model_loaded and not model_unavailable:
                             try:
                                 whisper_service.load_model()
                             except Exception:
                                 model_unavailable = True
                         if not pending:
                             pass
-                        elif model_unavailable or not whisper_service.is_model_loaded:
+                        elif not medium_review and (model_unavailable or not whisper_service.is_model_loaded):
                             relecturas['sin_modelo'] += 1
                             item['relectura_r59'] = 'MODELO_LOCAL_NO_DISPONIBLE'
                         else:
-                            recovered = whisper_service.recover_context(
-                                audio, data, relation, analysis.metadata)
+                            recovery_method=(whisper_service.recover_medium_context if medium_review else whisper_service.recover_context)
+                            recovered = recovery_method(audio,data,relation,analysis.metadata)
                             if recovered is not None:
                                 item['context_asr_recovery'] = recovered
                                 new_context_asr_recovery = True
@@ -165,7 +168,13 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
                                 item['relectura_r59'] = (
                                     'VALIDADA' if validation.get('valid') else
                                     'EVIDENCIA_NO_VERIFICADA')
-                                relecturas['realizadas'] += 1
+                                from app.services.context_audio_recovery import execution_status
+                                executed=execution_status(recovered)
+                                if executed['completed']:
+                                    relecturas['realizadas'] += 1
+                                if executed['failed']:
+                                    relecturas['errores'] += 1
+                                    item['relectura_r59']='RELECTURA_PARCIAL_CON_ERRORES'if executed['completed']else'ERROR_RELECTURA_SIN_DECODIFICACION_COMPLETA'
                             else:
                                 item['relectura_r59'] = 'SIN_VENTANA_ACUSTICA'
                     except Exception as error:
@@ -241,6 +250,7 @@ def reanalyze_checkpoint(checkpoint_path, output_directory=None, *, relation_exc
     updated['nonpayment_report_error'] = companion_status['error']
     updated["reanalysis"] = {"engine_revision": AnalyticsService.ENGINE_REVISION,
                               "source_sha256": hashlib.sha256(raw).hexdigest(),
+                              "review_model_requested": review_model,
                               "whisper_executed": relecturas['realizadas'] > 0, "audio_files_copied": False,
                               "second_listening": relecturas,
                               "pending_preserved": pending_count, "outcomes": outcomes}

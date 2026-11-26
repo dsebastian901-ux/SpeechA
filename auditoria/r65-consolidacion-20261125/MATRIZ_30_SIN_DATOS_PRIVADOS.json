@@ -1,0 +1,395 @@
+[
+  {
+    "case": 4,
+    "before": "REVISAR",
+    "after": "APROBADO",
+    "score_before": 80.0,
+    "score_after": 80.0,
+    "removed_blocking_codes": [
+      "NEGOTIATION_INVALID_OR_UNCERTAIN",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ],
+    "remaining_blocking_codes": []
+  },
+  {
+    "case": 5,
+    "before": "REVISAR",
+    "after": "FALLA_MINIMA",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [
+      "NEGOTIATION_INVALID_OR_UNCERTAIN"
+    ],
+    "remaining_blocking_codes": []
+  },
+  {
+    "case": 6,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "NEGOTIATION_INVALID_OR_UNCERTAIN"
+    ]
+  },
+  {
+    "case": 7,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "HOME_WARNING_UNATTRIBUTED"
+    ]
+  },
+  {
+    "case": 11,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "CARD_REFERENCE",
+      "NEGOTIATION_INVALID_OR_UNCERTAIN"
+    ]
+  },
+  {
+    "case": 17,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 80.0,
+    "score_after": 80.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "MESSAGE_BODY_NOT_CONFIRMED",
+      "MESSAGE_RECEIPT_NOT_CONFIRMED",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED",
+      "UNCERTAIN_DISCLOSURE"
+    ]
+  },
+  {
+    "case": 20,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "OFFENSIVE_LANGUAGE"
+    ]
+  },
+  {
+    "case": 23,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "PAYMENT_OUTCOME_NOT_CONFIRMED",
+      "RECEIPT_UNCERTAIN",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ]
+  },
+  {
+    "case": 25,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 80.0,
+    "score_after": 80.0,
+    "removed_blocking_codes": [
+      "NEGOTIATION_INVALID_OR_UNCERTAIN"
+    ],
+    "remaining_blocking_codes": [
+      "PAYMENT_OUTCOME_NOT_CONFIRMED",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED",
+      "UNCERTAIN_CONFRONTATION"
+    ]
+  },
+  {
+    "case": 26,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [
+      "WAIT_WITHOUT_RESUMPTION"
+    ],
+    "remaining_blocking_codes": [
+      "MISTREATMENT_REPORT"
+    ]
+  },
+  {
+    "case": 30,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [
+      "PAYMENT_OUTCOME_NOT_CONFIRMED",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ],
+    "remaining_blocking_codes": [
+      "UNCERTAIN_CONFRONTATION"
+    ]
+  },
+  {
+    "case": 32,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 80.0,
+    "score_after": 80.0,
+    "removed_blocking_codes": [
+      "NEGOTIATION_INVALID_OR_UNCERTAIN"
+    ],
+    "remaining_blocking_codes": [
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED",
+      "UNCERTAIN_DISCLOSURE",
+      "UNIDENTIFIED_CONTACT",
+      "WAIT_WITHOUT_RESUMPTION"
+    ]
+  },
+  {
+    "case": 35,
+    "before": "REVISAR",
+    "after": "APROBADO",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [
+      "PAYMENT_OUTCOME_NOT_CONFIRMED",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ],
+    "remaining_blocking_codes": []
+  },
+  {
+    "case": 37,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 80.0,
+    "score_after": 80.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "CARD_REFERENCE"
+    ]
+  },
+  {
+    "case": 44,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [
+      "NEGOTIATION_INVALID_OR_UNCERTAIN"
+    ],
+    "remaining_blocking_codes": [
+      "MISTREATMENT_REPORT"
+    ]
+  },
+  {
+    "case": 50,
+    "before": "REVISAR",
+    "after": "APROBADO",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [
+      "UNCERTAIN_CONFRONTATION"
+    ],
+    "remaining_blocking_codes": []
+  },
+  {
+    "case": 51,
+    "before": "REVISAR",
+    "after": "APROBADO",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [
+      "NEGOTIATION_INVALID_OR_UNCERTAIN",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ],
+    "remaining_blocking_codes": []
+  },
+  {
+    "case": 55,
+    "before": "REVISAR",
+    "after": "NO_APROBADO",
+    "score_before": 30.0,
+    "score_after": 30.0,
+    "removed_blocking_codes": [
+      "NEGOTIATION_INVALID_OR_UNCERTAIN"
+    ],
+    "remaining_blocking_codes": [
+      "WAIT_WITHOUT_RESUMPTION"
+    ]
+  },
+  {
+    "case": 56,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "NEGOTIATION_INVALID_OR_UNCERTAIN",
+      "PAYMENT_OUTCOME_NOT_CONFIRMED",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ]
+  },
+  {
+    "case": 57,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 85.0,
+    "score_after": 85.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "STATUS_INVALID",
+      "UNCERTAIN_DISCLOSURE"
+    ]
+  },
+  {
+    "case": 59,
+    "before": "REVISAR",
+    "after": "APROBADO_ETIQUETA_CORREGIDA",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED",
+      "UNCERTAIN_DISCLOSURE",
+      "UNIDENTIFIED_CONTACT"
+    ],
+    "remaining_blocking_codes": []
+  },
+  {
+    "case": 60,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ]
+  },
+  {
+    "case": 63,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "WAIT_WITHOUT_RESUMPTION"
+    ]
+  },
+  {
+    "case": 64,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [
+      "WAIT_WITHOUT_RESUMPTION"
+    ],
+    "remaining_blocking_codes": [
+      "PAYMENT_OUTCOME_NOT_CONFIRMED",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ]
+  },
+  {
+    "case": 65,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [
+      "PAYMENT_DESTINATION"
+    ],
+    "remaining_blocking_codes": [
+      "CALLBACK_NOT_DELIVERED",
+      "NEGOTIATION_INVALID_OR_UNCERTAIN",
+      "PAYMENT_OUTCOME_NOT_CONFIRMED",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ]
+  },
+  {
+    "case": 69,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [
+      "MESSAGE_RECEIPT_NOT_CONFIRMED",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ],
+    "remaining_blocking_codes": [
+      "NEGOTIATION_INVALID_OR_UNCERTAIN",
+      "WAIT_WITHOUT_RESUMPTION"
+    ]
+  },
+  {
+    "case": 70,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "MESSAGE_RECEIPT_NOT_CONFIRMED",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ]
+  },
+  {
+    "case": 72,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "PAYMENT_DESTINATION"
+    ]
+  },
+  {
+    "case": 75,
+    "before": "REVISAR",
+    "after": "APROBADO_ETIQUETA_CORREGIDA",
+    "score_before": 80.0,
+    "score_after": 80.0,
+    "removed_blocking_codes": [
+      "PAYMENT_OUTCOME_NOT_CONFIRMED",
+      "STATUS_INVALID",
+      "STATUS_NOT_CONFIRMED"
+    ],
+    "remaining_blocking_codes": []
+  },
+  {
+    "case": 76,
+    "before": "REVISAR",
+    "after": "REVISAR",
+    "score_before": 100.0,
+    "score_after": 100.0,
+    "removed_blocking_codes": [],
+    "remaining_blocking_codes": [
+      "LIQUIDATION_UNATTRIBUTED",
+      "NEGOTIATION_INVALID_OR_UNCERTAIN"
+    ]
+  }
+]

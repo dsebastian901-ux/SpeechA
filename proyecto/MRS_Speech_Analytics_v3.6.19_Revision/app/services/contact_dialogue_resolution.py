@@ -41,6 +41,8 @@ def contact_dialogue_evidence(text, segments=()):
     direct=re.compile(r'\b(?P<answer>(?:(?:yo )?soy (?:su )?|(?:le )?habl[ao] su |no[, ]+es su )(?P<kin>'+KIN+r'))\b')
     for m in direct.finditer(source):
         if not _recipient(source,text,segments,m.start(),m.end()):continue
+        from app.services.speech_scope import personal_family_background
+        if personal_family_background(source,m.start(),m.end()):continue
         if re.search(r'\b(?:no|nunca|no es|no soy)\s*$',source[max(0,m.start()-50):m.start()]):continue
         result['family'].append(_record(source,m,text,segments,'AUTOIDENTIFICACION_FAMILIAR',phrase=m['kin']))
     patterns=[

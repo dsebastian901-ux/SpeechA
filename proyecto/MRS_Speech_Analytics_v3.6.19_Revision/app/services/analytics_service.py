@@ -2065,6 +2065,10 @@ class AnalyticsService:
             prior_payment_total=None
 
         commitment_confirmation = payment_commitment(text, segments)
+        formalization_pattern=r'\b(?:genero|generamos|confirmo|confirmamos|activamos) (?:su |el |un )?convenio\b'
+        named_agreement=bool(agent_statement(text,segments,formalization_pattern))
+        from app.services.final_validation_confirmation import confirmed_validation_plan
+        final_validation = confirmed_validation_plan(text,segments,commitment=commitment_confirmation)
         from app.services.accepted_schedule_evidence import accepted_two_part_schedule
         accepted_schedule = accepted_two_part_schedule(text,segments,parsed_call_date)
         if accepted_schedule['confirmed']:
@@ -2088,7 +2092,28 @@ class AnalyticsService:
                 promise_date=accepted_detail['date']
                 promise_date_text=accepted_detail['text']
                 promise_date_evidence=commitment_confirmation['evidence']
+            elif not accepted_schedule['confirmed']:
+                promise_date=None;promise_date_text='';promise_date_evidence=''
+                # Validar el calendario completo de un convenio formalizado
+                # antes de decidir si faltó fecha. No recuperar una fecha de
+                # cualquier recordatorio: queda ligada al mismo turno del plan.
+                # Esto no transforma la lectura unilateral en aceptación.
+                if named_agreement:
+                    from app.services.speech_scope import nonassertive_prefix
+                    for unit in reversed(sentence_evidence(text,segments)):
+                        if unit['speaker_role']in{'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+                        value=norm(unit['text']);anchor=re.search(formalization_pattern,value)
+                        if not anchor or nonassertive_prefix(value,anchor.start()):continue
+                        dates=installment_dates(value[anchor.start():],lambda fragment:
+                            cls._extract_payment_promise_date_details(fragment,call_date))
+                        if len(dates)<2:continue
+                        last=max(dates,key=lambda row:row['date'])
+                        promise_date=date.fromisoformat(last['date'])
+                        promise_date_text=last['text'];promise_date_evidence=last['evidence']
+                        break
             for event in sorted(commitment_confirmation.get('contextual_confirmation_events',[]),key=lambda v:v['position'],reverse=True):
+                if ('position'in commitment_confirmation and
+                        event['position']!=commitment_confirmation['position']):continue
                 detail=({'date':parsed_call_date,'text':'respuesta de pago inmediato'} if event.get('immediate') else
                     cls._extract_payment_promise_date_details('Confirmacion de pago: '+event['evidence'],call_date))
                 if event.get('day_of_month') and parsed_call_date:
@@ -2345,6 +2370,7 @@ class AnalyticsService:
         # ambiguas se solicita revisión, evitando culpar al gestor por el
         # comportamiento del titular o por un corte técnico.
         confrontation_patterns = [
+            "no sabe hablar sin gritar",
             "mentirosa", "mentiroso",
             "sabes escuchar", "sabe escuchar", "aprende como funciona una tarjeta",
             "me esta poniendo muchas trabas", "si te molesta que te generen las llamadas",
@@ -2364,9 +2390,14 @@ class AnalyticsService:
             "eres una deudora",
             "usted es una deudora",
         ]
-        confrontation_details = [dict(unit, phrase=phrase)
-            for unit in sentence_evidence(text, context.get("_segments") or [])
-            for phrase in confrontation_patterns if re.search(r"(?<!\w)" + re.escape(norm(phrase)) + r"(?!\w)", norm(unit["text"]))]
+        confrontation_details = []
+        for unit in sentence_evidence(text, context.get("_segments") or []):
+            value=norm(unit["text"])
+            for phrase in confrontation_patterns:
+                for match in re.finditer(r"(?<!\w)"+re.escape(norm(phrase))+r"(?!\w)",value):
+                    if phrase=='pues pague' and re.search(r'\bpara que\s*$',value[:match.start()]):
+                        continue  # Finalidad en subjuntivo, no imperativo hostil.
+                    confrontation_details.append(dict(unit,phrase=phrase))
         confrontation_evidence = list(dict.fromkeys(e["phrase"] for e in confrontation_details))
         confrontation_review = any(e["speaker_role"] == "NO DETERMINADO" for e in confrontation_details)
         hostile_interlocutor_review = any(e["speaker_role"] in {"TITULAR", "TERCERO", "INTERLOCUTOR"} for e in confrontation_details)
@@ -2573,20 +2604,18 @@ class AnalyticsService:
         # atribuible al gestor; una mención aislada del titular no dispara alerta.
         # Evaluar el acuerdo real aunque el Excel tenga una etiqueta distinta.
         # No convertir por ello la propuesta rechazada en un convenio.
-        pending_decision = pending_status(dialogue, commitment_confirmation, payment_confirmation_case)
+        pending_decision = pending_status(dialogue, commitment_confirmation, payment_confirmation_case, date_confirmed=confirms_payment_date)
         non_holder_scenario = contact_type not in {"TITULAR", "CONTACTO NO DETERMINADO"} or recado_real
         explicit_decline = contact_type == "TITULAR" and commitment_confirmation.get('declined') and not payment_confirmation_case
         # El Excel puede estar mal etiquetado. Las obligaciones de un NUEVO
         # convenio nacen de su aceptación en la conversación, no de PP en
         # la fila original. Ofertas prohibidas y fraude se validan aparte.
-        named_agreement=bool(agent_statement(text,segments,
-            r'\b(?:genero|generamos|confirmo|confirmamos) (?:su |el |un )?convenio\b'))
         from app.services.operational_outcome_resolution import amount_confirmed_for_agreement
         confirmed_agreement_amount=amount_confirmed_for_agreement(
             text,segments,commitment_confirmation,accepted_schedule)
         is_convenio = bool(not non_holder_scenario and contact_type=='TITULAR'
             and (confirms_commitment or named_agreement)
-            and not payment_confirmation_case and not pending_decision and not explicit_decline)
+            and not payment_confirmation_case and (not pending_decision or named_agreement) and not explicit_decline)
         # Los lugares de pago también se revisan en llamadas de cobranza donde
         # el gestor instruye o solicita realizar un pago, aunque el estatus Excel
         # no sea literalmente CONVENIO (por ejemplo 1PV).
@@ -2766,6 +2795,9 @@ class AnalyticsService:
         }
 
         # v3.6.16 · VALIDACIÓN DE TARJETA PARA PAGO.
+        from app.services.payment_instruction_validation import third_party_payment_guidance
+        convenio_payment_validation['third_party_guidance']=third_party_payment_guidance(
+            convenio_payment_validation['payment_place_details'],third_party=contact_type.startswith('TERCERO'))
         # Solo se valida cuando la llamada contiene una referencia explícita a tarjeta/
         # terminación. Los dígitos detectados aquí nunca participan como montos.
         expected_card_digits = re.sub(r"\D", "", str(context.get("numero_de_tarjeta") or ""))
@@ -3150,9 +3182,9 @@ class AnalyticsService:
                 ["RN005", "RN006", "RM010", "FP007", "FP008", "FP009"],
             )
 
-        pending_decision = pending_status(dialogue, commitment_confirmation, payment_confirmation_case)
+        pending_decision = pending_status(dialogue, commitment_confirmation, payment_confirmation_case, date_confirmed=confirms_payment_date)
         requires_new_negotiation_validation = (
-            is_convenio and not payment_confirmation_case and not pending_decision
+            is_convenio and not payment_confirmation_case and (not pending_decision or named_agreement)
         )
         # En una decisión pendiente acreditada no se exige el comprobante de
         # un convenio nuevo. Conservar la frase dudosa como observación, sin
@@ -3218,7 +3250,11 @@ class AnalyticsService:
             and not confirms_commitment)
         # Un reporte sin importe comprobable es incertidumbre, no una falta de
         # gestión confirmada. No afirmar que cubre el mínimo ni restar 15 puntos.
-        reported_amount_pending = bool(contact_type == 'TITULAR' and payment_confirmation_case and not negotiation_attempt
+        no_current_payment_decision=bool(not confirms_commitment and not commitment_confirmation.get('declined')
+            and not commitment_confirmation.get('conditional') and not new_payment_proposals
+            and not reported_management['has_collection_action'])
+        reported_amount_pending = bool(contact_type == 'TITULAR' and payment_confirmation_case
+            and (not negotiation_attempt or no_current_payment_decision)
             and (prior_payment_total is None or minimum_for_attempt is None
                  or prior_payment_binding["review_required"]))
         clarification_validation=reported_card_clarification(text,segments)
@@ -4013,6 +4049,13 @@ class AnalyticsService:
                 and e['start'] <= detected_claim_span[0] and detected_claim_span[1] <= e['end']
                 and abs(float(e.get('amount', -1)) - float(detected_claim_amount or 0)) < .01
                 for e in prior_payment_binding.get('evidence', [])))
+        historical_statement_only=bool(detected_claim_span and not confirms_commitment
+            and not multi_payment_detected and not recovered_amounts
+            and (re.search(r'\b(?:mi pago me volvio a llegar|(?:antes|anteriormente) me (?:cobraban|solicitaban))\b[^.!?]{0,65}$',
+                source_norm[max(0,detected_claim_span[0]-120):detected_claim_span[0]])
+                or re.search(r'\bhace (?:(?:menos|mas) de )?(?:un|dos|tres|\d+) mes(?:es)? '
+                    r'(?:tenia|tuve) que pagar\s*$',
+                    source_norm[max(0,detected_claim_span[0]-120):detected_claim_span[0]])))
         # Una conversación con tercero no acredita un convenio ni un pago
         # negociado por el titular. Los montos permanecen disponibles para
         # verificar posible divulgación indebida en privacy_validation.
@@ -4042,7 +4085,7 @@ class AnalyticsService:
                 and not new_payment_proposals
                 and not agent_statement(text,segments,
                     r"\b(?:tiene|tendria|tendriamos|necesita) que (?:realizar|aplicar|cubrir|hacer) (?:un |el |su )?(?:pago|deposito)\b")
-                and (payment_confirmation_case or reported_claim_only or dispute_guidance
+                and (payment_confirmation_case or reported_claim_only or historical_statement_only or dispute_guidance
                      or (pending_decision or {}).get('method')=='ACCOUNT_DISPUTE')):
             # Un pago previo o una compra discutida no es el importe de un
             # convenio nuevo. El comprobante incierto y los saldos informados
@@ -4139,7 +4182,9 @@ class AnalyticsService:
             amount_reason = "Se ofrece un descuento, pero no se confirmó un importe atribuible a esa propuesta."
 
         schedule_dates = installment_dates(source_norm, lambda fragment:
-            cls._extract_payment_promise_date_details(fragment, call_date),expected_count=len(plan["amounts"])) if plan["amounts"] and not payment_confirmation_case else []
+            cls._extract_payment_promise_date_details(fragment, call_date),expected_count=len(plan["amounts"]),
+            accepted_evidence=commitment_confirmation['evidence']if confirms_commitment else '',
+            call_date=parsed_call_date) if plan["amounts"] and not payment_confirmation_case else []
         if accepted_schedule['confirmed'] and plan['method']==accepted_schedule['method']:
             schedule_dates=accepted_schedule['dates']
         if len(schedule_dates) >= 2:
@@ -4179,6 +4224,7 @@ class AnalyticsService:
             "date_year_rollover_review": date_year_rollover_review,
             "commitment_evidence": commitment_confirmation,
             "accepted_schedule": accepted_schedule,
+            "final_validation_confirmation": final_validation,
             "installment_validation": plan,
             "financial_review": financial_review,
             "date_rule": None,
@@ -4302,13 +4348,13 @@ class AnalyticsService:
             negotiation_validation['reasons'].append(
                 f"El importe que se indica ingresar ({conflict['instruction_amount']:g}) difiere del aceptado ({conflict['accepted_amount']:g}); confirmar la corrección en audio.")
 
-        if ((reported_amount_pending and not payment_followup_case)
+        if contact_type=='TITULAR'and ((reported_amount_pending and not payment_followup_case)
                 or (payment_confirmation_case and prior_payment_binding["review_required"])):
             negotiation_validation["valid"] = False
             negotiation_validation["review_required"] = True
             negotiation_validation["reasons"].append(prior_payment_binding["reason"] or
                 "Pago reportado sin importe y mínimo comparables; confirmar comprobante antes de dar cobertura por acreditada.")
-        pure_paid_followup=bool(payment_followup_case and not reported_management['has_collection_action'] and not new_payment_proposals and not unaccepted_new_payment_instruction
+        pure_paid_followup=bool(contact_type=='TITULAR'and payment_followup_case and not reported_management['has_collection_action'] and not new_payment_proposals and not unaccepted_new_payment_instruction
             and not prior_payment_with_current_decline and not prior_payment_with_current_condition)
         negotiation_validation['followup_coverage_validation']={
             'applies':pure_paid_followup,'reported_payment':prior_payment_total,'required_minimum':minimum_for_attempt,
@@ -4548,11 +4594,6 @@ class AnalyticsService:
                 r"confirmo\s+(?:su\s+)?convenio)\b", normalized
             ))
             refusal_evidence = full_payment_refusal(commitment_confirmation)
-            # Una validación FINAL puede cerrar un compromiso NUEVO después de
-            # que el cliente haya mencionado un pago HISTÓRICO. No permite
-            # aprobar la calidad ni omitir revisiones independientes.
-            from app.services.final_validation_confirmation import confirmed_validation_plan
-            final_validation = confirmed_validation_plan(text)
             no_date_evidence = recipient_statement(text, segments,
                 r"\b(?:no\s+se\s+cuando\s+(?:pueda|voy\s+a)\s+pagar|"
                 r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
@@ -4590,12 +4631,6 @@ class AnalyticsService:
                     status_evidence_method="CUELGUE_EXPRESO_SIN_ALTERNATIVAS"
                     status_evidence="El titular anunció que terminaría la llamada antes de recibir alternativas."
                 status_detection_confidence="ALTA"
-            elif (final_validation['confirmed'] and not refusal_evidence
-                  and not commitment_confirmation.get('declined')):
-                detected_status = 'CONVENIO'
-                status_detection_confidence = 'MEDIA'
-                status_evidence = final_validation['evidence']
-                status_evidence_method = 'MONTO_Y_FECHA_EN_VALIDACION_FINAL'
             elif date_outside_operational_policy:
                 detected_status="CONVENIO"
                 status_detection_confidence="ALTA"
@@ -4623,6 +4658,11 @@ class AnalyticsService:
                 status_detection_confidence = "ALTA"
                 status_evidence = commitment_confirmation["evidence"]
                 status_evidence_method = "FECHA_O_INTENCION_SIN_MONTO_CONFIRMADO"
+            elif confirms_commitment and promise_date is None and not payment_confirmation_case:
+                detected_status="NO DEFINE FECHA DE PAGO"
+                status_detection_confidence="ALTA"
+                status_evidence=commitment_confirmation["evidence"]
+                status_evidence_method="COMPROMISO_SIN_FECHA_CONFIRMADA"
             elif refusal_evidence and not confirms_commitment:
                 detected_status="NEGATIVA DE PAGO"
                 status_detection_confidence="ALTA"

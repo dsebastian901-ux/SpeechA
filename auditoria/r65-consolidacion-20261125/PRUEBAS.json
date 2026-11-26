@@ -1,0 +1,69 @@
+{
+  "baseline_488bfe1": {
+    "tests": 3422,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 22,
+    "passed": 3400,
+    "seconds": 537.767,
+    "raw_junit_sha256": "b0f60a703a69309aa08d0860073b93e78873566f7b35e1e998ca24a042d5a357"
+  },
+  "final_r65": {
+    "tests": 3481,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 22,
+    "passed": 3459,
+    "seconds": 535.149,
+    "raw_junit_sha256": "c4661673dc8efe3a05571da3a8bed4a3904317e27cc7061401e71099155bf372"
+  },
+  "focused_frozen_code": {
+    "tests": 244,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 244,
+    "seconds": 40.448,
+    "raw_junit_sha256": "dbef9ae30cfae11fc6bafe7480603401ecb32ae41180b643886e03cc56e3febc"
+  },
+  "skipped_reasons": {
+    "Necesita pantalla Tk (Xvfb o Windows).": 5,
+    "Requiere pantalla Tk.": 2,
+    "Necesita una pantalla Tk real (DISPLAY o Windows).": 5,
+    "Requiere pantalla Tk de pruebas.": 2,
+    "Requiere CMD y Python de Windows.": 8
+  },
+  "full_suite_repeated_after_last_code_change": true,
+  "compileall_app_tools": {
+    "exit_code": 0
+  },
+  "diff_check_crlf_aware": {
+    "exit_code": 0
+  },
+  "physical_windows": false,
+  "human_audio_listening": false,
+  "raw_junit_private_only": true,
+  "public_junit_parameter_names_sanitized": true,
+  "real_batch_integration_historical_crop_only": {
+    "scope": "INTEGRATION_ONLY_8_SECOND_HISTORICAL_CROP_NOT_FULL_CALL_NOT_THE_79",
+    "real_batch_service": true,
+    "primary_real_asr": "small",
+    "review_real_asr": "medium",
+    "asr_output_doubles": false,
+    "configuration_isolation": "Process-local settings and local model folder aliases; no application configuration persisted.",
+    "items_completed": 1,
+    "classification": "REVISAR",
+    "seconds": 35.21679700900131,
+    "medium_attempts": 3,
+    "medium_errors": 0,
+    "nonempty_medium_attempts": 3,
+    "primary_model_preserved": true,
+    "source_and_copy_sha256_equal": true,
+    "quality_excel_generated": true,
+    "nonpayment_excel_generated": true,
+    "checkpoint_generated": true,
+    "target_79_medium_executions": 0,
+    "human_verified": false,
+    "physical_windows_tested": false
+  }
+}

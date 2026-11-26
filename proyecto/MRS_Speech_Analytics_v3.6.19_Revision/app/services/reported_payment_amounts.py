@@ -78,7 +78,7 @@ def reported_amounts(text, completion):
             if re.search(r'[.!?]\s+',before):
                 continue
             if (re.search(r'\b(?:dia|fecha|corte|telefono|whatsapp|referencia|terminacion|digitos|folio|clabe)\s*(?:es|de|el|:)?\s*$',before)
-                    or re.match(r'\s*(?:horas?|dias?|meses?|anos?|semana|ocasion|de octubre|de noviembre|de diciembre|de enero)\b',after)):
+                    or re.match(r'\s*(?:(?:por|al|cada) (?:el )?mes|horas?|dias?|meses?|anos?|semana|ocasion|de octubre|de noviembre|de diciembre|de enero)\b',after)):
                 continue
             value=money_value(match['number'])
             if value is None or value<1: continue
@@ -114,6 +114,13 @@ def reported_amounts(text, completion):
         r'(?:de|por) que cantidad(?: (?:fue|lo (?:hizo|realizo)|realizo(?: (?:su|el) pago)?))?|'
         r'cual fue la cantidad|sobre que cantidad se realizo)\b[^?!]{0,45}[?!.]\s*')
     for match in question.finditer(source):
+        # «La reestructuración, ¿a cuántos meses y por qué cantidad?»
+        # pregunta por el calendario, no por el importe ya depositado. No
+        # avanzar al siguiente número de esa respuesta si la cuota se excluyó.
+        local=source[max(0,match.start()-110):match.end()]
+        if (re.search(r'\b(?:reestructura(?:cion)?|estructuracion|mensualidades|meses)\b',local)
+                and not re.search(r'\b(?:pago|pague|deposito|abono|cubrio|pagaron)\b',match.group())):
+            continue
         previous=[u for u in anchors if 0<=match.start()-u['text_start']<=650]
         if not previous: continue
         anchor=previous[-1]['text_start']

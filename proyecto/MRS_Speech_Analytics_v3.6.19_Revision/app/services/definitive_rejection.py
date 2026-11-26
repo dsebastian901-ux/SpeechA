@@ -7,6 +7,51 @@ ORDINARY_REVIEW_CODES={'STATUS_INVALID','STATUS_NOT_CONFIRMED','UNIDENTIFIED_CON
     'SHORT_DURATION','INVALID_DURATION','OUTPUT_NAME_MISSING','NO_COLLECTION_ATTEMPT'}
 
 
+def complete_accepted_installments(negotiation):
+    """Cerrar un total inválido solo con el plan aceptado completo y ligado.
+
+    No sumar propuestas, pagos históricos o fechas sueltas. Esta guarda usa
+    el calendario y los importes validados por el motor, sin extraerlos otra vez.
+    """
+    plan=negotiation.get('installment_validation')or{}
+    schedule=negotiation.get('accepted_schedule')or{}
+    amounts=plan.get('amounts')or[];dates=negotiation.get('installment_dates')or[]
+    if (plan.get('review_required')or not 2<=len(amounts)<=3 or len(dates)!=len(amounts)
+            or not(negotiation.get('commitment_evidence')or{}).get('accepted')):return False
+    try:
+        from math import isfinite
+        values=[float(v)for v in amounts]
+        total=float(plan['total']);detected=float(negotiation['monto_detectado'])
+        if not all(isfinite(v)and v>0 for v in values+[total,detected]):return False
+        if abs(sum(values)-total)>.009:return False
+        if abs(sum(values)-detected)>.009:return False
+        from datetime import date
+        days=[date.fromisoformat(row['date'])for row in dates]
+        if days!=sorted(set(days)):return False
+    except (KeyError,TypeError,ValueError,OverflowError):return False
+    bound_schedule=bool(schedule.get('confirmed')and schedule.get('amounts')==amounts
+        and [d.get('date')for d in schedule.get('dates')or[]]==[d.get('date')for d in dates])
+    accepted_calendar=all(d.get('method')=='CALENDARIO_ACEPTADO_CON_MES_FINAL_EXPLICITO'for d in dates)
+    return bound_schedule or accepted_calendar
+
+
+def confirmed_installment_range_failure(negotiation):
+    """El total fuera del rango es independiente de una liquidación ambigua.
+
+    Estar dentro del rango no acredita el efecto de liquidar; la atribución
+    dudosa de ese efecto conserva revisión y no se transforma en rechazo.
+    """
+    if not complete_accepted_installments(negotiation):return False
+    try:
+        from math import isfinite
+        amount=float(negotiation['monto_detectado'])
+        minimum=float(negotiation['pago_minimo_esperado'])
+        total=float(negotiation['saldo_total_esperado'])
+        if not all(isfinite(v)and v>0 for v in [amount,minimum,total])or minimum>total:return False
+        return amount+.009<minimum or amount>total+.009
+    except (KeyError,TypeError,ValueError,OverflowError):return False
+
+
 def explicit_message_refusal(text,segments=(),acceptance=()):
     source=normalize(text);events=[];cursor=0
     pattern=re.compile(r'\b(?:no (?:quiero|puedo|voy a) (?:recibir|tomar|pasar|dar|transmitir) (?:el |un |su |ningun |ninguno |ninguna )?(?:recado|mensaje)|'
@@ -81,18 +126,14 @@ def explicit_message_refusal(text,segments=(),acceptance=()):
 
 def definitive_rejection(metadata,findings,duration_seconds):
     blocking=[f for f in findings if f['severity']in{'REVIEW','CRITICAL'}]
-    treatment=metadata.get('treatment_validation')or{}
-    from app.services.message_contact_evidence import _outside_question
-    confirmed_complaint=False
-    for evidence in treatment.get('mistreatment_report_evidence')or[]:
-        value=normalize(evidence.get('text',''));phrase=normalize(evidence.get('phrase',''));at=value.find(phrase)if phrase else-1
-        if (at>=0 and 'speaker_role'in evidence and evidence['speaker_role']!='GESTOR'
-                and _outside_question(value,at,at+len(phrase))
-                and not re.search(r'\b(?:parece|quizas|tal vez|supongo|podria ser|no se si)\b',value[:at])):
-            confirmed_complaint=True;break
     # Decisión expresa de la usuaria: el rechazo comprobado cierra calidad;
     # otra duda no lo convierte de nuevo en REVISAR ni desaparece del reporte.
     if any(f['severity']=='CRITICAL'for f in blocking):return None
+    guidance=(metadata.get('convenio_payment_validation')or{}).get('third_party_guidance')or{}
+    if guidance.get('confirmed'):
+        return {'rule_group':3,'code':'CONFIRMED_THIRD_PARTY_PAYMENT_GUIDANCE','severity':'CONFIRMED_NONCRITICAL',
+            'resolves_codes':['THIRD_PARTY_PAYMENT_GUIDANCE'],'source_field':'convenio_payment_validation',
+            'reasons':[guidance['reason']]}
     n=metadata.get('negotiation_validation')or{}
     # Importe aceptado y cotejado inválido: rechazo, no una extracción dudosa.
     # Las dudas independientes permanecen como alertas del rechazo.
@@ -102,7 +143,8 @@ def definitive_rejection(metadata,findings,duration_seconds):
             and not n.get('review_required') and not n.get('datos_saldo_inconsistentes') and not n.get('monto_normalizado_asr')
             and n.get('amount_confirmed') and n.get('payment_date_confirmed')
             and n.get('commitment_confirmed') and not n.get('date_year_rollover_review')
-            and not n.get('payment_confirmation_case') and not n.get('multipago_detectado')
+            and not n.get('payment_confirmation_case')
+            and (not n.get('multipago_detectado')or confirmed_installment_range_failure(n))
             and n.get('evidencia_monto') and (n.get('commitment_evidence')or{}).get('accepted')
             and not(n.get('installment_validation')or{}).get('review_required')):
         return {'rule_group':12,'code':'CONFIRMED_INVALID_PAYMENT_AMOUNT',
@@ -115,17 +157,8 @@ def definitive_rejection(metadata,findings,duration_seconds):
     if coverage.get('confirmed_failure') and not (n.get('reported_payment_management')or{}).get('confirmed_receipt_only_shortfall'):
         return {'rule_group':12,'code':'CONFIRMED_INSUFFICIENT_FOLLOWUP','severity':'CONFIRMED_NONCRITICAL',
             'source_field':'negotiation_validation','reasons':[coverage['reason']]}
-    # La acusación al gestor actual que NO se corroboró es alerta (141);
-    # no aplicar automáticamente rechazo por queja de maltrato previa.
-    # La política MRS bloquea una denuncia de atención confirmada por la
-    # evaluación de la conversación. Eso no acredita falta grave del gestor
-    # actual. Un fragmento aislado sin validación de calidad conserva REVISAR.
-    if (confirmed_complaint and bool((metadata.get('quality_checks')or{}).get('queja_maltrato_detectada'))
-            and not treatment.get('current_agent_mistreatment_unverified')):
-        return {'rule_group':11,'code':'CONFIRMED_SERVICE_COMPLAINT',
-            'severity':'CONFIRMED_NONCRITICAL','resolves_codes':['MISTREATMENT_REPORT'],
-            'source_field':'treatment_validation',
-            'reasons':['Denuncia de atención corroborada en la conversación; bloquea por política MRS sin atribuir falta grave al gestor actual.']}
+    # Criterio ratificado 25/11: una denuncia de atención previa conserva
+    # REVISAR. Solo una causa independiente demostrada puede cerrar rechazo.
     # La negativa del TERCERO a tomar un recado NO es una falta del gestor.
     # Se dictamina como SE NIEGAN A TOMAR RECADO; la calidad debe seguir
     # evaluando identificación, privacidad, trato y demás controles reales.

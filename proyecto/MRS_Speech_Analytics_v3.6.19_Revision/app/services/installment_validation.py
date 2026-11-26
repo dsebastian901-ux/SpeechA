@@ -1,5 +1,6 @@
 """Relaciona importes con parcialidades explícitas; conserva contradicciones."""
 import re
+from datetime import date
 
 from app.services.reported_payment_amounts import NUMBER, money_value
 from app.services.conversation_evidence import normalize
@@ -41,8 +42,41 @@ def unresolved_accepted_plan(text, plan, dates, segments=()):
             'reason':'Se describe un plan aceptado de varias parcialidades, pero no quedaron validados todos sus importes y fechas.' if unresolved else ''}
 
 
-def installment_dates(source, parse_date, expected_count=None):
+def accepted_calendar(evidence,call_date,count):
+    """Calendario enumerado aceptado, con mes final explícito y cruce de mes.
+
+    El día 7 de diciembre tras 23 y 30 no convierte todos los pagos en
+    diciembre. No elegir fechas alternativas ni completar días desde Excel.
+    """
+    if not isinstance(call_date,date)or count not in {2,3}:return []
+    months='enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre'.split()
+    pattern=re.compile(r'\bdias?\s+(?:(?:lunes|martes|miercoles|jueves|viernes|sabado|domingo)\s+)?'
+        r'(?P<days>\d{1,2}(?:\s*(?:[-,]|y)\s*\d{1,2}){1,2})\s+de\s+(?P<month>'+'|'.join(months)+r')\b')
+    for m in reversed(list(pattern.finditer(normalize(evidence)))):
+        values=list(map(int,re.findall(r'\d+',m['days'])))
+        if len(values)!=count or any(not 1<=d<=31 for d in values):continue
+        month=months.index(m['month'])+1;year=call_date.year+(month<call_date.month)
+        result=[];later=None
+        try:
+            for day in reversed(values):
+                current=date(year,month,day)
+                if later is not None and current>=later:
+                    month-=1
+                    if not month:month=12;year-=1
+                    current=date(year,month,day)
+                result.append(current);later=current
+        except ValueError:continue
+        result=list(reversed(result))
+        if result[0]<call_date:continue
+        return [{'installment':i+1,'date':d.isoformat(),'text':str(d.day),'evidence':m.group(),
+                 'method':'CALENDARIO_ACEPTADO_CON_MES_FINAL_EXPLICITO'}for i,d in enumerate(result)]
+    return []
+
+
+def installment_dates(source, parse_date, expected_count=None, *, accepted_evidence='',call_date=None):
     """Última fecha propuesta para cada parcialidad, separada de recordatorios."""
+    calendar=accepted_calendar(accepted_evidence,call_date,expected_count)
+    if calendar:return calendar
     matches = list(re.finditer(r"\b(primer(?: pago)?|segundo(?: pago)?|tercer(?: pago)?|pago mas)\b", source))
     dates = {}
     for index, match in enumerate(matches):

@@ -5,6 +5,8 @@ import re
 from app.services.conversation_evidence import normalize
 
 FIELDS = {
+    'MISTREATMENT_REPORT': ('treatment_validation',),
+    'THIRD_PARTY_PAYMENT_GUIDANCE': ('convenio_payment_validation',),
     'UNIDENTIFIED_CONTACT': ('contact_validation',),
     'UNCERTAIN_DISCLOSURE': ('privacy_validation',),
     'CARD_REFERENCE': ('card_validation',),
@@ -20,6 +22,7 @@ FIELDS = {
     'MESSAGE_BODY_NOT_CONFIRMED': ('message_workflow_validation',),
 }
 CUES = {
+    'MISTREATMENT_REPORT': r'\b(?:atencion|queja|grit\w*|maltrat\w*|trataron mal|colg\w*)\b',
     'CARD_REFERENCE': r'\b(?:terminacion|digitos|referencia|tarjeta)\b',
     'UNCERTAIN_DISCLOSURE': r'\b(?:saldo|mensualidad|pesos|deuda|adeudo)\b',
     'RECEIPT_UNCERTAIN': r'\b(?:comprobante|ticket|whatsapp|foto)\b',
@@ -57,6 +60,28 @@ def _timeline(data):
         cursor=at+len(text)
         rows.append({'start':float(start),'end':float(end),'lo':at,'hi':cursor,'text':text})
     return source,rows
+
+
+def execution_for_window(item,code,start,end):
+    """Un plan no es una escucha; comprobar registro y cobertura del fragmento."""
+    if start is None or end is None:return 'NO_EJECUTADO'
+    record=item.get('context_asr_recovery')or{}
+    if record.get('model')!='Faster-Whisper:medium':return 'NO_EJECUTADO'
+    from app.services.context_audio_recovery import record_digest
+    from app.services.audio_block_evidence import binding
+    if (record.get('record_sha256')!=record_digest(record)
+            or record.get('source_binding')!=binding(item.get('result')or{},item.get('relation')or{})):
+        return 'REGISTRO_MEDIUM_NO_VINCULADO'
+    if not ((item.get('analytics_metadata')or{}).get('context_audio_validation')or{}).get('valid'):
+        return 'REGISTRO_MEDIUM_PENDIENTE_DE_VALIDACION'
+    if code not in record.get('required_findings',[]):return 'NO_EJECUTADO'
+    spans=[(a.get('start'),a.get('end'))for g in record.get('groups',[])for a in g.get('attempts',[])
+           if not a.get('error')and all(isinstance(a.get(k),(float,int))and math.isfinite(a[k])for k in ('start','end'))]
+    frontier=start
+    for a,b in sorted(spans):
+        if a>frontier:break
+        frontier=max(frontier,b)
+    return 'MEDIUM_EJECUTADO_REGISTRO_VALIDADO'if frontier>=end else'NO_EJECUTADO_COMPLETO'
 
 
 def plan_for_item(item):
@@ -112,8 +137,8 @@ def plan_for_item(item):
                 'audio_sha256_expected':(item.get('context_asr_recovery')or{}).get('audio_sha256'),
                 'finding_code':code,'start':a,'end':b,'location_basis':basis,
                 'missing_evidence':' | '.join(finding.get('reasons')or[]),
-                'required_model':'medium','execution':'NO_EJECUTADO',
-                'speaker_assignment_required':code in{'UNIDENTIFIED_CONTACT','UNCERTAIN_DISCLOSURE','OFFENSIVE_LANGUAGE','HOME_WARNING_UNATTRIBUTED','UNCERTAIN_CONFRONTATION'},
+                'required_model':'medium','execution':execution_for_window(item,code,a,b),
+                'speaker_assignment_required':code in{'THIRD_PARTY_PAYMENT_GUIDANCE','UNIDENTIFIED_CONTACT','UNCERTAIN_DISCLOSURE','OFFENSIVE_LANGUAGE','HOME_WARNING_UNATTRIBUTED','UNCERTAIN_CONFRONTATION'},
                 'classification_preserved':decision.get('clasificacion')})
     return result
 

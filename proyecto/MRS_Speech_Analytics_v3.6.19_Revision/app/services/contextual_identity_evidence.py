@@ -77,6 +77,8 @@ def nonholder_counter_evidence(text,segments=()):
     """Distinguir buscar a una persona de buscar la fecha de su propio pago."""
     source=normalize(text);found=[]
     for match in COUNTER.finditer(source):
+        from app.services.speech_scope import personal_family_background
+        if personal_family_background(source,match.start(),match.end()):continue
         role=_role_at(text,segments,match.start())
         if role=='GESTOR':continue
         from app.services.message_contact_evidence import _outside_question

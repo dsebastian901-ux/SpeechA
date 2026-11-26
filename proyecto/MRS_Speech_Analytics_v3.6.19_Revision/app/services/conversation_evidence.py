@@ -380,6 +380,7 @@ def associate_relationship(text, segments=()):
 
 def _payment_review_condition(value):
     explicit = re.search(r'\b(?:voy a hacer ?lo posible|voy a hacerlo posible|'
+                         r'(?:en cuanto|nada mas (?:de )?que|no mas (?:de )?que) me (?:llegue|depositen|den) (?:el )?dinero|'
                          r'(?:esto|eso) es lo que no tengo|'
                          r'para ver si me puedo comprometer|'
                          r'(?:checar|revisar) mis cuentas[^.!?]{0,65}para ver si|'
@@ -613,10 +614,8 @@ def payment_commitment(text, segments=()):
                 'day_of_month':frame['day_of_month'],'day_text':frame['day_text']})
     if not events:
         return {"accepted": False, "declined": False, "evidence": ""}
-    _, accepted, evidence = max(events, key=lambda e:(e[0],2 if e[1]is None else 1 if e[1]is False else 0))
-    return {"accepted": accepted is True, "declined": accepted is False,
-            "conditional": accepted is None, "evidence": evidence,
-            "contextual_confirmation_events":extra_events}
+    from app.services.payment_lifecycle import resolve_payment_events
+    return resolve_payment_events(events,extra_events)
 
 
 def completed_payment(text, segments=()):
@@ -648,6 +647,9 @@ def completed_payment(text, segments=()):
             r"\b(?:una vez que|cuando|en cuanto|para que|despu[eé]s de que|si)\s+"
             r"(?:(?:usted|yo|ya|lo|me|le)\s+)*(?:realice|haga|pague|deposite|tenga)\b",
             verbatim, re.I))
+        future_instructions.extend(re.finditer(
+            r'\b(?:recomiendo|sugiero|solicito|necesito|pido|requiero|requiere|indico) que\s+'
+            r'(?:(?:usted|yo|lo|le)\s+)*(?:realice|haga|pague|deposite)\b',verbatim,re.I))
         for candidate in candidates:
             if re.search(r'\b(?:vamos a|le enviaremos|le estaremos|le mandaremos|cuando recibamos|en caso de que)\b[^.!?]{0,100}$',s[:candidate.start()]):
                 continue
@@ -671,6 +673,12 @@ def completed_payment(text, segments=()):
             if candidate.group() in {'lo realice', 'lo hice'} and re.search(
                     r"\b(?:que|para que|cuando|si)\s*$", s[:candidate.start()]):
                 continue
+            if normalize(candidate.group())in {'lo hice','lo realice'}:
+                prior=source[max(0,position-180):position+candidate.start()]
+                objects=list(re.finditer(r'\b(?:pago|deposito|abono|transferencia|trato|contrato|'
+                    r'tramite|cancelacion|reestructura(?:cion)?|acuerdo|convenio|seguro)\b',prior))
+                if objects and objects[-1].group()not in {'pago','deposito','abono','transferencia'}:
+                    continue
             if unit["speaker_role"] == "GESTOR" and "tengo registrado" not in normalize(candidate.group()):
                 continue
             if re.search(r"\b(?:cuando|una vez que|si|para que)\b[^.!?]{0,35}$", s[:candidate.start()]):
@@ -748,6 +756,8 @@ def assess_recado(text, segments=()):
         if DECLINES.search(s):
             refusals.append(unit)
         for match in FAMILY.finditer(s):
+            from app.services.speech_scope import personal_family_background
+            if personal_family_background(s,match.start(),match.end()):continue
             prefix = s[max(0, match.start()-55):match.start()]
             suffix = s[match.end():match.end()+25]
             # Una pregunta posterior («es mi marido, ¿por qué?») no borra

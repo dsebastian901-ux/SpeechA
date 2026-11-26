@@ -108,10 +108,10 @@ def test_death_followup_preserves_original_status_only_with_complete_evidence(st
 
 def test_clear_service_complaint_closes_nonapproval_but_other_safety_uncertainty_remains():
  a=analyze('Habla MRS. Soy su hermana. En la llamada anterior me trataron mal.')
- assert a.metadata['shared_classification']['clasificacion']=='NO_APROBADO'
+ assert a.metadata['shared_classification']['clasificacion']=='REVISAR'
  b=analyze('Habla MRS. Soy su hermana. En la llamada anterior me trataron mal. Tiene una deuda de 1500 pesos.')
- assert b.metadata['shared_classification']['clasificacion']=='NO_APROBADO'
- assert b.metadata['shared_classification']['requires_alert_review']
+ assert b.metadata['shared_classification']['clasificacion']=='REVISAR'
+ assert any(f['code']=='UNCERTAIN_DISCLOSURE' and f['severity']=='REVIEW' for f in b.metadata['shared_classification']['decision_findings'])
 
 @pytest.mark.parametrize('reply',['No se encuentra, ¿de parte de quién?','No está, dígame.','No se encuentra de parte de quién?'])
 def test_absence_reply_to_named_request_is_a_third_party_even_with_followup_question(reply):

@@ -1,0 +1,57 @@
+{
+  "reference_r64": {
+    "NO_APROBADO": 4,
+    "FALLA_MINIMA": 6,
+    "APROBADO_ETIQUETA_CORREGIDA": 9,
+    "REVISAR": 30,
+    "NO_APROBADO_MENOR_80": 2,
+    "APROBADO": 9,
+    "SIN_RELACION_EXCEL": 19
+  },
+  "r65": {
+    "REVISAR": 26,
+    "APROBADO": 14,
+    "APROBADO_ETIQUETA_CORREGIDA": 11,
+    "FALLA_MINIMA": 6,
+    "NO_APROBADO_MENOR_80": 2,
+    "SIN_RELACION_EXCEL": 19,
+    "NO_APROBADO": 1
+  },
+  "initial_reviews": 30,
+  "initial_reviews_resolved": 8,
+  "resolved_ids": [
+    4,
+    5,
+    35,
+    50,
+    51,
+    55,
+    59,
+    75
+  ],
+  "initial_reviews_remaining": 22,
+  "prior_complaints_returned_to_review": [
+    1,
+    8,
+    28,
+    77
+  ],
+  "favorable_changes": [
+    2,
+    4,
+    35,
+    50,
+    51,
+    59,
+    75
+  ],
+  "all_79_original_transcriptions_and_readings_preserved": true,
+  "approvals_with_blocking_findings": 0,
+  "target_79_audio_available": 0,
+  "target_79_medium_inferences": 0,
+  "missing_excel_relations": 19,
+  "all_30_finding_records": 104,
+  "evidence_records": 169,
+  "medium_windows": 146,
+  "windows_are_execution": false
+}

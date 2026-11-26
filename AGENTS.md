@@ -1,5 +1,7 @@
 # Instrucciones de trabajo para Codex — MRS Speech Analytics
 
+> Actualización 25/nov/2026: aplicar [CRITERIOS_Y_ALCANCE r65](auditoria/r65-consolidacion-20261125/CRITERIOS_Y_ALCANCE.md). La instrucción más reciente de la usuaria exige REVISAR por queja de atención previa sola; no convertirla en rechazo para reducir revisión. Conservar rechazo por incumplimientos independientes confirmados. Este criterio prevalece sobre los cierres por queja descritos abajo.
+
 ## Objetivo
 Corregir de manera integral MRS Speech Analytics v3.6.19 para Windows. Trabajar sobre `proyecto/MRS_Speech_Analytics_v3.6.19_Revision/` como base más reciente (versión 06). Los ZIP anteriores en `historial_versiones/` son referencias para recuperar reglas que funcionaban; **no reemplazar ciegamente la versión más reciente**.
 

@@ -9,6 +9,8 @@ from app.services.checkpoint_reanalysis import reanalyze_checkpoint
 
 def whisper_execution_message(result):
     readings=result.get('second_listening')or{}
+    if readings.get('realizadas',0)and readings.get('errores',0):
+        return 'Se ejecutaron lecturas parciales con errores; consultar cada fragmento y su consenso.'
     if readings.get('realizadas',0):
         return 'Se ejecutó Whisper local en los fragmentos registrados.'
     if readings.get('errores',0):
@@ -28,6 +30,8 @@ def main():
     parser.add_argument('--copy-corrected-labels',action='store_true',help='Copiar solo aprobadas con etiqueta corregida, sin mover originales.')
     parser.add_argument('--audio-dir',type=Path,help='Carpeta de audios locales para corroboración o copias corregidas.')
     parser.add_argument('--labels-output-dir',type=Path,help='Carpeta nueva y vacía para las copias corregidas.')
+    parser.add_argument('--review-model',choices=['auto','primary','medium'],default='auto',
+        help='Segunda escucha: Medium local si está importado, modelo primario o Medium obligatorio.')
     args = parser.parse_args()
     if args.use_excel_card and (args.fill_mora_from_excel or args.relation_excel):
         parser.error('Use por separado la corrección de nombres y la recuperación de mora; conserve cada salida.')
@@ -63,7 +67,7 @@ def main():
     else:
         print('Reanalizando reglas; las nuevas escuchas, si corresponden, usan exclusivamente el modelo local.',flush=True)
         result = reanalyze_checkpoint(source, args.output_dir,relation_excel=excel,
-            acoustic=not args.no_acoustic,audio_directory=args.audio_dir)
+            acoustic=not args.no_acoustic,audio_directory=args.audio_dir,review_model=args.review_model)
     if excel is not None:
         import json
         saved=json.loads(Path(result['checkpoint']).read_text(encoding='utf-8'))

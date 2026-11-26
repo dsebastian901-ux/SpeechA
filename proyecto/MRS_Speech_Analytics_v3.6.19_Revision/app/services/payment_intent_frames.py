@@ -102,7 +102,8 @@ def payment_frames(text,segments=()):
   if re.search(r'\b(?:su |el )comprobante\b',answer)and not ACTION.search(answer):continue
   if OTHER.search(answer)and not(ACTION.search(answer)or OWN.search(answer)):continue
   history=kind=='HISTORY'or bool(re.search(r'\b(?:ya (?:lo |les )?pague|ya (?:hice|realice)|pague (?:ayer|antier))\b',answer))
-  condition=bool(CONDITION.search(answer));declined=bool(NEGATIVE.search(answer)or re.search(
+  from app.services.speech_scope import conditional_yes_reply
+  condition=bool(CONDITION.search(answer)or conditional_yes_reply(answer));declined=bool(NEGATIVE.search(answer)or re.search(
       r'\bpero (?:no (?:puedo|podria|tengo (?:dinero|la cantidad)|cuento con (?:dinero|la cantidad))|no me alcanza)\b',answer))
   negative_question=negative_payment_question(q)
   # «¿No aplica el pago aún? No» puede negar la pregunta o confirmar que
@@ -110,7 +111,7 @@ def payment_frames(text,segments=()):
   if ambiguous_negative_reply(q,answer):
    declined=False
   action=ACTION.search(answer);own=bool(OWN.search(answer)or action)
-  dated_reply=bool(re.match(r'(?:(?:seria|para|hasta|va a ser|lo estaria realizando|lo estaria haciendo) )?(?:el (?:dia(?: de)? )?)?'
+  dated_reply=bool(re.match(r'(?:(?:seria|para|por|hasta|va a ser|lo estaria realizando|lo estaria haciendo) )?(?:el (?:dia(?: de)? )?)?'
       r'(?:hoy|manana|ahorita|lunes|martes|miercoles|jueves|viernes|sabado|domingo|\d{1,2})(?:\b)',answer))
   # Un día en respuesta a CUANDO es un plan propio. Una hora o un importe
   # aislado en otro tipo de pregunta no se transforma en fecha.

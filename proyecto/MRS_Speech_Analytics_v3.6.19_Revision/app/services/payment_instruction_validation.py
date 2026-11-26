@@ -106,14 +106,36 @@ def transfer_is_option_listing(text, segments, authorized_places):
                  r"cuenta personal|banca movil|pago de tarjetas|practicaja|convenio (?:es|numero|\d))\b",source):
         return False
     mentions=list(re.finditer(r"\btransferencia\b",source))
+    introduction=r'\s*[,;]?\s*(?:si es posible\s*[,;]?\s*)?(?:de (?:alguna )?|desde |con |en |por medio de )?'
     listed=bool(mentions) and all(re.match(
-        r"\s+(?:de |desde |con |en |por medio de )?(?:bbva|bancomer|van commer|citibanamex|citi banamex|banamex|santander)\b",
+        introduction+r"(?:bbva|bancomer|van commer|citibanamex|citi banamex|banamex|santander)\b",
         source[m.end():]) for m in mentions)
     if not listed:return False
     banks=r'(?:bbva|bancomer|van commer|citibanamex|citi banamex|banamex|santander)'
-    enumeration=all(re.match(r'\s+(?:de |desde |con |en |por medio de )?'+banks+
+    enumeration=all(re.match(introduction+banks+
         r'\s*(?:,|\bo\b|\by\b)\s*'+banks+r'\b',source[m.end():])for m in mentions)
     return bool(enumeration or len(set(authorized_places))>=2)
+
+
+def third_party_payment_guidance(details,*,third_party):
+    """No exigir lugares al tercero ni dar por válido instruirlo a pagar.
+
+    Reutiliza los establecimientos ya acreditados; una mención del tercero o
+    un relato no es una instrucción del gestor. No atribuye voces desconocidas.
+    """
+    from app.services.speech_scope import nonassertive_prefix
+    evidence=[]
+    if third_party:
+        for detail in details:
+            if detail.get('speaker_role')in{'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+            value=normalize(detail.get('text'))
+            instruction=re.search(r'\b(?:puede pagar|podria pagar|pague|deposite|aplique (?:un |el )?pago)\b',value)
+            if not instruction or nonassertive_prefix(value,instruction.start()):continue
+            evidence.append(detail)
+    confirmed=any(e.get('speaker_role')=='GESTOR'for e in evidence)
+    return {'confirmed':confirmed,'review_required':bool(evidence)and not confirmed,'evidence':evidence,
+        'reason':'Se instruye a un tercero a realizar pagos; confirmar emisor si no está atribuido.'if evidence else'',
+        'policy_source':'INSTRUCCION_USUARIA_20261125'}
 
 
 def wrong_bank_instructions(text, segments, bank_variants, authorized_codes, transfer_account):

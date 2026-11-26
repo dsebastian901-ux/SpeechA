@@ -35,7 +35,7 @@ def accepted_two_part_schedule(text,segments,call_date):
         r'(?P<day>hoy|manana)\?\s*(?P<yes>si)\b'
         r'(?P<reply>[^?]{0,200}?)\b(?:y )?seria (?:un|uno) mas (?:por|de) '
         r'(?P<second>'+NUMBER+r')(?: pesos)?[.]\s*(?P<yes2>si|correcto|de acuerdo)\b')
-    candidates=_recapped_schedules(text,segments,call_date)
+    candidates=_recapped_schedules(text,segments,call_date)+_own_dated_schedule(text,segments,call_date)
     for match in pattern.finditer(source):
         if any(_role_at(text,segments,match.start(k)) in {'GESTOR','TERCERO'} for k in ['yes','yes2']):continue
         if re.search(r'\b(?:no puedo|no tengo|a lo mejor|yo creo|si consigo|si puedo|si me da)\b',match['reply']):continue
@@ -79,6 +79,36 @@ def accepted_two_part_schedule(text,segments,call_date):
     return max(candidates,key=lambda row:row['position']) if candidates else none
 
 
+def _own_dated_schedule(text,segments,call_date):
+    """Dos pagos formulados por el propio cliente en una misma declaración.
+
+    No requiere un «sí» adicional al compromiso personal explícito, ni une
+    importes de propuestas distintas. Conserva fecha, rol, cita y revocación.
+    """
+    from app.services.speech_scope import nonassertive_prefix
+    source=normalize(text);result=[]
+    pattern=re.compile(r'\b(?P<day>hoy|manana) (?:yo )?(?:voy a )?'
+        r'(?:hago|hare|realizo|realizare|hacer|realizar) (?:el |mi |un )?pago (?:de |por )?'
+        r'(?P<first>'+NUMBER+r')(?: pesos)? (?:para que|y) (?:el )?dia (?P<d2>\d{1,2}) '
+        r'(?:yo )?(?:hago|hare|realizo|realizare) (?:el )?otro pago (?:de |por )?'
+        r'(?P<second>'+NUMBER+r')(?!\w)')
+    for m in pattern.finditer(source):
+        if _role_at(text,segments,m.start())in{'GESTOR','TERCERO'}:continue
+        if nonassertive_prefix(source,m.start())or re.search(r'\b(?:si|cuando)\s*$',source[max(0,m.start()-30):m.start()]):continue
+        a,b=money_value(m['first']),money_value(m['second'])
+        if a is None or b is None or min(a,b)<10:continue
+        first=call_date+timedelta(days=m['day']=='manana')
+        try:second=date(call_date.year,call_date.month,int(m['d2']))
+        except ValueError:continue
+        if second<=first:continue
+        if re.search(r'\b(?:no acepto|no me comprometo|no voy a poder|no puedo pagar(?! con)|no voy a pagar)\b',source[m.end():]):continue
+        result.append({'confirmed':True,'amounts':[a,b],'total':a+b,
+            'dates':[{'installment':i+1,'date':d.isoformat(),'text':str(d.day),'evidence':m.group()}for i,d in enumerate([first,second])],
+            'evidence':m.group(),'position':m.start(),'end':m.end(),
+            'method':'DOS_PAGOS_PROPIOS_CON_FECHAS','human_verified':False})
+    return result
+
+
 def _recapped_schedules(text, segments, call_date):
     """Dos importes y sus días recapitulados y aceptados en el mismo marco.
 
@@ -86,7 +116,7 @@ def _recapped_schedules(text, segments, call_date):
     hipotética. Las reglas de mora y plazos se aplican después al plan.
     """
     source=normalize(text)
-    pattern=re.compile(
+    patterns=[re.compile(
         r"\b(?:confirmo|confirmamos|confirmaria|confirmariamos)"
         r"(?: asi)?(?: como (?:te|le) menciono)?[, :]*"
         r"(?:el (?:primer )?pago (?:de |por )?)?(?P<first>"+NUMBER+r")"
@@ -94,9 +124,14 @@ def _recapped_schedules(text, segments, call_date):
         r"[, ]+y (?:el (?:segundo )?pago (?:de |por )?)?(?P<second>"+NUMBER+r")"
         r"(?: pesos)? (?:es |seria |para )?(?:el (?:dia )?)(?P<d2>\d{1,2})"
         r"[.?]\s*(?:(?:titular|cliente|interlocutor)\s*:\s*)?"
-        r"(?P<yes>si|aja|correcto|de acuerdo|esta bien)(?=[,.! ]|$)")
+        r"(?P<yes>si|aja|correcto|de acuerdo|esta bien)(?=[,.! ]|$)"),re.compile(
+        r"\b(?:el primero )?seria (?:de |un pago de |el pago de )(?P<first>"+NUMBER+r")"
+        r"(?: pesos)? el dia (?:de )?(?P<d1>hoy|manana|\d{1,2})"
+        r"\s+y (?:el )?segundo pago (?:seria )?(?:de |por )(?P<second>"+NUMBER+r")"
+        r"(?: pesos)? el dia (?P<d2>\d{1,2})[, ]*¿?correcto\?\s*"
+        r"(?:(?:titular|cliente|interlocutor)\s*:\s*)?(?P<yes>si|aja|correcto|de acuerdo|esta bien)(?=[,.! ]|$)")]
     result=[]
-    for m in pattern.finditer(source):
+    for m in (match for pattern in patterns for match in pattern.finditer(source)):
         if _role_at(text,segments,m.start('yes'))in{'GESTOR','TERCERO'}:continue
         before=source[max(0,m.start()-120):m.start()]
         if re.search(r"\b(?:por ejemplo|supongamos|si pudiera|si tuviera|diga que|dijo que|repita)\b[^.!?]{0,100}$",before):continue
@@ -104,7 +139,7 @@ def _recapped_schedules(text, segments, call_date):
         if re.search(r"\b(?:pero|no puedo|no tengo|a lo mejor|yo creo|si (?:puedo|consigo))\b",reply):continue
         amounts=[money_value(m[k])for k in['first','second']]
         if any(v is None or v<10 for v in amounts):continue
-        try:days=[date(call_date.year,call_date.month,int(m[k]))for k in['d1','d2']]
+        try:days=[call_date+timedelta(days=m[k]=='manana') if m[k]in {'hoy','manana'} else date(call_date.year,call_date.month,int(m[k]))for k in['d1','d2']]
         except ValueError:continue
         if not(call_date<=days[0]<days[1]):continue
         # Una revocación posterior no desaparece por haber dicho sí antes.

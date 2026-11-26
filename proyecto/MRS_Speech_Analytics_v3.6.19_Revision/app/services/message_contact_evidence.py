@@ -35,6 +35,8 @@ def message_contact_evidence(text,segments=()):
     # La pregunta que sigue a una coma no convierte «es mi madre» en pregunta.
     declaration=re.compile(r'\b(?:(?:soy|era) (?:su |un |una )?familiar|soy su '+KIN+r'|(?:es|era) mi '+KIN+r')\b')
     for match in declaration.finditer(source):
+        from app.services.speech_scope import personal_family_background
+        if personal_family_background(source,match.start(),match.end()):continue
         if (_recipient(text,segments,match.start()) and _outside_question(source,match.start(),match.end())
                 and not BAD_PREFIX.search(source[max(0,match.start()-65):match.start()])):
             result['family'].append(_item(source,match,'DECLARACION_LOCAL_PARENTESCO',text,segments))
