@@ -68,3 +68,19 @@ def test_validator_yes_not_holder_yes():
             "Validador: Queda confirmado su pago por 526 pesos el día 20. "
             "Validador: Sí, correcto.")
     assert confirmed_validation_plan(text)['confirmed'] is False
+
+
+
+def test_real_asr_unattributed_validation_close_is_not_firm_holder_acceptance():
+    # Representa el patrón del checkpoint: no hay diarización del titular.
+    text = ("Lo paso al área de validación. Corrobóreme cantidad y fecha. "
+            "Queda confirmado su pago por la cantidad de mil pesos "
+            "al día de mañana 21 del mes. Quedamos a la espera del comprobante.")
+    assert confirmed_validation_plan(text)['confirmed'] is False
+
+
+def test_real_asr_unattributed_validator_question_not_a_holder_promise():
+    text = ("Al área de validaciones. Me podría indicar el monto y la fecha "
+            "de su pago. Sería el monto es 526, el día 20 de noviembre. "
+            "Muchas gracias por tomar la llamada.")
+    assert confirmed_validation_plan(text)['confirmed'] is False
