@@ -101,6 +101,14 @@ def receipt_request_evidence(text, segments=()):
             uncertain = re.search(rf'\b(?:a este|al) whatsapp\b[^.!?]{{0,45}}\b(?:mas a llegar|hace llegar)\b[^.!?]{{0,40}}\b{RECEIPT}\b',value)
             if uncertain:
                 pending.append(dict(unit,phrase=uncertain.group(),method='POSIBLE_SOLICITUD_ASR_REQUIERE_AUDIO'))
+            # Un recordatorio del documento sin acción de envío inteligible
+            # no prueba ni la solicitud completa ni su omisión. La petición
+            # clara, si existe en otra frase, sigue resolviendo esta duda.
+            reminder=re.search(rf'\brecuerd(?:e|a|en|an)\b[^.!?]{{0,40}}\b{RECEIPT}\b',value)
+            if reminder:
+                from app.services.speech_scope import nonassertive_prefix
+                if not nonassertive_prefix(value,reminder.start()):
+                    pending.append(dict(unit,phrase=reminder.group(),method='RECORDATORIO_SIN_ACCION_DE_ENVIO_INTELIGIBLE'))
         # Acredita que se reportó el envío; no certifica recepción ni pago bancario.
         for match in re.finditer(rf'\bya (?:nos |lo |les |los |las |le |se lo )?(?:mande|envie|mando|envio|comparti|compartio|pase|pasamos)\b[^.!?]{{0,55}}\b(?:{RECEIPT}|fotografia)\b',value):
             if re.search(r'\b(?:no|nunca|diga que|repita que)\s*$',value[:match.start()]):continue

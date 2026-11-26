@@ -29,6 +29,10 @@ def explicit_current_amounts(text,segments=()):
     # ofrecido. Nunca completar desde Excel ni de un saldo, teléfono o fecha.
     from app.services.payment_lifecycle import financial_response_events
     for response in financial_response_events(text,segments):
+        if response.get('method')=='RESPUESTA_ACTUAL_DE_IMPORTE_Y_FECHA':
+            events.append({k:response[k]for k in ['amount','amount_position','amount_end','amount_text','position','evidence']}
+                |{'method':'IMPORTE_Y_FECHA_CONFIRMADOS','human_verified':False})
+            continue
         offer=response['offer'];offset=response['offer_position']
         matches=list(re.finditer(r'\b(?:pagar|depositar|abonar|pago(?: (?:es|seria))?)(?: de| por)?\s+(?:\$\s*)?(?P<amount>'+NUMBER+r')(?!\w)',offer))
         usable=[]

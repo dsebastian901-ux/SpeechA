@@ -4,6 +4,38 @@ import re
 from app.services.conversation_evidence import normalize, sentence_evidence
 
 
+def asset_pressure_evidence(text, segments=()):
+    """Indicios actuales o quejas de presión con ámbito y voz sin inventar."""
+    from app.services.speech_scope import nonassertive_prefix
+    from app.services.reported_payment_amounts import NUMBER
+    from app.services.conversation_evidence import _role_at
+    patterns=(r'\b(?:venderlas|empenarlas|venda sus|empene sus|vendalas|empenelas)\b',
+        r'\blos bienes son para remediar los males\b',
+        r'\b(?:penalizacion|penalidad)\b[^.!?]{0,55}\b(?:otros|mas)\s+(?:'+NUMBER+r')\b')
+    source=normalize(text);cursor=0;details=[];seen=set()
+    for unit in sentence_evidence(text,segments):
+        value=normalize(unit['text']);at=source.find(value,cursor)
+        if at<0:continue
+        cursor=at+len(value)
+        for pattern in patterns:
+            for match in re.finditer(pattern,value):
+                position=at+match.start();prefix=value[max(0,match.start()-160):match.start()]
+                role=_role_at(text,segments,position)
+                report=bool(re.search(r'\b(?:me|nos) (?:dijo|dijeron|indicaron|amenazaron) que\b[^.!?]{0,80}$',prefix)
+                    and re.search(r'\b(?:gestor|gestora|asesor|asesora|cobranza|llamada|despacho)\b',value)
+                    and '?'not in value and '¿'not in value)
+                if role in {'TITULAR','TERCERO','INTERLOCUTOR'}and not report:continue
+                if nonassertive_prefix(value,match.start())and not report:continue
+                if re.search(r'\bno (?:tiene|debe|necesita|hay|voy a|quiero|puedo) '
+                    r'(?:usted )?(?:que |necesidad de )?$',prefix):continue
+                if position in seen:continue
+                seen.add(position)
+                details.append(dict(unit,phrase=match.group(),position=position,speaker_role=role,
+                    scope='REPORTE_PREVIO'if report else'INSTRUCCION_O_INDICIO_ACTUAL',
+                    human_verified=False,acoustic_voice_identified=False))
+    return {'review_required':bool(details),'evidence':details}
+
+
 def mistreatment_reports(text, segments, phrases):
     evidence = []
     variants = re.compile(

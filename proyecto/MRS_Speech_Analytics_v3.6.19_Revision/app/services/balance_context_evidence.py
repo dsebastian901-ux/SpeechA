@@ -19,8 +19,11 @@ def callback_dictation_spans(text):
     # para certificar recepción o validar sus diez dígitos. No exigir aquí las
     # condiciones positivas de un recado para excluirlo del dinero.
     gap=re.compile(r'[\W_]*(?:(?:es|seria|el|aja|si|ok|correcto|perdon|a ver)[\W_]*)*')
-    for cue in re.finditer(r'\b(?:numero(?: telefonico| de contacto| de telefono)?|telefono|whatsapp)\b',source):
+    for cue in re.finditer(r'\b(?:numero(?: telefonico| de contacto| de telefono)?|telefono|whatsapp|(?:tiene|cuenta con) (?:usted )?donde anotar)\b',source):
         before=source[max(0,cue.start()-250):cue.start()]
+        if 'donde anotar'in cue.group():
+            topics=list(re.finditer(r'\b(?:numero|telefono|whatsapp|cantidad|monto|saldo|pago (?:de|por|es))\b',before))
+            if not topics or topics[-1].group()not in{'numero','telefono','whatsapp'}:continue
         if cue.group()=='numero' and not re.search(r'\b(?:anotar|anotarte|anotarlo|apuntar|llamada|contacto|whatsapp|telefono)\b',before):
             continue
         tail=source[cue.end():cue.end()+220]

@@ -5,6 +5,8 @@ import re
 from app.services.conversation_evidence import normalize
 
 FIELDS = {
+    'ASSET_COERCION_REVIEW': ('treatment_validation',),
+    'CONVENIO_OUTCOME_CONFLICT': ('negotiation_validation','status_validation'),
     'MISTREATMENT_REPORT': ('treatment_validation',),
     'THIRD_PARTY_PAYMENT_GUIDANCE': ('convenio_payment_validation',),
     'UNIDENTIFIED_CONTACT': ('contact_validation',),
@@ -22,6 +24,7 @@ FIELDS = {
     'MESSAGE_BODY_NOT_CONFIRMED': ('message_workflow_validation',),
 }
 CUES = {
+    'ASSET_COERCION_REVIEW': r'\b(?:bienes|muebles|vend\w*|empen\w*|penalizacion|penalidad)\b',
     'MISTREATMENT_REPORT': r'\b(?:atencion|queja|grit\w*|maltrat\w*|trataron mal|colg\w*)\b',
     'CARD_REFERENCE': r'\b(?:terminacion|digitos|referencia|tarjeta)\b',
     'UNCERTAIN_DISCLOSURE': r'\b(?:saldo|mensualidad|pesos|deuda|adeudo)\b',
@@ -138,7 +141,7 @@ def plan_for_item(item):
                 'finding_code':code,'start':a,'end':b,'location_basis':basis,
                 'missing_evidence':' | '.join(finding.get('reasons')or[]),
                 'required_model':'medium','execution':execution_for_window(item,code,a,b),
-                'speaker_assignment_required':code in{'THIRD_PARTY_PAYMENT_GUIDANCE','UNIDENTIFIED_CONTACT','UNCERTAIN_DISCLOSURE','OFFENSIVE_LANGUAGE','HOME_WARNING_UNATTRIBUTED','UNCERTAIN_CONFRONTATION'},
+                'speaker_assignment_required':code in{'ASSET_COERCION_REVIEW','THIRD_PARTY_PAYMENT_GUIDANCE','UNIDENTIFIED_CONTACT','UNCERTAIN_DISCLOSURE','OFFENSIVE_LANGUAGE','HOME_WARNING_UNATTRIBUTED','UNCERTAIN_CONFRONTATION'},
                 'classification_preserved':decision.get('clasificacion')})
     return result
 

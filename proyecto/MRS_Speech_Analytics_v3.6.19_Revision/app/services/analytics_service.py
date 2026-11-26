@@ -2115,7 +2115,7 @@ class AnalyticsService:
                 if ('position'in commitment_confirmation and
                         event['position']!=commitment_confirmation['position']):continue
                 detail=({'date':parsed_call_date,'text':'respuesta de pago inmediato'} if event.get('immediate') else
-                    cls._extract_payment_promise_date_details('Confirmacion de pago: '+event['evidence'],call_date))
+                    cls._extract_payment_promise_date_details('Confirmacion de pago: '+(event.get('date_evidence')or event['evidence']),call_date))
                 if event.get('day_of_month') and parsed_call_date:
                     try:detail={'date':date(parsed_call_date.year,parsed_call_date.month,event['day_of_month']),'text':event['day_text']}
                     except ValueError:detail={'date':None,'text':''}
@@ -2560,21 +2560,8 @@ class AnalyticsService:
         # Indicios de presión sobre bienes o cargos adicionales no sustentados:
         # requieren comprobación del contexto y del hablante; no son una
         # falta grave confirmada por la sola transcripción.
-        asset_pressure_hits = []
-        for pattern in (
-            r'\b(?:venderlas|empenarlas|venda sus|empene sus|vendalas|empenelas)\b',
-            r'\blos bienes son para remediar los males\b',
-            r'\b(?:penalizacion|penalidad)\b[^.!?]{0,55}\b(?:otros|mas)\s+'
-                r'(?:dos mil|2000|2[.,]000)\b',
-        ):
-            for match in re.finditer(pattern, normalized):
-                asset_pressure_hits.append(
-                    normalized[max(0, match.start()-65):match.end()+90])
-        asset_pressure_review = bool(asset_pressure_hits and (
-            re.search(r'\b(?:bienes|muebles|empenar|empenarlas|venderlas)\b',
-                      normalized)
-            or any('penalizacion' in t or 'penalidad' in t
-                   for t in asset_pressure_hits)))
+        from app.services.treatment_evidence import asset_pressure_evidence
+        asset_pressure=asset_pressure_evidence(text,segments)
         treatment_validation = {
             "offensive_language_evidence": offensive_language_evidence,
             "confrontation": treatment_state,
@@ -2594,8 +2581,9 @@ class AnalyticsService:
             "contextual_confrontation": contextual_confrontation,
             "holder_distress_evidence": holder_distress_evidence,
             "pressure_evidence": pressure_evidence,
-            "asset_pressure_review": asset_pressure_review,
-            "asset_pressure_evidence": list(dict.fromkeys(asset_pressure_hits))[:5],
+            "asset_pressure_review": asset_pressure['review_required'],
+            "asset_pressure_evidence":list(dict.fromkeys(e['text']for e in asset_pressure['evidence'])),
+            "asset_pressure_details":asset_pressure['evidence'],
             "voice_tone_rule": "AGRESIVIDAD/CONFRONTACION CONFIRMADA DEL GESTOR = FALLA GRAVE BLOQUEANTE",
             "voice_tone_limit": "La transcripcion sola no atribuye tono acustico ni solapamiento de hablantes; señales ambiguas pasan a revision.",
         }
@@ -3600,7 +3588,9 @@ class AnalyticsService:
         # El dictado de contacto puede decir solo «¿qué número es?» y contener
         # puntos/echos. No escalar 7.22 a $7220 ni arrastrar el «saldo» previo.
         from app.services.balance_context_evidence import callback_dictation_spans
-        callback_spans = callback_dictation_spans(text)
+        # Los intervalos deben pertenecer a la misma normalización que las
+        # cifras: NFKD expande, por ejemplo, «…» a tres caracteres.
+        callback_spans = callback_dictation_spans(source_norm)
         money_mentions = [m for m in money_mentions if re.search(r'\$|\bpesos?\b',m[3]) or not any(
             start <= m[0] and m[1] <= end for start, end in callback_spans)]
         fragmented_balance_evidence = fragmented_balance_amounts(text)
@@ -4226,6 +4216,11 @@ class AnalyticsService:
             and (promise_date - parsed_call_date).days > 90
             and not re.search(r"\b20\d{2}\b|\b(?:proximo ano|ano (?:proximo|que viene)|ano entrante)\b",
                               norm(promise_date_evidence)))
+        commitment_text=norm(commitment_confirmation.get('evidence')or'')
+        commitment_at=source_norm.rfind(commitment_text)if commitment_text else -1
+        unaccepted_amount_after_decision=bool(confirms_commitment and not confirmed_agreement_amount
+            and detected_claim_span and commitment_at>=0
+            and detected_claim_span[0]>=commitment_at+len(commitment_text))
         negotiation_validation = {
             "mora_payment_policy": mora_policy,
             "installment_dates": schedule_dates,
@@ -4284,6 +4279,7 @@ class AnalyticsService:
             "holder_liquidation_report": holder_liquidation_report,
             "liquidation_allowed": mora not in restricted_liquidation_moras,
             "amount_confirmed": bool(detected_claim_amount is not None),
+            "unaccepted_amount_after_decision":unaccepted_amount_after_decision,
             "payment_date_confirmed": confirms_payment_date,
             "commitment_confirmed": confirms_commitment,
             "regularization_wording": regularization_wording,

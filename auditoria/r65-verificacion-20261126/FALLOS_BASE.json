@@ -1,0 +1,25 @@
+{
+  "base_commit": "ef1b5c6",
+  "tests": 3485,
+  "passed": 3447,
+  "failed": 16,
+  "skipped": 22,
+  "failed_cases": [
+    "tests.test_new_project_program_r47::test_general_rules_apply_to_new_project_before_any_checkpoint_review[cambio_de_estatus]",
+    "tests.test_status_label_output_r45::test_report_shows_both_original_and_actual_corrected_output",
+    "tests.test_status_label_output_r45::test_export_rechecks_rules_copies_binary_bytes_and_preserves_sources",
+    "tests.test_status_label_output_r45::test_forged_saved_approval_cannot_copy_a_call_with_prior_mistreatment",
+    "tests.test_status_label_output_r45::test_missing_or_duplicate_original_audio_never_selects_an_arbitrary_file",
+    "tests.test_status_label_output_r45::test_two_calls_with_same_output_keep_the_name_using_distinct_subdirectories",
+    "tests.test_status_label_output_r45::test_final_report_lists_accounts_and_actions_without_claiming_uncopied_audio",
+    "tests.test_status_label_output_r45::test_report_marks_only_verified_completed_copies",
+    "tests.test_status_label_output_r45::test_unfinished_or_changed_copy_does_not_modify_the_report[incomplete]",
+    "tests.test_status_label_output_r45::test_unfinished_or_changed_copy_does_not_modify_the_report[wrong_hash]",
+    "tests.test_status_label_output_r45::test_unfinished_or_changed_copy_does_not_modify_the_report[missing_audio]",
+    "tests.test_status_label_output_r45::test_new_batch_copy_uses_the_corrected_folder_and_keeps_the_source",
+    "tests.test_status_label_output_r45::test_unaccepted_proposal_uses_actual_scenario_for_script_scoring[CONVENIO]",
+    "tests.test_status_label_output_r45::test_unaccepted_proposal_uses_actual_scenario_for_script_scoring[NO DEFINE FECHA DE PAGO]",
+    "tests.test_status_label_output_r45::test_windows_entry_point_performs_reanalysis_copy_and_final_account_report",
+    "tests.test_ten_audio_review::test_listing_of_banks_does_not_make_other_authorized_options_unsafe"
+  ]
+}

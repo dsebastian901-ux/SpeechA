@@ -112,11 +112,11 @@ def needs_recovery(metadata):
         codes={str(f.get('code')or'')for f in findings if isinstance(f,dict)}
         if 'CONTEXT_AUDIO_REQUIRED_INVALID'in codes:
             codes.update((metadata.get('context_audio_validation')or{}).get('required_findings',[]))
-        if codes & {'RECEIPT_UNCERTAIN','PAYMENT_OUTCOME_NOT_CONFIRMED',
+        if codes & {'CONVENIO_OUTCOME_CONFLICT','RECEIPT_UNCERTAIN','PAYMENT_OUTCOME_NOT_CONFIRMED',
                     'NEGOTIATION_INVALID_OR_UNCERTAIN','STATUS_INVALID','STATUS_NOT_CONFIRMED',
                     'RECOVERED_AMOUNT_UNVERIFIED','FINANCIAL_CONFIRMATION'}:
             wanted.add('financial')
-        if codes & {'THIRD_PARTY_PAYMENT_GUIDANCE','UNCERTAIN_DISCLOSURE','WARNING_CONFIRMATION',
+        if codes & {'ASSET_COERCION_REVIEW','THIRD_PARTY_PAYMENT_GUIDANCE','UNCERTAIN_DISCLOSURE','WARNING_CONFIRMATION',
                     'HOME_WARNING_UNATTRIBUTED','OFFENSIVE_LANGUAGE',
                     'UNCERTAIN_CONFRONTATION','CONTEXT_AUDIO_RISK','ADDITIONAL_AUDIO_EVIDENCE',
                     'WAIT_WITHOUT_RESUMPTION','CARD_REFERENCE'}:
@@ -208,7 +208,7 @@ def _focused_windows(data,metadata):
         if a is None or b is None:continue
         code=row['finding_code']
         purpose=('holder'if code=='UNIDENTIFIED_CONTACT'else'callback'if code.startswith(('CALLBACK','MESSAGE_'))else
-                 'safety'if code in{'THIRD_PARTY_PAYMENT_GUIDANCE','UNCERTAIN_DISCLOSURE','HOME_WARNING_UNATTRIBUTED','OFFENSIVE_LANGUAGE',
+                 'safety'if code in{'ASSET_COERCION_REVIEW','THIRD_PARTY_PAYMENT_GUIDANCE','UNCERTAIN_DISCLOSURE','HOME_WARNING_UNATTRIBUTED','OFFENSIVE_LANGUAGE',
                     'UNCERTAIN_CONFRONTATION','WAIT_WITHOUT_RESUMPTION','CARD_REFERENCE','MISTREATMENT_REPORT'}else'financial')
         while a<b:
             end=min(b,a+38.)

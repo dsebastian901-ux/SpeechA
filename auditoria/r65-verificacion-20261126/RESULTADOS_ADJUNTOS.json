@@ -1,0 +1,102 @@
+{
+  "BATCH_79": {
+    "source_name": "batch_checkpoint.json",
+    "source_sha256": "941e9dc24bc6d151ff8462e81c4d5b813b7c45e1aacb044fdea02097e3d49fbe",
+    "items": 79,
+    "stored_counts": {
+      "NO_APROBADO": 4,
+      "FALLA_MINIMA": 6,
+      "APROBADO_ETIQUETA_CORREGIDA": 5,
+      "REVISAR": 39,
+      "APROBADO": 6,
+      "SIN_RELACION_EXCEL": 19
+    },
+    "base_counts": {
+      "REVISAR": 36,
+      "APROBADO": 14,
+      "NO_APROBADO_MENOR_80": 2,
+      "FALLA_MINIMA": 5,
+      "SIN_RELACION_EXCEL": 19,
+      "APROBADO_ETIQUETA_CORREGIDA": 2,
+      "NO_APROBADO": 1
+    },
+    "updated_counts": {
+      "REVISAR": 33,
+      "APROBADO": 15,
+      "APROBADO_ETIQUETA_CORREGIDA": 4,
+      "NO_APROBADO_MENOR_80": 2,
+      "FALLA_MINIMA": 5,
+      "SIN_RELACION_EXCEL": 19,
+      "NO_APROBADO": 1
+    },
+    "original_review_count": 39,
+    "original_review_results": {
+      "APROBADO": 8,
+      "REVISAR": 27,
+      "NO_APROBADO_MENOR_80": 2,
+      "NO_APROBADO": 1,
+      "APROBADO_ETIQUETA_CORREGIDA": 1
+    },
+    "original_reviews_resolved": 12,
+    "new_review_from_other_categories": 6,
+    "reviews_resolved_by_code_vs_integrated_base": 3,
+    "base_approvals_preserved": true,
+    "updated_approvals_checked": 19,
+    "output_names_normalized_in_working_copy": 23,
+    "original_asr_and_financial_source_and_reviews_preserved": true,
+    "original_upload_unchanged": true,
+    "target_audio_matches": 0,
+    "human_verified": false,
+    "physical_windows_tested": false
+  },
+  "REANALIZADO_79": {
+    "source_name": "checkpoint_reanalizado.json",
+    "source_sha256": "cdaed6fdcf6266fa59f661c7d7201cdeaa3afe2348ada32f9fcdcb6815ffa244",
+    "items": 79,
+    "stored_counts": {
+      "NO_APROBADO": 4,
+      "FALLA_MINIMA": 6,
+      "APROBADO_ETIQUETA_CORREGIDA": 6,
+      "REVISAR": 38,
+      "APROBADO": 6,
+      "SIN_RELACION_EXCEL": 19
+    },
+    "base_counts": {
+      "REVISAR": 36,
+      "APROBADO": 14,
+      "NO_APROBADO_MENOR_80": 2,
+      "FALLA_MINIMA": 5,
+      "SIN_RELACION_EXCEL": 19,
+      "APROBADO_ETIQUETA_CORREGIDA": 2,
+      "NO_APROBADO": 1
+    },
+    "updated_counts": {
+      "REVISAR": 33,
+      "APROBADO": 15,
+      "APROBADO_ETIQUETA_CORREGIDA": 4,
+      "NO_APROBADO_MENOR_80": 2,
+      "FALLA_MINIMA": 5,
+      "SIN_RELACION_EXCEL": 19,
+      "NO_APROBADO": 1
+    },
+    "original_review_count": 38,
+    "original_review_results": {
+      "APROBADO": 8,
+      "REVISAR": 26,
+      "NO_APROBADO_MENOR_80": 2,
+      "NO_APROBADO": 1,
+      "APROBADO_ETIQUETA_CORREGIDA": 1
+    },
+    "original_reviews_resolved": 12,
+    "new_review_from_other_categories": 7,
+    "reviews_resolved_by_code_vs_integrated_base": 3,
+    "base_approvals_preserved": true,
+    "updated_approvals_checked": 19,
+    "output_names_normalized_in_working_copy": 0,
+    "original_asr_and_financial_source_and_reviews_preserved": true,
+    "original_upload_unchanged": true,
+    "target_audio_matches": 0,
+    "human_verified": false,
+    "physical_windows_tested": false
+  }
+}

@@ -146,6 +146,9 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     # no aprobación automática con etiqueta corregida.
     if (status.get('excel_status') == 'CONVENIO'
             and status.get('detected_status') == 'NO DEFINE FECHA DE PAGO'
+            and not ((negotiation.get('commitment_evidence')or{}).get('declined')
+                     and not (negotiation.get('commitment_evidence')or{}).get('accepted'))
+            and not negotiation.get('unaccepted_amount_after_decision')
             and negotiation.get('amount_confirmed')
             and negotiation.get('payment_date_confirmed')
             and negotiation.get('promise_date')

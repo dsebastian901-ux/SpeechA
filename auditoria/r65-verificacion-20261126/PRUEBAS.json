@@ -1,0 +1,60 @@
+{
+  "base_commit": "ef1b5c6",
+  "base_full_suite": {
+    "tests": 3485,
+    "passed": 3447,
+    "failed": 16,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 523.532
+  },
+  "final_full_suite": {
+    "tests": 3515,
+    "passed": 3493,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 563.015
+  },
+  "all_16_baseline_failures_pass_now": true,
+  "existing_test_expectations_modified": false,
+  "new_synthetic_regression_cases": 30,
+  "skipped_reasons": {
+    "Necesita pantalla Tk (Xvfb o Windows).": 5,
+    "Requiere pantalla Tk.": 2,
+    "Necesita una pantalla Tk real (DISPLAY o Windows).": 5,
+    "Requiere pantalla Tk de pruebas.": 2,
+    "Requiere CMD y Python de Windows.": 8
+  },
+  "focused_155": {
+    "tests": 155,
+    "passed": 155,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 29.956
+  },
+  "module_305": {
+    "tests": 305,
+    "passed": 305,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 27.301
+  },
+  "receipt_157": {
+    "tests": 157,
+    "passed": 157,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 17.249
+  },
+  "intermediate_run_interrupted_after_receipt_correction": {
+    "passed_before_interrupt": 404,
+    "reason": "Se reinició la suite completa tras corregir otra causa reproducida; solo final_full_suite acredita el resultado completo."
+  },
+  "physical_windows_tested": false,
+  "human_listening_performed": false,
+  "no_new_version_tag_installer_or_exe": true
+}

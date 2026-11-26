@@ -82,6 +82,71 @@ def financial_response_events(text, segments=()):
             'reply':answer,'offer':offer,'offer_position':previous['start'],
             'method':'ACEPTACION_DE_RECAPITULACION_FINANCIERA_INMEDIATA',
             'speaker_role':reply['role'],'human_verified':False,'acoustic_voice_identified':False})
+    events.extend(_payment_terms_responses(text,segments,rows))
+    return events
+
+
+def _payment_terms_responses(text,segments,rows):
+    """Mismo objeto de pago: importe y fecha respondidos juntos o seguidos.
+
+    No toma términos del Excel ni de una lectura unilateral. Los dos datos
+    proceden de la respuesta actual; no cruza una pregunta de otro objeto.
+    """
+    from app.services.reported_payment_amounts import NUMBER,money_value
+    from app.services.payment_intent_frames import PAST as HISTORY, OTHER as OTHER_OBJECT
+    from app.services.conversation_evidence import _payment_review_condition,_payment_review_deferral
+    from app.services.speech_scope import nonassertive_prefix
+    source=normalize(text);events=[]
+    amount_reply=re.compile(r'^(?:(?:seria )?(?:el )?monto (?:es |seria |de )?|serian? |de |por )?'
+        r'(?P<amount>'+NUMBER+r')(?!\w)')
+    def query(row):
+        value=row['text']
+        if row['role']in{'TITULAR','TERCERO','INTERLOCUTOR'}:return False
+        if HISTORY.search(value)or OTHER_OBJECT.search(value)or QUOTE.search(value):return False
+        if re.search(r'\b(?:corte|vencimiento|vence|fecha limite)\b',value):return False
+        if nonassertive_prefix(source,row['start']):return False
+        return bool(re.search(r'\b(?:monto|cantidad)\b',value)
+            and re.search(r'\b(?:indi(?:ca|car|que)|confirm\w*|estaria (?:realizando|aplicando))\b',value)
+            and re.search(r'\b(?:pago|pagar|convenio|movimiento)\b',source[max(0,row['start']-250):row['end']]))
+    def safe(row):
+        value=row['text']
+        return bool(row['role']not in{'GESTOR','TERCERO'}and len(value)<=240
+            and '?'not in value and '¿'not in value and not HISTORY.search(value)
+            and not QUOTE.search(value)and not CONDITION.search(value)
+            and not re.search(r'\b(?:no|pero no|si consigo|si puedo|si me da)\b',value)
+            and not _payment_review_condition(value)and not _payment_review_deferral(value))
+    for index,offer in enumerate(rows[:-1]):
+        if not query(offer):continue
+        answer_index=index+1
+        # Una reparación breve no cambia el objeto ni acredita aceptación.
+        # No atravesar propuestas, agradecimientos ni otras preguntas.
+        if re.fullmatch(r'(?:perdon|disculpe)[.!]?',rows[answer_index]['text']):
+            answer_index+=1
+            if answer_index>=len(rows):continue
+        answer=rows[answer_index]
+        if not safe(answer):continue
+        match=amount_reply.match(answer['text'])
+        if not match:continue
+        amount=money_value(match['amount']);tail=answer['text'][match.end():]
+        if amount is None or amount<10 or re.match(r'\s*(?:dias?|horas?|meses?|anos?|de [a-z]+)\b',tail):continue
+        date_reply=answer;date_text=tail;end_index=answer_index
+        combined=bool(re.search(r'\b(?:fecha|dia)\b',offer['text']))
+        if not combined:
+            if answer_index+2>=len(rows)or re.sub(r'\bpesos\b|[,.! ]','',tail):continue
+            date_query=rows[answer_index+1];date_reply=rows[answer_index+2];date_text=date_reply['text'];end_index=answer_index+2
+            if date_query['role']in{'TITULAR','TERCERO','INTERLOCUTOR'}or HISTORY.search(date_query['text'])or OTHER_OBJECT.search(date_query['text']):continue
+            if re.search(r'\b(?:corte|vencimiento|vence|fecha limite)\b',date_query['text']):continue
+            if not re.search(r'\b(?:fecha|dia|hoy|manana)\b',date_query['text']):continue
+            if not safe(date_reply):continue
+        if len(list(DATE.finditer(date_text)))!=1 or re.search(r'\bo\b',date_text):continue
+        evidence=' '.join(row['text']for row in rows[index:end_index+1])
+        events.append({'position':date_reply['start'],'end':date_reply['end'],
+            'accepted':True,'declined':False,'conditional':False,'evidence':evidence,
+            'date_evidence':'Pago '+date_text,'reply':date_reply['text'],'offer':offer['text'],
+            'offer_position':offer['start'],'speaker_role':date_reply['role'],
+            'amount':float(amount),'amount_position':answer['start']+match.start('amount'),
+            'amount_end':answer['start']+match.end('amount'),'amount_text':match['amount'],
+            'method':'RESPUESTA_ACTUAL_DE_IMPORTE_Y_FECHA','human_verified':False,'acoustic_voice_identified':False})
     return events
 
 
@@ -232,7 +297,7 @@ def resolve_payment_events(events, confirmations):
         route_only=bool(re.search(r'\b(?:lo voy a realizar|voy a (?:hacer|realizar) (?:el )?pago)\b'
             r'[^.!?]{0,40}\b(?:por (?:medio de )?transferencia|por (?:la )?aplicacion|con (?:mi |la )?banca|en (?:la )?(?:tienda|tierna|sucursal))\b',value)
             and not DATE.search(value)and not AMOUNT.search(value))
-        if accepted is True and route_only and any(e[1]is True for e in choices):continue
+        if route_only and any(e[1]is True for e in choices):continue
         if accepted is True and re.search(r'\bcreo que (?:lo voy|voy|podre|puedo|hago)\b',value):accepted=None
         choices.append((position,accepted,evidence))
     if not choices:return {'accepted':False,'declined':False,'evidence':''}
