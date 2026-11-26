@@ -141,6 +141,24 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     if (m.get('quality_contact_type')=='TITULAR' and status.get('evidence_method')=='SIN_EVIDENCIA'
             and status.get('matches')is None and negotiation.get('negotiation_attempt_detected')):
         add(12,'PAYMENT_OUTCOME_NOT_CONFIRMED','Se identifica al titular y una gestión de pago, pero no se acredita su resultado final: aceptación firme, negativa o decisión pendiente.','negotiation_validation')
+    # No confirmar una reetiqueta NO DEFINE con fecha e importe presentes
+    # si el Excel registra CONVENIO. La evidencia requiere reconciliación,
+    # no aprobación automática con etiqueta corregida.
+    if (status.get('excel_status') == 'CONVENIO'
+            and status.get('detected_status') == 'NO DEFINE FECHA DE PAGO'
+            and negotiation.get('amount_confirmed')
+            and negotiation.get('payment_date_confirmed')
+            and negotiation.get('promise_date')
+            and negotiation.get('negotiation_attempt_detected')):
+        add(1, 'CONVENIO_OUTCOME_CONFLICT',
+            'La gestión contiene monto y fecha de pago, pero fue reetiquetada NO DEFINE: '
+            'confirmar aceptación final y si corresponde CONVENIO antes de aprobar.',
+            'status_validation')
+    if treatment.get('asset_pressure_review'):
+        add(10, 'ASSET_COERCION_REVIEW',
+            treatment.get('asset_pressure_evidence') or
+            'Posible presión para vender o empeñar bienes o penalidad adicional no corroborada; '
+            'confirmar contexto y hablante.', 'treatment_validation')
     if ids & {'PEN_CONV_FRAUDE','PEN_CONV_TRANSFER_REV'}:
         add(12,'PAYMENT_DESTINATION','Método o datos de pago requieren revisión de seguridad','convenio_payment_validation')
     if checks.get('queja_maltrato_detectada') or treatment.get('mistreatment_report_evidence') or 'PEN_QUEJA_MALTRATO' in ids:
@@ -234,6 +252,11 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     rejection = definitive_rejection(m,findings,duration_seconds)
     from app.services.minor_failure_policy import confirmed_minor_failure
     minor_failure = confirmed_minor_failure(m)
+    # Una falta mínima por plazo no puede cerrar una duda INDEPENDIENTE
+    # de seguridad o presión al interlocutor.
+    if minor_failure and any(f['code'] == 'ASSET_COERCION_REVIEW'
+                             and f['severity'] == 'REVIEW' for f in findings):
+        minor_failure = None
     score_rejection=bool(not score_ok and ordinary_score_rejection(m,score,minimum_score,duration_seconds))
     pending_alerts=[]
     if (rejection or minor_failure or score_rejection) and not critical:
