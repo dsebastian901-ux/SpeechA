@@ -2557,22 +2557,24 @@ class AnalyticsService:
         else:
             treatment_state = "SIN CONFRONTACION DETECTADA"
 
-        # Señales de presión patrimonial: no imputar maltrato sin voz
-        # acreditada. Conservar como REVIEW, también si el cierre financiero
-        # tiene una falta mínima independiente.
+        # Indicios de presión sobre bienes o cargos adicionales no sustentados:
+        # requieren comprobación del contexto y del hablante; no son una
+        # falta grave confirmada por la sola transcripción.
         asset_pressure_hits = []
         for pattern in (
-            r'\\b(?:venderlas|empenarlas|venda sus|empen[ea] sus|vendalas|empenelas)\\b',
-            r'\\blos bienes son para remediar los males\\b',
-            r'\\b(?:penalizacion|penalidad)\\b[^.!?]{0,55}\\b(?:otros|mas)\\s+'
-                r'(?:dos mil|2000|2[.,]000)\\b',
+            r'\b(?:venderlas|empenarlas|venda sus|empene sus|vendalas|empenelas)\b',
+            r'\blos bienes son para remediar los males\b',
+            r'\b(?:penalizacion|penalidad)\b[^.!?]{0,55}\b(?:otros|mas)\s+'
+                r'(?:dos mil|2000|2[.,]000)\b',
         ):
-            for match in re.finditer(pattern.replace('\\\\', '\\'), normalized):
-                asset_pressure_hits.append(normalized[max(0,match.start()-65):match.end()+90])
+            for match in re.finditer(pattern, normalized):
+                asset_pressure_hits.append(
+                    normalized[max(0, match.start()-65):match.end()+90])
         asset_pressure_review = bool(asset_pressure_hits and (
-            re.search(r'\\b(?:bienes|muebles|empenar|empenarlas|venderlas)\\b',
-                      normalized) or
-            any('penalizacion' in t or 'penalidad' in t for t in asset_pressure_hits)))
+            re.search(r'\b(?:bienes|muebles|empenar|empenarlas|venderlas)\b',
+                      normalized)
+            or any('penalizacion' in t or 'penalidad' in t
+                   for t in asset_pressure_hits)))
         treatment_validation = {
             "offensive_language_evidence": offensive_language_evidence,
             "confrontation": treatment_state,
