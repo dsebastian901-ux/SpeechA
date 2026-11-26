@@ -9,7 +9,7 @@ from app.services.reported_payment_amounts import money_value, NUMBER
 
 _VALIDATION = re.compile(r'\b(?:area de validacion|del area de validacion|al area de validacion|pasar a validacion|validaciones)\b')
 _FIRM = re.compile(r'\b(?:queda confirmado|quedamos entonces|confirmo (?:su |el )?pago|seria el monto|el monto es)\b')
-_DATE = re.compile(r'\b(?:(?:el|para|al)\s+dia\s+\d{1,2}|dia\s+\d{1,2}|(?:el|para)\s+\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)|manana|hoy)\b')
+_DATE = re.compile(r'\b(?:(?:el|para|al)\s+dia\s+(?:de\s+manana\s+)?\d{1,2}|dia\s+\d{1,2}|(?:el|para)\s+\d{1,2}\s+de\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)|manana|hoy)\b')
 _AMOUNT = re.compile(r'\b(?:por la cantidad de|cantidad de|el monto es|seria el monto|por los?)\s+(?P<amount>' + NUMBER + r')(?:\s+pesos?)?\b')
 _NEGATED = re.compile(r'\b(?:no quedo confirmado|no confirmo el pago|se cancela el compromiso|no voy a pagar|no pagare)\b')
 
