@@ -4548,6 +4548,11 @@ class AnalyticsService:
                 r"confirmo\s+(?:su\s+)?convenio)\b", normalized
             ))
             refusal_evidence = full_payment_refusal(commitment_confirmation)
+            # Una validación FINAL puede cerrar un compromiso NUEVO después de
+            # que el cliente haya mencionado un pago HISTÓRICO. No permite
+            # aprobar la calidad ni omitir revisiones independientes.
+            from app.services.final_validation_confirmation import confirmed_validation_plan
+            final_validation = confirmed_validation_plan(text)
             no_date_evidence = recipient_statement(text, segments,
                 r"\b(?:no\s+se\s+cuando\s+(?:pueda|voy\s+a)\s+pagar|"
                 r"no\s+puedo\s+(?:dar|confirmar)\s+(?:una\s+)?fecha|"
@@ -4585,6 +4590,12 @@ class AnalyticsService:
                     status_evidence_method="CUELGUE_EXPRESO_SIN_ALTERNATIVAS"
                     status_evidence="El titular anunció que terminaría la llamada antes de recibir alternativas."
                 status_detection_confidence="ALTA"
+            elif (final_validation['confirmed'] and not refusal_evidence
+                  and not commitment_confirmation.get('declined')):
+                detected_status = 'CONVENIO'
+                status_detection_confidence = 'MEDIA'
+                status_evidence = final_validation['evidence']
+                status_evidence_method = 'MONTO_Y_FECHA_EN_VALIDACION_FINAL'
             elif date_outside_operational_policy:
                 detected_status="CONVENIO"
                 status_detection_confidence="ALTA"
