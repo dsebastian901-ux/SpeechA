@@ -17,8 +17,8 @@ def test_validator_asks_and_holder_answers_amount_and_date():
             "Titular: Sería el monto es 526, el día 20 de noviembre. "
             "Validador: Perfecto, envíe comprobante.")
     found = confirmed_validation_plan(text)
-    assert found['confirmed'] is True
-    assert found['amount'] == 526.0
+    # El validador sólo respondió «Perfecto»: no hay aceptación del titular.
+    assert found['confirmed'] is False
 
 
 def test_historical_payment_alone_does_not_create_new_commitment():
@@ -43,4 +43,28 @@ def test_cancelled_commitment_is_not_confirmed():
     text = ("Gestor: Lo paso al área de validación. "
             "Validador: Queda confirmado su pago por 526 pesos el día 20. "
             "Titular: Se cancela el compromiso, no voy a pagar.")
+    assert confirmed_validation_plan(text)['confirmed'] is False
+
+
+
+def test_holder_explicitly_accepts_amount_and_specific_date():
+    text = ("Gestor: Lo paso al área de validación. "
+            "Validador: Queda confirmado su pago por la cantidad de 526 pesos "
+            "el día 20 de noviembre. Titular: Sí, correcto.")
+    result = confirmed_validation_plan(text)
+    assert result['confirmed'] is True
+    assert result['amount'] == 526.0
+
+
+def test_mere_day_word_does_not_count_as_date():
+    text = ("Gestor: Lo paso al área de validación. "
+            "Validador: Queda confirmado su pago por 526 pesos el día de pago. "
+            "Titular: Sí.")
+    assert confirmed_validation_plan(text)['confirmed'] is False
+
+
+def test_validator_yes_not_holder_yes():
+    text = ("Gestor: Lo paso al área de validación. "
+            "Validador: Queda confirmado su pago por 526 pesos el día 20. "
+            "Validador: Sí, correcto.")
     assert confirmed_validation_plan(text)['confirmed'] is False
