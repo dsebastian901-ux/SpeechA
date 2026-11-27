@@ -587,6 +587,18 @@ class BatchService:
             "REVISAR": "REVISAR",
         }
         destination_dir = classified_root / folder_map.get(category, "REVISAR")
+        # Decisión 26/11: la clasificación de calidad sigue FALLA_GRAVE,
+        # mientras la copia debe ir a la carpeta operativa NEGOCIACION_INVALIDA.
+        # No cambiar el estatus de grabación CONVENIO ni el nombre original.
+        findings = classification.get('decision_findings') or []
+        date_failure = any(
+            isinstance(finding, dict)
+            and finding.get('code') == 'CRITICAL_AGREED_DATE_OUTSIDE_POLICY'
+            and finding.get('severity') == 'CRITICAL'
+            for finding in findings
+        )
+        if category == 'FALLA_GRAVE' and date_failure:
+            destination_dir = classified_root / 'NEGOCIACION_INVALIDA'
         # Separa lugar no autorizado o referencia distinta sin alterar calidad
         # ni afirmar fraude por la sola mención/transcripción de una referencia.
         metadata=item.get('analytics_metadata') or {}
