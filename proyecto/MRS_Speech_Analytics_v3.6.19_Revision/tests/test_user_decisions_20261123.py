@@ -20,14 +20,15 @@ def analyze(text, **context):
         'Gestor: Habla MRS. Titular: Soy yo. '+text, duration_seconds=95),dict(CONTEXT,**context))
 
 
-def test_outside_operational_window_is_minor_failure_not_customer_refusal():
+def test_outside_operational_window_is_grave_not_customer_refusal():
     tail=' Gestor: Puede pagar en Kiosko o tiendas 3B. Envíe el comprobante por WhatsApp.'
     valid=analyze('Titular: Me comprometo a pagar 1000 pesos el 23 de noviembre.'+tail)
     late=analyze('Titular: Me comprometo a pagar 1000 pesos el 25 de noviembre.'+tail)
     m=late.metadata;d=m['shared_classification']
     assert m['status_validation']['detected_status']=='CONVENIO'
     assert m['status_validation']['evidence_method']=='CONVENIO_CON_FECHA_FUERA_DE_POLITICA'
-    assert d['clasificacion']=='FALLA_MINIMA' and not d['aprobado']
+    # Decisión posterior expresa del 26/11: gravedad sin modificar puntos.
+    assert d['clasificacion']=='FALLA_GRAVE' and not d['aprobado']
     assert d['score']==valid.metadata['shared_classification']['score']
     assert [(p['id'],p['points'])for p in m['penalties']]==[(p['id'],p['points'])for p in valid.metadata['penalties']]
 

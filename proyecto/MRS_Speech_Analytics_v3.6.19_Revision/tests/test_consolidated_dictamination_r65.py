@@ -186,7 +186,8 @@ def test_complete_formalized_installments_keep_their_dates_before_quality_scorin
     assert n['promise_date']=='2026-10-24'
     assert n['quality_stage_applicable']
     assert not any(p['id']=='PEN007'for p in m['penalties'])
-    assert m['shared_classification']['clasificacion']=='REVISAR'
+    # 26/11: calendario aceptado fuera de plazo conserva CONVENIO y es grave.
+    assert m['shared_classification']['clasificacion']=='FALLA_GRAVE'
 
 
 def test_complete_accepted_under_minimum_plan_closes_rejection_with_wait_alert():

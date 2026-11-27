@@ -17,7 +17,9 @@ RULES = (
 
 def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, base_classification=None):
     m = metadata if isinstance(metadata, dict) else {}
-    score = round(float(score or 0), 2)
+    # Redondear 79.999 a 80 antes de decidir permitiría una aprobación
+    # inferior al mínimo. La presentación no modifica el umbral real.
+    score = float(score or 0)
     if not math.isfinite(score) or not 0 <= score <= 100:
         raise ValueError('Puntaje de calidad inválido; debe ser finito y estar entre 0 y 100.')
     minimum_score=float(minimum_score)
@@ -64,6 +66,10 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     ]:
         pending(domain, field, code, message)
     context_audio=m.get('context_audio_validation')or{}
+    if context_audio.get('third_listening_pending'):
+        add(13,'CONTEXT_AUDIO_THIRD_REQUIRED','La tercera escucha requerida no se completó con calidad suficiente.', 'context_audio_validation')
+    if context_audio.get('contradictory_fact_rules'):
+        add(13,'CONTEXT_AUDIO_CONTRADICTION','Persisten hechos contradictorios entre escuchas: '+', '.join(sorted(set(context_audio['contradictory_fact_rules']))), 'context_audio_validation')
     from app.services.context_evidence_policy import unresolved_dependencies
     dependencies=unresolved_dependencies(m)
     if dependencies:
@@ -72,6 +78,8 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
             'context_audio_validation')
     if context_audio.get('review_required'):
         risks=context_audio.get('risks')or[]
+        if any(r.get('type')=='SUPPLEMENTAL_FINANCIAL_RISK'for r in risks):
+            add(12,'CONTEXT_AUDIO_FINANCIAL_RISK','Las relecturas contienen condiciones financieras, referencias o trato que requieren validación; no consumir solo el plan favorable.','context_audio_validation')
         if any(r.get('type')=='INFORMACION_PROTEGIDA_SIN_VOZ_CONFIRMADA'for r in risks):
             add(3,'CONTEXT_AUDIO_PRIVACY_RISK','Información protegida en relectura local sin voz confirmada; verificar el fragmento.','context_audio_validation')
         if any(r.get('type')=='EXPRESION_OFENSIVA_SIN_VOZ_CONFIRMADA' for r in risks):
@@ -288,6 +296,7 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         findings.append(minor_failure)
     if critical:
         category = 'FALLA_GRAVE'
+        pending_alerts=[dict(f,severity='PENDING_ALERT')for f in findings if f.get('severity')=='REVIEW']
     elif base.get('missing_excel_relation'):
         category = 'SIN_RELACION_EXCEL'
     elif rejection:
@@ -363,7 +372,9 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
                  'NO_APLICA' if applicability.get(number) is False else
                  'SIN_HALLAZGOS' if m else 'NO_EVALUADO')
         evaluations.append({'id':number,'rule':label,'state':state,'finding_codes':[f['code'] for f in relevant]})
-    return {'clasificacion':category, 'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR','APROBADO_CON_ALERTA'},
+    from app.services.classification_policy import operational_folder_name
+    return {'clasificacion':category, 'operational_folder':operational_folder_name({'clasificacion':category,'decision_findings':findings}),
+            'aprobado':category in {'APROBADO','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR','APROBADO_CON_ALERTA'},
             'calidad_aprobada':category.startswith('APROBADO'), 'score':score,'puntaje_minimo':minimum_score,
             'aprobado_con_alerta':approved_with_alert,
             'cumple_puntaje':score_ok,'rechazo_automatico_por_puntaje':category=='NO_APROBADO_MENOR_80',

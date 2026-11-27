@@ -24,6 +24,7 @@ def confirmed_grave_payment_date(negotiation):
         n.get("financial_validation_applicable")
         and n.get("commitment_confirmed")
         and n.get("amount_confirmed")
+        and n.get("agreement_amount_confirmed") is not False
         and n.get("payment_date_confirmed")
         and (n.get("commitment_evidence") or {}).get("accepted")
         and not n.get("payment_confirmation_case")
@@ -64,4 +65,20 @@ def confirmed_grave_payment_date(negotiation):
                 f"{limit.isoformat()}."
             ),
         }
+    return None
+
+
+def grave_date_folder(classification):
+    """Destino operativo; no cambia calidad, estatus ni penalizaciones.
+
+    PEN005 también puede acreditar vencimiento antes de la nueva guarda de
+    plazo. Ambas vías deben usar el mismo destino en lote y reportes.
+    """
+    c = classification or {}
+    if c.get('clasificacion') == 'FALLA_GRAVE' and any(
+        f.get('severity') == 'CRITICAL' and f.get('code') in {
+            'CRITICAL_AGREED_DATE_OUTSIDE_POLICY', 'CRITICAL_PEN005'}
+        for f in c.get('decision_findings', []) if isinstance(f, dict)
+    ):
+        return 'NEGOCIACION_INVALIDA'
     return None

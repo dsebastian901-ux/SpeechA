@@ -1,6 +1,21 @@
 """Una definición compartida para copias, estadísticas y reportes."""
 APPROVED_RESULTS=frozenset({'APROBADO','APROBADOS','APROBADO_ETIQUETA_CORREGIDA','APROBADO_DURACION_MENOR','APROBADO_CON_ALERTA'})
 SHORT_APPROVAL_FOLDER='APROBADAS_DURACION_MENOR'
+OPERATIONAL_FOLDERS = {
+    'APROBADO_DURACION_MENOR':SHORT_APPROVAL_FOLDER,
+    'APROBADO':'APROBADOS','APROBADOS':'APROBADOS',
+    'APROBADO_ETIQUETA_CORREGIDA':'APROBADOS_ETIQUETA_CORREGIDA',
+    'NO_APROBADO':'NO_APROBADOS','NO_APROBADO_MENOR_80':'NO_APROBADOS_MENOR_80',
+    **{code:code for code in ['SIN_RELACION_EXCEL',
+        'APROBADO_SIN_ETIQUETAR','APROBADO_CON_EXCEPCION','APROBADO_CON_ALERTA',
+        'MAL_DICTAMINADO','NEGOCIACION_INVALIDA','FALLA_GRAVE','FALLA_MINIMA','SIN_VOZ','REVISAR']},
+}
+
+
+def operational_folder_name(classification):
+    from app.services.grave_date_policy import grave_date_folder
+    return grave_date_folder(classification)or OPERATIONAL_FOLDERS.get(
+        str((classification or{}).get('clasificacion')or'').strip().upper(),'REVISAR')
 
 # Son resultados guardados de calidad, distintos de las bandas del puntaje y
 # del estatus de gestión del Excel. No deducir una aprobación a partir de 80.

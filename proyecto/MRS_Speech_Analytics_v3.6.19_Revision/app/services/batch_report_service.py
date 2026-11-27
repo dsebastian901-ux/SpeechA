@@ -15,6 +15,8 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from datetime import datetime, date
 from pathlib import Path
+from app.services.classification_policy import operational_folder_name
+
 import json
 import re
 from typing import Any, Dict, Iterable, List
@@ -230,7 +232,7 @@ class BatchReportService:
         _index = _headers.index('MRS detectado') + 1
         _headers[_index:_index] = CONTEXT_HEADERS
         _index = _headers.index('Ruta audio clasificado') + 1
-        _headers[_index:_index] = ['Estado de copia', 'Error de copia', 'Estado de procesamiento']
+        _headers[_index:_index] = ['Estado de copia', 'Error de copia', 'Estado de procesamiento','Carpeta operativa']
 
 
     @staticmethod
@@ -825,6 +827,7 @@ class BatchReportService:
             "Transcripción Completa": transcription,
             "Transcripción Depurada": transcription_clean,
             "Ruta audio clasificado": item.get("classified_audio_path") or "",
+            "Carpeta operativa": operational_folder_name(classification),
             "Interlocutor detectado": metadata.get("quality_contact_type") or "",
             "Evidencia estatus": status.get("evidence") or "",
             "Método detección estatus": status.get("evidence_method") or "",

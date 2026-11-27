@@ -1,0 +1,252 @@
+{
+  "base_commit": "034869e6bcba1d420667c3c9051f3ad64284d178",
+  "base_full_suite": {
+    "tests": 3522,
+    "passed": 3483,
+    "failed": 17,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 545.684
+  },
+  "final_full_suite": {
+    "tests": 3572,
+    "passed": 3550,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 558.361
+  },
+  "new_r66_synthetic_regression_cases": 50,
+  "new_r66_case_results": [
+    {
+      "test": "test_real_engine_keeps_convenio_grave_classification_and_operational_folder[1PV-24 de noviembre-2026-11-30-CONVENIO]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_real_engine_keeps_convenio_grave_classification_and_operational_folder[1PV-1 de diciembre-2026-11-30-CONVENIO]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_real_engine_keeps_convenio_grave_classification_and_operational_folder[1PV-1 de diciembre-2026-11-30-NO DEFINE FECHA DE PAGO]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_real_engine_keeps_convenio_grave_classification_and_operational_folder[C4-1 de diciembre-2026-12-10-CONVENIO]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_real_engine_keeps_convenio_grave_classification_and_operational_folder[C4-11 de diciembre-2026-12-10-CONVENIO]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_payment_within_both_limits_is_not_grave_for_date[20]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_payment_within_both_limits_is_not_grave_for_date[21]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_payment_within_both_limits_is_not_grave_for_date[22]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_payment_within_both_limits_is_not_grave_for_date[23]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_two_matching_terms_and_third_contrast_resolve_before_scoring",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_real_contradiction_is_not_outvoted_or_hidden_by_error[Me indica el monto y la fecha de su pago. Ser\\xeda el monto es 900, el d\\xeda 22 de noviembre.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_real_contradiction_is_not_outvoted_or_hidden_by_error[third1]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_missing_required_third_never_enables_matching_facts",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_source_decline_condition_or_third_party_cannot_be_overridden[ No me comprometo a pagar.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_source_decline_condition_or_third_party_cannot_be_overridden[ Si consigo dinero lo har\\xe9.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_source_decline_condition_or_third_party_cannot_be_overridden[ Soy su hermana, ella no est\\xe1.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_unilateral_conditional_or_reported_terms_do_not_create_plan[Gestor: Ser\\xeda el monto es 900, el d\\xeda 22 de noviembre.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_unilateral_conditional_or_reported_terms_do_not_create_plan[Ser\\xeda el monto es 900, el d\\xeda 22 de noviembre, si consigo dinero.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_unilateral_conditional_or_reported_terms_do_not_create_plan[Me est\\xe1n diciendo 900 el d\\xeda 22 de noviembre.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_consensus_trace_keeps_each_window_separate",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_date_without_acceptance_of_offered_amount_is_not_confirmed_grave",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_recovered_plan_still_passes_through_financial_and_date_rules[900-25 de noviembre-FALLA_GRAVE]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_recovered_plan_still_passes_through_financial_and_date_rules[900-1 de diciembre-FALLA_GRAVE]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_recovered_plan_still_passes_through_financial_and_date_rules[300-22 de noviembre-NO_APROBADO]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_recovered_plan_does_not_approve_a_score_under_80",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_failed_or_unavailable_third_keeps_its_reason_and_error",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_excel_and_checkpoint_keep_each_reading_and_date_folder",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_third_favorable_read_cannot_vote_out_a_real_decline_or_condition[No me comprometo a pagar, no tengo esa cantidad.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_third_favorable_read_cannot_vote_out_a_real_decline_or_condition[Lo voy a intentar si consigo dinero para el pago.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_exact_80_floor_is_not_bypassed_by_rounding_or_lower_requested_threshold[0]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_exact_80_floor_is_not_bypassed_by_rounding_or_lower_requested_threshold[70]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_exact_80_floor_is_not_bypassed_by_rounding_or_lower_requested_threshold[79]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_exact_80_floor_is_not_bypassed_by_rounding_or_lower_requested_threshold[79.99]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_exact_80_floor_is_not_bypassed_by_rounding_or_lower_requested_threshold[79.995]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_exact_80_floor_is_not_bypassed_by_rounding_or_lower_requested_threshold[79.999]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_unconfirmed_but_conflicting_amounts_still_require_a_third_read",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_confirmed_critical_date_does_not_hide_independent_acoustic_alerts",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_consumed_plan_is_reported_as_corroborated_instead_of_no_consensus",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_later_unusable_financial_window_cannot_be_ignored_for_approval",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_executed_pending_alert_is_not_reported_as_unexecuted",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_secondary_context_cannot_be_whitened_by_a_favorable_plan[ Con ese pago queda liquidada su cuenta.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_secondary_context_cannot_be_whitened_by_a_favorable_plan[ Deposite en la cuenta personal del gestor.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_secondary_context_cannot_be_whitened_by_a_favorable_plan[ La referencia de 16 d\\xedgitos es 1234567890123456.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_secondary_context_cannot_be_whitened_by_a_favorable_plan[ En la llamada anterior me trataron mal.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_secondary_context_cannot_be_whitened_by_a_favorable_plan[ No es necesario enviar el comprobante.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_settlement_result_state_requires_agent_attribution[Gestor: -True]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_settlement_result_state_requires_agent_attribution[-False]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_settlement_result_state_requires_agent_attribution[Titular: -False]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_negated_or_historical_settlement_is_not_a_new_prohibited_offer[ Con ese pago no queda liquidada su cuenta.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_negated_or_historical_settlement_is_not_a_new_prohibited_offer[ Me hab\\xeda dicho que con ese pago queda liquidada su cuenta.]",
+      "result": "PASSED"
+    }
+  ],
+  "baseline_17_policy_expectations_updated_by_explicit_user_instruction": true,
+  "version_literal_updated_to_requested_r66": true,
+  "numerical_penalty_weights_changed": false,
+  "skipped_reasons": {
+    "Necesita pantalla Tk (Xvfb o Windows).": 5,
+    "Requiere pantalla Tk.": 2,
+    "Necesita una pantalla Tk real (DISPLAY o Windows).": 5,
+    "Requiere pantalla Tk de pruebas.": 2,
+    "Requiere CMD y Python de Windows.": 8
+  },
+  "focused_policy": {
+    "tests": 223,
+    "passed": 223,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 44.569
+  },
+  "focused_security": {
+    "tests": 217,
+    "passed": 217,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 45.018
+  },
+  "controlled_cases_are_not_real_asr": true,
+  "real_model_inference_report": "MEDIUM_REAL.json",
+  "physical_windows_tested": false,
+  "human_listening_performed": false
+}

@@ -1,0 +1,39 @@
+{
+  "scope": "CHECKPOINT_ADJUNTO_79_NO_NUEVAS_ESCUCHAS_SIN_AUDIO",
+  "base_commit": "034869e6bcba1d420667c3c9051f3ad64284d178",
+  "items": 79,
+  "source_sha256": "cdaed6fdcf6266fa59f661c7d7201cdeaa3afe2348ada32f9fcdcb6815ffa244",
+  "before": {
+    "REVISAR": 32,
+    "APROBADO": 15,
+    "APROBADO_ETIQUETA_CORREGIDA": 4,
+    "FALLA_GRAVE": 1,
+    "NO_APROBADO_MENOR_80": 2,
+    "FALLA_MINIMA": 5,
+    "SIN_RELACION_EXCEL": 19,
+    "NO_APROBADO": 1
+  },
+  "after": {
+    "REVISAR": 32,
+    "APROBADO": 15,
+    "APROBADO_ETIQUETA_CORREGIDA": 4,
+    "FALLA_GRAVE": 1,
+    "NO_APROBADO_MENOR_80": 2,
+    "FALLA_MINIMA": 5,
+    "SIN_RELACION_EXCEL": 19,
+    "NO_APROBADO": 1
+  },
+  "classification_or_score_changes": 0,
+  "all_19_base_approvals_preserved": true,
+  "approvals_checked": 19,
+  "new_customer_approvals_attributed_to_r66": 0,
+  "original_result_relation_reviews_preserved": true,
+  "second_listening": {
+    "realizadas": 0,
+    "sin_audio": 55,
+    "sin_modelo": 0,
+    "errores": 0
+  },
+  "human_verified": false,
+  "physical_windows_tested": false
+}

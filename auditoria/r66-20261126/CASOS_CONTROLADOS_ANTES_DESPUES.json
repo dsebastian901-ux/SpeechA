@@ -1,0 +1,79 @@
+{
+  "scope": "CONTROLLED_NOT_REAL_ASR_NOT_CLIENT_APPROVALS",
+  "before": {
+    "scope": "CONTROLLED_DECODER_BOUNDARIES_NOT_REAL_ASR",
+    "asr_output_doubles": true,
+    "human_verified": false,
+    "client_data": false,
+    "engine": "3.6.19-r65-consolidacion-20261125-validacion",
+    "cases": {
+      "exact_80_floor": {
+        "classification": "APROBADO",
+        "approved": true,
+        "score": 80.0
+      },
+      "date_without_accepted_amount": {
+        "classification": "FALLA_GRAVE",
+        "score": 0.0,
+        "status": "NO DEFINE FECHA DE PAGO"
+      },
+      "corroborated_own_plan": {
+        "classification": "REVISAR",
+        "score": 85.0,
+        "status": "",
+        "decoder_calls": 3
+      },
+      "required_third_failed": {
+        "favorable_receipt_fact_consumable": true,
+        "third_pending": false,
+        "third_error": "RuntimeError"
+      },
+      "separate_window_trace": {
+        "states": [
+          "CONFIRMADO",
+          "CONFIRMADO",
+          "CONFIRMADO",
+          "CONFIRMADO"
+        ]
+      }
+    }
+  },
+  "after": {
+    "scope": "CONTROLLED_DECODER_BOUNDARIES_NOT_REAL_ASR",
+    "asr_output_doubles": true,
+    "human_verified": false,
+    "client_data": false,
+    "engine": "3.6.19-r66-escuchas-dictaminacion-20261126-validacion",
+    "cases": {
+      "exact_80_floor": {
+        "classification": "NO_APROBADO_MENOR_80",
+        "approved": false,
+        "score": 79.999
+      },
+      "date_without_accepted_amount": {
+        "classification": "REVISAR",
+        "score": 100.0,
+        "status": "NO DEFINE FECHA DE PAGO"
+      },
+      "corroborated_own_plan": {
+        "classification": "APROBADO",
+        "score": 100.0,
+        "status": "CONVENIO",
+        "decoder_calls": 3
+      },
+      "required_third_failed": {
+        "favorable_receipt_fact_consumable": false,
+        "third_pending": true,
+        "third_error": "RuntimeError"
+      },
+      "separate_window_trace": {
+        "states": [
+          "CONFIRMADO",
+          "CONFIRMADO",
+          "DESCARTADO_CON_EVIDENCIA",
+          "DESCARTADO_CON_EVIDENCIA"
+        ]
+      }
+    }
+  }
+}

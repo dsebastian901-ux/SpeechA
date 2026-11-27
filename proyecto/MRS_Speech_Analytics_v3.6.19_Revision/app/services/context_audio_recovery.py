@@ -88,7 +88,8 @@ def needs_recovery(metadata):
     """Releer dudas acústicas de TODO REVISAR, sin convertir la relectura en aprobación."""
     decision=metadata.get('shared_classification')or{}
     category=str(decision.get('clasificacion')or'')
-    if category not in {'REVISAR','NO_APROBADO_MENOR_80'}:
+    if (category not in {'REVISAR','NO_APROBADO_MENOR_80'} and not (
+        category in {'FALLA_GRAVE','NO_APROBADO','FALLA_MINIMA'} and decision.get('pending_alerts'))):
         return set()
     wanted=set()
     if category=='REVISAR' and metadata.get('quality_contact_type')=='CONTACTO NO DETERMINADO':
@@ -105,11 +106,13 @@ def needs_recovery(metadata):
             and workflow.get('directed_body')and not workflow.get('callback_available')
             and not workflow.get('final_refusal')):
         wanted.add('callback')
-    if category=='REVISAR':
+    if category=='REVISAR' or decision.get('pending_alerts'):
         # Se solicitan lecturas adicionales para comprobar, NO para eximir,
         # los otros bloqueos del dictaminador.
         findings=(decision.get('pending_alerts')or decision.get('decision_findings')or [])
         codes={str(f.get('code')or'')for f in findings if isinstance(f,dict)}
+        if codes & {'CONTEXT_AUDIO_THIRD_REQUIRED','CONTEXT_AUDIO_CONTRADICTION'}:
+            wanted.update((metadata.get('context_audio_validation')or{}).get('recovery_reasons')or['general'])
         if 'CONTEXT_AUDIO_REQUIRED_INVALID'in codes:
             codes.update((metadata.get('context_audio_validation')or{}).get('required_findings',[]))
         if codes & {'CONVENIO_OUTCOME_CONFLICT','RECEIPT_UNCERTAIN','PAYMENT_OUTCOME_NOT_CONFIRMED',
@@ -170,10 +173,10 @@ def windows(data,wanted):
     return result
 
 
-def needs_third_read(purpose,attempts):
+def needs_third_read(purpose,attempts,relation=None):
     """Otra decodificación aporta contraste de hechos, nunca una voz independiente."""
     from app.services.context_fact_consensus import consensus
-    return len(attempts)==2 and consensus(purpose,attempts)['third_recommended']
+    return len(attempts)==2 and consensus(purpose,attempts,relation)['third_recommended']
 
 
 def reading_summary(record):
@@ -225,6 +228,12 @@ def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=F
     """read_window lee PCM real mediante el modelo ya cargado, sin prompt de cuenta."""
     requested=needs_recovery(metadata)
     plan=_focused_windows(data,metadata)if focused else windows(data,requested)
+    located=bool(plan)
+    if focused and not plan:
+        # Leer un encuadre diagnóstico acotado aunque falten marcas útiles.
+        # No presentarlo como localización confirmada del bloqueo ni usarlo
+        # para cerrar automáticamente una duda situada en otro lugar.
+        plan=windows(data,requested)
     if not plan:return None
     path=Path(audio_path)
     from app.config.release import ENGINE_REVISION
@@ -235,8 +244,9 @@ def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=F
         'audio_file':path.name,'model':str(model),'human_verified':False,
         'speaker_roles_confirmed':False,'groups':[], 'engine_revision':ENGINE_REVISION,
         'validator_revision':VALIDATOR_REVISION,
+        'recovery_location_confirmed':located if focused else True,
         'required_findings':[f['code']for f in decision.get('decision_findings',[])
-                             if f.get('severity')=='REVIEW' and f.get('code')],
+                             if f.get('severity')in{'REVIEW','PENDING_ALERT'} and f.get('code')],
         'classification_before':decision.get('clasificacion'),
         'recovery_reasons':sorted(requested), 'independent_sources':1}
     # El cierre también pasa por los mismos controles de consenso y calidad.
@@ -251,32 +261,38 @@ def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=F
                 primary.append(str(segment.get('texto',segment.get('text',''))))
         primary_text=' '.join(primary)
         attempts=[]
-        for (start,end),beam in zip(pair,(5,10)):
-            attempt={'start':start,'end':end,'beam_size':beam}
+        def execute(start,end,beam,index,reason):
+            import time
+            began=time.perf_counter()
+            attempt={'start':start,'end':end,'beam_size':beam,'listening_index':index,
+                     'model':str(model),'trigger_reason':reason}
             try:
                 reading=read_window(start,end,beam)
                 attempt.update(text=str(reading.get('text')or''),segments=reading.get('segments')or[])
             except Exception as error:
                 attempt.update(text='',segments=[],error=type(error).__name__)
-            attempts.append(attempt)
+            attempt['seconds']=time.perf_counter()-began
+            attempt['text_sha256']=digest(attempt['text'])
+            return attempt
+        for index,((start,end),beam) in enumerate(zip(pair,(5,10)),1):
+            attempts.append(execute(start,end,beam,index,'CONTRASTE_FOCAL_INICIAL'))
         primary_disagrees=bool(focused and primary_text and
             normalize(primary_text)!=normalize(attempts[0].get('text')))
-        if needs_third_read(purpose,attempts)or primary_disagrees:
+        first_two=consensus(purpose,attempts,relation)
+        third_required=needs_third_read(purpose,attempts,relation)or primary_disagrees
+        third_reason=('DISCREPANCIA_CON_ASR_ORIGINAL' if primary_disagrees else first_two['reason_code'])
+        if third_required:
             duration=float(data.get('duracion_segundos')or 0)
             start=max(0.,pair[0][0]-2.)
             end=min(duration,start+45.,max(pair[0][1],pair[1][1])+2.)
             if (start,end)in pair:
                 start=max(0.,start-1.)
             if end>start and end-start<=45.:
-                attempt={'start':start,'end':end,'beam_size':8}
-                try:
-                    reading=read_window(start,end,8)
-                    attempt.update(text=str(reading.get('text')or''),segments=reading.get('segments')or[])
-                except Exception as error:
-                    attempt.update(text='',segments=[],error=type(error).__name__)
-                attempts.append(attempt)
+                attempts.append(execute(start,end,8,3,third_reason))
         # Comparar con el ASR original sin reemplazarlo ni atribuir una voz.
         record['groups'].append({'purpose':purpose,'attempts':attempts,
+            'first_two_consensus':first_two,'third_read_required':bool(third_required),
+            'third_read_reason':third_reason if third_required else '',
             'primary_text':primary_text,'primary_overlap_is_segment_level':True,
             'third_read_required_by_primary_disagreement':primary_disagrees,
             'primary_text_matches_first_read':normalize(primary_text)==normalize(attempts[0].get('text')),
@@ -316,13 +332,14 @@ def validate(record,data,relation,audio_path):
         result['valid']=True
         from app.services.context_fact_consensus import consensus, VALIDATOR_REVISION
         result.update(validator_revision=VALIDATOR_REVISION,
+            recovery_location_confirmed=record.get('recovery_location_confirmed',True),
             audio_sha256=record.get('audio_sha256'), audio_file=record.get('audio_file'),
             model=record.get('model'), engine_revision=record.get('engine_revision'),
             required_findings=record.get('required_findings',[]),
             recovery_reasons=record.get('recovery_reasons',[]), independent_sources=1,
             classification_before=record.get('classification_before'), fact_validations=[])
         result['readings']=reading_summary(record)
-        for group in record.get('groups')or[]:
+        for group_index,group in enumerate(record.get('groups')or[]):
             all_attempts=group.get('attempts')or[]
             if len(all_attempts)not in (2,3)or [a.get('beam_size')for a in all_attempts[:2]]!=[5,10]:raise ValueError('Lecturas incompletas')
             if len(all_attempts)==3 and all_attempts[2].get('beam_size')!=8:raise ValueError('Tercera lectura inválida')
@@ -332,6 +349,16 @@ def validate(record,data,relation,audio_path):
             purpose=group.get('purpose','')
             semantic=consensus(purpose,all_attempts,relation)
             result['fact_validations'].append(semantic)
+            required=needs_third_read(purpose,all_attempts[:2],relation) or bool(
+                group.get('third_read_required_by_primary_disagreement'))
+            if required and (len(all_attempts)!=3 or all_attempts[2].get('error')
+                             or not reading_quality(all_attempts[2])):
+                result.setdefault('third_listening_pending',[]).append(purpose)
+                result['review_required']=True
+            contradictions=[r['rule']for r in semantic['rules']if r['state']=='CONTRADICTORIO']
+            if contradictions:
+                result.setdefault('contradictory_fact_rules',[]).extend(contradictions)
+                result['review_required']=True
             good=[a for a in all_attempts if not a.get('error')and reading_quality(a)]
             # Una relectura no puede aportar solamente hechos favorables e
             # ignorar una expresión ofensiva que la primera lectura omitió.
@@ -368,6 +395,17 @@ def validate(record,data,relation,audio_path):
                        r['matching_evidence']+r['contradictory_evidence'])
                    for r in semantic['rules']):
                 result['risks'].append({'type':'CONFRONTACION_PENDIENTE','human_verified':False})
+            if purpose in{'financial','general'}and original_holder and any(
+                f['rule']=='PAYMENT_PLAN'and f['state']=='CONFIRMADO'for f in semantic['rules']):
+                from app.services.supplemental_rule_checks import financial_context_risks
+                checked={}
+                for attempt in good:
+                    key=normalize(attempt['text'])
+                    if key not in checked:checked[key]=financial_context_risks(attempt['text'],relation)
+                    if checked[key]:
+                        result['risks'].append({'type':'SUPPLEMENTAL_FINANCIAL_RISK',
+                            'codes':checked[key],'text':attempt['text'],'start':attempt['start'],
+                            'end':attempt['end'],'human_verified':False})
             # No resolver con una única lectura; dos evidencias concordantes
             # como mínimo y ninguna contradicción explícita en una tercera.
             if len(good)<2:continue
@@ -456,7 +494,7 @@ def validate(record,data,relation,audio_path):
                         'method':'CALLBACK_MATCH_IN_TWO_LOCAL_READINGS','source':'LOCAL_AUDIO_CONTEXT',
                         'human_verified':False})
         result['outcomes']=[]
-        for group in record.get('groups')or[]:
+        for group_index,group in enumerate(record.get('groups')or[]):
             purpose=group.get('purpose','')
             if purpose=='holder' and result['holder']:
                 status='IDENTIDAD_CORROBORADA'
@@ -464,10 +502,10 @@ def validate(record,data,relation,audio_path):
                 status='CONTACTO_CORROBORADO'
             else:
                 status='SIN_CONSENSO_O_ATRIBUCION'
-            semantic=next((c for c in result['fact_validations'] if c['purpose']==purpose),{})
+            semantic=result['fact_validations'][group_index]
             result['outcomes'].append({'purpose':purpose,'result':status,
                 'attempts':len(group.get('attempts')or[]),
-                'consensus':next((c for c in result['fact_validations'] if c['purpose']==purpose),{}),
+                'consensus':semantic,
                 'reason_code':semantic.get('reason_code','REGISTRO_NO_VALIDADO'),
                 'reason':('Coincidencia validada bajo los controles de identidad y privacidad.'
                           if status!='SIN_CONSENSO_O_ATRIBUCION' else

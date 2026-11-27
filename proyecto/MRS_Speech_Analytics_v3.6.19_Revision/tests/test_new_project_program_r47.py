@@ -53,7 +53,8 @@ CASES = [
     ('rechazo_por_puntaje', 'Soy yo. Confirmo su convenio. Me comprometo a pagar 3000 pesos para regularizar mi cuenta.',
      dict(BASE, asignacion='1PV', vencimiento='2026-11-20', pago_minimo=2500, saldo_total=5000),
      'NO_APROBADO_MENOR_80'),
-    ('liquidacion_prohibida', PLAN, dict(BASE, asignacion='1PV'), 'REVISAR'),
+    # 26/11: el calendario firme del fixture excede el plazo 1PV.
+    ('liquidacion_prohibida', PLAN, dict(BASE, asignacion='1PV'), 'FALLA_GRAVE'),
     ('espera_65_segundos', PAID, BASE, 'REVISAR'),
     ('espera_64_segundos', PAID, BASE, 'APROBADO'),
     ('lugares_autorizados', PLAN+' Puede pagar en Farmacias del Ahorro y 7-Eleven.', BASE, 'APROBADO'),

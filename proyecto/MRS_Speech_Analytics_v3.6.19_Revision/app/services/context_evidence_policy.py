@@ -60,6 +60,10 @@ def confirmed_fact(context, rule):
     from app.services.context_fact_consensus import VALIDATOR_REVISION
     if not context.get('valid') or context.get('validator_revision') != VALIDATOR_REVISION:
         return None
+    if context.get('third_listening_pending'):
+        return None
+    if context.get('recovery_location_confirmed')is False:
+        return None
     candidates=[]
     for group in context.get('fact_validations') or []:
         for result in group.get('rules') or []:
@@ -86,6 +90,15 @@ def annotate_decision(metadata, decision):
     if receipt.get('receipt_evidence_source')=='LOCAL_AUDIO_CONTEXT':consumed.append(('RECEIPT_REQUEST','RECEIPT_UNCERTAIN'))
     if (metadata.get('arco_validation')or{}).get('source')=='LOCAL_AUDIO_CONTEXT':consumed.append(('ARCO','ARCO_INCOMPLETE'))
     if (metadata.get('contact_validation')or{}).get('source')=='LOCAL_AUDIO_CONTEXT':consumed.append(('IDENTITY','UNIDENTIFIED_CONTACT'))
+    if (metadata.get('negotiation_validation')or{}).get('reviewed_payment_plan'):
+        consumed.extend(('PAYMENT_PLAN',code)for code in ['CONVENIO_OUTCOME_CONFLICT',
+            'PAYMENT_OUTCOME_NOT_CONFIRMED','NEGOTIATION_INVALID_OR_UNCERTAIN','STATUS_INVALID'])
+        for outcome in context.get('outcomes')or[]:
+            if outcome.get('purpose')!='financial':continue
+            if any(f.get('rule')=='PAYMENT_PLAN'and f.get('state')=='CONFIRMADO'
+                   for f in (outcome.get('consensus')or{}).get('rules',[])):
+                outcome['result']='PLAN_DE_PAGO_CORROBORADO'
+                outcome['reason']='Importe y fecha propios corroborados; calidad y seguridad se evalúan por separado.'
     for group in context.get('fact_validations')or[]:
         for fact in group.get('rules')or[]:
             fact['resolves_codes']=[code for rule,code in consumed if rule==fact['rule']and code not in remaining]

@@ -37,9 +37,9 @@ def test_later_maturity_does_not_allow_settlement_in_next_month(mora):
     assert any("fuera del mes" in reason for reason in n["reasons"])
     # Fecha y compromiso comprobados: la política de cierre de incumplimientos
     # de la usuaria exige rechazo, no una revisión manual genérica.
-    # 23/11: plazo operativo incumplido es FALLA_MINIMA, sin ampliar plazo.
-    assert a.metadata["shared_classification"]["clasificacion"] == "FALLA_MINIMA"
-    assert any('CONFIRMED_PAYMENT_DATE_OUTSIDE_POLICY' in f.get('detail_codes', [])
+    # 26/11: acuerdo firme fuera del plazo autorizado es FALLA_GRAVE; no cambia CONVENIO.
+    assert a.metadata["shared_classification"]["clasificacion"] == "FALLA_GRAVE"
+    assert any(f.get('code')=='CRITICAL_AGREED_DATE_OUTSIDE_POLICY'
                for f in a.metadata['shared_classification']['decision_findings'])
     assert "PEN005" not in {p["id"] for p in a.metadata["penalties"]}
 
@@ -60,7 +60,7 @@ def test_earlier_maturity_remains_a_binding_limit():
 
 def test_month_of_next_year_is_not_the_same_month():
     a = analyze(promise="1 de enero de 2027", fecha="2026-12-20", vencimiento="2027-01-31")
-    assert a.metadata["shared_classification"]["clasificacion"] == "FALLA_MINIMA"
+    assert a.metadata["shared_classification"]["clasificacion"] == "FALLA_GRAVE"
 
 
 @pytest.mark.parametrize("minimum,total,amount", [("2000", "50000", 2000), ("2000", "50000", 50000)])
@@ -189,8 +189,8 @@ def test_two_installment_boundaries_are_explicit(anchor,first,second,due,valid):
 
 @pytest.mark.parametrize("first,second,due,expected", [
     ("16 de octubre","23 de octubre","2026-10-30","APROBADO"),
-    ("16 de octubre","24 de octubre","2026-10-30","REVISAR"),
-    ("17 de octubre","23 de octubre","2026-10-30","REVISAR"),
+    ("16 de octubre","24 de octubre","2026-10-30","FALLA_GRAVE"),
+    ("17 de octubre","23 de octubre","2026-10-30","FALLA_GRAVE"),
     ("16 de octubre","23 de octubre","2026-10-22","FALLA_GRAVE"),
 ])
 def test_two_installment_exception_is_applied_to_the_complete_decision(first,second,due,expected):

@@ -1853,6 +1853,7 @@ class AnalyticsService:
             r"|(?P<offer>\b(?:le\s+ofrecemos|le\s+podemos\s+ofrecer|la\s+opcion\s+es)\b.{0,100}\b(?:liquidar|liquidacion)\b)"
             r"|(?P<bare>\b(?:liquida|liquidaria)\s+(?:su\s+cuenta|la\s+cuenta|saldo\s+total|el\s+saldo\s+total)\b"
             r"|\b(?:va a|puede) saldar (?:el|su) total\b"
+            r"|\b(?:queda|quedaria|quedara) (?:totalmente |completamente )?(?:liquidada|saldada) (?:su|la) (?:cuenta|tarjeta)\b"
             r"|\b(?:tendria|tendra|dejaria|dejara)\s+(?:su|la)\s+cuenta\s+en\s+ceros\b)",
         )
         # «Finiquitar la deuda» expresa liquidación total, aunque la oferta
@@ -1876,7 +1877,7 @@ class AnalyticsService:
             for clause in re.split(r"[;]|(?=¿)", unit["text"]):
                 folded = norm(clause)
                 for candidate in liquidation_offer_pattern.finditer(folded):
-                    if re.search(r"\b(?:me dijeron|me habian dicho|segun yo|yo pague|yo quiero|crei|pense)\b", folded) or re.search(
+                    if re.search(r"\b(?:(?:me|nos) (?:dijo|dijeron|(?:habia|habian) dicho)|segun yo|yo pague|yo quiero|crei|pense)\b", folded) or re.search(
                             r"\b(?:el cliente|la cliente|el titular|la titular|usted)\s+(?:dijo|dice|menciona|comenta|confirmo|me dijo)\b", folded):
                         continue
                     prefix = folded[max(0, candidate.start()-60):candidate.start()]
@@ -2083,6 +2084,15 @@ class AnalyticsService:
                 last=accepted_schedule['dates'][-1]
                 promise_date=date.fromisoformat(last['date'])
                 promise_date_text=last['text'];promise_date_evidence=last['evidence']
+        from app.services.reviewed_payment_plan import confirmed_payment_plan
+        reviewed_plan=(None if accepted_schedule['confirmed'] else confirmed_payment_plan(
+            context.get('_context_audio_validation')or{},contact_type=contact_type,
+            commitment=commitment_confirmation,completed_payment=completed_payment_confirmation['confirmed']))
+        if reviewed_plan:
+            mentions_amount=True
+            commitment_confirmation={'accepted':True,'declined':False,'conditional':False,
+                'evidence':reviewed_plan['evidence'],'contextual_confirmation_events':[],
+                'source':'LOCAL_AUDIO_CONTEXT','human_verified':False}
         if commitment_confirmation['accepted']:
             # La promesa vigente pertenece a la respuesta aceptada. Un viernes
             # histórico no puede desplazar «hoy me comprometo a pagarlo».
@@ -2122,6 +2132,9 @@ class AnalyticsService:
                 if detail['date'] is not None:
                     promise_date=detail['date'];promise_date_text=detail['text'];promise_date_evidence=event['evidence']
                     break
+        if reviewed_plan:
+            promise_date=reviewed_plan['date'];promise_date_text=promise_date.isoformat()
+            promise_date_evidence=reviewed_plan['evidence']
         # Recalcular el contexto tras vincular la confirmación actual.
         promise_is_future = bool(promise_date and parsed_call_date and promise_date > parsed_call_date)
         prior_cue_in_promise = bool(re.search(
@@ -2619,7 +2632,7 @@ class AnalyticsService:
         # convenio nacen de su aceptación en la conversación, no de PP en
         # la fila original. Ofertas prohibidas y fraude se validan aparte.
         from app.services.operational_outcome_resolution import amount_confirmed_for_agreement
-        confirmed_agreement_amount=amount_confirmed_for_agreement(
+        confirmed_agreement_amount=bool(reviewed_plan) or amount_confirmed_for_agreement(
             text,segments,commitment_confirmation,accepted_schedule)
         is_convenio = bool(not non_holder_scenario and contact_type=='TITULAR'
             and (confirms_commitment or named_agreement)
@@ -4010,6 +4023,14 @@ class AnalyticsService:
             detected_amount_role = "SALDO INFORMADO"
             detected_claim_evidence = detected_balance_evidence
 
+        if reviewed_plan:
+            # Entra antes de validar importes, política, penalizaciones y
+            # estatus; no es una aprobación ni una reetiqueta posterior.
+            detected_claim_amount=reviewed_plan['amount'];detected_claim_span=None
+            detected_amount_raw=detected_claim_amount;amount_asr_normalized=False
+            detected_claim_evidence=reviewed_plan['evidence']
+            detected_amount_role='PAGO CONFIRMADO EN RELECTURAS VINCULADAS'
+            multi_payment_detected=False;multi_payment_amounts=[];multi_payment_total=None
         amount_validation = "NO APLICA"
         amount_reason = ""
         amount_invalid = False
@@ -4222,6 +4243,8 @@ class AnalyticsService:
             and detected_claim_span and commitment_at>=0
             and detected_claim_span[0]>=commitment_at+len(commitment_text))
         negotiation_validation = {
+            'source':'LOCAL_AUDIO_CONTEXT' if reviewed_plan else 'PRIMARY_TRANSCRIPT',
+            'reviewed_payment_plan':({**reviewed_plan,'date':reviewed_plan['date'].isoformat()} if reviewed_plan else None),
             "mora_payment_policy": mora_policy,
             "installment_dates": schedule_dates,
             "installment_window": installment_window,
@@ -4279,6 +4302,7 @@ class AnalyticsService:
             "holder_liquidation_report": holder_liquidation_report,
             "liquidation_allowed": mora not in restricted_liquidation_moras,
             "amount_confirmed": bool(detected_claim_amount is not None),
+            "agreement_amount_confirmed": bool(confirmed_agreement_amount),
             "unaccepted_amount_after_decision":unaccepted_amount_after_decision,
             "payment_date_confirmed": confirms_payment_date,
             "commitment_confirmed": confirms_commitment,
@@ -4528,7 +4552,7 @@ class AnalyticsService:
                 )
                 negotiation_validation["reasons"].append(reason)
 
-                if not confirms_commitment or detected_claim_amount is None or plan["review_required"] or date_year_rollover_review:
+                if not confirms_commitment or not confirmed_agreement_amount or detected_claim_amount is None or plan["review_required"] or date_year_rollover_review:
                     negotiation_validation["reasons"].append("Confirmar aceptación del plan y sus fechas antes de atribuir falta grave.")
                 else:
                     add_penalty(

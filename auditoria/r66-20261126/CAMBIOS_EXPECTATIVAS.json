@@ -1,0 +1,149 @@
+{
+  "base_commit": "034869e6bcba1d420667c3c9051f3ad64284d178",
+  "count": 17,
+  "cases": [
+    {
+      "test_base": "tests.test_active_clarification_and_deadline::test_confirmed_single_payment_outside_policy_closes_rejection_with_other_alerts_preserved",
+      "new_test": "tests.test_active_clarification_and_deadline::test_confirmed_single_payment_outside_policy_closes_rejection_with_other_alerts_preserved",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_consolidated_dictamination_r65::test_complete_formalized_installments_keep_their_dates_before_quality_scoring",
+      "new_test": "tests.test_consolidated_dictamination_r65::test_complete_formalized_installments_keep_their_dates_before_quality_scoring",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[3HN]",
+      "new_test": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[3HN]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[4PV]",
+      "new_test": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[4PV]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[5PV]",
+      "new_test": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[5PV]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[6PV]",
+      "new_test": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[6PV]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[A]",
+      "new_test": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[A]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[B]",
+      "new_test": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[B]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[C1]",
+      "new_test": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[C1]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[C2]",
+      "new_test": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[C2]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[C3]",
+      "new_test": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[C3]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[C4]",
+      "new_test": "tests.test_mora_payment_policy::test_later_maturity_does_not_allow_settlement_in_next_month[C4]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_month_of_next_year_is_not_the_same_month",
+      "new_test": "tests.test_mora_payment_policy::test_month_of_next_year_is_not_the_same_month",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_two_installment_exception_is_applied_to_the_complete_decision[16 de octubre-24 de octubre-2026-10-30-REVISAR]",
+      "new_test": "tests.test_mora_payment_policy::test_two_installment_exception_is_applied_to_the_complete_decision[16 de octubre-24 de octubre-2026-10-30-REVISAR]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_mora_payment_policy::test_two_installment_exception_is_applied_to_the_complete_decision[17 de octubre-23 de octubre-2026-10-30-REVISAR]",
+      "new_test": "tests.test_mora_payment_policy::test_two_installment_exception_is_applied_to_the_complete_decision[17 de octubre-23 de octubre-2026-10-30-REVISAR]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_new_project_program_r47::test_general_rules_apply_to_new_project_before_any_checkpoint_review[liquidacion_prohibida]",
+      "new_test": "tests.test_new_project_program_r47::test_general_rules_apply_to_new_project_before_any_checkpoint_review[liquidacion_prohibida]",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    },
+    {
+      "test_base": "tests.test_user_decisions_20261123::test_outside_operational_window_is_minor_failure_not_customer_refusal",
+      "new_test": "tests.test_user_decisions_20261123::test_outside_operational_window_is_grave_not_customer_refusal",
+      "authorized_change": "Acuerdo firme fuera de plazo: FALLA_GRAVE; CONVENIO conservado; NEGOCIACION_INVALIDA como destino.",
+      "authorization": "Instrucción directa de la usuaria, punto 1 de solicitud r66; posterior a criterios del 23/nov.",
+      "score_weights_changed": false,
+      "financial_expectations_relaxed": false
+    }
+  ],
+  "version_stamp_update": {
+    "test": "tests.test_release_recovery_invalidation_20261123::test_new_release_and_recovery_schema_invalidate_old_results",
+    "before": "3.6.19-r65-consolidacion-20261125-validacion",
+    "after": "3.6.19-r66-escuchas-dictaminacion-20261126-validacion",
+    "authorization": "Solicitud explícita de una nueva revisión r66, punto 7.",
+    "recovery_schema_changed": false
+  }
+}

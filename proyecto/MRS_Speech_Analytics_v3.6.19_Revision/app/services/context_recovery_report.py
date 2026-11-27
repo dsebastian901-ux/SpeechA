@@ -7,7 +7,9 @@ HEADERS = ['Archivo', 'Huella audio SHA256', 'Motor de lectura', 'Validador', 'M
            'Motivo de consenso', 'Atribución', 'Evidencia coincidente',
            'Evidencia contradictoria', 'Bloqueo', 'Códigos resueltos',
            'Bloqueos conservados', 'Clasificación anterior', 'Clasificación nueva',
-           'Justificación', 'Fuentes independientes']
+           'Justificación', 'Fuentes independientes', 'Grupo de fragmento',
+           'ASR original del fragmento', 'Tercera requerida', 'Motivo tercera escucha',
+           'Consenso primeras dos', 'Huella texto SHA256', 'Tiempo inferencia (s)']
 
 
 def trace_rows(item):
@@ -18,9 +20,10 @@ def trace_rows(item):
     if not context.get('present'):return []
     rows=[]
     groups=record.get('groups')or[{}]
-    for group in groups:
+    for group_index,group in enumerate(groups):
         purpose=group.get('purpose','')
-        semantic=next((g for g in context.get('fact_validations',[])if g['purpose']==purpose),{})
+        validations=context.get('fact_validations')or[]
+        semantic=validations[group_index]if group_index<len(validations)else{}
         rules=semantic.get('rules')or[{}]
         for index,attempt in enumerate(group.get('attempts')or[{}],1):
             for rule in rules:
@@ -42,6 +45,10 @@ def trace_rows(item):
                     record.get('classification_before')or context.get('classification_before','NO_REGISTRADA'),
                     classification.get('clasificacion')or context.get('classification_after',''),
                     classification.get('motivo')or context.get('decision_justification',''),1,
+                    group_index+1,group.get('primary_text',''),group.get('third_read_required',False),
+                    group.get('third_read_reason',''),
+                    json.dumps(group.get('first_two_consensus')or{},ensure_ascii=False),
+                    attempt.get('text_sha256',''),attempt.get('seconds'),
                 ])))
     return rows
 

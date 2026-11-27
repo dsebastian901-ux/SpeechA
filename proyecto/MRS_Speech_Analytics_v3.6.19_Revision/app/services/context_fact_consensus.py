@@ -8,7 +8,7 @@ import re
 
 from app.services.conversation_evidence import normalize, sentence_evidence
 
-VALIDATOR_REVISION = 'r65-evidencia-20261125-v1'
+VALIDATOR_REVISION = 'r66-evidencia-20261126-v1'
 STATES = {'CONFIRMADO', 'DESCARTADO_CON_EVIDENCIA', 'CONTRADICTORIO',
           'SIN_ATRIBUCION', 'EVIDENCIA_INSUFICIENTE'}
 OFFENSE = re.compile(r'\b(?:que poca madre|chingad[ao]s?|chingues|chingue|'
@@ -20,7 +20,7 @@ NONASSERTIVE = re.compile(r'\b(?:dice que|dijo que|diga que|repita|supongamos|'
 FACT_RULES = {
     'holder': ('IDENTITY',), 'callback': ('CALLBACK',),
     'financial': ('AMOUNT', 'PAYMENT_DATE', 'COMMITMENT_WITHOUT_DATE',
-                  'RECEIPT_REQUEST', 'PAYMENT_PLACES', 'REFERENCE'),
+                  'RECEIPT_REQUEST', 'PAYMENT_PLACES', 'REFERENCE', 'PAYMENT_PLAN'),
     'safety': ('DISCLOSURE', 'ARCO', 'REFERENCE', 'HOME_WARNING', 'OFFENSE', 'CONFRONTATION',
                'INTERLOCUTOR_HOSTILITY'),
 }
@@ -40,6 +40,10 @@ def unresolved_cues(text,purpose):
             r'\b(?:hoy|manana|ayer|mes|lunes|martes|miercoles|jueves|viernes|sabado|domingo)\b',source))
         cues.update('IMPORTE:'+m.group()for m in re.finditer(r'\b\d+(?:[.,]\d+)?\s+pesos\b',source))
         if re.search(r'\b(?:comprobante|ticket|captura)\b',source):cues.add('COMPROBANTE_POR_VALIDAR')
+        from app.services.reported_payment_amounts import NUMBER,money_value
+        for match in re.finditer(r'\b(?:pago|monto|cantidad|abono)\s+(?:(?:es|de|por|seria|la cantidad)\s+){0,3}(?P<amount>'+NUMBER+r')(?!\w)',source):
+            amount=money_value(match['amount'])
+            if amount is not None:cues.add('IMPORTE_POR_VALIDAR:'+str(amount))
     if purpose in {'callback','general'} and re.search(r'\b(?:numero|telefono|contacto|comunique)\b',source):
         cues.update('DIGITOS:'+digits for digits in re.findall(r'\d+',source))
     if purpose in {'safety','general'}:
@@ -86,6 +90,10 @@ def extract_facts(reading, purpose, relation=None):
             facts.append(_fact('CALLBACK', number['digits'], number['text'],
                                'CONTEXTO_DE_RECONTACTO', attributed=True))
     if purpose in {'financial', 'general'}:
+        from app.services.reviewed_payment_plan import extract_payment_plans
+        for plan in extract_payment_plans(text,segments,relation):
+            facts.append(_fact('PAYMENT_PLAN',plan['value'],plan['text'],
+                'CONTEXTO_DE_RESPUESTA_FINANCIERA',attributed=True))
         for amount in explicit_current_amounts(text, segments):
             if amount['method'] == 'MONTO_EXPLICITO_DE_OPERACION_DE_PAGO':
                 continue  # una instrucción no prueba aceptación del interlocutor
@@ -111,6 +119,11 @@ def extract_facts(reading, purpose, relation=None):
                 facts.append(_fact('PAYMENT_DATE', date, frame['evidence'], role,
                                    attributed=role in {'TITULAR', 'INTERLOCUTOR'}))
         commitment = payment_commitment(text, segments)
+        if (commitment.get('declined')or commitment.get('conditional'))and commitment.get('evidence'):
+            # Una negativa/condición es evidencia contraria, no ausencia de
+            # datos que dos lecturas favorables puedan votar fuera.
+            facts.append(_fact('PAYMENT_PLAN','ACEPTACION_NO_FIRME',commitment['evidence'],
+                'CONTEXTO_DE_RESPUESTA_FINANCIERA',polarity=False,attributed=True))
         if commitment.get('accepted') and not commitment.get('conditional') and not any(f['rule'] == 'PAYMENT_DATE' for f in facts):
             evidence = commitment.get('evidence') or text
             # No convertir una fecha omitida por el extractor en compromiso sin fecha.
@@ -185,7 +198,9 @@ def consensus(purpose, attempts, relation=None):
     from app.services.context_audio_recovery import digest
     good = [a for a in attempts if not a.get('error') and reading_quality(a)]
     extraction_purpose='safety'if purpose=='safety_tail'else purpose
-    observations = [extract_facts(a, extraction_purpose, relation) for a in good]
+    observations = [[dict(f,listening_index=index,reading_start=a.get('start'),reading_end=a.get('end'))
+                     for f in extract_facts(a,extraction_purpose,relation)]
+                    for index,a in enumerate(attempts,1)if a in good]
     rules = sorted(set(FACT_RULES.get(extraction_purpose, ())) |
                    {f['rule'] for values in observations for f in values})
     outcomes = []
@@ -218,7 +233,7 @@ def consensus(purpose, attempts, relation=None):
         outcome={'rule': rule, 'state': state, 'reason_code': reason,
                          'matching_evidence': matching,
                          'contradictory_evidence': [f for row in by_reading for f in row] if contradiction else [],
-                         'speaker_attribution': ('CONTEXTUAL' if rule in {'IDENTITY', 'CALLBACK'}
+                         'speaker_attribution': ('CONTEXTUAL' if rule in {'IDENTITY', 'CALLBACK', 'PAYMENT_PLAN'}
                                                  and matching else 'EXPLICITA_EN_TEXTO' if matching and
                                                  all(f['attributed'] for f in matching) else 'NO_ACREDITADA'),
                          'resolves_codes': []}
@@ -245,6 +260,9 @@ def consensus(purpose, attempts, relation=None):
     signatures = [{(f['rule'], digest(f['value']), f['polarity']) for f in row} for row in observations]
     if len(good) >= 2 and signatures and any(row != signatures[0] for row in signatures[1:]):
         third = True
+    if len(good)>=2 and extraction_purpose=='financial':
+        pending=[{c for c in unresolved_cues(a.get('text'),'financial')if c.startswith('IMPORTE_POR_VALIDAR:')}for a in good]
+        if any(c!=pending[0]for c in pending[1:]):third=True
     return {'purpose': purpose, 'validator_revision': VALIDATOR_REVISION, 'rules': outcomes,
             'reason_code': reason, 'third_recommended': third, 'usable_readings': len(good),
             'same_audio_correlated_readings': True, 'independent_sources': 1,

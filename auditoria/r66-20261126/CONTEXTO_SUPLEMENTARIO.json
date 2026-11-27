@@ -1,0 +1,46 @@
+{
+  "scope": "CONTROLLED_DECODER_BOUNDARIES_NOT_REAL_ASR_NOT_CLIENTS",
+  "cases": [
+    {
+      "case": "settlement_not_authorized",
+      "classification": "REVISAR",
+      "approved": false,
+      "risk_codes": [
+        "LIQUIDACION_NO_CORROBORADA_O_NO_AUTORIZADA"
+      ]
+    },
+    {
+      "case": "personal_account",
+      "classification": "REVISAR",
+      "approved": false,
+      "risk_codes": [
+        "PEN_CONV_FRAUDE"
+      ]
+    },
+    {
+      "case": "unvalidated_reference",
+      "classification": "REVISAR",
+      "approved": false,
+      "risk_codes": [
+        "REFERENCIA_NO_VALIDADA"
+      ]
+    },
+    {
+      "case": "prior_service_complaint",
+      "classification": "REVISAR",
+      "approved": false,
+      "risk_codes": [
+        "PEN_QUEJA_MALTRATO",
+        "TRATO_REQUIERE_VALIDACION"
+      ]
+    },
+    {
+      "case": "receipt_withdrawal",
+      "classification": "REVISAR",
+      "approved": false,
+      "risk_codes": [
+        "COMPROBANTE_RETIRADO_EN_RELECTURA"
+      ]
+    }
+  ]
+}

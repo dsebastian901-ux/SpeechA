@@ -5,7 +5,7 @@ from app.services import batch_runtime_state
 
 
 def test_new_release_and_recovery_schema_invalidate_old_results():
-    assert ENGINE_REVISION == "3.6.19-r65-consolidacion-20261125-validacion"
+    assert ENGINE_REVISION == "3.6.19-r66-escuchas-dictaminacion-20261126-validacion"
     assert SCHEMA == 2
 
 

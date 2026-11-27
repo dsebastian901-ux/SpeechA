@@ -568,37 +568,11 @@ class BatchService:
 
         approved = bool(classification.get("aprobado"))
         category = str(classification.get("clasificacion") or "REVISAR").strip().upper()
-        folder_map = {
-            "APROBADO_DURACION_MENOR": "APROBADAS_DURACION_MENOR",
-            "APROBADO_ETIQUETA_CORREGIDA": "APROBADOS_ETIQUETA_CORREGIDA",
-            "SIN_RELACION_EXCEL": "SIN_RELACION_EXCEL",
-            "APROBADO": "APROBADOS",
-            "APROBADOS": "APROBADOS",
-            "APROBADO_SIN_ETIQUETAR": "APROBADO_SIN_ETIQUETAR",
-            "APROBADO_CON_EXCEPCION": "APROBADO_CON_EXCEPCION",
-            "APROBADO_CON_ALERTA": "APROBADO_CON_ALERTA",
-            "NO_APROBADO": "NO_APROBADOS",
-            "NO_APROBADO_MENOR_80": "NO_APROBADOS_MENOR_80",
-            "MAL_DICTAMINADO": "MAL_DICTAMINADO",
-            "NEGOCIACION_INVALIDA": "NEGOCIACION_INVALIDA",
-            "FALLA_GRAVE": "FALLA_GRAVE",
-            "FALLA_MINIMA": "FALLA_MINIMA",
-            "SIN_VOZ": "SIN_VOZ",
-            "REVISAR": "REVISAR",
-        }
-        destination_dir = classified_root / folder_map.get(category, "REVISAR")
-        # Decisión 26/11: la clasificación de calidad sigue FALLA_GRAVE,
-        # mientras la copia debe ir a la carpeta operativa NEGOCIACION_INVALIDA.
-        # No cambiar el estatus de grabación CONVENIO ni el nombre original.
-        findings = classification.get('decision_findings') or []
-        date_failure = any(
-            isinstance(finding, dict)
-            and finding.get('code') == 'CRITICAL_AGREED_DATE_OUTSIDE_POLICY'
-            and finding.get('severity') == 'CRITICAL'
-            for finding in findings
-        )
-        if category == 'FALLA_GRAVE' and date_failure:
-            destination_dir = classified_root / 'NEGOCIACION_INVALIDA'
+        from app.services.classification_policy import OPERATIONAL_FOLDERS, operational_folder_name
+        folder_map = OPERATIONAL_FOLDERS
+        from app.services.grave_date_policy import grave_date_folder
+        date_folder = grave_date_folder(classification)
+        destination_dir = classified_root / operational_folder_name(classification)
         # Separa lugar no autorizado o referencia distinta sin alterar calidad
         # ni afirmar fraude por la sola mención/transcripción de una referencia.
         metadata=item.get('analytics_metadata') or {}
@@ -608,7 +582,8 @@ class BatchService:
         if venues.get('confirmed') or reference_mismatch:
             subfolder=('REFERENCIA_POR_CONFIRMAR' if reference_mismatch and not venues.get('confirmed')
                        else folder_map.get(category,'REVISAR'))
-            destination_dir=classified_root/'LUGARES_NO_AUTORIZADOS'/subfolder
+            destination_dir=(classified_root/date_folder/'LUGARES_NO_AUTORIZADOS'/subfolder
+                             if date_folder else classified_root/'LUGARES_NO_AUTORIZADOS'/subfolder)
 
         correction = classification.get('output_label_correction') or {}
         from app.services.classification_policy import corrected_label_exportable

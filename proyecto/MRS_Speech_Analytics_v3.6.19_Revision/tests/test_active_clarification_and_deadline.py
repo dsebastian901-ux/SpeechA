@@ -45,12 +45,12 @@ def metadata():
 
 def test_confirmed_single_payment_outside_policy_closes_rejection_with_other_alerts_preserved():
     m=metadata();before=deepcopy(m)
-    # 23/11: confirmación va a FALLA_MINIMA; privacidad queda como alerta.
+    # 26/11: acuerdo fuera de plazo es FALLA_GRAVE; privacidad conserva alerta.
     result=confirmed_minor_failure(m)
-    assert 'CONFIRMED_PAYMENT_DATE_OUTSIDE_POLICY'in result['detail_codes']
+    assert result is None  # La regla ya no pertenece a faltas mínimas.
     m['privacy_validation']={'review_required':True}
     decision=A.shared_quality_decision(m,100,duration_seconds=100)
-    assert decision['clasificacion']=='FALLA_MINIMA' and not decision['aprobado']
+    assert decision['clasificacion']=='FALLA_GRAVE' and not decision['aprobado']
     assert any(a['rule_group']==3 for a in decision['pending_alerts'])
     m.pop('privacy_validation')
     assert m==before
