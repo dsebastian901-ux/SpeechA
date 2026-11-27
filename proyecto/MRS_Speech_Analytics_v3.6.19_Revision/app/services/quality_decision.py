@@ -109,6 +109,15 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
     for failure in failures:
         if isinstance(failure,dict) and failure.get('invalidates') is True and failure.get('id') in critical_domains:
             add(critical_domains[failure['id']],'CRITICAL_'+failure['id'],failure.get('reason') or failure['id'], 'critical_failures','CRITICAL')
+    # Decisión 26/11: CONVENIO aceptado fuera del plazo autorizado
+    # permanece CONVENIO como etiqueta, pero es FALLA GRAVE de calidad.
+    # Solo evidencia firme; nunca convertir una fecha ambigua en falta.
+    if m.get('quality_contact_type') == 'TITULAR':
+        from app.services.grave_date_policy import confirmed_grave_payment_date
+        grave_date = confirmed_grave_payment_date(negotiation)
+        if grave_date:
+            add(12, 'CRITICAL_AGREED_DATE_OUTSIDE_POLICY',
+                grave_date['reason'], 'negotiation_validation', 'CRITICAL')
     privacy = m.get('privacy_validation') or {}
     guidance=(m.get('convenio_payment_validation')or{}).get('third_party_guidance')or{}
     if guidance.get('confirmed')or guidance.get('review_required'):
