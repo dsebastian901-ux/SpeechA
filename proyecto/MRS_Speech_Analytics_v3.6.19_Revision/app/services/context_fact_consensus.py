@@ -8,7 +8,7 @@ import re
 
 from app.services.conversation_evidence import normalize, sentence_evidence
 
-VALIDATOR_REVISION = 'r67-evidencia-20261127-v1'
+VALIDATOR_REVISION = 'r67-evidencia-20261127-v2'
 STATES = {'CONFIRMADO', 'DESCARTADO_CON_EVIDENCIA', 'CONTRADICTORIO',
           'SIN_ATRIBUCION', 'EVIDENCIA_INSUFICIENTE'}
 OFFENSE = re.compile(r'\b(?:que poca madre|chingad[ao]s?|chingues|chingue|'

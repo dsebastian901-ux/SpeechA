@@ -17,17 +17,18 @@ def extract_payment_plans(text,segments=(),relation=None):
             or proxy_account_evidence(text,segments)):
         return []
     call=A._parse_context_date((relation or{}).get('fecha'))
-    from app.services.accepted_schedule_evidence import accepted_two_part_schedule
-    schedule=accepted_two_part_schedule(text,segments,call)
+    from app.services.negotiation_resolution import resolve_negotiation
+    active=resolve_negotiation(text,segments,call)
+    schedule=active['schedule']
     if schedule['confirmed']:
         return [{'value':{'amount':schedule['total'],'date':schedule['dates'][-1]['date'],
                           'amounts':schedule['amounts'],'dates':[{'installment':d['installment'],'date':d['date']}for d in schedule['dates']]},'text':schedule['evidence']}]
-    commitment=payment_commitment(text,segments)
+    commitment=active['commitment']
     if not commitment.get('accepted')or commitment.get('declined')or commitment.get('conditional'):return []
     call=A._parse_context_date((relation or{}).get('fecha'))
     if call is None:return []
     plans=[]
-    for event in financial_response_events(text,segments):
+    for event in ([active['single_terms']] if active['single_terms'] else []):
         if event.get('method')!='RESPUESTA_ACTUAL_DE_IMPORTE_Y_FECHA':continue
         if event.get('position')!=commitment.get('position'):continue
         detail=A._extract_payment_promise_date_details(event['date_evidence'],call.isoformat())

@@ -1,0 +1,14 @@
+{
+  "auditoria/r67-flujo-real-20261127/reproducir_flujo_completo.py": "9c2cd72c816979a98f34cfa76f244b85ae5218d3ba22a71f5d25b2fac5ef0df1",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/analytics_service.py": "5673d36ff38c6cae77ad3cff95513378716cfa35b257342a4fd67afd8a21771d",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/batch_service.py": "68d6c2dc89b43d701da95a6a58a821ac119251406a322a6a99298200e314cf7c",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_fact_consensus.py": "34837a72bfa18100be93770e2c757235bec4422cf8bd4f17b715ba7ee24820c1",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/installment_validation.py": "e4b010f7f8a509b2e3905828b01209e7f57aad70ebbd9384c61c8cc146f007ef",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/medium_review_plan.py": "a86c8eabaa5f4f3d4be7418a262bc1a7198698f46f57d1d1b570867746ed77dd",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/negotiation_resolution.py": "84724e15bf2c16839e5570bec656c2fadefe54de65f575baa2e791ef2b60cbb1",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/payment_dialogue_frames.py": "523180690706063959923e15298ada24289202cb1e548ae5b9a8d98ae93236c0",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/payment_intent_frames.py": "d11e6281ee3ffde40a19581c128b7de3bfcc50cc57735ab27ef9128d9598a77b",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/payment_reply_scope.py": "e6d118cdcc610575268c50c650c32668bbb834d7d9c7a7adcb336b1fd4096d71",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/reviewed_payment_plan.py": "0a4ab245f6323fc5418309b280368f330ce54578abb40de9d5b57c8c016e53ae",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_product_pipeline_negotiation.py": "ccc775d3c9a6c2f028d0eda3761646b9b3086c1e7d1a835022aa5adc16d2eef0"
+}

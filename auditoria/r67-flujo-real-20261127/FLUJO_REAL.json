@@ -1,0 +1,278 @@
+{
+  "fresh_genuine_full_recording_runs_before": {
+    "scope": "TWO_FULL_HISTORICAL_CALLS_NOT_THE_23_NOV27_NO_HUMAN_LISTENING",
+    "asr_output_doubles": false,
+    "planner_overrides": false,
+    "seconds": 238.96106616700126,
+    "rows": [
+      {
+        "case": "REAL_1",
+        "status": "completado",
+        "duration": 95.7,
+        "primary_model": "small",
+        "reused_transcript": false,
+        "quality_score": 80.0,
+        "classification": "REVISAR",
+        "detected_status": "NO DEFINE FECHA DE PAGO",
+        "medium_model": "Faster-Whisper:medium",
+        "medium_groups": 3,
+        "medium_attempts": 9,
+        "medium_errors": 0,
+        "reason_matches_canonical": false,
+        "checkpoint_classification": "REVISAR",
+        "excel_classification": "REVISAR",
+        "folder": "REVISAR",
+        "original_hash_unchanged": true,
+        "copy_hash_equal": true,
+        "codes": [
+          "CONTEXT_AUDIO_THIRD_INSUFFICIENT",
+          "CONTEXT_AUDIO_PRIMARY_CONTRADICTION",
+          "CONTEXT_AUDIO_UNVERIFIED",
+          "CONVENIO_OUTCOME_CONFLICT"
+        ]
+      },
+      {
+        "case": "REAL_2",
+        "status": "completado",
+        "duration": 101.0,
+        "primary_model": "small",
+        "reused_transcript": false,
+        "quality_score": 100.0,
+        "classification": "APROBADO",
+        "detected_status": "CONVENIO",
+        "medium_model": null,
+        "medium_groups": 0,
+        "medium_attempts": 0,
+        "medium_errors": 0,
+        "reason_matches_canonical": true,
+        "checkpoint_classification": "APROBADO",
+        "excel_classification": "APROBADO",
+        "folder": "APROBADOS",
+        "original_hash_unchanged": true,
+        "copy_hash_equal": true,
+        "codes": []
+      }
+    ],
+    "nonpayment_report_generated": true,
+    "derived_private_excel_hash_unchanged": true
+  },
+  "fresh_genuine_full_recording_runs_after": {
+    "scope": "TWO_FULL_HISTORICAL_CALLS_NOT_THE_23_NOV27_NO_HUMAN_LISTENING",
+    "asr_output_doubles": false,
+    "planner_overrides": false,
+    "seconds": 254.7442423409957,
+    "rows": [
+      {
+        "case": "REAL_1",
+        "status": "completado",
+        "duration": 95.7,
+        "primary_model": "small",
+        "reused_transcript": false,
+        "quality_score": 100.0,
+        "classification": "REVISAR",
+        "detected_status": "NO DEFINE FECHA DE PAGO",
+        "medium_model": "Faster-Whisper:medium",
+        "medium_groups": 3,
+        "medium_attempts": 9,
+        "medium_errors": 0,
+        "reason_matches_canonical": true,
+        "checkpoint_classification": "REVISAR",
+        "excel_classification": "REVISAR",
+        "folder": "REVISAR",
+        "original_hash_unchanged": true,
+        "copy_hash_equal": true,
+        "codes": [
+          "CONTEXT_AUDIO_PRIMARY_CONTRADICTION",
+          "CONTEXT_AUDIO_CONTRADICTION",
+          "CONTEXT_AUDIO_UNVERIFIED",
+          "CONVENIO_OUTCOME_CONFLICT"
+        ]
+      },
+      {
+        "case": "REAL_2",
+        "status": "completado",
+        "duration": 101.0,
+        "primary_model": "small",
+        "reused_transcript": false,
+        "quality_score": 100.0,
+        "classification": "APROBADO",
+        "detected_status": "CONVENIO",
+        "medium_model": null,
+        "medium_groups": 0,
+        "medium_attempts": 0,
+        "medium_errors": 0,
+        "reason_matches_canonical": true,
+        "checkpoint_classification": "APROBADO",
+        "excel_classification": "APROBADO",
+        "folder": "APROBADOS",
+        "original_hash_unchanged": true,
+        "copy_hash_equal": true,
+        "codes": []
+      }
+    ],
+    "nonpayment_report_generated": true,
+    "derived_private_excel_hash_unchanged": true
+  },
+  "fresh_genuine_full_recording_runs_final_frozen_code": {
+    "scope": "TWO_FULL_HISTORICAL_CALLS_NOT_THE_23_NOV27_NO_HUMAN_LISTENING",
+    "asr_output_doubles": false,
+    "planner_overrides": false,
+    "seconds": 149.2752680190024,
+    "rows": [
+      {
+        "case": "REAL_1",
+        "status": "completado",
+        "duration": 95.7,
+        "primary_model": "small",
+        "reused_transcript": false,
+        "quality_score": 100.0,
+        "classification": "REVISAR",
+        "detected_status": "NO DEFINE FECHA DE PAGO",
+        "medium_model": "Faster-Whisper:medium",
+        "medium_groups": 2,
+        "medium_attempts": 5,
+        "medium_errors": 0,
+        "reason_matches_canonical": true,
+        "checkpoint_classification": "REVISAR",
+        "excel_classification": "REVISAR",
+        "folder": "REVISAR",
+        "original_hash_unchanged": true,
+        "copy_hash_equal": true,
+        "codes": [
+          "CONVENIO_OUTCOME_CONFLICT"
+        ]
+      },
+      {
+        "case": "REAL_2",
+        "status": "completado",
+        "duration": 101.0,
+        "primary_model": "small",
+        "reused_transcript": false,
+        "quality_score": 100.0,
+        "classification": "APROBADO",
+        "detected_status": "CONVENIO",
+        "medium_model": null,
+        "medium_groups": 0,
+        "medium_attempts": 0,
+        "medium_errors": 0,
+        "reason_matches_canonical": true,
+        "checkpoint_classification": "APROBADO",
+        "excel_classification": "APROBADO",
+        "folder": "APROBADOS",
+        "original_hash_unchanged": true,
+        "copy_hash_equal": true,
+        "codes": []
+      }
+    ],
+    "nonpayment_report_generated": true,
+    "derived_private_excel_hash_unchanged": true
+  },
+  "deterministic_same_genuine_inputs_before": {
+    "scope": "FROZEN_FINAL_CODE_REPLAY_OF_GENUINE_FULL_CALL_ASR_WITH_ORIGINAL_AUDIO_PRESENT",
+    "asr_output_doubles": false,
+    "new_inference_on_replay": false,
+    "rows": [
+      {
+        "case": "REAL_1",
+        "classification": "REVISAR",
+        "score": 100.0,
+        "asr_text_sha256": "c85b54adcc873775aa56e589fe61f13c34fe2563c8fe3e6070f2aa598f086850",
+        "preserved_genuine_transcript_and_medium_records": true,
+        "fresh_asr_on_final_replay": false,
+        "new_medium_attempts": 0,
+        "reason_matches_canonical": false,
+        "classifications_match_all_outputs": true,
+        "copied_audio_sha256_equal": true,
+        "engine_fingerprint": "c2df3732ffd4910bca9bfabafe8a84fd011cb1c1ad4846cc2005ef7f2910145c"
+      },
+      {
+        "case": "REAL_2",
+        "classification": "APROBADO",
+        "score": 100.0,
+        "asr_text_sha256": "31856d6d3c176f1d8fd09495415938eb1fa5e6d50a63cf074f165dbe57bbf34b",
+        "preserved_genuine_transcript_and_medium_records": true,
+        "fresh_asr_on_final_replay": false,
+        "new_medium_attempts": 0,
+        "reason_matches_canonical": true,
+        "classifications_match_all_outputs": true,
+        "copied_audio_sha256_equal": true,
+        "engine_fingerprint": "c2df3732ffd4910bca9bfabafe8a84fd011cb1c1ad4846cc2005ef7f2910145c"
+      }
+    ],
+    "quality_excel_generated": true,
+    "nonpayment_excel_generated": true,
+    "checkpoint_generated": true,
+    "human_verified": false
+  },
+  "deterministic_same_genuine_inputs_final": {
+    "scope": "FROZEN_FINAL_CODE_REPLAY_OF_GENUINE_FULL_CALL_ASR_WITH_ORIGINAL_AUDIO_PRESENT",
+    "asr_output_doubles": false,
+    "new_inference_on_replay": false,
+    "rows": [
+      {
+        "case": "REAL_1",
+        "classification": "REVISAR",
+        "score": 100.0,
+        "asr_text_sha256": "c85b54adcc873775aa56e589fe61f13c34fe2563c8fe3e6070f2aa598f086850",
+        "preserved_genuine_transcript_and_medium_records": true,
+        "fresh_asr_on_final_replay": false,
+        "new_medium_attempts": 0,
+        "reason_matches_canonical": true,
+        "classifications_match_all_outputs": true,
+        "copied_audio_sha256_equal": true,
+        "engine_fingerprint": "2f80e8330e407e07ca52db61c21eb9c402077f86c3dd0061f495469d778b67b9"
+      },
+      {
+        "case": "REAL_2",
+        "classification": "APROBADO",
+        "score": 100.0,
+        "asr_text_sha256": "31856d6d3c176f1d8fd09495415938eb1fa5e6d50a63cf074f165dbe57bbf34b",
+        "preserved_genuine_transcript_and_medium_records": true,
+        "fresh_asr_on_final_replay": false,
+        "new_medium_attempts": 0,
+        "reason_matches_canonical": true,
+        "classifications_match_all_outputs": true,
+        "copied_audio_sha256_equal": true,
+        "engine_fingerprint": "2f80e8330e407e07ca52db61c21eb9c402077f86c3dd0061f495469d778b67b9"
+      }
+    ],
+    "quality_excel_generated": true,
+    "nonpayment_excel_generated": true,
+    "checkpoint_generated": true,
+    "human_verified": false
+  },
+  "asr_output_doubles": false,
+  "same_transcripts_and_reading_records_for_final_comparison": true,
+  "classification_changes_not_attributed_to_different_asr_outputs": true,
+  "human_or_bank_verification_claimed": false,
+  "customer23_new_approvals_claimed": 0,
+  "private_originals_published": false,
+  "wall_time_comparison_is_not_a_controlled_performance_benchmark": true,
+  "final_genuine_execution_stages": [
+    {
+      "case": "REAL_1",
+      "engine_fingerprint": "2f80e8330e407e07ca52db61c21eb9c402077f86c3dd0061f495469d778b67b9",
+      "third_listening_states": {
+        "NO_REQUERIDA": 1,
+        "INSUFICIENTE": 1
+      },
+      "small_seconds": 32.399523043000954,
+      "focal_recovery_seconds": 99.98823965100746,
+      "focal_attempts": 5,
+      "third_attempts": 1,
+      "focal_errors": 0
+    },
+    {
+      "case": "REAL_2",
+      "engine_fingerprint": "2f80e8330e407e07ca52db61c21eb9c402077f86c3dd0061f495469d778b67b9",
+      "third_listening_states": {},
+      "small_seconds": 15.523405516010826,
+      "focal_recovery_seconds": null,
+      "focal_attempts": 0,
+      "third_attempts": 0,
+      "focal_errors": 0
+    }
+  ],
+  "real_account_relation_source": "DERIVED_PRIVATE_EXCEL_FROM_PRESERVED_HISTORICAL_CHECKPOINT_RELATION_FIELDS",
+  "uploaded_original_workbook_used_for_historical_audio_probe": false
+}

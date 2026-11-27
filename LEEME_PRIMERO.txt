@@ -7,6 +7,7 @@ Abra INICIAR_PROGRAMA.bat con el entorno Python y modelos locales existentes.
 Conserve r66 en su rama o carpeta. Este paquete contiene codigo fuente.
 No incluye Python, modelos, contrasenas, datos de clientes ni instalador EXE.
 El acceso local y las funciones de usuarios, GUI, lotes y reportes se conservan.
-Lea README.md y auditoria/r67-20261127/README.md para cambios y pruebas.
+Lea README.md y auditoria/r67-flujo-real-20261127/README.md para cambios y pruebas.
 Los 23 audios originales del lote real no estaban disponibles para nuevas escuchas.
 No se certifican aprobaciones de ese lote sin evidencia suficiente.
+Se conserva r67: verificar el commit con git log -1; no basta comparar la cabecera.

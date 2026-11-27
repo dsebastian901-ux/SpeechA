@@ -995,32 +995,8 @@ class BatchService:
 
                 analytics_data = analysis.to_dict()
                 analytics_metadata = getattr(analysis, "metadata", {}) or {}
-                final_result = str(
-                    analytics_metadata.get("final_result") or ""
-                ).strip().upper()
-                critical_failures = (
-                    analytics_metadata.get("critical_failures") or []
-                )
-                status_validation = (
-                    analytics_metadata.get("status_validation") or {}
-                )
-                negotiation_validation = (
-                    analytics_metadata.get("negotiation_validation") or {}
-                )
-
-                # Puerta de aprobación común en SOLO AUDIOS; sin requisitos de Excel.
-                if not self.has_relation_excel():
-                    shared = AnalyticsService.shared_quality_decision(
-                        analytics_metadata, score, minimum_score,
-                        getattr(transcription, "duration_seconds", None),
-                    )
-                    classification.update(shared)
-                    classification["modo"] = "SOLO_AUDIOS"
-
-                # Las reglas críticas del Manual Operativo tienen prioridad
-                # sobre el simple cumplimiento del umbral.
-                manual_reasons = []
-
+                # Duration metadata supplies the shared quality policy. There is
+                # no parallel batch-only decision or accumulated rejection reason.
                 # v3.5.5 · Regla general de duración para aprobación.
                 # El mínimo es obligatorio; el máximo queda configurable y
                 # desactivado por defecto (None).
@@ -1053,9 +1029,6 @@ class BatchService:
                         f"duración {duration_seconds:.1f}s < mínimo "
                         f"{float(MIN_APPROVAL_DURATION_SECONDS):.0f}s"
                     )
-                    classification["aprobado"] = False
-                    classification["clasificacion"] = "REVISAR"
-                    manual_reasons.append(duration_validation["reason"])
 
                 elif (
                     MAX_APPROVAL_DURATION_SECONDS is not None
@@ -1067,50 +1040,10 @@ class BatchService:
                         f"duración {duration_seconds:.1f}s > máximo "
                         f"{float(MAX_APPROVAL_DURATION_SECONDS):.0f}s"
                     )
-                    classification["aprobado"] = False
-                    classification["clasificacion"] = "REVISAR"
-                    manual_reasons.append(duration_validation["reason"])
 
                 analytics_metadata["duration_validation"] = duration_validation
                 if isinstance(analytics_data, dict):
                     analytics_data.setdefault("metadata", analytics_metadata)
-
-                if final_result == "INCORRECTA" or critical_failures:
-                    classification["aprobado"] = False
-                    classification["clasificacion"] = "REVISAR"
-
-                    for failure in critical_failures:
-                        reason = str(failure.get("reason") or "").strip()
-                        if reason:
-                            manual_reasons.append(reason)
-
-                    if not manual_reasons:
-                        manual_reasons.append(
-                            "incumplimiento crítico del Manual Operativo"
-                        )
-
-                if status_validation and not status_validation.get("valid", True):
-                    classification["aprobado"] = False
-                    classification["clasificacion"] = "REVISAR"
-                    manual_reasons.extend(
-                        str(reason).strip()
-                        for reason in status_validation.get("reasons", [])
-                        if str(reason).strip()
-                    )
-
-                if negotiation_validation and not negotiation_validation.get("valid", True):
-                    classification["aprobado"] = False
-                    classification["clasificacion"] = "REVISAR"
-                    manual_reasons.extend(
-                        str(reason).strip()
-                        for reason in negotiation_validation.get("reasons", [])
-                        if str(reason).strip()
-                    )
-
-                if manual_reasons:
-                    # Evita repetir el mismo motivo.
-                    unique_reasons = list(dict.fromkeys(manual_reasons))
-                    classification["motivo"] = " | ".join(unique_reasons)
 
                 # Una sola puerta de decisión para individual, lote con Excel y solo audios.
                 classification['missing_excel_relation'] = bool(self.has_relation_excel() and record is None)
@@ -1118,15 +1051,13 @@ class BatchService:
                     analytics_metadata, score, minimum_score, duration_seconds, classification)
                 classification.update(decision)
                 operational_class = decision["clasificacion"]
-                if decision.get("motivo"):
-                    manual_reasons.append(decision["motivo"])
+                if decision.get('short_duration_approval'):
+                    duration_validation.update(valid=True,result='APROBADO_DURACION_MENOR',reason=decision['motivo'])
                 # Un mismo dictamen en checkpoint, reporte y metadatos.
                 analytics_metadata["final_result"] = operational_class
                 analytics_metadata["shared_classification"] = decision
                 if isinstance(analytics_data, dict):
-                    analytics_data.setdefault("metadata", {})["final_result"] = analytics_metadata["final_result"]
-                if manual_reasons:
-                    classification["motivo"] = " | ".join(dict.fromkeys(part.strip() for reason in manual_reasons for part in str(reason).split("|") if part.strip()))
+                    analytics_data["metadata"] = analytics_metadata
 
                 item["analytics"] = analytics_data
                 item["analytics_metadata"] = analytics_metadata

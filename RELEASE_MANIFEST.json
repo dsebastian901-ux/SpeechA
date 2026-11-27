@@ -7,28 +7,31 @@
   "exe_compiled": false,
   "validation": {
     "full_suite": {
-      "tests": 3622,
-      "passed": 3600,
+      "tests": 3647,
+      "passed": 3625,
       "failed": 0,
       "errors": 0,
       "skipped": 22,
-      "seconds": 610.078,
-      "junit_sha256": "d03475261adae7aa664a56590903d1a7bce4943c7e4c52f9bd3507589b44ca6d"
+      "seconds": 611.807,
+      "junit_sha256": "c4b549e71fbadd66347ad46b844afff584fb0cb6e0676d8a8f91a149b534ebab"
     },
     "focused_suite": {
-      "tests": 200,
-      "passed": 200,
+      "tests": 225,
+      "passed": 225,
       "failed": 0,
       "errors": 0,
       "skipped": 0,
-      "seconds": 22.855,
-      "junit_sha256": "640fefdcb928976998e574c6fff52c759b708868fbc2a4b5dc597e81fe539b4b"
+      "seconds": 29.782,
+      "junit_sha256": "b514853c8d721514a479ace99e49d388f788def7925953751134198750a6a1fb"
     },
-    "new_regression_cases": 50,
+    "new_regression_cases": 25,
     "physical_windows_tested": false,
     "human_listening": false,
     "customer23_original_audio_available": false,
-    "customer23_approvals_recovered_and_certified": 0
+    "customer23_approvals_recovered_and_certified": 0,
+    "new_pipeline_tests": 25,
+    "full_product_pipeline_controlled_scenarios": 14,
+    "genuine_full_call_asr_cases": 2
   },
   "previous_r66_preserved": true,
   "protected_r57_preserved": true,
@@ -37,5 +40,10 @@
   "medium_primary_model_activated": false,
   "mrs_academy_added": false,
   "private_inputs_published": false,
-  "details": "auditoria/r67-20261127/README.md"
+  "details": "auditoria/r67-flujo-real-20261127/README.md",
+  "previous_validation_reference": {
+    "commit": "1ea369e7ca0edd576ba765cbca3f458c2dfcd421",
+    "details": "auditoria/r67-20261127/README.md"
+  },
+  "no_new_revision_number": true
 }

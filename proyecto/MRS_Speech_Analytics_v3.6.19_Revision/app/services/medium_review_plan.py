@@ -65,7 +65,7 @@ def _timeline(data):
     return source,rows
 
 
-def _closing_exchange(data,timeline):
+def _closing_exchange(data,timeline,active=None):
     """Locate the current negotiation's question, answer and recap together."""
     from app.services.payment_lifecycle import frames,financial_response_events
     from app.services.conversation_evidence import payment_commitment
@@ -73,11 +73,21 @@ def _closing_exchange(data,timeline):
     text=data.get('texto')or'';segments=data.get('segmentos')or[]
     rows=frames(text,segments)
     events=financial_response_events(text,segments)
-    commitment=payment_commitment(text,segments)
+    from app.services.negotiation_resolution import resolve_negotiation
+    active=active or resolve_negotiation(text,segments,None)
+    commitment=active['commitment']
     final=commitment.get('position',0)
     floor=scope_start(text,len(normalize(text)))
-    anchors=[(e.get('offer_position',e['position']),e['end']) for e in events
-             if e['position']>=floor]
+    anchors=([(active['start'],active['end'])] if active.get('plan_scope_proven') and active['start']is not None and active['end']is not None and active['start']>=floor else
+             [(e.get('offer_position',e['position']),e['end']) for e in events if e['position']>=floor])
+    if active['kind']=='ACCEPTED' and not active.get('plan_scope_proven'):
+        # A generic acceptance refers back to a plan, not just its own words.
+        # Include the immediately preceding proposal even if an earlier amount
+        # question was also recognized elsewhere in the conversation.
+        for i,row in enumerate(rows):
+            if row['start']<=final<=row['end']:
+                anchors.append((max(floor,rows[max(0,i-1)]['start']),row['end']))
+                break
     if not anchors:
         for i,row in enumerate(rows[:-1]):
             if row['start']<floor or row['role']in{'TITULAR','TERCERO','INTERLOCUTOR'}:continue
@@ -175,7 +185,7 @@ def plan_for_item(item):
         elif code in {'CONVENIO_OUTCOME_CONFLICT','NEGOTIATION_INVALID_OR_UNCERTAIN',
                       'PAYMENT_OUTCOME_NOT_CONFIRMED','CONTEXT_AUDIO_UNVERIFIED',
                       'CONTEXT_AUDIO_THIRD_REQUIRED','CONTEXT_AUDIO_THIRD_INSUFFICIENT'}:
-            spans=_closing_exchange(data,timeline)
+            spans=_closing_exchange(data,timeline,(metadata.get('negotiation_validation')or{}).get('active_negotiation'))
             basis='PREGUNTA_RESPUESTA_Y_CIERRE_EN_ORDEN_CRONOLOGICO'
             if not spans:
                 # An unintelligible reply may have no parsed financial event.

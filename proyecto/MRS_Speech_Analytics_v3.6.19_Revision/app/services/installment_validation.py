@@ -32,11 +32,18 @@ def unresolved_accepted_plan(text, plan, dates, segments=()):
         r'[^?!]{0,65}?\b'+day+r'\b\s+y\s+(?:otro pago de |un pago de )?'+NUMBER+
         r'(?: pesos)? [^?!]{0,80}?\b'+day+r'\b')
     for event in financial_response_events(text,segments):
+        from app.services.negotiation_resolution import component_index
+        ordinal=component_index(event['offer'])
+        if ordinal and ordinal>1:
+            cues.append({'count':ordinal,'text':event['evidence'],'speaker_role':event['speaker_role'],
+                'method':'CONFIRMACION_DE_COMPONENTE_REQUIERE_PLAN_COMPLETO'})
         if coordinated.search(normalize(event['offer'])):
             cues.append({'count':2,'text':event['evidence'],'speaker_role':event['speaker_role'],
                 'method':'RECAPITULACION_DE_DOS_IMPORTES_CON_FECHAS'})
     if not cues:return {'review_required':False,'evidence':[]}
     count=cues[-1]['count']
+    if cues[-1].get('method')=='CONFIRMACION_DE_COMPONENTE_REQUIERE_PLAN_COMPLETO':
+        count=max(c['count']for c in cues)
     unresolved=(len(plan.get('amounts')or[])!=count or len(dates)<count or plan.get('review_required'))
     return {'review_required':bool(unresolved),'expected_count':count,'evidence':cues,
             'reason':'Se describe un plan aceptado de varias parcialidades, pero no quedaron validados todos sus importes y fechas.' if unresolved else ''}

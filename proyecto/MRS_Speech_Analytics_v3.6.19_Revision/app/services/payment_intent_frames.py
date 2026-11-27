@@ -97,6 +97,8 @@ def payment_frames(text,segments=()):
   role=_role_at(text,segments,pos)
   if role in{'GESTOR','TERCERO'}or QUOTE.search(answer):continue
   if re.match(r'(?:mi nombre|me presento|le (?:solicito|ofrezco|requiero|comento)|el banco|se le)\b',answer):continue
+  from app.services.payment_reply_scope import communication_repair
+  if communication_repair(answer):continue
   # Una confirmación de método no acredita pago ni autorreferencia financiera.
   if re.search(r'\b(?:reporte|registro|sistema|validar|validando|anexar|ingresar)\b',answer)and not re.search(r'\b(?:mi (?:tarjeta|cuenta)|yo pague|no tengo (?:dinero|trabajo|la cantidad)|para pagar)\b',answer):continue
   if re.search(r'\b(?:su |el )comprobante\b',answer)and not ACTION.search(answer):continue

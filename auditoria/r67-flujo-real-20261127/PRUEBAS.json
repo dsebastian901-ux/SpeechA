@@ -1,0 +1,99 @@
+{
+  "reference_commit": "1ea369e7ca0edd576ba765cbca3f458c2dfcd421",
+  "branch": "codex/consolidacion-r67-20261127",
+  "new_release_created": false,
+  "full_regression": {
+    "tests": 3647,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 611.807,
+    "junit_sha256": "c4b549e71fbadd66347ad46b844afff584fb0cb6e0676d8a8f91a149b534ebab",
+    "passed": 3625
+  },
+  "full_regression_command": "PYTHONPATH=. python -m pytest -q --tb=short --junitxml=<private-output>/suite-consolidated.xml",
+  "new_pipeline_regression_tests": 25,
+  "controlled_full_pipeline_cases": 14,
+  "controlled_review_before": 11,
+  "controlled_review_after": 3,
+  "controlled_review_resolved": 8,
+  "real_complete_recordings": 2,
+  "new_customer23_approvals_certified": 0,
+  "proof_scope": "BatchService loading, account relation, analytics, actual recovery/consensus logic, quality classification, verified copy, checkpoint and Excel. Controlled ASR and genuine recognition are disclosed separately.",
+  "skip_groups": [
+    {
+      "module": "tests.test_individual_permissions_gui",
+      "reason": "Necesita pantalla Tk (Xvfb o Windows).",
+      "count": 5
+    },
+    {
+      "module": "tests.test_medium_settings_gui",
+      "reason": "Requiere pantalla Tk.",
+      "count": 2
+    },
+    {
+      "module": "tests.test_privacy_confirmation_window",
+      "reason": "Necesita una pantalla Tk real (DISPLAY o Windows).",
+      "count": 5
+    },
+    {
+      "module": "tests.test_recado_batch_review",
+      "reason": "Requiere pantalla Tk de pruebas.",
+      "count": 2
+    },
+    {
+      "module": "tests.test_startup_windows.WindowsStartupTests",
+      "reason": "Requiere CMD y Python de Windows.",
+      "count": 8
+    }
+  ],
+  "intermediate_failed_full_run": {
+    "result": {
+      "tests": 3645,
+      "failures": 3,
+      "errors": 0,
+      "skipped": 22,
+      "seconds": 588.279,
+      "junit_sha256": "695919c564aa1ecf7246133e6905f0e817639edf16b4103644f35d41265ea809"
+    },
+    "failed_tests": [
+      "test_an_earlier_installment_offer_does_not_override_a_different_accepted_amount",
+      "test_spanish_two_payment_sequence_does_not_drop_conjunction_inside_amount_span",
+      "test_distinct_dated_installments_are_still_added"
+    ],
+    "root_cause": "Active-scope narrowing removed an incomplete prior offer and reset supported coordinated payment sequences. Fixed product scope and scoped sequence extraction; original test expectations unchanged.",
+    "resolved_in_final_full_suite": true
+  },
+  "focused_final_execution": {
+    "tests": 225,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 29.782,
+    "junit_sha256": "b514853c8d721514a479ace99e49d388f788def7925953751134198750a6a1fb"
+  },
+  "previous_focused_execution": {
+    "tests": 317,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 97.847,
+    "junit_sha256": "53625b2fc35788825f92cecf68f7803b9a5eaf15bdd8486263f04de23cc8147c"
+  },
+  "post_fix_focused_execution": {
+    "passed": 156,
+    "failures": 0,
+    "seconds": 14.4,
+    "raw_log_sha256": "be12ea7725593bb7c312a63fcf3e6e00fb57a529f4a4760219cc5be445cd1779"
+  },
+  "physical_windows_tested": false,
+  "human_listening": false,
+  "protected_versions": {
+    "r66": 20,
+    "r64": 21,
+    "r57": 780,
+    "r65_commit": "034869e6bcba1d420667c3c9051f3ad64284d178"
+  },
+  "existing_test_expectations_changed_in_this_commit": false,
+  "code_freeze_verified": true
+}

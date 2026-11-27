@@ -1,0 +1,17 @@
+{
+  "protected_versions": {
+    "r66": 20,
+    "r64": 21,
+    "r57": 780,
+    "r65_commit": "034869e6bcba1d420667c3c9051f3ad64284d178"
+  },
+  "reference_commit": "1ea369e7ca0edd576ba765cbca3f458c2dfcd421",
+  "penalty_calls_arguments_unchanged": 33,
+  "gui_security_access_primary_whisper_source_and_app_version_unchanged": true,
+  "full_run_code_freeze_verified": true,
+  "existing_test_expectations_modified": false,
+  "no_new_release_number": true,
+  "mrs_academy_added": false,
+  "windows_physical_tested": false,
+  "human_listening": false
+}

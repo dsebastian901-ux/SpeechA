@@ -2067,25 +2067,18 @@ class AnalyticsService:
             prior_payment_amounts=[]
             prior_payment_total=None
 
-        commitment_confirmation = payment_commitment(text, segments)
+        from app.services.negotiation_resolution import resolve_negotiation
+        active_negotiation = resolve_negotiation(text, segments, parsed_call_date)
+        commitment_confirmation = active_negotiation['commitment']
+        accepted_schedule = active_negotiation['schedule']
         formalization_pattern=r'\b(?:genero|generamos|confirmo|confirmamos|activamos) (?:su |el |un )?convenio\b'
         named_agreement=bool(agent_statement(text,segments,formalization_pattern))
         from app.services.final_validation_confirmation import confirmed_validation_plan
         final_validation = confirmed_validation_plan(text,segments,commitment=commitment_confirmation)
-        from app.services.accepted_schedule_evidence import accepted_two_part_schedule
-        accepted_schedule = accepted_two_part_schedule(text,segments,parsed_call_date)
         if accepted_schedule['confirmed']:
-            prior_evidence = norm(commitment_confirmation.get('evidence') or '')
-            newer_firm = (commitment_confirmation.get('accepted') and prior_evidence
-                and normalized.rfind(prior_evidence)>accepted_schedule['end'])
-            if newer_firm:
-                accepted_schedule['confirmed']=False
-            else:
-                commitment_confirmation = {'accepted':True,'declined':False,'conditional':False,
-                    'evidence':accepted_schedule['evidence'],'contextual_confirmation_events':[]}
-                last=accepted_schedule['dates'][-1]
-                promise_date=date.fromisoformat(last['date'])
-                promise_date_text=last['text'];promise_date_evidence=last['evidence']
+            last=accepted_schedule['dates'][-1]
+            promise_date=date.fromisoformat(last['date'])
+            promise_date_text=last['text'];promise_date_evidence=last['evidence']
         from app.services.reviewed_payment_plan import confirmed_payment_plan
         reviewed_plan=(None if accepted_schedule['confirmed'] else confirmed_payment_plan(
             context.get('_context_audio_validation')or{},contact_type=contact_type,
@@ -2640,10 +2633,7 @@ class AnalyticsService:
         from app.services.operational_outcome_resolution import amount_confirmed_for_agreement
         confirmed_agreement_amount=bool(reviewed_plan) or amount_confirmed_for_agreement(
             text,segments,commitment_confirmation,accepted_schedule)
-        from app.services.payment_lifecycle import financial_response_events
-        final_own_terms=next((e for e in reversed(financial_response_events(text,segments))
-            if e.get('amount')is not None and e['position']==commitment_confirmation.get('position')
-            and commitment_confirmation.get('accepted')),None)
+        final_own_terms=active_negotiation['single_terms'] if not reviewed_plan else None
         if final_own_terms:confirmed_agreement_amount=True
         is_convenio = bool(not non_holder_scenario and contact_type=='TITULAR'
             and (confirms_commitment or named_agreement)
@@ -3966,7 +3956,19 @@ class AnalyticsService:
                 + " | ".join(a["texto"] for a in recovered["attempts"]))
             detected_amount_role = "OFERTA RECUPERADA ASR - REVISAR"
             amount_asr_normalized = False
-        plan = installment_plan(source_norm, money_mentions)
+        financial_plan_text = norm(reviewed_plan['evidence'] if reviewed_plan else active_negotiation['plan_text'])
+        plan = installment_plan(financial_plan_text, monetary_mentions(financial_plan_text))
+        if active_negotiation['plan_scope_proven'] or reviewed_plan:
+            # Rebuild every supported plan form within the active evidence.
+            # Resetting only the old multipayment flag discarded coordinated
+            # amounts such as «mil hoy y dos mil mañana» in the new closure.
+            scoped_mentions = monetary_mentions(financial_plan_text)
+            from app.services.payment_sequence_evidence import bounded_two_payment_sequence
+            scoped_sequence = bounded_two_payment_sequence(financial_plan_text,
+                [(0, 0, mention) for mention in scoped_mentions])
+            multi_payment_detected = bool(scoped_sequence)
+            multi_payment_amounts = scoped_sequence
+            multi_payment_total = sum(scoped_sequence) if scoped_sequence else None
         if accepted_schedule['confirmed']:
             plan={'amounts':accepted_schedule['amounts'],'total':accepted_schedule['total'],
                 'method':accepted_schedule['method'],'evidence':[{'text':accepted_schedule['evidence']}],
@@ -4227,7 +4229,7 @@ class AnalyticsService:
             amount_validation = "REVISAR - IMPORTE DEL DESCUENTO NO CONFIRMADO"
             amount_reason = "Se ofrece un descuento, pero no se confirmó un importe atribuible a esa propuesta."
 
-        schedule_dates = installment_dates(source_norm, lambda fragment:
+        schedule_dates = installment_dates(financial_plan_text, lambda fragment:
             cls._extract_payment_promise_date_details(fragment, call_date),expected_count=len(plan["amounts"]),
             accepted_evidence=commitment_confirmation['evidence']if confirms_commitment else '',
             call_date=parsed_call_date) if plan["amounts"] and not payment_confirmation_case else []
@@ -4260,6 +4262,7 @@ class AnalyticsService:
         from app.services.negotiation_chronology import handoffs,payment_purpose
         negotiation_validation = {
             'source':'LOCAL_AUDIO_CONTEXT' if reviewed_plan else 'PRIMARY_TRANSCRIPT',
+            'active_negotiation':active_negotiation,
             'handoffs':handoffs(text),
             'payment_purpose':payment_purpose(commitment_confirmation.get('evidence','')),
             'reviewed_payment_plan':({**reviewed_plan,'date':reviewed_plan['date'].isoformat()} if reviewed_plan else None),
@@ -4626,7 +4629,8 @@ class AnalyticsService:
         if any(p["id"] == "PEN005" for p in penalties):
             negotiation_validation["hard_invalid"] = True
         from app.services.installment_validation import unresolved_accepted_plan
-        unresolved_plan=unresolved_accepted_plan(text,plan,schedule_dates,segments)
+        unresolved_plan=unresolved_accepted_plan(
+            financial_plan_text,plan,schedule_dates,[]if active_negotiation['plan_scope_proven'] or reviewed_plan else segments)
         negotiation_validation['unresolved_accepted_plan']=unresolved_plan
         if contact_type=='TITULAR' and not payment_confirmation_case and unresolved_plan['review_required']:
             negotiation_validation['review_required']=True

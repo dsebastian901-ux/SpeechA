@@ -1,0 +1,535 @@
+{
+  "reference_commit": "1ea369e7ca0edd576ba765cbca3f458c2dfcd421",
+  "defectos": [
+    {
+      "id": "NEGOCIACION_VIGENTE",
+      "causa_demostrada": "Analytics y el extractor de hechos escogían acuerdos distintos; el importe antiguo se combinaba con la fecha posterior.",
+      "ubicacion": [
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/negotiation_resolution.py",
+          "funcion": "resolve_negotiation"
+        },
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/analytics_service.py",
+          "funcion": "AnalyticsService.calculate_basic_compliance"
+        },
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/reviewed_payment_plan.py",
+          "funcion": "extract_payment_plans"
+        }
+      ],
+      "casos": [
+        {
+          "caso": "nuevo_importe",
+          "antes": "REVISAR",
+          "despues": "APROBADO",
+          "importe_antes": 900.0,
+          "importe_despues": 1200.0,
+          "fecha_antes": "2026-11-22",
+          "fecha_despues": "2026-11-22",
+          "puntos_antes": 100.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "CONVENIO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "APROBADOS",
+          "motivo_canonico_antes": true,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "promesa_personal",
+          "antes": "REVISAR",
+          "despues": "APROBADO",
+          "importe_antes": 900.0,
+          "importe_despues": 1300.0,
+          "fecha_antes": "2026-11-22",
+          "fecha_despues": "2026-11-22",
+          "puntos_antes": 100.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "CONVENIO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "APROBADOS",
+          "motivo_canonico_antes": true,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "recapitulacion_posterior",
+          "antes": "REVISAR",
+          "despues": "APROBADO",
+          "importe_antes": 900.0,
+          "importe_despues": 1200.0,
+          "fecha_antes": "2026-11-21",
+          "fecha_despues": "2026-11-21",
+          "puntos_antes": 100.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "CONVENIO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "APROBADOS",
+          "motivo_canonico_antes": true,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        }
+      ],
+      "regresion": "test_one_negotiation_in_facts_final_quality_copy_checkpoint_and_excel",
+      "estado": "VERIFICADO_EN_FLUJO_PRODUCTIVO_CON_ASR_CONTROLADO",
+      "alcance_acustico": "Las transcripciones controladas no certifican comprensión de audio real. La ejecución genuina separada y la repetición del mismo ASR se documentan en FLUJO_REAL.json."
+    },
+    {
+      "id": "PARCIALIDAD_Y_PLAN",
+      "causa_demostrada": "Una confirmación de componente reemplazaba todo el plan o el plan previo seguía contaminando un cierre completo. Se conserva el componente explícito y la incertidumbre cuando faltan los otros términos.",
+      "ubicacion": [
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/negotiation_resolution.py",
+          "funcion": "resolve_negotiation"
+        },
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/installment_validation.py",
+          "funcion": "unresolved_accepted_plan"
+        },
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/analytics_service.py",
+          "funcion": "AnalyticsService.calculate_basic_compliance"
+        }
+      ],
+      "casos": [
+        {
+          "caso": "parcialidad_modificada",
+          "antes": "REVISAR",
+          "despues": "APROBADO",
+          "importe_antes": 900.0,
+          "importe_despues": 1800.0,
+          "fecha_antes": "2026-11-22",
+          "fecha_despues": "2026-11-23",
+          "puntos_antes": 100.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "CONVENIO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "APROBADOS",
+          "motivo_canonico_antes": true,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "oferta_incompleta",
+          "antes": "REVISAR",
+          "despues": "REVISAR",
+          "importe_antes": 1800.0,
+          "importe_despues": 1800.0,
+          "fecha_antes": "2026-11-21",
+          "fecha_despues": "2026-11-21",
+          "puntos_antes": 100.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "CONVENIO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "REVISAR",
+          "motivo_canonico_antes": true,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "dos_pagos_coordinados",
+          "antes": "APROBADO",
+          "despues": "APROBADO",
+          "importe_antes": 3000.0,
+          "importe_despues": 3000.0,
+          "fecha_antes": "2026-11-21",
+          "fecha_despues": "2026-11-21",
+          "puntos_antes": 100.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "CONVENIO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "APROBADOS",
+          "carpeta_despues": "APROBADOS",
+          "motivo_canonico_antes": true,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        }
+      ],
+      "regresion": "test_partial_component_without_other_terms_cannot_create_a_whole_plan; test_incomplete_offer_is_not_assumed_to_be_replaced_by_one_component; test_coordinated_amounts_survive_active_scope_in_all_outputs",
+      "estado": "VERIFICADO_EN_FLUJO_PRODUCTIVO_CON_ASR_CONTROLADO",
+      "alcance_acustico": "Las transcripciones controladas no certifican comprensión de audio real. La ejecución genuina separada y la repetición del mismo ASR se documentan en FLUJO_REAL.json."
+    },
+    {
+      "id": "SELECCION_FOCAL",
+      "causa_demostrada": "El selector podía releer la propuesta antigua o solo una aceptación referencial, sin el cierre vigente completo. Usa la misma selección cronológica y conserva pregunta/propuesta cuando faltan términos propios.",
+      "ubicacion": [
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/medium_review_plan.py",
+          "funcion": "_closing_exchange"
+        },
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/medium_review_plan.py",
+          "funcion": "plan_for_item"
+        }
+      ],
+      "casos": [
+        {
+          "caso": "medium_resuelve_cierre",
+          "antes": "REVISAR",
+          "despues": "APROBADO",
+          "importe_antes": null,
+          "importe_despues": 1200.0,
+          "fecha_antes": null,
+          "fecha_despues": "2026-11-22",
+          "puntos_antes": 85.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "NO DEFINE FECHA DE PAGO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "APROBADOS",
+          "motivo_canonico_antes": false,
+          "motivo_canonico_despues": true,
+          "medium_antes": 3,
+          "medium_despues": 2,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "medium_contradictorio",
+          "antes": "REVISAR",
+          "despues": "REVISAR",
+          "importe_antes": null,
+          "importe_despues": null,
+          "fecha_antes": null,
+          "fecha_despues": null,
+          "puntos_antes": 85.0,
+          "puntos_despues": 85.0,
+          "estatus_antes": "NO DEFINE FECHA DE PAGO",
+          "estatus_despues": "",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "REVISAR",
+          "motivo_canonico_antes": false,
+          "motivo_canonico_despues": true,
+          "medium_antes": 3,
+          "medium_despues": 3,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        }
+      ],
+      "regresion": "test_one_negotiation_in_facts_final_quality_copy_checkpoint_and_excel; test_a_real_contradiction_between_decodes_is_not_outvoted",
+      "estado": "VERIFICADO_EN_FLUJO_PRODUCTIVO_CON_ASR_CONTROLADO",
+      "alcance_acustico": "Las transcripciones controladas no certifican comprensión de audio real. La ejecución genuina separada y la repetición del mismo ASR se documentan en FLUJO_REAL.json."
+    },
+    {
+      "id": "CONTRADICCION_ARTIFICIAL",
+      "causa_demostrada": "El no de no entiendo/no escucho se clasificaba como negativa financiera, contradiciendo los hechos concordantes recuperados por Medium.",
+      "ubicacion": [
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/payment_reply_scope.py",
+          "funcion": "communication_repair"
+        },
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/payment_dialogue_frames.py",
+          "funcion": "payment_replies"
+        },
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/payment_intent_frames.py",
+          "funcion": "payment_frames"
+        }
+      ],
+      "casos": [
+        {
+          "caso": "medium_resuelve_cierre",
+          "antes": "REVISAR",
+          "despues": "APROBADO",
+          "importe_antes": null,
+          "importe_despues": 1200.0,
+          "fecha_antes": null,
+          "fecha_despues": "2026-11-22",
+          "puntos_antes": 85.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "NO DEFINE FECHA DE PAGO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "APROBADOS",
+          "motivo_canonico_antes": false,
+          "motivo_canonico_despues": true,
+          "medium_antes": 3,
+          "medium_despues": 2,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "medium_contradictorio",
+          "antes": "REVISAR",
+          "despues": "REVISAR",
+          "importe_antes": null,
+          "importe_despues": null,
+          "fecha_antes": null,
+          "fecha_despues": null,
+          "puntos_antes": 85.0,
+          "puntos_despues": 85.0,
+          "estatus_antes": "NO DEFINE FECHA DE PAGO",
+          "estatus_despues": "",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "REVISAR",
+          "motivo_canonico_antes": false,
+          "motivo_canonico_despues": true,
+          "medium_antes": 3,
+          "medium_despues": 3,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        }
+      ],
+      "regresion": "test_communication_repair_is_not_a_financial_refusal; test_real_refusal_still_blocks_acceptance; test_hearing_confirmation_is_not_a_request_to_repair_the_call",
+      "estado": "VERIFICADO_EN_FLUJO_PRODUCTIVO_CON_ASR_CONTROLADO",
+      "alcance_acustico": "Las transcripciones controladas no certifican comprensión de audio real. La ejecución genuina separada y la repetición del mismo ASR se documentan en FLUJO_REAL.json."
+    },
+    {
+      "id": "DECISION_FINAL_UNICA",
+      "causa_demostrada": "BatchService acumulaba motivos de evaluaciones intermedias después de resolver la decisión compartida. Carpeta, metadatos, checkpoint y Excel deben finalizar con el mismo resultado y motivo.",
+      "ubicacion": [
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/batch_service.py",
+          "funcion": "BatchService.process_all"
+        }
+      ],
+      "casos": [
+        {
+          "caso": "revocado",
+          "antes": "REVISAR",
+          "despues": "APROBADO_ETIQUETA_CORREGIDA",
+          "importe_antes": 900.0,
+          "importe_despues": null,
+          "fecha_antes": "2026-11-23",
+          "fecha_despues": "2026-11-23",
+          "puntos_antes": 100.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "NO DEFINE FECHA DE PAGO",
+          "estatus_despues": "NO DEFINE FECHA DE PAGO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "APROBADOS_ETIQUETA_CORREGIDA",
+          "motivo_canonico_antes": false,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "nuevo_importe_maltrato",
+          "antes": "REVISAR",
+          "despues": "REVISAR",
+          "importe_antes": 900.0,
+          "importe_despues": 1200.0,
+          "fecha_antes": "2026-11-22",
+          "fecha_despues": "2026-11-22",
+          "puntos_antes": 100.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "CONVENIO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "REVISAR",
+          "motivo_canonico_antes": false,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "medium_resuelve_cierre",
+          "antes": "REVISAR",
+          "despues": "APROBADO",
+          "importe_antes": null,
+          "importe_despues": 1200.0,
+          "fecha_antes": null,
+          "fecha_despues": "2026-11-22",
+          "puntos_antes": 85.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "NO DEFINE FECHA DE PAGO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "APROBADOS",
+          "motivo_canonico_antes": false,
+          "motivo_canonico_despues": true,
+          "medium_antes": 3,
+          "medium_despues": 2,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        }
+      ],
+      "regresion": "test_one_negotiation_in_facts_final_quality_copy_checkpoint_and_excel; dos grabaciones históricas completas y repetición determinista del mismo ASR genuino",
+      "estado": "VERIFICADO_EN_FLUJO_PRODUCTIVO_CON_ASR_CONTROLADO",
+      "alcance_acustico": "Las transcripciones controladas no certifican comprensión de audio real. La ejecución genuina separada y la repetición del mismo ASR se documentan en FLUJO_REAL.json."
+    },
+    {
+      "id": "CONTROLES_INDEPENDIENTES",
+      "causa_demostrada": "El cierre vigente entra antes de validar fechas/importes; su resolución no elimina quejas, discrepancias acústicas ni mínimos financieros.",
+      "ubicacion": [
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/analytics_service.py",
+          "funcion": "AnalyticsService.calculate_basic_compliance"
+        },
+        {
+          "archivo": "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/analytics_service.py",
+          "funcion": "AnalyticsService.shared_quality_decision"
+        }
+      ],
+      "casos": [
+        {
+          "caso": "nuevo_importe_fuera_plazo",
+          "antes": "REVISAR",
+          "despues": "FALLA_GRAVE",
+          "importe_antes": 900.0,
+          "importe_despues": 1200.0,
+          "fecha_antes": "2026-12-01",
+          "fecha_despues": "2026-12-01",
+          "puntos_antes": 100.0,
+          "puntos_despues": 0.0,
+          "estatus_antes": "CONVENIO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "NEGOCIACION_INVALIDA",
+          "motivo_canonico_antes": true,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "nuevo_importe_inferior_minimo",
+          "antes": "REVISAR",
+          "despues": "NO_APROBADO",
+          "importe_antes": 900.0,
+          "importe_despues": 200.0,
+          "fecha_antes": "2026-11-22",
+          "fecha_despues": "2026-11-22",
+          "puntos_antes": 100.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "CONVENIO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "NO_APROBADOS",
+          "motivo_canonico_antes": true,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "nuevo_importe_maltrato",
+          "antes": "REVISAR",
+          "despues": "REVISAR",
+          "importe_antes": 900.0,
+          "importe_despues": 1200.0,
+          "fecha_antes": "2026-11-22",
+          "fecha_despues": "2026-11-22",
+          "puntos_antes": 100.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "CONVENIO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "REVISAR",
+          "motivo_canonico_antes": false,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "medium_contradictorio",
+          "antes": "REVISAR",
+          "despues": "REVISAR",
+          "importe_antes": null,
+          "importe_despues": null,
+          "fecha_antes": null,
+          "fecha_despues": null,
+          "puntos_antes": 85.0,
+          "puntos_despues": 85.0,
+          "estatus_antes": "NO DEFINE FECHA DE PAGO",
+          "estatus_despues": "",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "REVISAR",
+          "motivo_canonico_antes": false,
+          "motivo_canonico_despues": true,
+          "medium_antes": 3,
+          "medium_despues": 3,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        },
+        {
+          "caso": "oferta_incompleta",
+          "antes": "REVISAR",
+          "despues": "REVISAR",
+          "importe_antes": 1800.0,
+          "importe_despues": 1800.0,
+          "fecha_antes": "2026-11-21",
+          "fecha_despues": "2026-11-21",
+          "puntos_antes": 100.0,
+          "puntos_despues": 100.0,
+          "estatus_antes": "CONVENIO",
+          "estatus_despues": "CONVENIO",
+          "carpeta_antes": "REVISAR",
+          "carpeta_despues": "REVISAR",
+          "motivo_canonico_antes": true,
+          "motivo_canonico_despues": true,
+          "medium_antes": 0,
+          "medium_despues": 0,
+          "metadatos_checkpoint_excel_coinciden": true,
+          "copia_binaria_correcta": true
+        }
+      ],
+      "regresion": "test_one_negotiation_in_facts_final_quality_copy_checkpoint_and_excel; suite histórica completa",
+      "estado": "VERIFICADO_EN_FLUJO_PRODUCTIVO_CON_ASR_CONTROLADO",
+      "alcance_acustico": "Las transcripciones controladas no certifican comprensión de audio real. La ejecución genuina separada y la repetición del mismo ASR se documentan en FLUJO_REAL.json."
+    }
+  ],
+  "pendientes_controlados": [
+    {
+      "id": "oferta_incompleta",
+      "motivo": "La oferta anterior no tiene calendario completo; no se acredita si el monto posterior es un componente o sustituye todo el plan. Conservar REVISAR."
+    },
+    {
+      "id": "medium_contradictorio",
+      "motivo": "Las lecturas recuperadas discrepan en el importe del mismo intercambio; una tercera lectura favorable no elimina la contradicción por mayoría."
+    },
+    {
+      "id": "nuevo_importe_maltrato",
+      "motivo": "La recuperación financiera no permite aprobar una queja de atención; bloqueo independiente vigente."
+    }
+  ],
+  "cambios_de_puntuacion": [
+    {
+      "caso": "nuevo_importe_fuera_plazo",
+      "antes": 100.0,
+      "despues": 0.0,
+      "motivo": "PEN005 y convenio fuera de plazo ahora evaluados sobre el cierre vigente."
+    },
+    {
+      "caso": "medium_resuelve_cierre",
+      "antes": 85.0,
+      "despues": 100.0,
+      "motivo": "El cierre recuperado acredita la gestión; deja de imputarse ausencia de intento de negociación."
+    }
+  ],
+  "penalty_weights_unchanged": true,
+  "no_customer_approvals_certified": true
+}

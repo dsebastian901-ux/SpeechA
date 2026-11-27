@@ -44,6 +44,8 @@ def payment_replies(text,segments=()):
         boundary=re.search(r'\.(?=\s|$)|[!?]|\b(?:gestor|titular|tercero|cliente|interlocutor)\s*:',tail)
         reply=tail[:boundary.start()if boundary else len(tail)].strip()
         if not reply or tail.startswith('¿')or(boundary and boundary.group()=='?'):continue
+        from app.services.payment_reply_scope import communication_repair
+        if communication_repair(reply):continue
         if _role_at(text,segments,start)in{'GESTOR','TERCERO'}:continue
         if re.search(r'\b(?:ya (?:lo |les )?pague|pague ayer|ya (?:hice|realice|mande)|me lo habia dicho|ya les habia pagado)\b',reply):continue
         if re.match(r'(?:me presento|mi nombre|hablamos|le (?:hablo|ofrezco|solicito|requiero|voy a)|se le|el banco)\b',reply):continue
