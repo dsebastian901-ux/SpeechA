@@ -90,24 +90,8 @@ def confirmed_minor_failure(metadata):
     if payment.get('confirmed_missing_receipt_request'):
         codes.append('REPORTED_PAYMENT_RECEIPT_NOT_REQUESTED')
         reasons.append('Se confirmó el importe reportado, pero no se solicitó el comprobante del pago.')
-    # No convertir una segunda exhibición, una fecha ambigua ni un monto
-    # dudoso en una falta confirmada. PEN005 por vencimiento sigue intacta.
-    if (n.get('financial_validation_applicable') and not n.get('review_required')
-            and n.get('payment_date_confirmed') and n.get('commitment_confirmed')
-            and n.get('amount_confirmed') and not n.get('date_year_rollover_review')
-            and not n.get('payment_confirmation_case') and (not n.get('multipago_detectado')or complete_accepted_calendar)
-            and not (n.get('accepted_schedule') or {}).get('confirmed')
-            and not (n.get('installment_window') or {}).get('applies')
-            and (n.get('commitment_evidence') or {}).get('accepted')
-            and not n.get('datos_saldo_inconsistentes') and not n.get('monto_normalizado_asr')):
-        try:
-            promised = date.fromisoformat(str(n['promise_date'])[:10])
-            maximum = date.fromisoformat(str(n['mora_payment_policy']['window_end'])[:10])
-            if promised > maximum:
-                codes.append('CONFIRMED_PAYMENT_DATE_OUTSIDE_POLICY')
-                reasons.append(f'La fecha aceptada ({promised}) excede el plazo operativo autorizado ({maximum}); no es negativa del titular.')
-        except (ValueError, KeyError, TypeError):
-            pass
+    # La promesa aceptada fuera de plazo o vencimiento dejó de ser
+    # FALLA_MINIMA: se evalúa como FALLA_GRAVE en grave_date_policy.
     if not codes:
         return None
     return {'rule_group': 12, 'code': 'CONFIRMED_MINOR_FAILURE',
