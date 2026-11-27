@@ -196,7 +196,9 @@ def execution_status(record):
     """Contabilidad de llamadas al decodificador, separada del consenso."""
     attempts=[a for group in (record or{}).get('groups',[])for a in group.get('attempts',[])]
     return {'attempted':len(attempts),'completed':sum(not bool(a.get('error'))for a in attempts),
-            'failed':sum(bool(a.get('error'))for a in attempts),'model':(record or{}).get('model')}
+            'failed':sum(bool(a.get('error'))for a in attempts),'model':(record or{}).get('model'),
+            'cache_hits':sum(bool(a.get('cache_hit'))for a in attempts),
+            'actual_decoder_calls':sum(not bool(a.get('cache_hit'))for a in attempts)}
 
 
 def _focused_windows(data,metadata):
@@ -213,6 +215,11 @@ def _focused_windows(data,metadata):
         purpose=('holder'if code=='UNIDENTIFIED_CONTACT'else'callback'if code.startswith(('CALLBACK','MESSAGE_'))else
                  'safety'if code in{'ASSET_COERCION_REVIEW','THIRD_PARTY_PAYMENT_GUIDANCE','UNCERTAIN_DISCLOSURE','HOME_WARNING_UNATTRIBUTED','OFFENSIVE_LANGUAGE',
                     'UNCERTAIN_CONFRONTATION','WAIT_WITHOUT_RESUMPTION','CARD_REFERENCE','MISTREATMENT_REPORT'}else'financial')
+        if purpose=='holder' and a==0.:
+            first=(0.,min(b,38.));second=(0.,min(b,40.))
+            if first==second:first=(0.,max(0.,first[1]-1.))
+            if all(y>x for x,y in (first,second)):groups[(purpose,first,second)]=(purpose,[first,second])
+            continue
         while a<b:
             end=min(b,a+38.)
             first=(a,end);second=(max(0.,a-2.),min(duration,end+2.))
@@ -221,7 +228,24 @@ def _focused_windows(data,metadata):
                 groups[(purpose,first,second)]=(purpose,[first,second])
             if end==b:break
             a=end-2.
-    return list(groups.values())
+    selected=[]
+    for purpose,pair in sorted(groups.values(),key=lambda g:-(g[1][0][1]-g[1][0][0])):
+        if any(p==purpose and old[0][0]<=pair[0][0] and old[0][1]>=pair[0][1]
+               for p,old in selected):continue
+        selected.append((purpose,pair))
+    merged=[]
+    for purpose,pair in sorted(selected,key=lambda g:(g[0],g[1][0][0])):
+        a,b=pair[0]
+        if purpose=='holder':
+            merged.append((purpose,pair));continue
+        if merged and merged[-1][0]==purpose:
+            old=merged[-1][1][0]
+            if a<=old[1]and max(b,old[1])-old[0]<=38.:
+                a,b=old[0],max(b,old[1]);merged.pop()
+        second=(max(0.,a-2.),min(duration,b+2.))
+        first=(a,b)if(a,b)!=second else(a,max(a,b-1.))
+        merged.append((purpose,[first,second]))
+    return merged
 
 
 def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=False,focused=False):
@@ -263,23 +287,27 @@ def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=F
         attempts=[]
         def execute(start,end,beam,index,reason):
             import time
-            began=time.perf_counter()
+            began=time.perf_counter();cpu_began=time.process_time()
             attempt={'start':start,'end':end,'beam_size':beam,'listening_index':index,
                      'model':str(model),'trigger_reason':reason}
             try:
                 reading=read_window(start,end,beam)
                 attempt.update(text=str(reading.get('text')or''),segments=reading.get('segments')or[])
+                attempt['stage_seconds']=reading.get('stage_seconds',{})
+                attempt['cache_hit']=bool(reading.get('cache_hit'))
             except Exception as error:
                 attempt.update(text='',segments=[],error=type(error).__name__)
             attempt['seconds']=time.perf_counter()-began
+            attempt['process_cpu_seconds']=time.process_time()-cpu_began
+            attempt['elapsed_anomaly']=attempt['seconds']>max(120.,(end-start)*10.)
             attempt['text_sha256']=digest(attempt['text'])
             return attempt
         for index,((start,end),beam) in enumerate(zip(pair,(5,10)),1):
             attempts.append(execute(start,end,beam,index,'CONTRASTE_FOCAL_INICIAL'))
-        primary_disagrees=bool(focused and primary_text and
-            normalize(primary_text)!=normalize(attempts[0].get('text')))
+        from app.services.listening_lifecycle import primary_fact_conflict, third_state
+        primary_disagrees=bool(focused and primary_fact_conflict(purpose,primary_text,attempts,relation))
         first_two=consensus(purpose,attempts,relation)
-        third_required=needs_third_read(purpose,attempts,relation)or primary_disagrees
+        third_required=first_two['third_recommended']or primary_disagrees
         third_reason=('DISCREPANCIA_CON_ASR_ORIGINAL' if primary_disagrees else first_two['reason_code'])
         if third_required:
             duration=float(data.get('duracion_segundos')or 0)
@@ -290,13 +318,15 @@ def collect(audio_path,data,relation,metadata,read_window,model,*,include_tail=F
             if end>start and end-start<=45.:
                 attempts.append(execute(start,end,8,3,third_reason))
         # Comparar con el ASR original sin reemplazarlo ni atribuir una voz.
+        final_semantic=consensus(purpose,attempts,relation)
         record['groups'].append({'purpose':purpose,'attempts':attempts,
+            'third_listening_state':third_state(third_required,attempts,final_semantic),
             'first_two_consensus':first_two,'third_read_required':bool(third_required),
             'third_read_reason':third_reason if third_required else '',
             'primary_text':primary_text,'primary_overlap_is_segment_level':True,
             'third_read_required_by_primary_disagreement':primary_disagrees,
             'primary_text_matches_first_read':normalize(primary_text)==normalize(attempts[0].get('text')),
-            'consensus':consensus(purpose,attempts,relation)})
+            'consensus':final_semantic})
     record['record_sha256']=record_digest(record)
     return record
 
@@ -338,6 +368,14 @@ def validate(record,data,relation,audio_path):
             required_findings=record.get('required_findings',[]),
             recovery_reasons=record.get('recovery_reasons',[]), independent_sources=1,
             classification_before=record.get('classification_before'), fact_validations=[])
+        from app.services.conversation_evidence import payment_commitment
+        from app.services.medium_review_plan import _timeline
+        decision=payment_commitment(data.get('texto')or'',data.get('segmentos')or[])
+        if decision.get('declined')or decision.get('conditional'):
+            _,timeline=_timeline(data);position=decision.get('position')
+            if isinstance(position,int):
+                ends=[r['end']for r in timeline if r['lo']<=position<r['hi']]
+                if ends:result['source_decision_end']=max(ends)
         result['readings']=reading_summary(record)
         for group_index,group in enumerate(record.get('groups')or[]):
             all_attempts=group.get('attempts')or[]
@@ -348,13 +386,30 @@ def validate(record,data,relation,audio_path):
             if (all_attempts[0]['start'],all_attempts[0]['end'])==(all_attempts[1]['start'],all_attempts[1]['end']):raise ValueError('Ventanas idénticas')
             purpose=group.get('purpose','')
             semantic=consensus(purpose,all_attempts,relation)
+            semantic.update(window_start=min(a['start']for a in all_attempts),window_end=max(a['end']for a in all_attempts))
             result['fact_validations'].append(semantic)
-            required=needs_third_read(purpose,all_attempts[:2],relation) or bool(
+            required=(semantic['third_recommended']if len(all_attempts)==2 else needs_third_read(purpose,all_attempts[:2],relation)) or bool(
                 group.get('third_read_required_by_primary_disagreement'))
-            if required and (len(all_attempts)!=3 or all_attempts[2].get('error')
-                             or not reading_quality(all_attempts[2])):
-                result.setdefault('third_listening_pending',[]).append(purpose)
+            from app.services.listening_lifecycle import primary_fact_conflict
+            if primary_fact_conflict(purpose,group.get('primary_text',''),all_attempts,relation):
+                result.setdefault('primary_conflicting_fact_rules',[]).append(purpose)
                 result['review_required']=True
+            from app.services.listening_lifecycle import third_state
+            state=third_state(required,all_attempts,semantic)
+            result.setdefault('third_listening_states',[]).append({'group':group_index+1,'purpose':purpose,'state':state})
+            if state in {'PENDIENTE','FALLIDA','INSUFICIENTE'}:
+                key={'PENDIENTE':'third_listening_pending','FALLIDA':'third_listening_failed',
+                     'INSUFICIENTE':'third_listening_insufficient'}[state]
+                diagnostic_only=(state=='INSUFICIENTE' and reading_quality(all_attempts[2])
+                    and all(r['state']=='EVIDENCIA_INSUFICIENTE'for r in semantic['rules']))
+                if diagnostic_only:
+                    # Executed, usable diagnostic text with no attributable
+                    # fact does not invent a new quality violation. Original
+                    # financial/contact findings remain; nothing is consumed.
+                    result.setdefault('diagnostic_listening_insufficient',[]).append(purpose)
+                else:
+                    result.setdefault(key,[]).append(purpose)
+                    result['review_required']=True
             contradictions=[r['rule']for r in semantic['rules']if r['state']=='CONTRADICTORIO']
             if contradictions:
                 result.setdefault('contradictory_fact_rules',[]).extend(contradictions)
@@ -409,6 +464,7 @@ def validate(record,data,relation,audio_path):
             # No resolver con una única lectura; dos evidencias concordantes
             # como mínimo y ninguna contradicción explícita en una tercera.
             if len(good)<2:continue
+            if required and state!='EJECUTADA':continue
             attempts=good[:2]
             if len(all_attempts)==3 and len(good)==3:
                 if group.get('purpose')=='holder':
@@ -437,7 +493,7 @@ def validate(record,data,relation,audio_path):
                 # la evidencia acústica que debe atribuirse.
                 continue
             if group.get('purpose')=='holder':
-                if any(a['start']!=0 or a['end']>(36 if a.get('beam_size')==8 else 34)
+                if any(a['start']!=0 or a['end']>45.
                        for a in attempts):continue
                 source=normalize(data.get('texto'))
                 from app.services.contact_dialogue_resolution import declared_intermediary
@@ -493,6 +549,19 @@ def validate(record,data,relation,audio_path):
                     result['evidence'].append({'purpose':'callback','texts':[a['text']for a in attempts],
                         'method':'CALLBACK_MATCH_IN_TWO_LOCAL_READINGS','source':'LOCAL_AUDIO_CONTEXT',
                         'human_verified':False})
+        # Reception and dictation of a phone number are distinct facts.
+        # Consuming reception never fabricates a missing callback number.
+        from app.services.context_evidence_policy import confirmed_fact
+        receipt=confirmed_fact(result,'MESSAGE_RECEIPT')
+        if receipt and not result.get('message_receipt'):
+            from app.services.definitive_rejection import explicit_message_refusal
+            from app.services.conversation_evidence import assess_recado
+            raw=assess_recado(data.get('texto')or'',data.get('segmentos')or[])
+            refused=explicit_message_refusal(data.get('texto')or'',data.get('segmentos')or[],raw['acceptance'])
+            if not refused['confirmed']:
+                result['message_receipt']={'text':' / '.join(e['text']for e in receipt['matching_evidence']),
+                    'source':'LOCAL_AUDIO_CONTEXT','method':'RESPUESTA_CONTEXTUAL_DE_RECEPCION_CORROBORADA',
+                    'speaker_role':'NO DETERMINADO','human_verified':False,'readings':receipt['matching_evidence']}
         result['outcomes']=[]
         for group_index,group in enumerate(record.get('groups')or[]):
             purpose=group.get('purpose','')

@@ -281,9 +281,17 @@ class WhisperService:
         from app.services.local_model_catalog import inspect_model
         source=local_model_source(str(model_source))
         inspect_model(source,'medium')  # Nunca etiquetar Small como Medium.
+        import time
+        began=time.perf_counter()
         reviewer.load_model(model_name=source,device='cpu',compute_type='int8')
-        return reviewer._collect_context(audio_path,data,relation,metadata,reviewer._model,
+        load_seconds=time.perf_counter()-began
+        record=reviewer._collect_context(audio_path,data,relation,metadata,reviewer._model,
             'Faster-Whisper:medium',focused=True)
+        if record:
+            from app.services.context_audio_recovery import record_digest
+            record.setdefault('stage_seconds',{})['model_load_or_reuse']=load_seconds
+            record['record_sha256']=record_digest(record)
+        return record
 
     def recover_review_context(self, audio_path, data, relation, metadata):
         """Usar Medium local cuando esté importado; registrar siempre el modelo real."""
@@ -308,14 +316,26 @@ class WhisperService:
     def _collect_context(self, audio_path, data, relation, metadata, model, model_label, *, focused=False):
         from faster_whisper.audio import decode_audio
         from app.services.context_audio_recovery import collect
+        import time
+        from copy import deepcopy
+        began=time.perf_counter()
         samples = decode_audio(str(audio_path), sampling_rate=16000)
+        decode_seconds=time.perf_counter()-began
+        cache={}  # Scoped to this audio and model; never reuse a different call's PCM.
+        stage={'audio_decode':decode_seconds,'lock_wait':0.,'inference':0.,'cache_hits':0,'decoder_calls':0}
         language = str(data.get('idioma_solicitado') or 'es')
         if language.lower() == 'auto':
             language = None
 
         def read_window(start, end, beam):
+            key=(start,end,beam,language)
+            if key in cache:
+                stage['cache_hits']+=1
+                return dict(deepcopy(cache[key]),cache_hit=True,stage_seconds={'lock_wait':0.,'inference':0.})
             audio = samples[int(start*16000):int(end*16000)]
+            queued=time.perf_counter()
             with self._transcription_lock:
+                acquired=time.perf_counter()
                 stream, _ = model.transcribe(audio, language=language,
                     task='transcribe', beam_size=beam, vad_filter=False,
                     word_timestamps=False, condition_on_previous_text=False)
@@ -328,10 +348,21 @@ class WhisperService:
                         if isinstance(value,(int,float)):
                             row[field] = value
                     rows.append(row)
-            return {'text':' '.join(r['text'] for r in rows),'segments':rows}
+                finished=time.perf_counter()
+            timings={'lock_wait':acquired-queued,'inference':finished-acquired}
+            stage['lock_wait']+=timings['lock_wait'];stage['inference']+=timings['inference'];stage['decoder_calls']+=1
+            result={'text':' '.join(r['text'] for r in rows),'segments':rows,'stage_seconds':timings,'cache_hit':False}
+            cache[key]=deepcopy(result)
+            return result
 
-        return collect(audio_path,data,relation,metadata,read_window,
+        record=collect(audio_path,data,relation,metadata,read_window,
                        model_label,include_tail=True,focused=focused)
+        if record:
+            from app.services.context_audio_recovery import record_digest
+            record['stage_seconds']=stage
+            record['stage_seconds']['context_total']=time.perf_counter()-began
+            record['record_sha256']=record_digest(record)
+        return record
 
     # =========================================================
     # TRANSCRIBIR AUDIO

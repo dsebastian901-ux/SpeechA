@@ -83,6 +83,8 @@ def financial_response_events(text, segments=()):
             'method':'ACEPTACION_DE_RECAPITULACION_FINANCIERA_INMEDIATA',
             'speaker_role':reply['role'],'human_verified':False,'acoustic_voice_identified':False})
     events.extend(_payment_terms_responses(text,segments,rows))
+    from app.services.negotiation_chronology import validation_terms
+    events.extend(validation_terms(text,segments))
     return events
 
 
@@ -279,7 +281,7 @@ def active_paid_followup(payment_events, completed_payment_evidence):
     return not(current and not max(current,key=lambda e:e['position']).get('accepted'))
 
 
-def resolve_payment_events(events, confirmations):
+def resolve_payment_events(events, confirmations, text=""):
     """Un solo cierre para todos los extractores; el método no reemplaza el pacto.
 
     Las candidatas conservan su posición original. Condición y negativa ganan
@@ -298,10 +300,25 @@ def resolve_payment_events(events, confirmations):
             r'[^.!?]{0,40}\b(?:por (?:medio de )?transferencia|por (?:la )?aplicacion|con (?:mi |la )?banca|en (?:la )?(?:tienda|tierna|sucursal))\b',value)
             and not DATE.search(value)and not AMOUNT.search(value))
         if route_only and any(e[1]is True for e in choices):continue
+        from app.services.negotiation_chronology import route_uncertainty
+        if route_uncertainty(value) and any(e[1]is True for e in choices):continue
         if accepted is True and re.search(r'\bcreo que (?:lo voy|voy|podre|puedo|hago)\b',value):accepted=None
         choices.append((position,accepted,evidence))
     if not choices:return {'accepted':False,'declined':False,'evidence':''}
     position,accepted,evidence=max(choices,key=lambda e:(e[0],2 if e[1]is None else 1 if e[1]is False else 0))
+    if accepted is True and not DATE.search(normalize(evidence)) and not AMOUNT.search(normalize(evidence)):
+        from app.services.negotiation_chronology import scope_start
+        floor=scope_start(text,position) if text else position
+        last_refusal=max([p for p,a,_ in choices if p<position and a is not True] or [floor])
+        terms=[e for e in confirmations if max(floor,last_refusal)<=e['position']<=position
+               and DATE.search(e.get('date_evidence','')) and not CONDITION.search(e.get('date_evidence',''))]
+        if terms:
+            previous=max(terms,key=lambda e:e['position'])
+            # Preserve the last accepted dated recap only within the same
+            # uninterrupted payment object, not across another amount/date.
+            between=normalize(text)[previous.get('end',previous['position']):position]
+            if not AMOUNT.search(between)and not DATE.search(between):
+                evidence=previous['evidence']+' '+evidence
     return {'accepted':accepted is True,'declined':accepted is False,'conditional':accepted is None,
         'evidence':evidence,'position':position,'contextual_confirmation_events':confirmations,
         'resolution_method':'ULTIMA_DECISION_FINANCIERA_EN_AMBITO'}

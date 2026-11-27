@@ -1,44 +1,35 @@
-# MRS Speech Analytics — r55
+# MRS Speech Analytics — r67
 
-Extraiga todo el ZIP en una carpeta nueva y abra INICIAR_PROGRAMA.bat.
-La barra debe mostrar **3.6.19-r55**. Utiliza el Python y el modelo local
-ya instalados; la relectura no necesita descargar otro modelo.
+Revisión independiente en `codex/consolidacion-r67-20261127`, basada en r66 (`13684a3`). Los cambios se aplican al motor de procesamiento por lotes y a la evaluación de proyectos nuevos. R66 conserva su rama y su código.
 
-Los cambios se aplican al Procesamiento por lotes de proyectos nuevos.
-También se corrige la recuperación de lotes anteriores: actualiza los
-resultados desactualizados reutilizando la transcripción compatible y
-conserva un historial del checkpoint anterior.
+Se corrigen la negociación cronológica, los cierres de fecha e importe, las parcialidades completas, la selección de fragmentos y el ciclo de la tercera escucha. Se distingue ejecución de suficiencia acústica. Los hechos recuperados pasan por las mismas reglas financieras y de seguridad; no se modifican las ponderaciones ni el mínimo de 80 puntos.
 
-Con ASR nuevo o guardado, si queda REVISAR por identidad del interlocutor o contacto
-incompleto del recado, intenta dos relecturas locales acotadas con el modelo
-local instalado. No retranscribe toda la llamada. Solo incorpora esos hechos con evidencia compatible en ambas.
-Conserva el ASR original, no completa datos desde Excel ni certifica voces.
-El Excel final muestra la relectura y sus alertas.
+Consulte [cambios, pruebas y límites](auditoria/r67-20261127/README.md), [matriz de los 12 requisitos](auditoria/r67-20261127/MATRIZ_FUNCIONAL.csv) y [comparativo anónimo de las 23 llamadas](auditoria/r67-20261127/COMPARATIVO_23.csv). Las aprobaciones de casos controlados no representan aprobaciones de llamadas de clientes.
 
-Se corrige confundir teléfonos con dinero, atribuir un saldo referido de
-una llamada anterior al gestor actual e identificar al receptor del recado
-como titular. Reconoce más respuestas familiares y nominales sin omitir
-los filtros de privacidad, trato, negociación y seguridad acordados.
+## Actualizar la instalación existente
 
-Continúan los reportes de motivos de no pago y cuentas reetiquetadas.
-Reportes incorpora consolidación local de varios lotes, contados por
-separado, con exportación Excel y Word.
+Con el programa cerrado y los cambios locales guardados, desde la carpeta del repositorio en PowerShell:
 
-Consulte REVISION_55_PROGRAMA.md en la carpeta del programa y VALIDACION_R55.json
-para el alcance comprobado. Las pruebas con ASR guardado o salida controlada
-del modelo no equivalen a retranscribir el lote real con Faster-Whisper.
-No se acredita aquí una reducción de REVISAR mediante transcripción nueva.
+```powershell
+git fetch origin
+git switch codex/consolidacion-r67-20261127
+.\INICIAR_PROGRAMA.bat
+```
 
-Este paquete usa la instalación existente. El inicio de sesión y el
-instalador autónomo permanecen pendientes de integración.
+La barra debe mostrar `3.6.19-r67-cronologia-escuchas-20261127-validacion`. Se conserva el entorno Python existente, los modelos locales, la autenticación y el catálogo de usuarios. Las cuentas siguen en su ubicación local habitual; no se incluyen contraseñas ni catálogos de usuarios en los entregables.
 
-También se corrige el orden temporal de las respuestas de pago, el cambio
-del sujeto de la gestión al buscar a otra persona, solicitudes de comprobante
-y foto de pago, seguimiento de aclaraciones y quejas concretas de atención.
-Un incumplimiento de fecha comprobado se cierra como NO_APROBADO; sus alertas
-independientes permanecen visibles. Las dudas de un recado se explican por
-recepción, cuerpo o contacto, sin presentarlas como una sola duda de estatus.
+La actualización por Git necesita conexión; el procesamiento continúa local y sin internet. No se activa Medium como modelo principal: se utiliza su instalación local para contrastes cuando corresponde. Si falta audio o evidencia suficiente, se conserva el bloqueo y se explica en los reportes.
 
-El programa no agrega APIs ni servicios de pago. La relectura usa únicamente
-Faster-Whisper local. Si el modelo completo no está disponible en el equipo,
-conserva la transcripción y el resultado sustentado, sin descargar modelos.
+El ZIP es código fuente y no incluye Python, pesos de modelos ni un instalador EXE. Para conservar r66, extraer en otra carpeta y configurar el entorno y modelos locales mediante las herramientas existentes. No copiar datos de cuentas ni reemplazar originales con archivos del paquete.
+
+## Pruebas reproducibles
+
+Desde `proyecto/MRS_Speech_Analytics_v3.6.19_Revision`, con las dependencias locales instaladas:
+
+```powershell
+python -m pytest -q --tb=short
+```
+
+La suite completa se conserva en la rama Git. El ZIP incluye las regresiones sintéticas seleccionadas y sus dependencias, sin los datos históricos de clientes.
+
+El informe [PRUEBAS.json](auditoria/r67-20261127/PRUEBAS.json) registra las ejecuciones comprobadas y sus límites. No se afirma prueba en Windows físico ni escucha humana. El lote real de 23 llamadas se contrastó con transcripciones y registros guardados; faltan sus audios originales para nuevas escuchas y cotejo de integridad.

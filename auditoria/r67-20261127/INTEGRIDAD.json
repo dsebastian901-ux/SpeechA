@@ -1,0 +1,17 @@
+{
+  "base_r66_commit": "13684a3406012a0cea9158b6bb6b7ecc7aba35dd",
+  "base_worktree_clean": true,
+  "protected_r66_files": 20,
+  "protected_r57_files": 780,
+  "protected_r64_files": 21,
+  "penalty_call_arguments_unchanged": 33,
+  "authentication_security_gui_batch_sources_unchanged": true,
+  "app_runtime_source_files_changed_or_added": 17,
+  "original_audio_fixture_sha256": "3b8b0def3978dea0b85dfb1f5251b4fa2a93adfed177c8b4b2ce4e24c4e1c901",
+  "input_checkpoint_sha256": "2c5f5d479e922fc1463fccf2b259432f9bf0cf4fdd602abbadc56765f0aba3e3",
+  "input_excel_sha256": "2de885e4bd437bb3a92f8ab8dd0a26454b7811b26bcb8fdb4b3a4d41bf027dd9",
+  "credentials_or_customer_files_added": false,
+  "mrs_academy_added": false,
+  "physical_windows_tested": false,
+  "human_listening_performed": false
+}

@@ -8,7 +8,7 @@ import re
 
 from app.services.conversation_evidence import normalize, sentence_evidence
 
-VALIDATOR_REVISION = 'r66-evidencia-20261126-v1'
+VALIDATOR_REVISION = 'r67-evidencia-20261127-v1'
 STATES = {'CONFIRMADO', 'DESCARTADO_CON_EVIDENCIA', 'CONTRADICTORIO',
           'SIN_ATRIBUCION', 'EVIDENCIA_INSUFICIENTE'}
 OFFENSE = re.compile(r'\b(?:que poca madre|chingad[ao]s?|chingues|chingue|'
@@ -18,7 +18,7 @@ THREAT = re.compile(r'\b(?:vamos a|voy a|iremos a|pasaremos a|se realizara|reali
 NONASSERTIVE = re.compile(r'\b(?:dice que|dijo que|diga que|repita|supongamos|'
                           r'por ejemplo|si hubiera|si hubiese)\b')
 FACT_RULES = {
-    'holder': ('IDENTITY',), 'callback': ('CALLBACK',),
+    'holder': ('IDENTITY',), 'callback': ('CALLBACK','MESSAGE_RECEIPT'),
     'financial': ('AMOUNT', 'PAYMENT_DATE', 'COMMITMENT_WITHOUT_DATE',
                   'RECEIPT_REQUEST', 'PAYMENT_PLACES', 'REFERENCE', 'PAYMENT_PLAN'),
     'safety': ('DISCLOSURE', 'ARCO', 'REFERENCE', 'HOME_WARNING', 'OFFENSE', 'CONFRONTATION',
@@ -89,18 +89,29 @@ def extract_facts(reading, purpose, relation=None):
         for number in callback_numbers(text):
             facts.append(_fact('CALLBACK', number['digits'], number['text'],
                                'CONTEXTO_DE_RECONTACTO', attributed=True))
+    if purpose in {'callback','general'}:
+        from app.services.conversation_evidence import assess_recado
+        recado=assess_recado(text,segments)
+        if recado['acceptance'] and not recado['refusal']:
+            for e in recado['acceptance']:
+                facts.append(_fact('MESSAGE_RECEIPT',True,e['text'],'CONTEXTO_RESPUESTA_RECADO',attributed=True))
     if purpose in {'financial', 'general'}:
         from app.services.reviewed_payment_plan import extract_payment_plans
-        for plan in extract_payment_plans(text,segments,relation):
+        plans=extract_payment_plans(text,segments,relation)
+        for plan in plans:
             facts.append(_fact('PAYMENT_PLAN',plan['value'],plan['text'],
                 'CONTEXTO_DE_RESPUESTA_FINANCIERA',attributed=True))
-        for amount in explicit_current_amounts(text, segments):
+        if plans:
+            final=plans[-1]
+            facts.append(_fact('AMOUNT',final['value']['amount'],final['text'],'CONTEXTO_DE_RESPUESTA_FINANCIERA',attributed=True))
+            facts.append(_fact('PAYMENT_DATE',final['value'].get('dates')or final['value']['date'],final['text'],'CONTEXTO_DE_RESPUESTA_FINANCIERA',attributed=True))
+        for amount in ([]if plans else explicit_current_amounts(text, segments)):
             if amount['method'] == 'MONTO_EXPLICITO_DE_OPERACION_DE_PAGO':
                 continue  # una instrucción no prueba aceptación del interlocutor
             role = _role_at(text, segments, amount['position'])
             facts.append(_fact('AMOUNT', amount['amount'], amount['evidence'], role,
                                attributed=role in {'TITULAR', 'INTERLOCUTOR'}))
-        frames = payment_frames(text, segments)
+        frames = []if plans else payment_frames(text, segments)
         for frame in frames:
             if not frame['accepted'] or frame['history']:
                 continue
@@ -137,7 +148,7 @@ def extract_facts(reading, purpose, relation=None):
         receipt = receipt_request_evidence(text, segments)
         for item in receipt['request_evidence']:
             facts.append(_fact('RECEIPT_REQUEST', True, item['text'], item['speaker_role'],
-                               attributed=item['speaker_role'] == 'GESTOR'))
+                               attributed=item['speaker_role'] == 'GESTOR' or item.get('contextual_request_attribution',False)))
         for item in receipt['withdrawal_evidence']:
             facts.append(_fact('RECEIPT_REQUEST', True, item['text'], item['speaker_role'],
                                polarity=False, attributed=item['speaker_role'] == 'GESTOR'))

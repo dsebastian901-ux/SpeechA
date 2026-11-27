@@ -1,0 +1,264 @@
+{
+  "base_r66_commit": "13684a3406012a0cea9158b6bb6b7ecc7aba35dd",
+  "base_r66_full_suite": {
+    "tests": 3572,
+    "passed": 3550,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 558.361,
+    "junit_sha256": "f81cecfc374fd883e4e78d42c782b8342985d292f2026c0b1a69fa9c47961e71"
+  },
+  "initial_r67_full_suite": {
+    "tests": 3616,
+    "passed": 3593,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 615.944,
+    "junit_sha256": "dce8f10631f7bc48dc63f612178a0eb55871d9fd3adf2805487bc1cebfb8aff0"
+  },
+  "initial_failure": "Diagnostic third listening incorrectly added a new review flag; corrected in production code, existing test unchanged.",
+  "final_full_suite": {
+    "tests": 3622,
+    "passed": 3600,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 22,
+    "seconds": 610.078,
+    "junit_sha256": "d03475261adae7aa664a56590903d1a7bce4943c7e4c52f9bd3507589b44ca6d"
+  },
+  "focused_final_suite": {
+    "tests": 200,
+    "passed": 200,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 22.855,
+    "junit_sha256": "640fefdcb928976998e574c6fff52c759b708868fbc2a4b5dc597e81fe539b4b"
+  },
+  "new_r67_anonymized_and_adversarial_regression_cases": [
+    {
+      "test": "test_real_c22_later_firm_terms_supersede_initial_condition",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_real_c01_route_uncertainty_does_not_erase_accepted_terms",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_later_refusal_or_condition_still_replaces_acceptance[ No me comprometo a pagar.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_later_refusal_or_condition_still_replaces_acceptance[ Si consigo dinero voy a pagar.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_validation_does_not_invent_firm_acceptance[Quiz\\xe1s ma\\xf1ana.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_validation_does_not_invent_firm_acceptance[No s\\xe9 si ma\\xf1ana.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_validation_does_not_invent_firm_acceptance[Ma\\xf1ana o el lunes.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_validation_does_not_invent_firm_acceptance[Gestor: Ma\\xf1ana.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_validation_does_not_invent_firm_acceptance[Ma\\xf1ana si consigo dinero.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_terms_do_not_cross_another_question[tel\\xe9fono]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_terms_do_not_cross_another_question[comprobante]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_terms_do_not_cross_another_question[folio]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_terms_do_not_cross_another_question[vencimiento]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_terms_do_not_cross_another_question[corte]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_handoff_is_recorded_and_terms_not_joined_between_areas",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_financial_purpose_has_distinct_objects[text0-EXPLICACION_TRAMITE_CANCELACION]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_financial_purpose_has_distinct_objects[Con este pago liquida la cuenta.-LIQUIDACION]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_financial_purpose_has_distinct_objects[Con este pago se pone al corriente.-REGULARIZACION]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_financial_purpose_has_distinct_objects[Es el pago de su mensualidad.-MENSUALIDAD]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_financial_purpose_has_distinct_objects[Le ofrecemos liquidar su cuenta y hacer la cancelaci\\xf3n.-LIQUIDACION]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_installment_count_unit_price_dates_and_later_acceptance_are_bound",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_installment_proposal_without_customer_acceptance_is_not_confirmed[No puedo pagar.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_installment_proposal_without_customer_acceptance_is_not_confirmed[S\\xed, si consigo dinero.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_installment_proposal_without_customer_acceptance_is_not_confirmed[Gestor: S\\xed, de acuerdo.]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_missing_installment_dates_are_not_filled_in",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_installment_financial_rules_still_run[100-NO_APROBADO]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_installment_financial_rules_still_run[300-None]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_third_lifecycle_distinguishes_execution_and_resolution[pending-PENDIENTE]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_third_lifecycle_distinguishes_execution_and_resolution[failed-FALLIDA]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_third_lifecycle_distinguishes_execution_and_resolution[empty-INSUFICIENTE]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_third_lifecycle_distinguishes_execution_and_resolution[conflict-CONTRADICTORIA]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_third_lifecycle_distinguishes_execution_and_resolution[good-EJECUTADA]",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_matching_terms_do_not_trigger_third_for_punctuation_or_missing_primary_words",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_recovered_installments_enter_same_financial_policy",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_window_follows_final_question_response_not_only_initial_refusal",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_contextual_receipt_is_local_request_and_response_not_a_voice_label",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_receipt_customer_report_or_agent_thanks_does_not_forge_reception",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_required_unusable_third_does_not_enable_favorable_fact",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_identical_pcm_configuration_is_cached_and_timed",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_final_plan_does_not_consume_a_later_refusal_in_another_window",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_already_accepted_but_unparsed_terms_can_use_corroborated_complete_plan",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_earlier_rejection_may_be_superseded_only_by_located_later_terms",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_conflicting_original_terms_are_never_outvoted_by_three_favorable_reads",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_contextual_recado_reception_is_consumed_without_inventing_phone",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_same_installment_calendar_with_different_punctuation_is_same_fact",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_real_c22_directed_payment_photo_request_survives_document_asr_typo",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_medium_focused_opening_is_accepted_by_same_global_window_budget",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_new_area_own_terms_replace_previous_area_without_mixing_amounts",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_phone_review_window_contains_current_dictation_and_reply",
+      "result": "PASSED"
+    },
+    {
+      "test": "test_executed_diagnostic_third_does_not_invent_an_ordinary_violation",
+      "result": "PASSED"
+    }
+  ],
+  "skipped_reasons": {
+    "Necesita pantalla Tk (Xvfb o Windows).": 5,
+    "Requiere pantalla Tk.": 2,
+    "Necesita una pantalla Tk real (DISPLAY o Windows).": 5,
+    "Requiere pantalla Tk de pruebas.": 2,
+    "Requiere CMD y Python de Windows.": 8
+  },
+  "compileall_app_and_tools": {
+    "exit_code": 0
+  },
+  "git_diff_check": {
+    "exit_code": 0
+  },
+  "code_sha256_matches_full_run_freeze": true,
+  "all_23_checked": true,
+  "new_23_inference_executions": 0,
+  "medium_real_proof": "MEDIUM_REAL.json",
+  "human_listening": false,
+  "physical_windows_tested": false,
+  "regressions_observed_in_executed_final_tests": 0,
+  "unqualified_claim_of_no_possible_regressions": false,
+  "command": "python -m pytest -q --tb=short --junitxml=release-full.xml"
+}

@@ -1,0 +1,112 @@
+{
+  "case": "C19",
+  "call_elapsed_seconds": 21550.442839400028,
+  "primary_whisper_seconds": 129.0168193000136,
+  "analytics_seconds": 3.4313413000199944,
+  "context_recovery_seconds": 21417.770145700022,
+  "recorded_attempt_seconds_sum": 21413.012898699613,
+  "attempt_count": 57,
+  "slow_group": 10,
+  "slow_attempt": {
+    "start": 170.1,
+    "end": 185.1,
+    "beam_size": 10,
+    "listening_index": 2,
+    "seconds": 20006.81600599998,
+    "error": null
+  },
+  "historical_attempt_timer_scope": "Includes callback execution, model lock and generator consumption; r66 did not separate these stages.",
+  "cpu_lock_wait_suspend_history_available": false,
+  "cause": "NO_DETERMINABLE_CON_TELEMETRIA_R66",
+  "whisper_inference_blame_established": false,
+  "new_instrumentation": [
+    "audio_decode",
+    "model_load_or_reuse",
+    "lock_wait",
+    "inference",
+    "context_total",
+    "process_cpu_seconds",
+    "elapsed_anomaly"
+  ],
+  "new_plan_for_this_call": [
+    {
+      "purpose": "callback",
+      "pairs": [
+        [
+          377.93,
+          415.93
+        ],
+        [
+          375.93,
+          417.93
+        ]
+      ]
+    },
+    {
+      "purpose": "callback",
+      "pairs": [
+        [
+          413.93,
+          436.1
+        ],
+        [
+          411.93,
+          436.1
+        ]
+      ]
+    },
+    {
+      "purpose": "financial",
+      "pairs": [
+        [
+          242.15,
+          280.15
+        ],
+        [
+          240.15,
+          282.15
+        ]
+      ]
+    },
+    {
+      "purpose": "financial",
+      "pairs": [
+        [
+          278.15,
+          316.15
+        ],
+        [
+          276.15,
+          318.15
+        ]
+      ]
+    },
+    {
+      "purpose": "financial",
+      "pairs": [
+        [
+          314.15,
+          337.91
+        ],
+        [
+          312.15,
+          339.91
+        ]
+      ]
+    },
+    {
+      "purpose": "financial",
+      "pairs": [
+        [
+          422.66,
+          436.1
+        ],
+        [
+          420.66,
+          436.1
+        ]
+      ]
+    }
+  ],
+  "new_plan_is_not_a_runtime_benchmark": true
+}

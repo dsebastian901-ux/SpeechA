@@ -16,6 +16,12 @@ def extract_payment_plans(text,segments=(),relation=None):
     if (declared_intermediary(text,segments)['confirmed'] or nonholder_counter_evidence(text,segments)
             or proxy_account_evidence(text,segments)):
         return []
+    call=A._parse_context_date((relation or{}).get('fecha'))
+    from app.services.accepted_schedule_evidence import accepted_two_part_schedule
+    schedule=accepted_two_part_schedule(text,segments,call)
+    if schedule['confirmed']:
+        return [{'value':{'amount':schedule['total'],'date':schedule['dates'][-1]['date'],
+                          'amounts':schedule['amounts'],'dates':[{'installment':d['installment'],'date':d['date']}for d in schedule['dates']]},'text':schedule['evidence']}]
     commitment=payment_commitment(text,segments)
     if not commitment.get('accepted')or commitment.get('declined')or commitment.get('conditional'):return []
     call=A._parse_context_date((relation or{}).get('fecha'))
@@ -36,14 +42,20 @@ def confirmed_payment_plan(context,*,contact_type,commitment,completed_payment=F
     from app.services.context_evidence_policy import confirmed_fact
     if (contact_type!='TITULAR' or context.get('model')!='Faster-Whisper:medium'
             or completed_payment or context.get('risks')
-            or context.get('third_listening_pending') or context.get('contradictory_fact_rules')
-            or commitment.get('accepted') or commitment.get('declined')or commitment.get('conditional')):
+            or any(context.get(k)for k in ('third_listening_pending','third_listening_failed','third_listening_insufficient')) or context.get('contradictory_fact_rules')
+            or context.get('primary_conflicting_fact_rules')):
         return None
     if any(g.get('purpose')=='financial' and g.get('usable_readings',0)<2
            for g in context.get('fact_validations')or[]):
         return None
     fact=confirmed_fact(context,'PAYMENT_PLAN')
     if not fact:return None
+    if commitment.get('declined')or commitment.get('conditional'):
+        # A positive decode of the same refused exchange is a contradiction.
+        # Only a located later exchange may supersede that source decision.
+        declined_end=context.get('source_decision_end')
+        starts=[e.get('reading_start')for e in fact.get('matching_evidence',[])]
+        if declined_end is None or not starts or any(t is None or t<declined_end for t in starts):return None
     evidence=fact['matching_evidence'];values=[e['value']for e in evidence]
     if not values:return None
     value=values[0]
@@ -52,5 +64,6 @@ def confirmed_payment_plan(context,*,contact_type,commitment,completed_payment=F
     # lecturas deben confirmar el mismo plan y conservar la procedencia.
     if len({e.get('listening_index')for e in evidence})<2:return None
     return {'amount':value['amount'],'date':date.fromisoformat(value['date']),
+            'amounts':value.get('amounts',[]),'dates':value.get('dates',[]),
             'evidence':evidence[0]['text'],'readings':evidence,'source':'LOCAL_AUDIO_CONTEXT',
             'human_verified':False,'speaker_assignment':'CONTEXTUAL_NO_ACOUSTIC_DIARIZATION'}

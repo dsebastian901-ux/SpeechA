@@ -65,6 +65,63 @@ def _timeline(data):
     return source,rows
 
 
+def _closing_exchange(data,timeline):
+    """Locate the current negotiation's question, answer and recap together."""
+    from app.services.payment_lifecycle import frames,financial_response_events
+    from app.services.conversation_evidence import payment_commitment
+    from app.services.negotiation_chronology import scope_start
+    text=data.get('texto')or'';segments=data.get('segmentos')or[]
+    rows=frames(text,segments)
+    events=financial_response_events(text,segments)
+    commitment=payment_commitment(text,segments)
+    final=commitment.get('position',0)
+    floor=scope_start(text,len(normalize(text)))
+    anchors=[(e.get('offer_position',e['position']),e['end']) for e in events
+             if e['position']>=floor]
+    if not anchors:
+        for i,row in enumerate(rows[:-1]):
+            if row['start']<floor or row['role']in{'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+            if re.search(r'\b(?:confirm\w*|acordamos|cantidad|monto|fecha)\b',row['text']) and re.search(
+                    r'\b(?:pago|pagar|pagos|deposit|aplic|acordamos)\w*',row['text']):
+                anchors.append((row['start'],rows[min(i+2,len(rows)-1)]['end']))
+    if final>=floor and not anchors:
+        for index,row in enumerate(rows):
+            if row['start']<=final<=row['end']:
+                anchors.append((max(floor,rows[max(0,index-1)]['start']),rows[min(index+1,len(rows)-1)]['end']))
+                break
+    spans=[]
+    selected=anchors[-3:]
+    if floor:
+        # Include the validation area's first payment exchange, even when ASR
+        # damaged its amount/date question. Do not carry the former agent's
+        # alternative through a long phone-dictation interval.
+        for index,row in enumerate(rows):
+            if row['start']>=floor and re.search(r'\b(?:pago|pagar|movimiento)\b',row['text']):
+                selected.insert(0,(row['start'],rows[min(index+3,len(rows)-1)]['end']))
+                break
+    for lo,hi in selected:
+        covered=[r for r in timeline if r['lo']<hi and lo<r['hi']]
+        if covered:spans.append((covered[0]['start'],covered[-1]['end']))
+    return spans
+
+
+def _callback_exchange(data,timeline):
+    """Last local phone delivery exchange, including its question and reply."""
+    cue=re.compile(CUES['CALLBACK_NOT_DELIVERED'])
+    matches=[i for i,row in enumerate(timeline)if cue.search(row['text'])]
+    if not matches:return []
+    cluster=[matches[-1]]
+    for index in reversed(matches[:-1]):
+        if timeline[cluster[0]]['start']-timeline[index]['end']>45:break
+        cluster.insert(0,index)
+    first=cluster[0];last=cluster[-1]
+    if first>0 and timeline[first]['start']-timeline[first-1]['end']<=8:first-=1
+    for index in range(last+1,min(len(timeline),last+3)):
+        if timeline[index]['start']-timeline[last]['end']>8:break
+        last=index
+    return [(timeline[first]['start'],timeline[last]['end'])]
+
+
 def execution_for_window(item,code,start,end):
     """Un plan no es una escucha; comprobar registro y cobertura del fragmento."""
     if start is None or end is None:return 'NO_EJECUTADO'
@@ -112,6 +169,26 @@ def plan_for_item(item):
                 if all(isinstance(v,(float,int))and math.isfinite(v)for v in (a,b))and 0<=a<b:
                     spans.append((max(0.,a-3),min(duration,b+3)if duration else b+3))
             basis='INTERVALO_ASR_COMPLETO_NO_PRUEBA_SILENCIO_ACUSTICO'
+        elif code=='CALLBACK_NOT_DELIVERED':
+            spans=_callback_exchange(data,timeline)
+            basis='DICTADO_LOCAL_DE_CONTACTO_PREGUNTA_Y_RESPUESTA'
+        elif code in {'CONVENIO_OUTCOME_CONFLICT','NEGOTIATION_INVALID_OR_UNCERTAIN',
+                      'PAYMENT_OUTCOME_NOT_CONFIRMED','CONTEXT_AUDIO_UNVERIFIED',
+                      'CONTEXT_AUDIO_THIRD_REQUIRED','CONTEXT_AUDIO_THIRD_INSUFFICIENT'}:
+            spans=_closing_exchange(data,timeline)
+            basis='PREGUNTA_RESPUESTA_Y_CIERRE_EN_ORDEN_CRONOLOGICO'
+            if not spans:
+                # An unintelligible reply may have no parsed financial event.
+                # Keep its explicitly located finding instead of falling back
+                # to an unrelated midpoint diagnostic window.
+                for field in FIELDS.get(code,('negotiation_validation',)):
+                    for quote in set(_quotes(metadata.get(field)or{})):
+                        if len(quote)<12:continue
+                        at=source.find(quote)
+                        if at>=0:
+                            spans.extend((r['start'],r['end'])for r in timeline
+                                         if r['lo']<at+len(quote)and at<r['hi'])
+                basis='RESPUESTA_PENDIENTE_LOCALIZADA_EN_EVIDENCIA_ASR'
         else:
             quotes=[]
             for field in FIELDS.get(code,('negotiation_validation',)):

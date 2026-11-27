@@ -1,6 +1,12 @@
-MRS Speech Analytics 3.6.19-r55
+MRS Speech Analytics r67
 
-Extraiga TODO en una carpeta nueva. Abra INICIAR_PROGRAMA.bat.
-Compruebe r55 en la barra del programa. Use Procesamiento por lotes.
-Utiliza el Python y Whisper ya instalados. No es un instalador autonomo.
-Lea README.md y REVISION_55_PROGRAMA.md para cambios y alcance comprobado.
+Version: 3.6.19-r67-cronologia-escuchas-20261127-validacion
+Rama: codex/consolidacion-r67-20261127
+
+Abra INICIAR_PROGRAMA.bat con el entorno Python y modelos locales existentes.
+Conserve r66 en su rama o carpeta. Este paquete contiene codigo fuente.
+No incluye Python, modelos, contrasenas, datos de clientes ni instalador EXE.
+El acceso local y las funciones de usuarios, GUI, lotes y reportes se conservan.
+Lea README.md y auditoria/r67-20261127/README.md para cambios y pruebas.
+Los 23 audios originales del lote real no estaban disponibles para nuevas escuchas.
+No se certifican aprobaciones de ese lote sin evidencia suficiente.

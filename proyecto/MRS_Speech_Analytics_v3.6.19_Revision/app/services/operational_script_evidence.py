@@ -85,10 +85,14 @@ def receipt_request_evidence(text, segments=()):
             if backwards and not re.search(r'\b(?:no|nunca|dice que|dijo que|diga que)\s*$',value[:backwards.start()]):
                 requests.append(dict(unit,phrase=backwards.group(),method='INDICA_ENVIO_DEL_DOCUMENTO_MENCIONADO'))
             # Una fotografía puede ser del ticket: no confundirla con INE/ARCO.
-            photo=re.search(r'\b(?:mande|envie|comparta|enviar|mandar|enviarnos)\b[^.!?]{0,65}\b(?:foto|fotografia)\b',value)
+            photo=re.search(r'\b(?:mande|envie|comparta|compartir(?:me|nos)?|enviar|mandar|enviarnos)\b[^.!?]{0,65}\b(?:foto|fotografia)\b',value)
             if photo and re.search(r'\b(?:pago|deposito|ticket|tiquete|comprobante)\b',value) and not re.search(r'\b(?:ine|identificacion|linea telefonica)\b',value):
                 prefix=value[max(0,photo.start()-60):photo.start()]
-                if not re.search(r'\b(?:no|nunca|yo|ya|dice que|dijo que|diga que)\s*$',prefix):
+                from app.services.speech_scope import nonassertive_prefix
+                excluded=(nonassertive_prefix(value,photo.start()) or re.search(
+                    r'\b(?:no|nunca|yo|ya|dice que|dijo que|diga que)\s*$|'
+                    r'\b(?:no (?:(?:me|nos) )?va a|yo voy a)\s*$',prefix))
+                if not excluded:
                     requests.append(dict(unit,phrase=photo.group(),method='SOLICITA_FOTOGRAFIA_DE_PAGO'))
             pronoun=re.search(r'\bes importante\b[^.!?]{0,40}\b(?:los|lo|las|la) '
                 r'(?:(?:pueda|puedas|podais|puedan) )?(?:reportar|enviar|mandar)\b',value)
@@ -153,6 +157,22 @@ def receipt_request_evidence(text, segments=()):
             if re.search(rf'\b{RECEIPT}\b',normalize(unit['text'])):
                 pending.append(dict(unit,method='COMPROBANTE_Y_CANAL_SIN_PETICION_CLARA'))
                 break
+    # Contextual attribution is limited to this request/answer pair. It does
+    # not turn anonymous ASR segments into an acoustically identified agent.
+    from app.services.payment_lifecycle import frames,FIRM
+    dialog=frames(text,segments)
+    for item in requests:
+        if item['speaker_role']!='NO DETERMINADO':continue
+        for index,row in enumerate(dialog[:-1]):
+            if normalize(item['phrase'])not in row['text']:continue
+            reply=dialog[index+1]
+            nearby=source[max(0,row['start']-220):row['end']]
+            if (reply['role']not in {'GESTOR'} and FIRM.match(reply['text'])
+                    and re.search(r'\b(?:nos|me)\b',row['text'])
+                    and re.search(r'\b(?:whatsapp|numero|sistema)\b',nearby)
+                    and not re.search(r'\b(?:no|no puedo|yo creo|si puedo|dice que|dijo que)\b',reply['text'])):
+                item['contextual_request_attribution']=True
+                item['attribution_method']='SOLICITUD_LOCAL_DE_ENVIO_Y_RESPUESTA_DIRECTA'
     return {'requested':bool(requests),'reported_sent':bool(received),
             'channel':'WHATSAPP' if channels else 'NO CONFIRMADO',
             'request_evidence':requests,'withdrawn_request_evidence':withdrawn,'withdrawal_evidence':withdrawals,'reported_sent_evidence':received,'channel_evidence':channels,

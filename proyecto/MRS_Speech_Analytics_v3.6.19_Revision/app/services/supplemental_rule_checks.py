@@ -25,7 +25,8 @@ def financial_context_risks(text,relation):
         codes.append('REFERENCIA_NO_VALIDADA')
     if n.get('liquidation_offer_review_required')or(n.get('liquidation_detected')and not n.get('liquidation_allowed')):
         codes.append('LIQUIDACION_NO_CORROBORADA_O_NO_AUTORIZADA')
-    if n.get('multipago_detectado')or(n.get('installment_validation')or{}).get('review_required'):
+    schedule=n.get('accepted_schedule')or{}
+    if (n.get('multipago_detectado') and not(schedule.get('confirmed')and len(schedule.get('dates',[]))==len(schedule.get('amounts',[]))))or(n.get('installment_validation')or{}).get('review_required'):
         codes.append('PLAN_COMPLEJO_REQUIERE_VALIDACION_COMPLETA')
     if any(t in str(n.get('validacion_saldo_informado')or'')for t in ['REVISAR','INCORRECTO','DIFERENTE']):
         codes.append('SALDO_NO_VALIDADO')

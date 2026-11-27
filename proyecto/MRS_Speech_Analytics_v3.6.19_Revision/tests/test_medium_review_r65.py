@@ -59,7 +59,7 @@ def test_live_review_dispatch_uses_imported_medium_without_changing_primary(monk
     assert service.recover_review_context('sample.wav',{}, {},{})==expected
 
 
-def test_focused_medium_reads_reported_windows_and_a_third_on_primary_disagreement(tmp_path):
+def test_focused_medium_does_not_third_read_a_missing_primary_identity_fact(tmp_path):
     audio=tmp_path/'sample.wav';audio.write_bytes(b'controlled test only')
     data={'texto':'Me puede comunicar con Marina Robles.','duracion_segundos':12,
           'segmentos':[{'inicio':0,'fin':12,'texto':'Me puede comunicar con Marina Robles.'}]}
@@ -69,10 +69,10 @@ def test_focused_medium_reads_reported_windows_and_a_third_on_primary_disagreeme
     def read(a,b,beam):
         calls.append((a,b,beam));return {'text':'No está la titular, soy su hermana.','segments':[]}
     record=C.collect(audio,data,{},metadata,read,'Faster-Whisper:medium',focused=True)
-    assert data==original and len(calls)==3
+    assert data==original and len(calls)==2
     assert all(0<=a<b<=12 and b-a<=45 for a,b,_ in calls)
     assert record['groups'][0]['primary_text']==data['texto']
-    assert record['groups'][0]['third_read_required_by_primary_disagreement']
+    assert not record['groups'][0]['third_read_required_by_primary_disagreement']
     assert record['independent_sources']==1 and not record['human_verified']
     assert C.validate(record,data,{},audio)['holder']is False
 

@@ -67,7 +67,12 @@ def evaluate_quality(metadata, score, minimum_score=80, duration_seconds=None, b
         pending(domain, field, code, message)
     context_audio=m.get('context_audio_validation')or{}
     if context_audio.get('third_listening_pending'):
-        add(13,'CONTEXT_AUDIO_THIRD_REQUIRED','La tercera escucha requerida no se completó con calidad suficiente.', 'context_audio_validation')
+        add(13,'CONTEXT_AUDIO_THIRD_REQUIRED','La tercera escucha requerida todavía no fue ejecutada.', 'context_audio_validation')
+    for key,code,message in [('third_listening_failed','CONTEXT_AUDIO_THIRD_FAILED','La tercera escucha se ejecutó y falló técnicamente.'),
+            ('third_listening_insufficient','CONTEXT_AUDIO_THIRD_INSUFFICIENT','La tercera escucha se ejecutó; falta evidencia utilizable o atribuible.')]:
+        if context_audio.get(key):add(13,code,message,'context_audio_validation')
+    if context_audio.get('primary_conflicting_fact_rules'):
+        add(13,'CONTEXT_AUDIO_PRIMARY_CONTRADICTION','Persisten hechos incompatibles entre el ASR original del fragmento y las relecturas; no resolver por mayoría.','context_audio_validation')
     if context_audio.get('contradictory_fact_rules'):
         add(13,'CONTEXT_AUDIO_CONTRADICTION','Persisten hechos contradictorios entre escuchas: '+', '.join(sorted(set(context_audio['contradictory_fact_rules']))), 'context_audio_validation')
     from app.services.context_evidence_policy import unresolved_dependencies

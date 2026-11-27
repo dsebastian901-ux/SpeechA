@@ -60,12 +60,23 @@ def confirmed_fact(context, rule):
     from app.services.context_fact_consensus import VALIDATOR_REVISION
     if not context.get('valid') or context.get('validator_revision') != VALIDATOR_REVISION:
         return None
-    if context.get('third_listening_pending'):
+    if any(context.get(k)for k in ('third_listening_pending','third_listening_failed','third_listening_insufficient')):
+        return None
+    if context.get('primary_conflicting_fact_rules'):
         return None
     if context.get('recovery_location_confirmed')is False:
         return None
     candidates=[]
-    for group in context.get('fact_validations') or []:
+    groups=context.get('fact_validations')or[]
+    if rule=='PAYMENT_PLAN':
+        # Chronologically separate exchanges are not votes about one event.
+        # Ignore an earlier refusal only if the entire later confirmed
+        # exchange is after it. Overlap or incompatible decodes still veto.
+        positive=[g for g in groups if any(r['rule']==rule and r['state']=='CONFIRMADO'for r in g.get('rules',[]))]
+        latest=max(positive,key=lambda g:g.get('window_start',-1),default=None)
+        if latest is not None and latest.get('window_start')is not None:
+            groups=[g for g in groups if g.get('window_end',float('inf'))>=latest['window_start']]
+    for group in groups:
         for result in group.get('rules') or []:
             if result['rule'] != rule:continue
             if result['state']in{'CONTRADICTORIO','DESCARTADO_CON_EVIDENCIA'}:

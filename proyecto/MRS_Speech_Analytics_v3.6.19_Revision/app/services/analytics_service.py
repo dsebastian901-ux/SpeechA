@@ -1876,6 +1876,8 @@ class AnalyticsService:
                 continue
             for clause in re.split(r"[;]|(?=¿)", unit["text"]):
                 folded = norm(clause)
+                from app.services.negotiation_chronology import payment_purpose
+                if payment_purpose(folded)=='EXPLICACION_TRAMITE_CANCELACION':continue
                 for candidate in liquidation_offer_pattern.finditer(folded):
                     if re.search(r"\b(?:(?:me|nos) (?:dijo|dijeron|(?:habia|habian) dicho)|segun yo|yo pague|yo quiero|crei|pense)\b", folded) or re.search(
                             r"\b(?:el cliente|la cliente|el titular|la titular|usted)\s+(?:dijo|dice|menciona|comenta|confirmo|me dijo)\b", folded):
@@ -2088,6 +2090,10 @@ class AnalyticsService:
         reviewed_plan=(None if accepted_schedule['confirmed'] else confirmed_payment_plan(
             context.get('_context_audio_validation')or{},contact_type=contact_type,
             commitment=commitment_confirmation,completed_payment=completed_payment_confirmation['confirmed']))
+        if reviewed_plan and reviewed_plan.get('amounts'):
+            accepted_schedule={'confirmed':True,'amounts':reviewed_plan['amounts'],'total':reviewed_plan['amount'],
+                'dates':[dict(d,text=d['date'],evidence=reviewed_plan['evidence'])for d in reviewed_plan['dates']],'evidence':reviewed_plan['evidence'],
+                'method':'PARCIALIDADES_CORROBORADAS_MEDIUM','human_verified':False}
         if reviewed_plan:
             mentions_amount=True
             commitment_confirmation={'accepted':True,'declined':False,'conditional':False,
@@ -2634,6 +2640,11 @@ class AnalyticsService:
         from app.services.operational_outcome_resolution import amount_confirmed_for_agreement
         confirmed_agreement_amount=bool(reviewed_plan) or amount_confirmed_for_agreement(
             text,segments,commitment_confirmation,accepted_schedule)
+        from app.services.payment_lifecycle import financial_response_events
+        final_own_terms=next((e for e in reversed(financial_response_events(text,segments))
+            if e.get('amount')is not None and e['position']==commitment_confirmation.get('position')
+            and commitment_confirmation.get('accepted')),None)
+        if final_own_terms:confirmed_agreement_amount=True
         is_convenio = bool(not non_holder_scenario and contact_type=='TITULAR'
             and (confirms_commitment or named_agreement)
             and not payment_confirmation_case and (not pending_decision or named_agreement) and not explicit_decline)
@@ -4023,6 +4034,10 @@ class AnalyticsService:
             detected_amount_role = "SALDO INFORMADO"
             detected_claim_evidence = detected_balance_evidence
 
+        if final_own_terms and not multi_payment_detected:
+            detected_claim_amount=final_own_terms['amount'];detected_amount_raw=detected_claim_amount
+            detected_claim_evidence=final_own_terms['evidence'];amount_asr_normalized=False
+            detected_amount_role='IMPORTE_PROPIO_DEL_CIERRE_ACTUAL'
         if reviewed_plan:
             # Entra antes de validar importes, política, penalizaciones y
             # estatus; no es una aprobación ni una reetiqueta posterior.
@@ -4030,7 +4045,7 @@ class AnalyticsService:
             detected_amount_raw=detected_claim_amount;amount_asr_normalized=False
             detected_claim_evidence=reviewed_plan['evidence']
             detected_amount_role='PAGO CONFIRMADO EN RELECTURAS VINCULADAS'
-            multi_payment_detected=False;multi_payment_amounts=[];multi_payment_total=None
+            multi_payment_detected=bool(reviewed_plan.get('amounts'));multi_payment_amounts=reviewed_plan.get('amounts',[]);multi_payment_total=reviewed_plan['amount'] if multi_payment_detected else None
         amount_validation = "NO APLICA"
         amount_reason = ""
         amount_invalid = False
@@ -4242,8 +4257,11 @@ class AnalyticsService:
         unaccepted_amount_after_decision=bool(confirms_commitment and not confirmed_agreement_amount
             and detected_claim_span and commitment_at>=0
             and detected_claim_span[0]>=commitment_at+len(commitment_text))
+        from app.services.negotiation_chronology import handoffs,payment_purpose
         negotiation_validation = {
             'source':'LOCAL_AUDIO_CONTEXT' if reviewed_plan else 'PRIMARY_TRANSCRIPT',
+            'handoffs':handoffs(text),
+            'payment_purpose':payment_purpose(commitment_confirmation.get('evidence','')),
             'reviewed_payment_plan':({**reviewed_plan,'date':reviewed_plan['date'].isoformat()} if reviewed_plan else None),
             "mora_payment_policy": mora_policy,
             "installment_dates": schedule_dates,

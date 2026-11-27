@@ -1,0 +1,23 @@
+{
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/config/release.py": "878a1ed3e215237005ee9a9ec4cd6292155ec9002ff9cb581afbc1e8345811da",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/accepted_schedule_evidence.py": "1128707f57a4097a158137daaab0736e97a47c84795378d63b3e17f74bc906f0",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/analytics_service.py": "076233a385f7b2e3350ad612f2dea09682741776923e2f54cd6fe42a7983b1b9",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_audio_recovery.py": "eb8604c7bb88cdceda48b6c8789112ec2ad5365867cdaa61e05726c59ec310c8",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_evidence_policy.py": "4812d03e804fdb84ba414c556d20a38b90041ef05f57be2611420098f386626b",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_fact_consensus.py": "83b270a512da64af0aeae2790c49caab8e3d186390e06e37dfbf1840d7ee53c1",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/context_recovery_report.py": "e87ad029108dd3ed876665db57949d2891478c35231d93221712204fc99efdd7",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/conversation_evidence.py": "1b209813c8d6f8510ade6b35d5e2b32ac2116ccce9a46bfb29263abfaff34750",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/listening_lifecycle.py": "811609822dd87416215881bdef5fa43165e2b50ec539aea3a160c0305e23d1b8",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/medium_review_plan.py": "693fd5c93d4d3560d31fed7d5bef35c0c6da1ae96dab2e399ffc11ea3f4744eb",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/negotiation_chronology.py": "19d1b75a081b0290f913e905df31582f99eadd91aaf4cee9f9e3588f6a605688",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/operational_script_evidence.py": "66d097b12827bd60cae97c9d7f9d64b5f8513f0c3c36a3fe2700c06eb36043de",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/payment_lifecycle.py": "b78845d25c89db84b6029a7111a3b174cd64026a29776a1e97a5d7669a7c2b12",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/quality_decision.py": "32c4b7d31b28d712a1455be548b959d49df159d28508c054cae8010cb40dd812",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/reviewed_payment_plan.py": "97ef8e440ca498f7fc6745a860471240c49208ee1d1519b513ebd038c64f80b8",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/supplemental_rule_checks.py": "3cdc0fb0702244653d42d084456fde60fc0f41c2297d13cf7b9a4dc6a838f7e5",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/app/services/whisper_service.py": "31886bf99c219c24fde4fb4e128e707e12a3492eebf488f7a3693d7ea8804613",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_medium_review_r65.py": "ff1a5c116c441db984e0d400506c76ea2239a93205391bebdabc36ba4ad9762e",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_r66_listening_and_deadlines.py": "776142290acdd151f60c114dc2da27ced9a9c5cc3b576563ed864daec53be7af",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_r67_chronology_and_listening.py": "34dac5176e96b5f53f12722bf112a89b004bbc4f5d248ff486950bb7141161cf",
+  "proyecto/MRS_Speech_Analytics_v3.6.19_Revision/tests/test_release_recovery_invalidation_20261123.py": "d8d823af7fe2a5c42a144a067a83791891f739237f116911c9267dca1ec60960"
+}

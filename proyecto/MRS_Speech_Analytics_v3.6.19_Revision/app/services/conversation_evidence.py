@@ -615,7 +615,7 @@ def payment_commitment(text, segments=()):
     if not events:
         return {"accepted": False, "declined": False, "evidence": ""}
     from app.services.payment_lifecycle import resolve_payment_events
-    return resolve_payment_events(events,extra_events)
+    return resolve_payment_events(events,extra_events,text)
 
 
 def completed_payment(text, segments=()):

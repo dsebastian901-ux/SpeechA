@@ -1,0 +1,36 @@
+{
+  "changed_existing_expectations": [
+    {
+      "test": "test_medium_review_r65.py::test_focused_medium_does_not_third_read_a_missing_primary_identity_fact",
+      "change": "Antes exigía 3 lecturas por diferencia léxica. Ahora 2 si el ASR original no aporta un hecho de identidad contrario. Conserva la no identificación del titular.",
+      "authority": "r67 criterio 10: tercera solo cuando corresponda"
+    },
+    {
+      "test": "test_r66_listening_and_deadlines.py::test_two_matching_terms_resolve_before_scoring_without_redundant_third",
+      "change": "Solo cambia 3→2 y beams 5/10 para hechos coincidentes sin contradicción. Conserva aceptación, importe, fecha, clasificación y procedencia.",
+      "authority": "r67 criterios 5 y 10"
+    },
+    {
+      "test": "test_r66_listening_and_deadlines.py::test_missing_required_third_never_enables_matching_facts",
+      "change": "La entrada ahora contiene discrepancia 900/1200 para que la tercera sea realmente requerida. Mantiene rechazo de evidencia cuando falta el tercer intento.",
+      "authority": "r67: no usar diferencias léxicas como requisito artificial"
+    },
+    {
+      "test": "test_r66_listening_and_deadlines.py::test_failed_or_unavailable_third_keeps_its_reason_and_error",
+      "change": "Discrepancia 900/1200 obliga tercera. El fallo del decodificador se identifica como FALLIDA en lugar de PENDIENTE. Conserva el error y ausencia de aprobación.",
+      "authority": "r67 criterio 5"
+    },
+    {
+      "test": "test_r66_listening_and_deadlines.py::test_excel_and_checkpoint_keep_each_reading_and_date_folder",
+      "change": "La hoja espera las dos lecturas realmente necesarias; no una tercera redundante. Conserva huellas, texto, reporte y carpeta de fechas.",
+      "authority": "r67 criterios 5, 10"
+    },
+    {
+      "test": "test_release_recovery_invalidation_20261123.py::test_new_release_and_recovery_schema_invalidate_old_results",
+      "change": "Literal de versión r66→r67 para invalidar resultados viejos; no cambia reglas de calidad.",
+      "authority": "Revisión independiente solicitada"
+    }
+  ],
+  "financial_scoring_privacy_threat_fraud_test_expectations_relaxed": false,
+  "existing_diagnostic_third_regression_fixed_in_production_code": true
+}

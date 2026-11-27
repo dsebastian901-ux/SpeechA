@@ -35,7 +35,8 @@ def accepted_two_part_schedule(text,segments,call_date):
         r'(?P<day>hoy|manana)\?\s*(?P<yes>si)\b'
         r'(?P<reply>[^?]{0,200}?)\b(?:y )?seria (?:un|uno) mas (?:por|de) '
         r'(?P<second>'+NUMBER+r')(?: pesos)?[.]\s*(?P<yes2>si|correcto|de acuerdo)\b')
-    candidates=_recapped_schedules(text,segments,call_date)+_own_dated_schedule(text,segments,call_date)
+    candidates=(_recapped_schedules(text,segments,call_date)+_own_dated_schedule(text,segments,call_date)
+                +_equal_recapped_schedule(text,segments,call_date))
     for match in pattern.finditer(source):
         if any(_role_at(text,segments,match.start(k)) in {'GESTOR','TERCERO'} for k in ['yes','yes2']):continue
         if re.search(r'\b(?:no puedo|no tengo|a lo mejor|yo creo|si consigo|si puedo|si me da)\b',match['reply']):continue
@@ -77,6 +78,40 @@ def accepted_two_part_schedule(text,segments,call_date):
             'evidence':match.group(),'position':match.start('yes2'),'end':match.end(),
             'method':'DOS_PAGOS_ACEPTADOS_CON_FECHAS','human_verified':False})
     return max(candidates,key=lambda row:row['position']) if candidates else none
+
+
+def _equal_recapped_schedule(text,segments,call_date):
+    """Count × unit price plus an explicit calendar and an immediate acceptance.
+
+    No interpolation of missing dates, rounding to the bank minimum or joining
+    terms across a handoff. Subsequent revocation still invalidates the plan.
+    """
+    from decimal import Decimal
+    from app.services.payment_lifecycle import frames,FIRM,CONDITION,QUOTE,PAST,NEGATIVE_DECISION
+    from app.services.installment_validation import accepted_calendar
+    from app.services.negotiation_chronology import HANDOFF
+    rows=frames(text,segments);result=[]
+    pattern=re.compile(r'\b(?P<count>dos|tres|2|3) pagos (?:de|por) (?P<amount>'+NUMBER+r')(?!\w)')
+    for i,offer in enumerate(rows[:-1]):
+        match=pattern.search(offer['text'])
+        if not match or offer['role']in{'TITULAR','TERCERO','INTERLOCUTOR'}:continue
+        if QUOTE.search(offer['text'])or PAST.search(offer['text'])or CONDITION.search(offer['text']):continue
+        count={'dos':2,'tres':3,'2':2,'3':3}[match['count']]
+        amount=money_value(match['amount'])
+        if amount is None or amount<10:continue
+        reply=rows[i+1]
+        if reply['role']in{'GESTOR','TERCERO'}or not FIRM.match(reply['text']):continue
+        if '?'in reply['text']or CONDITION.search(reply['text'])or NEGATIVE_DECISION.search(reply['text']):continue
+        dates=accepted_calendar(offer['text'],call_date,count)
+        if len(dates)!=count or HANDOFF.search(offer['text']):continue
+        later=[r for r in rows[i+2:]if r['role']!='GESTOR']
+        if any(NEGATIVE_DECISION.search(r['text'])for r in later):continue
+        evidence=offer['text']+' '+reply['text']
+        result.append({'confirmed':True,'amounts':[float(amount)]*count,
+            'total':float(Decimal(str(amount))*count),'dates':dates,'evidence':evidence,
+            'position':reply['start'],'end':reply['end'],'method':'PARCIALIDADES_IGUALES_ACEPTADAS_CON_CALENDARIO',
+            'human_verified':False})
+    return result
 
 
 def _own_dated_schedule(text,segments,call_date):

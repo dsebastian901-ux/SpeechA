@@ -1,0 +1,177 @@
+{
+  "scope": "CONTROLLED_DECODER_BOUNDARY_NOT_REAL_ASR_ANONYMIZED_EXCHANGES_AND_VARIATIONS",
+  "synthetic_relation_and_closing_script": true,
+  "customer_approvals_asserted": 0,
+  "before": {
+    "engine": "3.6.19-r66-escuchas-dictaminacion-20261126-validacion",
+    "scope": "CONTROLLED_DECODER_BOUNDARY_NOT_REAL_ASR_ANONYMIZED_EXCHANGES_AND_VARIATIONS",
+    "cases": {
+      "C22_date_then_amount_final_acceptance": {
+        "classification": "REVISAR",
+        "score": 100.0,
+        "accepted": false,
+        "amount": null,
+        "date": "2026-11-21",
+        "status": ""
+      },
+      "later_decline_blocks": {
+        "classification": "APROBADO_SIN_ETIQUETAR",
+        "score": 100.0,
+        "accepted": false,
+        "amount": null,
+        "date": "2026-11-21",
+        "status": "NO DEFINE FECHA DE PAGO"
+      },
+      "equal_installments_complete": {
+        "classification": "REVISAR",
+        "score": 100.0,
+        "accepted": true,
+        "amount": 900.0,
+        "date": "2026-11-23",
+        "status": "NO DEFINE FECHA DE PAGO"
+      },
+      "matching_financial_facts": {
+        "attempts": 3,
+        "third_states": [],
+        "pending": [],
+        "failed": [],
+        "insufficient": [],
+        "contradictions": []
+      },
+      "third_decoder_failure": {
+        "attempts": 3,
+        "third_states": [],
+        "pending": [
+          "financial"
+        ],
+        "failed": [],
+        "insufficient": [],
+        "contradictions": [
+          "AMOUNT",
+          "PAYMENT_PLAN"
+        ]
+      },
+      "third_empty": {
+        "attempts": 3,
+        "third_states": [],
+        "pending": [
+          "financial"
+        ],
+        "failed": [],
+        "insufficient": [],
+        "contradictions": [
+          "AMOUNT",
+          "PAYMENT_PLAN"
+        ]
+      },
+      "third_contradiction_not_voted_out": {
+        "attempts": 3,
+        "third_states": [],
+        "pending": [],
+        "failed": [],
+        "insufficient": [],
+        "contradictions": [
+          "AMOUNT",
+          "PAYMENT_PLAN"
+        ]
+      }
+    }
+  },
+  "after": {
+    "engine": "3.6.19-r67-cronologia-escuchas-20261127-validacion",
+    "scope": "CONTROLLED_DECODER_BOUNDARY_NOT_REAL_ASR_ANONYMIZED_EXCHANGES_AND_VARIATIONS",
+    "cases": {
+      "C22_date_then_amount_final_acceptance": {
+        "classification": "APROBADO",
+        "score": 100.0,
+        "accepted": true,
+        "amount": 4111.0,
+        "date": "2026-11-21",
+        "status": "CONVENIO"
+      },
+      "later_decline_blocks": {
+        "classification": "APROBADO_SIN_ETIQUETAR",
+        "score": 100.0,
+        "accepted": false,
+        "amount": 4111.0,
+        "date": "2026-11-21",
+        "status": "NO DEFINE FECHA DE PAGO"
+      },
+      "equal_installments_complete": {
+        "classification": "APROBADO",
+        "score": 100.0,
+        "accepted": true,
+        "amount": 900.0,
+        "date": "2026-11-23",
+        "status": "CONVENIO"
+      },
+      "matching_financial_facts": {
+        "attempts": 2,
+        "third_states": [
+          {
+            "group": 1,
+            "purpose": "financial",
+            "state": "NO_REQUERIDA"
+          }
+        ],
+        "pending": [],
+        "failed": [],
+        "insufficient": [],
+        "contradictions": []
+      },
+      "third_decoder_failure": {
+        "attempts": 3,
+        "third_states": [
+          {
+            "group": 1,
+            "purpose": "financial",
+            "state": "FALLIDA"
+          }
+        ],
+        "pending": [],
+        "failed": [
+          "financial"
+        ],
+        "insufficient": [],
+        "contradictions": [
+          "AMOUNT",
+          "PAYMENT_PLAN"
+        ]
+      },
+      "third_empty": {
+        "attempts": 3,
+        "third_states": [
+          {
+            "group": 1,
+            "purpose": "financial",
+            "state": "CONTRADICTORIA"
+          }
+        ],
+        "pending": [],
+        "failed": [],
+        "insufficient": [],
+        "contradictions": [
+          "AMOUNT",
+          "PAYMENT_PLAN"
+        ]
+      },
+      "third_contradiction_not_voted_out": {
+        "attempts": 3,
+        "third_states": [
+          {
+            "group": 1,
+            "purpose": "financial",
+            "state": "CONTRADICTORIA"
+          }
+        ],
+        "pending": [],
+        "failed": [],
+        "insufficient": [],
+        "contradictions": [
+          "AMOUNT",
+          "PAYMENT_PLAN"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "source_sha256": "2c5f5d479e922fc1463fccf2b259432f9bf0cf4fdd602abbadc56765f0aba3e3",
+  "items": 23,
+  "original_score_counts": {
+    "100.0": 18,
+    "80.0": 4,
+    "85.0": 1
+  },
+  "old_groups": 173,
+  "old_attempts": 519,
+  "old_third_attempts": 173,
+  "original_records_binding_and_record_digests_valid": true,
+  "all_previously_marked_valid_by_source_engine": true,
+  "current_audio_integrity_verified": false,
+  "attempt_errors": 0,
+  "new_planned_groups": 148,
+  "new_initial_planned_requests": 296,
+  "new_inference_executed_on_these_23": 0,
+  "new_third_recommended_for_existing_pairs": 50,
+  "batch_elapsed_seconds": 36008.18975239998,
+  "note": "Plan counts are scheduling comparison, not new execution timings. Current semantics re-extract stored readings without certifying absent audio."
+}

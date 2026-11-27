@@ -9,7 +9,7 @@ HEADERS = ['Archivo', 'Huella audio SHA256', 'Motor de lectura', 'Validador', 'M
            'Bloqueos conservados', 'Clasificación anterior', 'Clasificación nueva',
            'Justificación', 'Fuentes independientes', 'Grupo de fragmento',
            'ASR original del fragmento', 'Tercera requerida', 'Motivo tercera escucha',
-           'Consenso primeras dos', 'Huella texto SHA256', 'Tiempo inferencia (s)']
+           'Consenso primeras dos', 'Huella texto SHA256', 'Tiempo intento total (s)', 'Estado tercera escucha', 'Espera de bloqueo (s)', 'Inferencia medida (s)', 'Reutilizado', 'Tiempos de etapa', 'CPU proceso durante intento (s)', 'Tiempo anómalo']
 
 
 def trace_rows(item):
@@ -49,6 +49,10 @@ def trace_rows(item):
                     group.get('third_read_reason',''),
                     json.dumps(group.get('first_two_consensus')or{},ensure_ascii=False),
                     attempt.get('text_sha256',''),attempt.get('seconds'),
+                    next((v['state']for v in context.get('third_listening_states',[])if v['group']==group_index+1),group.get('third_listening_state','NO_REGISTRADO')),
+                    attempt.get('stage_seconds',{}).get('lock_wait'),attempt.get('stage_seconds',{}).get('inference'),
+                    attempt.get('cache_hit',False),json.dumps(record.get('stage_seconds',{})),
+                    attempt.get('process_cpu_seconds'),attempt.get('elapsed_anomaly',False),
                 ])))
     return rows
 

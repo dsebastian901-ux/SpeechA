@@ -1,0 +1,72 @@
+{
+  "final_real_batch": {
+    "medium_instance_reused_across_calls": true,
+    "second_call_stage_seconds": {
+      "audio_decode": 0.03354395400674548,
+      "lock_wait": 0.00026411900762468576,
+      "inference": 18.151657082984457,
+      "cache_hits": 0,
+      "decoder_calls": 2,
+      "context_total": 18.338396916995407,
+      "model_load_or_reuse": 0.0010202580015175045
+    },
+    "scope": "INTEGRATION_ONLY_8_SECOND_HISTORICAL_CROP_NOT_FULL_CALL_NOT_THE_23",
+    "real_batch_service": true,
+    "primary_real_asr": "small",
+    "review_real_asr": "medium",
+    "asr_output_doubles": false,
+    "configuration_isolation": "Process-local settings and local model folder aliases; no application configuration persisted.",
+    "items_completed": 1,
+    "classification": "REVISAR",
+    "seconds": 28.39126038599352,
+    "stage_seconds": {
+      "audio_decode": 0.019731253996724263,
+      "lock_wait": 2.664004568941891e-06,
+      "inference": 18.973596301002544,
+      "cache_hits": 0,
+      "decoder_calls": 2,
+      "context_total": 19.200677588989493,
+      "model_load_or_reuse": 2.2840418230043724
+    },
+    "medium_attempts": 2,
+    "medium_errors": 0,
+    "third_read_real": false,
+    "individual_text_hashes": true,
+    "nonempty_medium_attempts": 2,
+    "primary_model_preserved": true,
+    "source_and_copy_sha256_equal": true,
+    "quality_excel_generated": true,
+    "nonpayment_excel_generated": true,
+    "checkpoint_generated": true,
+    "target_23_medium_executions": 0,
+    "human_verified": false,
+    "physical_windows_tested": false
+  },
+  "final_real_third": {
+    "scope": "8_SECOND_HISTORICAL_CROP_NOT_CUSTOMER23_CONTROLLED_WINDOW_GEOMETRY",
+    "asr_output_doubles": false,
+    "planner_window_override": true,
+    "genuine_local_medium": true,
+    "actual_decoder_calls": 3,
+    "third_required": true,
+    "third_executed": true,
+    "errors": 0,
+    "third_state": "INSUFICIENTE",
+    "third_still_pending": false,
+    "seconds": 44.714798775006784,
+    "stage_seconds": {
+      "audio_decode": 0.01922939698852133,
+      "lock_wait": 6.850998033769429e-06,
+      "inference": 40.58421238599112,
+      "cache_hits": 0,
+      "decoder_calls": 3,
+      "context_total": 40.8320475199871,
+      "model_load_or_reuse": 3.5565786410006694
+    },
+    "original_sha256_preserved": true,
+    "human_verified": false,
+    "customer_approvals_asserted": 0
+  },
+  "raw_asr_readings_kept_private": true,
+  "new_medium_listenings_on_the_23": 0
+}

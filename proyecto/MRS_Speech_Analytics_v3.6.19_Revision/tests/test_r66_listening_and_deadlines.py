@@ -68,11 +68,11 @@ def collect(tmp_path,reads,*,data=None):
     return path,data,record,calls
 
 
-def test_two_matching_terms_and_third_contrast_resolve_before_scoring(tmp_path):
+def test_two_matching_terms_resolve_before_scoring_without_redundant_third(tmp_path):
     path,data,record,calls=collect(tmp_path,[PLAN]*3)
     original=deepcopy(data)
     a=analysis(data['texto'],path=path,record=record,segments=data.get('segmentos'));m=a.metadata
-    assert len(calls)==3 and [c[2]for c in calls]==[5,10,8]
+    assert len(calls)==2 and [c[2]for c in calls]==[5,10]
     assert m['status_validation']['detected_status']=='CONVENIO'
     assert m['negotiation_validation']['monto_detectado']==900
     assert m['negotiation_validation']['promise_date']=='2026-11-22'
@@ -93,7 +93,7 @@ def test_real_contradiction_is_not_outvoted_or_hidden_by_error(tmp_path,third):
 
 
 def test_missing_required_third_never_enables_matching_facts(tmp_path):
-    path,data,record,_=collect(tmp_path,[PLAN]*3)
+    path,data,record,_=collect(tmp_path,[PLAN,PLAN.replace('900','1200'),PLAN])
     record['groups'][0]['attempts']=record['groups'][0]['attempts'][:2]
     record['record_sha256']=C.record_digest(record)
     c=C.validate(record,data,REL,path)
@@ -165,11 +165,11 @@ def test_recovered_plan_does_not_approve_a_score_under_80(tmp_path):
 
 
 def test_failed_or_unavailable_third_keeps_its_reason_and_error(tmp_path):
-    path,data,record,calls=collect(tmp_path,[PLAN,PLAN,RuntimeError('controlled decoder failure')])
+    path,data,record,calls=collect(tmp_path,[PLAN,PLAN.replace('900','1200'),RuntimeError('controlled decoder failure')])
     g=record['groups'][0]
     assert g['third_read_required']and g['third_read_reason']
     assert g['attempts'][2]['error']=='RuntimeError'
-    assert C.validate(record,data,REL,path)['third_listening_pending']
+    assert C.validate(record,data,REL,path)['third_listening_failed']
 
 
 def test_excel_and_checkpoint_keep_each_reading_and_date_folder(tmp_path):
@@ -184,7 +184,7 @@ def test_excel_and_checkpoint_keep_each_reading_and_date_folder(tmp_path):
     report=BatchReportService.generate_report([item],tmp_path/'output/Transcripciones')
     b=load_workbook(report,read_only=True);sheet=b['EVIDENCIA_RELECTURAS']
     headers=[c.value for c in next(sheet.rows)];rows=list(sheet.values)[1:]
-    assert {r[headers.index('Lectura')]for r in rows}=={1,2,3}
+    assert {r[headers.index('Lectura')]for r in rows}=={1,2}
     assert all(r[headers.index('Modelo')]=='Faster-Whisper:medium'for r in rows)
     assert all(r[headers.index('Texto')]for r in rows)
     assert 'Motivo tercera escucha'in headers
